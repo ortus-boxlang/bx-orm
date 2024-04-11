@@ -1,4 +1,4 @@
-name: @MODULE_NAME@ Snapshots
+name: bx-orm Snapshots
 
 on:
   push:

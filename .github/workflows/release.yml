@@ -1,6 +1,6 @@
 # This workflow is used to build releases
 # It can also be called by other workflows to reuse the release flow.
-name: @MODULE_NAME@ Release
+name: bx-orm Release
 
 on:
   # If you push to main this will trigger a stable release
@@ -19,7 +19,7 @@ on:
         type: boolean
 
 env:
-  MODULE_ID: @MODULE_SLUG@
+  MODULE_ID: bx-orm
   SNAPSHOT: ${{ inputs.snapshot || false }}
   JDK: 17
   GRADLE: 8.7

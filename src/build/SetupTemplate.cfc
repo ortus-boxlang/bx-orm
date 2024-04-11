@@ -47,7 +47,7 @@ component {
 		command( "tokenReplace" )
 			.params(
 				path        = "/#variables.cwd#/**",
-				token       = "@MODULE_SLUG@",
+				token       = "bx-orm",
 				replacement = moduleSlug
 			)
 			.run();
