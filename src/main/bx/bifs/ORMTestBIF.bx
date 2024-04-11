@@ -17,7 +17,7 @@
  * - interceptorService : The BoxLang InterceptorService
  * - moduleRecord : The ModuleRecord instance
  */
-// @BoxBIF "ExampleBxBIF"
+@BoxBIF "ORMTestBIF"
 class {
 
     /**
@@ -27,7 +27,7 @@ class {
      * @age
      */
     function invoke() {
-        return "Hello from an ExampleBxBIF!";
+        return "Hello from an ORMTestBIF!";
     }
 
 }

@@ -102,10 +102,10 @@
 		 */
 		interceptors = [
 			// { class="path.to.Interceptor", properties={} }
-			{ class : "#moduleRecord.invocationPath#.interceptors.Listener", properties : {
-				createdOn : now(),
-				by : "Luis Majano"
-			} }
+			// { class : "#moduleRecord.invocationPath#.interceptors.Listener", properties : {
+			// 	createdOn : now(),
+			// 	by : "Luis Majano"
+			// } }
 		];
 
 		/**
