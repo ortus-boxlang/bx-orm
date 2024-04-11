@@ -41,11 +41,4 @@ public class ORMFlushTest {
 		assertEquals( "Hello from an ORMFlush!", variables.get( result ) );
 	}
 
-	@DisplayName( "It can test the ExampleBIF" )
-	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
-	}
-
 }
