@@ -1,5 +1,5 @@
 {
-    "name": "@MODULE_NAME@",
+    "name": "BoxLang ORM",
     "version": "@build.version@+@build.number@",
     "location": "https://downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-orm/@build.version@/bx-orm-@build.version@.zip",
     "author": "Ortus Solutions",
