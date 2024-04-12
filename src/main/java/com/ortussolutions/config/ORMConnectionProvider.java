@@ -1,4 +1,4 @@
-package com.ortussolutions;
+package com.ortussolutions.config;
 
 import java.sql.Connection;
 import java.sql.SQLException;

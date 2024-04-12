@@ -1,50 +1,110 @@
 package com.ortussolutions;
 
-import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
+import java.util.Properties;
+
+import org.hibernate.SessionFactory;
+import org.hibernate.cfg.AvailableSettings;
+import org.hibernate.cfg.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+
+import com.ortussolutions.config.ORMConfigKeys;
+import com.ortussolutions.config.ORMConnectionProvider;
 
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.config.segments.DatasourceConfig;
-import ortus.boxlang.runtime.config.segments.RuntimeConfig;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
-import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
+/**
+ * Java class responsible for constructing and managing the Hibernate ORM engine.
+ */
 public class ORMEngine {
 
 	private static final Logger logger = LoggerFactory.getLogger( ORMEngine.class );
 
-	public ORMEngine() {
-		// do stuff?
+	/**
+	 * Constructor for the ORMEngine. Self-registers as a global runtime service.
+	 *
+	 * @param runtime The BoxRuntime instance to which this ORMEngine will attach itself.
+	 */
+	public ORMEngine( BoxRuntime runtime ) {
+		runtime.setGlobalService( ORMConfigKeys.ORM, this );
 	}
 
-	// @TODO: This is proof-of-concept code; feel free to move it to a more logical location.
+	// @TODO: This is proof-of-concept code; move it to a more logical location.
 	public void onStartup() {
 		// grab the ormConfig struct from the runtime config
 		// @TODO: This only checks the runtime config - how do we tweak this to check the web application config as well?
-		BoxRuntime		runtime			= BoxRuntime.getInstance();
-		RuntimeConfig	runtimeConfig	= ( RuntimeConfig ) runtime.getConfiguration().asStruct().get( Key.runtime );
-		IStruct			ormConfig		= runtimeConfig.asStruct().getAsStruct( Key.of( "ormConfig" ) );
+		BoxRuntime	runtime		= BoxRuntime.getInstance();
+		IStruct		ormConfig	= runtime.getConfiguration().asStruct().getAsStruct( Key.runtime ).getAsStruct( Key.of( "ormConfig" ) );
 		if ( ormConfig == null ) {
 			// silent fail?
 			logger.info( "No ORM configuration found in runtime configuration" );
-		} else {
-			// grab configured datasource from the runtime config
-			// @TODO: This only checks the runtime config - how do we tweak this to check the web application config as well?
-			Key		ormDatasource			= ormConfig.getAsKey( Key.datasource );
-			IStruct	availableDatasources	= runtimeConfig.asStruct().getAsStruct( Key.datasources );
-			if ( !availableDatasources.containsKey( ormDatasource ) ) {
-				throw new BoxRuntimeException( "Datasource '{}' not found in runtime configuration", ormDatasource );
-			}
-
-			IStruct				datasourceStruct	= availableDatasources.getAsStruct( ormDatasource );
-			DatasourceConfig	datasourceConfig	= new DatasourceConfig( ormDatasource, datasourceStruct.getAsKey( Key.driver ), datasourceStruct );
-			DataSource			dataSource			= new DataSource( datasourceConfig );
-			ConnectionProvider	connectionProvider	= new ORMConnectionProvider( dataSource );
-
-			// Now that we have a connection provider so Hibernate can talk to the DB, build Hibernate ORM configuration
+			return;
 		}
+		// grab configured datasource from the runtime config
+		// @TODO: This only checks the runtime config - how do we tweak this to check the web application config as well?
+		DataSource	dataSource	= getORMDataSource( ormConfig );
+
+		// Now that we have a connection provider so Hibernate can talk to the DB, build Hibernate ORM configuration
+		Properties	properties	= new Properties();
+		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( dataSource ) );
+		SessionFactory sessionFactory = buildSessionFactory( properties );
+		System.out.println( "Session factory created! " + sessionFactory.toString());
+	}
+
+	DataSource getORMDataSource( IStruct ormConfig ) {
+		Key ormDatasource = ormConfig.getAsKey( Key.datasource );
+		if ( ormDatasource != null ) {
+			return BoxRuntime.getInstance().getDataSourceService().get( ormDatasource );
+		}
+		throw new BoxRuntimeException( "ORM configuration is missing 'datasource' key. Default datasources will be supported in a future iteration." );
+		// @TODO: Implement this. the hard part is knowing the context.
+		// logger.warn( "ORM configuration is missing 'datasource' key; falling back to default datasource" );
+		// return currentContext.getConnectionManager().getDefaultDatasourceOrThrow();
+	}
+
+	// List<File> getORMMappingFiles( IStruct ormConfig ) {
+	// if ( !ormConfig.getAsBoolean( ORMConfigKeys.autoGenMap ) ) {
+	// // @TODO: Here we turn off the automatic generation of entity mappings and instead scan the codebase for orm.xml files.
+	// return ( ( java.util.List ) ormConfig.getAsArray( ORMConfigKeys.cfclocation ) )
+	// .stream()
+	// .flatMap( path -> {
+	// try {
+	// return Files.walk( Paths.get( path ), 1 );
+	// } catch ( IOException e ) {
+	// throw new BoxRuntimeException( "Error walking cfclcation path: " + path.toString(), e );
+	// }
+	// } )
+	// // filter to valid orm.xml files
+	// .filter( filePath -> FilePath.endsWith( ".orm.xml" ) )
+	// @TODO: I'm unsure, but we may need to convert the string path to a File object to work around JPA's classpath limitations.
+	// // We should first try this without the conversion and see if it works.
+	// .map( filePath -> new File( filePath ) )
+	// .toArray();
+	// } else {
+	// // @TODO: Here we generate entity mappings and return an array of the generated files.
+	// }
+	// }
+
+	SessionFactory buildSessionFactory( Properties properties ) {
+		Configuration configuration = new Configuration();
+
+		// getORMMappingFiles( ormConfig ).forEach( file -> configuration.addFile( file ) );
+
+		return configuration
+		    .setProperties( properties )
+		    .addFile( Paths.get( "src/test/resources/bx/models/MyEntity.xml" ).toString() )
+		    .buildSessionFactory();
 	}
 }
