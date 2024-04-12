@@ -21,34 +21,34 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 @Disabled
 public class EntityLoadByPKTest {
 
-    static BoxRuntime instance;
-    IBoxContext context;
-    IScope variables;
-    static Key result = new Key("result");
+	static BoxRuntime	instance;
+	IBoxContext			context;
+	IScope				variables;
+	static Key			result	= new Key( "result" );
 
-    @BeforeAll
-    public static void setUp() {
-        instance = BoxRuntime.getInstance(true, Path.of("src/test/resources/boxlang.json").toString());
-    }
+	@BeforeAll
+	public static void setUp() {
+		instance = BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
+	}
 
-    @BeforeEach
-    public void setupEach() {
-        context = new ScriptingRequestBoxContext(instance.getRuntimeContext());
-        variables = context.getScopeNearby(VariablesScope.name);
-    }
+	@BeforeEach
+	public void setupEach() {
+		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
+		variables	= context.getScopeNearby( VariablesScope.name );
+	}
 
-    @DisplayName("It can test the ExampleBIF")
-    @Test
-    public void testExampleBIF() {
-        instance.executeSource("result = ORMFlush()", context);
-        assertEquals("Hello from an ORMFlush!", variables.get(result));
-    }
+	@DisplayName( "It can test the ExampleBIF" )
+	@Test
+	public void testExampleBIF() {
+		instance.executeSource( "result = ORMFlush()", context );
+		assertEquals( "Hello from an ORMFlush!", variables.get( result ) );
+	}
 
-    @DisplayName("It can test the ExampleBIF")
-    @Test
-    public void testTestBIF() {
-        instance.executeSource("result = ORMTestBIF()", context);
-        assertEquals("Hello from an ORMTestBIF!", variables.get(result));
-    }
+	@DisplayName( "It can test the ExampleBIF" )
+	@Test
+	public void testTestBIF() {
+		instance.executeSource( "result = ORMTestBIF()", context );
+		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	}
 
 }

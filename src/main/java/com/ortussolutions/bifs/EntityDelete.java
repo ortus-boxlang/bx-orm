@@ -16,7 +16,7 @@ public class EntityDelete extends BIF {
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
-	public String _invoke(IBoxContext context, ArgumentsScope arguments) {
+	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		// TODO implement BIF
 		throw new NotImplementedException();
 	}

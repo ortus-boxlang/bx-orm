@@ -10,15 +10,15 @@ import ortus.boxlang.runtime.scopes.ArgumentsScope;
 @BoxBIF
 public class EntityMerge extends BIF {
 
-    /**
-     * ExampleBIF
-     *
-     * @param context   The context in which the BIF is being invoked.
-     * @param arguments Argument scope for the BIF.
-     */
-    public String _invoke(IBoxContext context, ArgumentsScope arguments) {
-        // TODO implement BIF
-        throw new NotImplementedException();
-    }
+	/**
+	 * ExampleBIF
+	 *
+	 * @param context   The context in which the BIF is being invoked.
+	 * @param arguments Argument scope for the BIF.
+	 */
+	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		// TODO implement BIF
+		throw new NotImplementedException();
+	}
 
 }
