@@ -8,7 +8,7 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 
 @BoxBIF
-public class ORMFlush extends BIF {
+public class EntityMerge extends BIF {
 
 	/**
 	 * ExampleBIF

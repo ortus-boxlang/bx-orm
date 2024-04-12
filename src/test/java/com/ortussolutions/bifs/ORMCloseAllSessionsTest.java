@@ -19,7 +19,7 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 
 // TODO implement test
 @Disabled
-public class ORMFlushTest {
+public class ORMCloseAllSessionsTest {
 
 	static BoxRuntime	instance;
 	IBoxContext			context;
@@ -42,6 +42,13 @@ public class ORMFlushTest {
 	public void testExampleBIF() {
 		instance.executeSource( "result = ORMFlush()", context );
 		assertEquals( "Hello from an ORMFlush!", variables.get( result ) );
+	}
+
+	@DisplayName( "It can test the ExampleBIF" )
+	@Test
+	public void testTestBIF() {
+		instance.executeSource( "result = ORMTestBIF()", context );
+		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
 	}
 
 }
