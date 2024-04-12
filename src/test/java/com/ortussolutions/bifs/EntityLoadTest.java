@@ -19,7 +19,7 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 
 // TODO implement test
 @Disabled
-public class ORMFlushTest {
+public class EntityLoadTest {
 
 	static BoxRuntime instance;
 	IBoxContext context;
