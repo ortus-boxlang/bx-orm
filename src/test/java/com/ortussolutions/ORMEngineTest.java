@@ -38,7 +38,7 @@ public class ORMEngineTest {
 	@DisplayName( "It can start up" )
 	@Test
 	public void testStartup() {
-		new ORMEngine( instance ).onStartup();
+		new ORMEngine( instance ).onStartup( context );
 	}
 
 }

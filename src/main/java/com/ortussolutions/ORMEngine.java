@@ -21,6 +21,7 @@ import com.ortussolutions.config.ORMConfigKeys;
 import com.ortussolutions.config.ORMConnectionProvider;
 
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -38,25 +39,21 @@ public class ORMEngine {
 	 * @param runtime The BoxRuntime instance to which this ORMEngine will attach itself.
 	 */
 	public ORMEngine( BoxRuntime runtime ) {
-		runtime.setGlobalService( ORMConfigKeys.ORM, this );
+		// runtime.setGlobalService( ORMConfigKeys.ORM, this );
 	}
 
-	// @TODO: This is proof-of-concept code; move it to a more logical location.
-	public void onStartup() {
+	public void onStartup( IBoxContext context ) {
+		// @TODO: This is proof-of-concept code; move it to a more logical location like a new HibernateConfigurator() or something.
 		// grab the ormConfig struct from the runtime config
-		// @TODO: This only checks the runtime config - how do we tweak this to check the web application config as well?
-		BoxRuntime	runtime		= BoxRuntime.getInstance();
-		IStruct		ormConfig	= runtime.getConfiguration().asStruct().getAsStruct( Key.runtime ).getAsStruct( Key.of( "ormConfig" ) );
+		IStruct		ormConfig	= (IStruct) context.getConfigItem( ORMConfigKeys.ormConfig );
 		if ( ormConfig == null ) {
 			// silent fail?
 			logger.info( "No ORM configuration found in runtime configuration" );
 			return;
 		}
-		// grab configured datasource from the runtime config
-		// @TODO: This only checks the runtime config - how do we tweak this to check the web application config as well?
 		DataSource	dataSource	= getORMDataSource( ormConfig );
 
-		// Now that we have a connection provider so Hibernate can talk to the DB, build Hibernate ORM configuration
+		// build Hibernate ORM configuration
 		Properties	properties	= new Properties();
 		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( dataSource ) );
 		SessionFactory sessionFactory = buildSessionFactory( properties );
