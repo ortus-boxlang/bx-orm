@@ -2,9 +2,10 @@ package com.ortussolutions.config;
 
 import ortus.boxlang.runtime.scopes.Key;
 
-public class ORMConfigKeys {
+public class ORMKeys {
 
 	public static final Key	ORM						= Key.of( "ORM" );
+	public static final Key	ORMSettings				= Key.of( "ormSettings" );
 	public static final Key	autoGenMap				= Key.of( "autoGenMap" );
 	public static final Key	autoManageSession		= Key.of( "autoManageSession" );
 	public static final Key	cacheConfig				= Key.of( "cacheConfig" );

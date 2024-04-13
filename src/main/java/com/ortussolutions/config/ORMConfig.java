@@ -156,8 +156,8 @@ public class ORMConfig {
 		if ( properties == null ) {
 			return;
 		}
-		if ( properties.containsKey( ORMConfigKeys.autoGenMap ) ) {
-			autoGenMap = properties.getAsBoolean( ORMConfigKeys.autoGenMap );
+		if ( properties.containsKey( ORMKeys.autoGenMap ) ) {
+			autoGenMap = properties.getAsBoolean( ORMKeys.autoGenMap );
 		}
 	}
 }

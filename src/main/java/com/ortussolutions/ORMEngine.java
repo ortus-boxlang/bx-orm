@@ -2,6 +2,7 @@ package com.ortussolutions;
 
 import java.util.Properties;
 
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
@@ -17,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
-import com.ortussolutions.config.ORMConfigKeys;
+import com.ortussolutions.config.ORMKeys;
 import com.ortussolutions.config.ORMConnectionProvider;
 
 import ortus.boxlang.runtime.BoxRuntime;
@@ -31,77 +32,47 @@ import ortus.boxlang.runtime.types.IStruct;
  */
 public class ORMEngine {
 
-	private static final Logger logger = LoggerFactory.getLogger( ORMEngine.class );
+	private static ORMEngine			instance;
+
+	private static final Logger			logger	= LoggerFactory.getLogger( ORMEngine.class );
+
+	private Map<Key, SessionFactory>	sessionFactories;
 
 	/**
-	 * Constructor for the ORMEngine. Self-registers as a global runtime service.
-	 *
-	 * @param runtime The BoxRuntime instance to which this ORMEngine will attach itself.
+	 * Private constructor for the ORMEngine. Use the getInstance method to get an instance of the ORMEngine.
 	 */
-	public ORMEngine( BoxRuntime runtime ) {
-		// runtime.setGlobalService( ORMConfigKeys.ORM, this );
+	private ORMEngine() {
 	}
 
-	public void onStartup( IBoxContext context ) {
-		// @TODO: This is proof-of-concept code; move it to a more logical location like a new HibernateConfigurator() or something.
-		// grab the ormConfig struct from the runtime config
-		IStruct		ormConfig	= (IStruct) context.getConfigItem( ORMConfigKeys.ormConfig );
-		if ( ormConfig == null ) {
-			// silent fail?
-			logger.info( "No ORM configuration found in runtime configuration" );
-			return;
+	/**
+	 * Get an instance of the ORMEngine.
+	 *
+	 * @return An instance of the ORMEngine.
+	 */
+	public static synchronized ORMEngine getInstance() {
+		if ( instance == null ) {
+			instance = new ORMEngine();
 		}
-		DataSource	dataSource	= getORMDataSource( ormConfig );
-
-		// build Hibernate ORM configuration
-		Properties	properties	= new Properties();
-		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( dataSource ) );
-		SessionFactory sessionFactory = buildSessionFactory( properties );
-		System.out.println( "Session factory created! " + sessionFactory.toString());
+		return instance;
 	}
 
-	DataSource getORMDataSource( IStruct ormConfig ) {
-		Key ormDatasource = ormConfig.getAsKey( Key.datasource );
-		if ( ormDatasource != null ) {
-			return BoxRuntime.getInstance().getDataSourceService().get( ormDatasource );
-		}
-		throw new BoxRuntimeException( "ORM configuration is missing 'datasource' key. Default datasources will be supported in a future iteration." );
-		// @TODO: Implement this. the hard part is knowing the context.
-		// logger.warn( "ORM configuration is missing 'datasource' key; falling back to default datasource" );
-		// return currentContext.getConnectionManager().getDefaultDatasourceOrThrow();
+	public void setSessionFactoryForName( Key name, SessionFactory sessionFactory ) {
+		logger.info( "Registering new Hibernate session factory for name: {}", name );
+		sessionFactories.put( name, sessionFactory );
 	}
 
-	// List<File> getORMMappingFiles( IStruct ormConfig ) {
-	// if ( !ormConfig.getAsBoolean( ORMConfigKeys.autoGenMap ) ) {
-	// // @TODO: Here we turn off the automatic generation of entity mappings and instead scan the codebase for orm.xml files.
-	// return ( ( java.util.List ) ormConfig.getAsArray( ORMConfigKeys.cfclocation ) )
-	// .stream()
-	// .flatMap( path -> {
-	// try {
-	// return Files.walk( Paths.get( path ), 1 );
-	// } catch ( IOException e ) {
-	// throw new BoxRuntimeException( "Error walking cfclcation path: " + path.toString(), e );
-	// }
-	// } )
-	// // filter to valid orm.xml files
-	// .filter( filePath -> FilePath.endsWith( ".orm.xml" ) )
-	// @TODO: I'm unsure, but we may need to convert the string path to a File object to work around JPA's classpath limitations.
-	// // We should first try this without the conversion and see if it works.
-	// .map( filePath -> new File( filePath ) )
-	// .toArray();
-	// } else {
-	// // @TODO: Here we generate entity mappings and return an array of the generated files.
-	// }
-	// }
+	public SessionFactory getSessionFactoryForName( Key name ) {
+		return sessionFactories.get( name );
+	}
 
-	SessionFactory buildSessionFactory( Properties properties ) {
-		Configuration configuration = new Configuration();
-
-		// getORMMappingFiles( ormConfig ).forEach( file -> configuration.addFile( file ) );
-
-		return configuration
-		    .setProperties( properties )
-		    .addFile( Paths.get( "src/test/resources/bx/models/MyEntity.xml" ).toString() )
-		    .buildSessionFactory();
+	/**
+	 * Shut down the ORM engine, closing all Hibernate session factories and sessions, and releasing all resources.
+	 */
+	public void shutdown() {
+		// @TODO: "It is the responsibility of the application to ensure that there are no open sessions before calling this method as the impact on those
+		// sessions is indeterminate."
+		sessionFactories.forEach( ( key, sessionFactory ) -> {
+			sessionFactory.close();
+		} );
 	}
 }

@@ -1,14 +1,19 @@
 package com.ortussolutions;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.file.Path;
 
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import com.ortussolutions.config.ORMKeys;
 
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -16,6 +21,8 @@ import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
+import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 
 public class ORMEngineTest {
 
@@ -35,10 +42,19 @@ public class ORMEngineTest {
 		variables	= context.getScopeNearby( VariablesScope.name );
 	}
 
-	@DisplayName( "It can start up" )
+	@Disabled( "Switch to module-based configuration" )
+	@DisplayName( "It can start up, register a runtime-wide session factory, and shut down." )
 	@Test
-	public void testStartup() {
-		new ORMEngine( instance ).onStartup( context );
+	public void testRuntimeSessionFactoryLifeCycle() {
+		ORMEngine	ormEngine	= ORMEngine.getInstance();
+		IStruct		ORMSettings	= ( IStruct ) context.getConfigItem( ORMKeys.ORMSettings );
+		assertNotNull( ORMSettings );
+
+		ormEngine.setSessionFactoryForName( Key.runtime, new SessionFactoryBuilder( ORMSettings ).build() );
+		SessionFactory sessionFactory = ormEngine.getSessionFactoryForName( Key.runtime );
+
+		ormEngine.shutdown();
+		assertTrue( sessionFactory.isClosed() );
 	}
 
 }

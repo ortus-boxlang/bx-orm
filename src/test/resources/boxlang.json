@@ -45,5 +45,13 @@
                 }
             }
         }
-    }
+    },
+	"modules": {
+		"orm": {
+			"enabled": true,
+			"settings": {
+				"datasource": "testDB"
+			}
+		}
+	}
 }
