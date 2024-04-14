@@ -42,6 +42,7 @@ public class ORMEngine {
 	 * Private constructor for the ORMEngine. Use the getInstance method to get an instance of the ORMEngine.
 	 */
 	private ORMEngine() {
+		this.sessionFactories = new java.util.HashMap<>();
 	}
 
 	/**

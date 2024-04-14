@@ -32,7 +32,7 @@ public class RuntimeLifecycle extends BaseInterceptor {
 	 *
 	 */
 	@InterceptionPoint
-	public void onRuntimeStart( IStruct data ) {
+	public void onRuntimeStart( IStruct args ) {
 		logger.info( "onRuntimeStart fired; checking for ORM configuration in the runtime context config" );
 
 		BoxRuntime	runtime		= BoxRuntime.getInstance();
@@ -58,7 +58,7 @@ public class RuntimeLifecycle extends BaseInterceptor {
 	 * Listen for runtime shutdown and shut down the ORM engine; mainly cleaning up Hibernate session factories.
 	 */
 	@InterceptionPoint
-	public void onRuntimeShutdown( BoxRuntime runtime, Boolean force ) {
+	public void onRuntimeShutdown( IStruct args ) {
 		logger.info( "onRuntimeShutdown fired; cleaning up Hibernate session factories" );
 		ORMEngine.getInstance().shutdown();
 	}
