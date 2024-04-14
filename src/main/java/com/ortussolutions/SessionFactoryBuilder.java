@@ -6,11 +6,13 @@ import java.util.List;
 import java.util.Properties;
 
 import org.hibernate.SessionFactory;
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
 
 import com.ortussolutions.config.ORMConnectionProvider;
 import com.ortussolutions.config.ORMKeys;
+import com.ortussolutions.config.naming.MacroCaseNamingStrategy;
 
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.jdbc.DataSource;
@@ -87,6 +89,13 @@ public class SessionFactoryBuilder {
 		Configuration configuration = new Configuration();
 
 		// @TODO: generic config goes here
+		if (ormConfig.containsKey(ORMKeys.namingStrategy)) {
+			PhysicalNamingStrategy namingStrategy = getNamingStrategyForName(
+					ormConfig.getAsString(ORMKeys.namingStrategy));
+			if (namingStrategy != null) {
+				configuration.setPhysicalNamingStrategy(namingStrategy);
+			}
+		}
 
 		Properties properties = new Properties();
 		// @TODO: Any configuration which needs a specific java type (such as the
@@ -94,5 +103,25 @@ public class SessionFactoryBuilder {
 		properties.put(AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider(getORMDataSource()));
 		configuration.setProperties(properties);
 		return configuration;
+	}
+
+	private PhysicalNamingStrategy getNamingStrategyForName(String name) {
+		return switch (name) {
+			/**
+			 * Historically, the "smart" naming strategy simply converts camelCase to
+			 * MACRO_CASE.
+			 */
+			case "smart" -> new MacroCaseNamingStrategy();
+			/**
+			 * Allows apps to define their own naming strategy by providing a ful CFC path.
+			 */
+			case "CFC_Path" -> throw new BoxRuntimeException("CFC_Path naming strategy is not yet supported.");
+			/**
+			 * The "default" naming strategy is essentially a no-op, and simply returns the
+			 * identifier value unmodified.
+			 */
+			case "default" -> null;
+			default -> null;
+		};
 	}
 }
