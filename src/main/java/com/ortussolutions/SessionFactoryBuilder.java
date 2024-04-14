@@ -28,7 +28,7 @@ public class SessionFactoryBuilder {
 
 	public SessionFactory build() {
 		Configuration configuration = buildConfiguration();
-		getORMMappingFiles(ormConfig).forEach(file -> configuration.addFile(file));
+		getORMMappingFiles(ormConfig).forEach(configuration::addFile);
 
 		return configuration.buildSessionFactory();
 	}
