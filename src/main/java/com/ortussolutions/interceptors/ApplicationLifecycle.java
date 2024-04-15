@@ -23,9 +23,9 @@ public class ApplicationLifecycle extends BaseInterceptor {
 	 * @param properties The properties to configure the interceptor with (if any)
 	 */
 	@Override
-	public void configure( IStruct properties ) {
-		this.properties	= properties;
-		this.logger		= LoggerFactory.getLogger( this.getClass() );
+	public void configure(IStruct properties) {
+		this.properties = properties;
+		this.logger = LoggerFactory.getLogger(this.getClass());
 	}
 
 	/**
@@ -33,27 +33,27 @@ public class ApplicationLifecycle extends BaseInterceptor {
 	 * ORM configuration is present in the application config.
 	 */
 	@InterceptionPoint
-	public void afterApplicationListenerLoad( IStruct args ) {
+	public void afterApplicationListenerLoad(IStruct args) {
 		logger.info(
-		    "afterApplicationListenerLoad fired; checking for ORM configuration in the application context config" );
+				"afterApplicationListenerLoad fired; checking for ORM configuration in the application context config");
 
-		ApplicationListener	listener	= ( ApplicationListener ) args.get( "listener" );
-		RequestBoxContext	context		= ( RequestBoxContext ) args.get( "context" );
+		ApplicationListener listener = (ApplicationListener) args.get("listener");
+		RequestBoxContext context = (RequestBoxContext) args.get("context");
 		// URI template = (URI) args.get( "template" );
 
-		ORMEngine			ormEngine	= ORMEngine.getInstance();
+		ORMEngine ormEngine = ORMEngine.getInstance();
 
 		// grab the ORMSettings struct from the application config
-		IStruct				ormSettings	= ( IStruct ) context.getConfigItem( ORMKeys.ORMSettings );
-		if ( ormSettings == null ) {
+		IStruct ormSettings = (IStruct) context.getConfigItem(ORMKeys.ORMSettings);
+		if (ormSettings == null) {
 			// silent fail?
-			logger.info( "No ORM configuration found in application configuration" );
+			logger.info("No ORM configuration found in application configuration");
 			return;
 		}
 
-		ormEngine.setSessionFactoryForName( listener.getAppName(),
-		    new SessionFactoryBuilder( listener.getAppName(), ormSettings ).build() );
-		this.logger.info( "Session factory created! " + ormEngine.getSessionFactoryForName( Key.runtime ) );
+		ormEngine.setSessionFactoryForName(listener.getAppName(),
+				new SessionFactoryBuilder(listener.getAppName(), ormSettings).build());
+		this.logger.info("Session factory created! " + ormEngine.getSessionFactoryForName(Key.runtime));
 	}
 
 	/**
@@ -61,8 +61,8 @@ public class ApplicationLifecycle extends BaseInterceptor {
 	 * Hibernate session factories.
 	 */
 	@InterceptionPoint
-	public void onRuntimeShutdown( BoxRuntime runtime, Boolean force ) {
-		logger.info( "onRuntimeShutdown fired; cleaning up Hibernate session factories" );
+	public void onRuntimeShutdown(BoxRuntime runtime, Boolean force) {
+		logger.info("onRuntimeShutdown fired; cleaning up Hibernate session factories");
 		ORMEngine.getInstance().shutdown();
 	}
 

@@ -101,17 +101,13 @@
 		 * The module interceptors to register into the runtime
 		 */
 		interceptors = [
-			// { class="path.to.Interceptor", properties={} }
-			// { class : "#moduleRecord.invocationPath#.interceptors.Listener", properties : {
-			// 	createdOn : now(),
-			// 	by : "Luis Majano"
-			// } }
+			{ class="#moduleRecord.invocationPath#.interceptors.ApplicationLifecycle", properties={} }
 		];
 
 		/**
 		 * A list of custom interception points to register into the runtime
 		 */
-		customInterceptionPoints = [ "onBxTestModule" ];
+		customInterceptionPoints = [];
 	}
 
 	/**
