@@ -14,7 +14,8 @@ import org.slf4j.LoggerFactory;
 import com.ortussolutions.config.ORMConfig;
 import com.ortussolutions.config.ORMConnectionProvider;
 
-import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -45,10 +46,17 @@ public class SessionFactoryBuilder {
 	 */
 	private Key					appName;
 
-	public SessionFactoryBuilder( Key appName, IStruct properties ) {
-		this.appName	= appName;
-		this.ormConfig	= new ORMConfig( properties );
-		this.datasource	= getORMDataSource();
+	/**
+	 * The context-level connection manager, used for retrieving datasources that we
+	 * can be sure have been registered with the datasource manager.
+	 */
+	private ConnectionManager	connectionManager;
+
+	public SessionFactoryBuilder( IJDBCCapableContext context, Key appName, IStruct properties ) {
+		this.appName			= appName;
+		this.connectionManager	= context.getConnectionManager();
+		this.ormConfig			= new ORMConfig( properties );
+		this.datasource			= getORMDataSource();
 	}
 
 	public SessionFactory build() {
@@ -64,15 +72,12 @@ public class SessionFactoryBuilder {
 	 * configuration, but eventually we will support a default datasource.
 	 */
 	private DataSource getORMDataSource() {
-		Object ormDatasource = this.ormConfig.getDatasourceName();
+		Object ormDatasource = this.ormConfig.getDatasource();
 		if ( ormDatasource != null ) {
 			if ( ormDatasource instanceof IStruct datasourceStruct ) {
-				return BoxRuntime.getInstance().getDataSourceService().register( datasourceStruct );
+				return connectionManager.getOnTheFlyDataSource( datasourceStruct );
 			}
-			Key datasourceKey = Key.of( ormDatasource );
-			if ( Boolean.TRUE.equals( BoxRuntime.getInstance().getDataSourceService().has( datasourceKey ) ) ) {
-				return BoxRuntime.getInstance().getDataSourceService().get( datasourceKey );
-			}
+			return connectionManager.getDatasourceOrThrow( Key.of( ormDatasource ) );
 		}
 		throw new BoxRuntimeException(
 		    "ORM configuration is missing 'datasource' key, or named datasource is not found. Default datasources will be supported in a future iteration." );

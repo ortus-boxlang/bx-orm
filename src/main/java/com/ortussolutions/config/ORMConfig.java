@@ -255,9 +255,14 @@ public class ORMConfig {
 			cfclocation = properties.getAsString( ORMKeys.cfclocation );
 		}
 
-		if ( properties.containsKey( ORMKeys.datasource ) && properties.get( ORMKeys.datasource ) != null
-		    && !properties.getAsString( ORMKeys.datasource ).isBlank() ) {
-			datasource = properties.getAsString( ORMKeys.datasource );
+		if ( properties.containsKey( ORMKeys.datasource ) && properties.get( ORMKeys.datasource ) != null ) {
+			Object datasourceProperty = properties.get( ORMKeys.datasource );
+			if ( datasourceProperty instanceof String datasourceName ) {
+				datasource = datasourceName;
+			} else if ( datasourceProperty instanceof IStruct datasourceStruct ) {
+				// @TODO: Implement this!
+				// datasourceStruct = datasourceStruct;
+			}
 		}
 
 		if ( properties.containsKey( ORMKeys.dbcreate ) && properties.get( ORMKeys.dbcreate ) != null
@@ -309,7 +314,7 @@ public class ORMConfig {
 		return cfclocation;
 	}
 
-	public String getDatasourceName() {
+	public String getDatasource() {
 		return datasource;
 	}
 

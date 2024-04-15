@@ -16,6 +16,7 @@ import com.ortussolutions.config.ORMKeys;
 
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
@@ -48,7 +49,8 @@ public class ORMEngineTest {
 		IStruct		ORMSettings	= ( IStruct ) context.getConfigItem( ORMKeys.ORMSettings );
 		assertNotNull( ORMSettings );
 
-		ormEngine.setSessionFactoryForName( Key.runtime, new SessionFactoryBuilder( Key.runtime, ORMSettings ).build() );
+		ormEngine.setSessionFactoryForName( Key.runtime,
+		    new SessionFactoryBuilder( ( IJDBCCapableContext ) context, Key.runtime, ORMSettings ).build() );
 		SessionFactory sessionFactory = ormEngine.getSessionFactoryForName( Key.runtime );
 
 		ormEngine.shutdown();

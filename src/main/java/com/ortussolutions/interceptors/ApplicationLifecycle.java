@@ -8,6 +8,7 @@ import com.ortussolutions.config.ORMKeys;
 
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.ApplicationListener;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
@@ -39,22 +40,23 @@ public class ApplicationLifecycle extends BaseInterceptor {
 
 		ApplicationListener	listener	= ( ApplicationListener ) args.get( "listener" );
 		RequestBoxContext	context		= ( RequestBoxContext ) args.get( "context" );
-		// URI template = (URI) args.get( "template" );
-
-		ORMEngine			ormEngine	= ORMEngine.getInstance();
 
 		// grab the ORMSettings struct from the application config
 		IStruct				appSettings	= ( IStruct ) context.getConfigItem( Key.applicationSettings );
-		IStruct				ormSettings	= ( IStruct ) appSettings.get( ORMKeys.ORMSettings );
-		if ( ormSettings == null ) {
+		if ( !appSettings.containsKey( ORMKeys.ORMSettings )
+		    || !appSettings.containsKey( ORMKeys.ORMEnabled )
+		    || Boolean.FALSE.equals( appSettings.getAsBoolean( ORMKeys.ORMEnabled ) )
+		    || appSettings.get( ORMKeys.ORMSettings ) == null ) {
 			// silent fail?
 			logger.info( "No ORM configuration found in application configuration" );
 			return;
 		}
+		IStruct		ormSettings	= ( IStruct ) appSettings.get( ORMKeys.ORMSettings );
+		ORMEngine	ormEngine	= ORMEngine.getInstance();
 
 		ormEngine.setSessionFactoryForName( listener.getAppName(),
-		    new SessionFactoryBuilder( listener.getAppName(), ormSettings ).build() );
-		this.logger.info( "Session factory created! " + ormEngine.getSessionFactoryForName( Key.runtime ) );
+		    new SessionFactoryBuilder( ( IJDBCCapableContext ) context, listener.getAppName(), ormSettings ).build() );
+		this.logger.info( "Session factory created! {}", ormEngine.getSessionFactoryForName( listener.getAppName() ) );
 	}
 
 	/**

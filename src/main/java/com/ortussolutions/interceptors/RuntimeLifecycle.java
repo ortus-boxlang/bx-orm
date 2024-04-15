@@ -8,6 +8,7 @@ import com.ortussolutions.config.ORMKeys;
 
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
 import ortus.boxlang.runtime.scopes.Key;
@@ -50,7 +51,8 @@ public class RuntimeLifecycle extends BaseInterceptor {
 		}
 
 		ormEngine.setSessionFactoryForName(
-		    Key.runtime, new SessionFactoryBuilder( Key.runtime, ormSettings ).build() );
+		    Key.runtime,
+		    new SessionFactoryBuilder( ( IJDBCCapableContext ) context, Key.runtime, ormSettings ).build() );
 		this.logger.info( "Session factory build successful: {}", ormEngine.getSessionFactoryForName( Key.runtime ) );
 	}
 
