@@ -19,12 +19,12 @@ public class ORMEngine {
 	/**
 	 * The singleton instance of the ORMEngine.
 	 */
-	private static ORMEngine instance;
+	private static ORMEngine			instance;
 
 	/**
 	 * The logger for the ORMEngine.
 	 */
-	private static final Logger logger = LoggerFactory.getLogger(ORMEngine.class);
+	private static final Logger			logger	= LoggerFactory.getLogger( ORMEngine.class );
 
 	/**
 	 * A map of session factories, keyed by name.
@@ -32,7 +32,7 @@ public class ORMEngine {
 	 * Each web application will have its own session factory which you can look up
 	 * by name using {@link #getSessionFactoryForName(Key)}
 	 */
-	private Map<Key, SessionFactory> sessionFactories;
+	private Map<Key, SessionFactory>	sessionFactories;
 
 	/**
 	 * Private constructor for the ORMEngine. Use the getInstance method to get an
@@ -48,7 +48,7 @@ public class ORMEngine {
 	 * @return An instance of the ORMEngine.
 	 */
 	public static synchronized ORMEngine getInstance() {
-		if (instance == null) {
+		if ( instance == null ) {
 			instance = new ORMEngine();
 		}
 		return instance;
@@ -62,19 +62,20 @@ public class ORMEngine {
 	 * @param sessionFactory The Hibernate session factory, constructed via the
 	 *                       {@link SessionFactoryBuilder}.
 	 */
-	public void setSessionFactoryForName(Key name, SessionFactory sessionFactory) {
-		logger.info("Registering new Hibernate session factory for name: {}", name);
-		sessionFactories.put(name, sessionFactory);
+	public void setSessionFactoryForName( Key name, SessionFactory sessionFactory ) {
+		logger.info( "Registering new Hibernate session factory for name: {}", name );
+		sessionFactories.put( name, sessionFactory );
 	}
 
 	/**
 	 * Get a Hibernate session factory by name.
 	 *
 	 * @param name The name of the session factory.
+	 * 
 	 * @return The Hibernate session factory.
 	 */
-	public SessionFactory getSessionFactoryForName(Key name) {
-		return sessionFactories.get(name);
+	public SessionFactory getSessionFactoryForName( Key name ) {
+		return sessionFactories.get( name );
 	}
 
 	/**
@@ -85,8 +86,8 @@ public class ORMEngine {
 		// @TODO: "It is the responsibility of the application to ensure that there are
 		// no open sessions before calling this method as the impact on those
 		// sessions is indeterminate."
-		sessionFactories.forEach((key, sessionFactory) -> {
+		sessionFactories.forEach( ( key, sessionFactory ) -> {
 			sessionFactory.close();
-		});
+		} );
 	}
 }

@@ -28,12 +28,12 @@ public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 
 	private final Class<IClassRunnable> customNamingStrategy;
 
-	public BoxLangClassNamingStrategy(Class<IClassRunnable> customNamingStrategy) {
+	public BoxLangClassNamingStrategy( Class<IClassRunnable> customNamingStrategy ) {
 		this.customNamingStrategy = customNamingStrategy;
 	}
 
 	@Override
-	public Identifier toPhysicalCatalogName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
+	public Identifier toPhysicalCatalogName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
 		// @TODO: Implement this. This was unsupported in the Lucee Hibernate extension.
 		// Call `getCatalogName()` on the customNamingStrategy class, passing
 		// `logicalName` as the sole parameter.
@@ -41,7 +41,7 @@ public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 	}
 
 	@Override
-	public Identifier toPhysicalSchemaName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
+	public Identifier toPhysicalSchemaName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
 		// @TODO: Implement this. This was unsupported in the Lucee Hibernate extension.
 		// Call `getSchemaName()` on the customNamingStrategy class, passing
 		// `logicalName` as the sole parameter.
@@ -49,7 +49,7 @@ public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 	}
 
 	@Override
-	public Identifier toPhysicalTableName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
+	public Identifier toPhysicalTableName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
 		// @TODO: Implement this.
 		// Call `getTableName()` on the customNamingStrategy class, passing
 		// `logicalName` as the sole parameter.
@@ -57,7 +57,7 @@ public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 	}
 
 	@Override
-	public Identifier toPhysicalSequenceName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
+	public Identifier toPhysicalSequenceName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
 		// @TODO: Implement this. This was unsupported in the Lucee Hibernate extension.
 		// Call `getSequenceName()` on the customNamingStrategy class, passing
 		// `logicalName` as the sole parameter.
@@ -65,7 +65,7 @@ public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 	}
 
 	@Override
-	public Identifier toPhysicalColumnName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
+	public Identifier toPhysicalColumnName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
 		// @TODO: Implement this.
 		// Call `getColumnName()` on the customNamingStrategy class, passing
 		// `logicalName` as the sole parameter.

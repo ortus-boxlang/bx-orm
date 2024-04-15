@@ -23,45 +23,45 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 public class MacroCaseNamingStrategy implements PhysicalNamingStrategy {
 
 	@Override
-	public Identifier toPhysicalCatalogName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
-		return toMacroCase(logicalName);
+	public Identifier toPhysicalCatalogName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
+		return toMacroCase( logicalName );
 	}
 
 	@Override
-	public Identifier toPhysicalSchemaName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
-		return toMacroCase(logicalName);
+	public Identifier toPhysicalSchemaName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
+		return toMacroCase( logicalName );
 	}
 
 	@Override
-	public Identifier toPhysicalTableName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
-		return toMacroCase(logicalName);
+	public Identifier toPhysicalTableName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
+		return toMacroCase( logicalName );
 	}
 
 	@Override
-	public Identifier toPhysicalSequenceName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
-		return toMacroCase(logicalName);
+	public Identifier toPhysicalSequenceName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
+		return toMacroCase( logicalName );
 	}
 
 	@Override
-	public Identifier toPhysicalColumnName(Identifier logicalName, JdbcEnvironment jdbcEnvironment) {
-		return toMacroCase(logicalName);
+	public Identifier toPhysicalColumnName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
+		return toMacroCase( logicalName );
 	}
 
-	private Identifier toMacroCase(Identifier identifier) {
-		if (identifier == null) {
+	private Identifier toMacroCase( Identifier identifier ) {
+		if ( identifier == null ) {
 			return null;
 		}
-		String text = identifier.getText();
-		StringBuilder result = new StringBuilder();
+		String			text	= identifier.getText();
+		StringBuilder	result	= new StringBuilder();
 
-		for (char c : text.toCharArray()) {
-			if (Character.isUpperCase(c)) {
-				result.append("_");
+		for ( char c : text.toCharArray() ) {
+			if ( Character.isUpperCase( c ) ) {
+				result.append( "_" );
 			}
-			result.append(c);
+			result.append( c );
 		}
 
-		return new Identifier(result.toString().toUpperCase(), identifier.isQuoted());
+		return new Identifier( result.toString().toUpperCase(), identifier.isQuoted() );
 	}
 
 }

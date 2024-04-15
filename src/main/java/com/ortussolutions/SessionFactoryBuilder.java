@@ -26,22 +26,22 @@ import ortus.boxlang.runtime.util.FileSystemUtil;
 
 public class SessionFactoryBuilder {
 
-	private IStruct ormConfig;
+	private IStruct	ormConfig;
 
 	/**
 	 * The application name for this session factory. Used as an identifier in
 	 * hash maps.
 	 */
-	private Key appName;
+	private Key		appName;
 
-	public SessionFactoryBuilder(Key appName, IStruct ormConfig) {
-		this.appName = appName;
-		this.ormConfig = ormConfig;
+	public SessionFactoryBuilder( Key appName, IStruct ormConfig ) {
+		this.appName	= appName;
+		this.ormConfig	= ormConfig;
 	}
 
 	public SessionFactory build() {
 		Configuration configuration = buildConfiguration();
-		getORMMappingFiles(ormConfig).forEach(configuration::addFile);
+		getORMMappingFiles( ormConfig ).forEach( configuration::addFile );
 
 		return configuration.buildSessionFactory();
 	}
@@ -52,26 +52,26 @@ public class SessionFactoryBuilder {
 	 * configuration, but eventually we will support a default datasource.
 	 */
 	private DataSource getORMDataSource() {
-		Key ormDatasource = ormConfig.getAsKey(Key.datasource);
-		if (ormDatasource != null) {
-			return BoxRuntime.getInstance().getDataSourceService().get(ormDatasource);
+		Key ormDatasource = ormConfig.getAsKey( Key.datasource );
+		if ( ormDatasource != null ) {
+			return BoxRuntime.getInstance().getDataSourceService().get( ormDatasource );
 		}
 		throw new BoxRuntimeException(
-				"ORM configuration is missing 'datasource' key. Default datasources will be supported in a future iteration.");
+		    "ORM configuration is missing 'datasource' key. Default datasources will be supported in a future iteration." );
 		// @TODO: Implement this. the hard part is knowing the context.
 		// logger.warn( "ORM configuration is missing 'datasource' key; falling back to
 		// default datasource" );
 		// return currentContext.getConnectionManager().getDefaultDatasourceOrThrow();
 	}
 
-	private List<File> getORMMappingFiles(IStruct ormConfig) {
+	private List<File> getORMMappingFiles( IStruct ormConfig ) {
 		// @TODO: Should we use the application name, or the ORM configuration hash?
 		String xmlMappingLocation = FileSystemUtil.getTempDirectory() + "/orm_mappings/" + getAppName().getName();
-		if (Boolean.FALSE.equals(ormConfig.getAsBoolean(ORMKeys.autoGenMap))) {
+		if ( Boolean.FALSE.equals( ormConfig.getAsBoolean( ORMKeys.autoGenMap ) ) ) {
 			// Skip mapping generation and load the pre-generated mappings from this
 			// location.
-			xmlMappingLocation = ormConfig.getAsString(ORMKeys.cfclocation);
-			throw new BoxRuntimeException("ORMKeys.autoGenMap: the `false` setting value is currently unsupported.");
+			xmlMappingLocation = ormConfig.getAsString( ORMKeys.cfclocation );
+			throw new BoxRuntimeException( "ORMKeys.autoGenMap: the `false` setting value is currently unsupported." );
 		} else {
 			// @TODO: Here we generate entity mappings and populate the temp directory (aka
 			// xmlMappingLocation) with the generated files.
@@ -99,7 +99,7 @@ public class SessionFactoryBuilder {
 		// Alternative test implementation
 		List<File> files = new java.util.ArrayList<>();
 		// Dummy file for testing
-		files.add(Paths.get("src/test/resources/bx/models/MyEntity.xml").toFile());
+		files.add( Paths.get( "src/test/resources/bx/models/MyEntity.xml" ).toFile() );
 		return files;
 	}
 
@@ -107,25 +107,25 @@ public class SessionFactoryBuilder {
 		Configuration configuration = new Configuration();
 
 		// @TODO: generic config goes here
-		if (ormConfig.containsKey(ORMKeys.namingStrategy)) {
+		if ( ormConfig.containsKey( ORMKeys.namingStrategy ) ) {
 			PhysicalNamingStrategy namingStrategy = getNamingStrategyForName(
-					ormConfig.getAsString(ORMKeys.namingStrategy));
-			if (namingStrategy != null) {
-				configuration.setPhysicalNamingStrategy(namingStrategy);
+			    ormConfig.getAsString( ORMKeys.namingStrategy ) );
+			if ( namingStrategy != null ) {
+				configuration.setPhysicalNamingStrategy( namingStrategy );
 			}
 		}
 
 		Properties properties = new Properties();
 		// @TODO: Any configuration which needs a specific java type (such as the
 		// connection provider instance) goes here
-		properties.put(AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider(getORMDataSource()));
-		configuration.setProperties(properties);
+		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( getORMDataSource() ) );
+		configuration.setProperties( properties );
 		return configuration;
 	}
 
-	private PhysicalNamingStrategy getNamingStrategyForName(String name) {
+	private PhysicalNamingStrategy getNamingStrategyForName( String name ) {
 		// @TODO: Use an enum for the naming strategies
-		return switch (name.toLowerCase()) {
+		return switch ( name.toLowerCase() ) {
 			/**
 			 * Historically, the "smart" naming strategy simply converts camelCase to
 			 * MACRO_CASE.
@@ -140,7 +140,7 @@ public class SessionFactoryBuilder {
 			 * The "cfc" naming strategy allows apps to define their own naming strategy by
 			 * providing a full CFC path.
 			 */
-			default -> new BoxLangClassNamingStrategy(loadBoxlangClassByPath(name));
+			default -> new BoxLangClassNamingStrategy( loadBoxlangClassByPath( name ) );
 		};
 	}
 
@@ -151,10 +151,10 @@ public class SessionFactoryBuilder {
 	 * @param classPath The path to the Boxlang class, either slash or dot
 	 *                  delimited.
 	 */
-	private Class<IClassRunnable> loadBoxlangClassByPath(String classPath) {
-		String packageName = Paths.get(classPath).getParent().toString().replace("/", ".");
-		return RunnableLoader.getInstance().loadClass(Paths.get(classPath), packageName,
-				BoxRuntime.getInstance().getRuntimeContext());
+	private Class<IClassRunnable> loadBoxlangClassByPath( String classPath ) {
+		String packageName = Paths.get( classPath ).getParent().toString().replace( "/", "." );
+		return RunnableLoader.getInstance().loadClass( Paths.get( classPath ), packageName,
+		    BoxRuntime.getInstance().getRuntimeContext() );
 	}
 
 	/**
@@ -162,7 +162,7 @@ public class SessionFactoryBuilder {
 	 * /**
 	 *
 	 * Get the application name for this session factory. Used as an identifier in
-	 * hash maps. */
+	 * hash maps.
 	 */
 	private Key getAppName() {
 		return appName;
