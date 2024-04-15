@@ -51,8 +51,8 @@ public class ApplicationLifecycle extends BaseInterceptor {
 			return;
 		}
 
-		ormEngine.setSessionFactoryForName(
-				listener.getAppName(), new SessionFactoryBuilder(ormSettings).build());
+		ormEngine.setSessionFactoryForName(listener.getAppName(),
+				new SessionFactoryBuilder(listener.getAppName(), ormSettings).build());
 		this.logger.info("Session factory created! " + ormEngine.getSessionFactoryForName(Key.runtime));
 	}
 

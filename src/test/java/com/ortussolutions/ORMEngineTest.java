@@ -2,7 +2,6 @@ package com.ortussolutions;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.file.Path;
 
@@ -22,39 +21,38 @@ import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.types.IStruct;
-import ortus.boxlang.runtime.types.Struct;
 
 public class ORMEngineTest {
 
-	static BoxRuntime	instance;
-	IBoxContext			context;
-	IScope				variables;
-	static Key			result	= new Key( "result" );
+	static BoxRuntime instance;
+	IBoxContext context;
+	IScope variables;
+	static Key result = new Key("result");
 
 	@BeforeAll
 	public static void setUp() {
-		instance = BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
+		instance = BoxRuntime.getInstance(true, Path.of("src/test/resources/boxlang.json").toString());
 	}
 
 	@BeforeEach
 	public void setupEach() {
-		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		variables	= context.getScopeNearby( VariablesScope.name );
+		context = new ScriptingRequestBoxContext(instance.getRuntimeContext());
+		variables = context.getScopeNearby(VariablesScope.name);
 	}
 
-	@Disabled( "Switch to module-based configuration" )
-	@DisplayName( "It can start up, register a runtime-wide session factory, and shut down." )
+	@Disabled("Switch to module-based configuration")
+	@DisplayName("It can start up, register a runtime-wide session factory, and shut down.")
 	@Test
 	public void testRuntimeSessionFactoryLifeCycle() {
-		ORMEngine	ormEngine	= ORMEngine.getInstance();
-		IStruct		ORMSettings	= ( IStruct ) context.getConfigItem( ORMKeys.ORMSettings );
-		assertNotNull( ORMSettings );
+		ORMEngine ormEngine = ORMEngine.getInstance();
+		IStruct ORMSettings = (IStruct) context.getConfigItem(ORMKeys.ORMSettings);
+		assertNotNull(ORMSettings);
 
-		ormEngine.setSessionFactoryForName( Key.runtime, new SessionFactoryBuilder( ORMSettings ).build() );
-		SessionFactory sessionFactory = ormEngine.getSessionFactoryForName( Key.runtime );
+		ormEngine.setSessionFactoryForName(Key.runtime, new SessionFactoryBuilder(Key.runtime, ORMSettings).build());
+		SessionFactory sessionFactory = ormEngine.getSessionFactoryForName(Key.runtime);
 
 		ormEngine.shutdown();
-		assertTrue( sessionFactory.isClosed() );
+		assertTrue(sessionFactory.isClosed());
 	}
 
 }

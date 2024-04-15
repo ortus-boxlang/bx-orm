@@ -22,12 +22,20 @@ import ortus.boxlang.runtime.runnables.RunnableLoader;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.util.FileSystemUtil;
 
 public class SessionFactoryBuilder {
 
 	private IStruct ormConfig;
 
-	public SessionFactoryBuilder(IStruct ormConfig) {
+	/**
+	 * The application name for this session factory. Used as an identifier in
+	 * hash maps.
+	 */
+	private Key appName;
+
+	public SessionFactoryBuilder(Key appName, IStruct ormConfig) {
+		this.appName = appName;
 		this.ormConfig = ormConfig;
 	}
 
@@ -57,35 +65,42 @@ public class SessionFactoryBuilder {
 	}
 
 	private List<File> getORMMappingFiles(IStruct ormConfig) {
+		// @TODO: Should we use the application name, or the ORM configuration hash?
+		String xmlMappingLocation = FileSystemUtil.getTempDirectory() + "/orm_mappings/" + getAppName().getName();
 		if (Boolean.FALSE.equals(ormConfig.getAsBoolean(ORMKeys.autoGenMap))) {
-			// Here we turn off the automatic generation of entity mappings and
-			// instead scan the codebase for orm.xml files.
-			// return Arrays.stream(ormConfig.getAsArray(ORMKeys.cfclocation))
-			// .flatMap(path -> {
-			// try {
-			// return Files.walk(Paths.get(path), 1);
-			// } catch (IOException e) {
-			// throw new BoxRuntimeException("Error walking cfclcation path: " +
-			// path.toString(), e);
-			// }
-			// })
-			// // filter to valid orm.xml files
-			// .filter(filePath -> FilePath.endsWith(".orm.xml"))
-			// // @TODO: I'm unsure, but we may need to convert the string path to a File
-			// // object to work around JPA's classpath limitations.
-			// // We should first try this without the conversion and see if it works.
-			// .map(filePath -> filePath.toFile())
-			// .toList();
-			throw new BoxRuntimeException(
-					"ORMKeys.autoGenMap: the `false` setting value is currently unsupported.");
+			// Skip mapping generation and load the pre-generated mappings from this
+			// location.
+			xmlMappingLocation = ormConfig.getAsString(ORMKeys.cfclocation);
+			throw new BoxRuntimeException("ORMKeys.autoGenMap: the `false` setting value is currently unsupported.");
 		} else {
-			List<File> files = new java.util.ArrayList<>();
-			// Dummy file for testing
-			files.add(Paths.get("src/test/resources/bx/models/MyEntity.xml").toFile());
-			// @TODO: Here we generate entity mappings and return an array of the
-			// generated files.
-			return files;
+			// @TODO: Here we generate entity mappings and populate the temp directory (aka
+			// xmlMappingLocation) with the generated files.
 		}
+		// Regardless of the autoGenMap configuration value, we now have a directory
+		// populated with JPA orm.xml mapping files.
+		// We now need to load these files into the Hibernate configuration.
+		// return Arrays.stream(xmlMappingLocation.split(","))
+		// .flatMap(path -> {
+		// try {
+		// return Files.walk(Paths.get(path), 1);
+		// } catch (IOException e) {
+		// throw new BoxRuntimeException("Error walking cfclcation path: " +
+		// path.toString(), e);
+		// }
+		// })
+		// // filter to valid orm.xml files
+		// .filter(filePath -> FilePath.endsWith(".orm.xml"))
+		// // @TODO: I'm unsure, but we may need to convert the string path to a File
+		// // object to work around JPA's classpath limitations.
+		// // We should first try this without the conversion and see if it works.
+		// .map(filePath -> filePath.toFile())
+		// .toList();
+
+		// Alternative test implementation
+		List<File> files = new java.util.ArrayList<>();
+		// Dummy file for testing
+		files.add(Paths.get("src/test/resources/bx/models/MyEntity.xml").toFile());
+		return files;
 	}
 
 	private Configuration buildConfiguration() {
@@ -140,5 +155,16 @@ public class SessionFactoryBuilder {
 		String packageName = Paths.get(classPath).getParent().toString().replace("/", ".");
 		return RunnableLoader.getInstance().loadClass(Paths.get(classPath), packageName,
 				BoxRuntime.getInstance().getRuntimeContext());
+	}
+
+	/**
+	 * Get the application name for this session factory.
+	 * /**
+	 *
+	 * Get the application name for this session factory. Used as an identifier in
+	 * hash maps. */
+	 */
+	private Key getAppName() {
+		return appName;
 	}
 }
