@@ -12,10 +12,13 @@ import org.hibernate.cfg.Configuration;
 
 import com.ortussolutions.config.ORMConnectionProvider;
 import com.ortussolutions.config.ORMKeys;
+import com.ortussolutions.config.naming.BoxLangClassNamingStrategy;
 import com.ortussolutions.config.naming.MacroCaseNamingStrategy;
 
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.jdbc.DataSource;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.runnables.RunnableLoader;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
@@ -106,22 +109,36 @@ public class SessionFactoryBuilder {
 	}
 
 	private PhysicalNamingStrategy getNamingStrategyForName(String name) {
-		return switch (name) {
+		// @TODO: Use an enum for the naming strategies
+		return switch (name.toLowerCase()) {
 			/**
 			 * Historically, the "smart" naming strategy simply converts camelCase to
 			 * MACRO_CASE.
 			 */
 			case "smart" -> new MacroCaseNamingStrategy();
 			/**
-			 * Allows apps to define their own naming strategy by providing a ful CFC path.
-			 */
-			case "CFC_Path" -> throw new BoxRuntimeException("CFC_Path naming strategy is not yet supported.");
-			/**
 			 * The "default" naming strategy is essentially a no-op, and simply returns the
 			 * identifier value unmodified.
 			 */
 			case "default" -> null;
-			default -> null;
+			/**
+			 * The "cfc" naming strategy allows apps to define their own naming strategy by
+			 * providing a full CFC path.
+			 */
+			default -> new BoxLangClassNamingStrategy(loadBoxlangClassByPath(name));
 		};
+	}
+
+	/**
+	 * Load and instantiate the Boxlang class by its string path. Useful for using a
+	 * .bx class as a custom naming strategy.
+	 *
+	 * @param classPath The path to the Boxlang class, either slash or dot
+	 *                  delimited.
+	 */
+	private Class<IClassRunnable> loadBoxlangClassByPath(String classPath) {
+		String packageName = Paths.get(classPath).getParent().toString().replace("/", ".");
+		return RunnableLoader.getInstance().loadClass(Paths.get(classPath), packageName,
+				BoxRuntime.getInstance().getRuntimeContext());
 	}
 }
