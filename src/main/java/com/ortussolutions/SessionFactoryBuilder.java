@@ -64,12 +64,18 @@ public class SessionFactoryBuilder {
 	 * configuration, but eventually we will support a default datasource.
 	 */
 	private DataSource getORMDataSource() {
-		String ormDatasource = this.ormConfig.getDatasourceName();
+		Object ormDatasource = this.ormConfig.getDatasourceName();
 		if ( ormDatasource != null ) {
-			return BoxRuntime.getInstance().getDataSourceService().get( Key.of( ormDatasource ) );
+			if ( ormDatasource instanceof IStruct datasourceStruct ) {
+				return BoxRuntime.getInstance().getDataSourceService().register( datasourceStruct );
+			}
+			Key datasourceKey = Key.of( ormDatasource );
+			if ( Boolean.TRUE.equals( BoxRuntime.getInstance().getDataSourceService().has( datasourceKey ) ) ) {
+				return BoxRuntime.getInstance().getDataSourceService().get( datasourceKey );
+			}
 		}
 		throw new BoxRuntimeException(
-		    "ORM configuration is missing 'datasource' key. Default datasources will be supported in a future iteration." );
+		    "ORM configuration is missing 'datasource' key, or named datasource is not found. Default datasources will be supported in a future iteration." );
 		// @TODO: Implement this. the hard part is knowing the context.
 		// logger.warn( "ORM configuration is missing 'datasource' key; falling back to
 		// default datasource" );
@@ -117,7 +123,7 @@ public class SessionFactoryBuilder {
 		// Alternative test implementation
 		List<File> files = new java.util.ArrayList<>();
 		// Dummy file for testing
-		files.add( Paths.get( "src/test/resources/bx/models/MyEntity.xml" ).toFile() );
+		files.add( Paths.get( "src/test/resources/app/models/MyEntity.xml" ).toFile() );
 		return files;
 	}
 

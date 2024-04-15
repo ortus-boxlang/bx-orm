@@ -10,7 +10,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -34,101 +33,104 @@ import ortus.boxlang.runtime.types.Struct;
 
 public class ApplicationLifecycleTest {
 
-	static BoxRuntime instance;
-	static ORMEngine ormEngine;
-	static InterceptorService interceptorService;
-	IBoxContext context;
-	IScope variables;
-	static Key result = new Key("result");
+	static BoxRuntime			instance;
+	static ORMEngine			ormEngine;
+	static InterceptorService	interceptorService;
+	IBoxContext					context;
+	IScope						variables;
+	static Key					result	= new Key( "result" );
 
 	@BeforeAll
 	public static void setUp() {
-		instance = BoxRuntime.getInstance(true);
-		ormEngine = ORMEngine.getInstance();
-		interceptorService = instance.getInterceptorService();
+		instance			= BoxRuntime.getInstance( true );
+		ormEngine			= ORMEngine.getInstance();
+		interceptorService	= instance.getInterceptorService();
 	}
 
 	@BeforeEach
 	public void setupEach() {
-		context = new ScriptingRequestBoxContext(instance.getRuntimeContext());
+		context = new ScriptingRequestBoxContext( instance.getRuntimeContext() );
 	}
 
-	@Disabled("Can't get this working.  Need to revisit.")
-	@DisplayName("Test my interceptor")
+	// @Disabled("Can't get this working. Need to revisit.")
+	@DisplayName( "Test my interceptor" )
 	@Test
-	void testInterceptor() {
-		interceptorService.register(new ApplicationLifecycle());
+	void testApplicationStartupListener() {
+		interceptorService.register( new ApplicationLifecycle() );
 
-		BoxTemplate template = new BoxTemplate() {
+		BoxTemplate			template	= new BoxTemplate() {
 
-			@Override
-			public List<ImportDefinition> getImports() {
-				return null;
-			}
+											@Override
+											public List<ImportDefinition> getImports() {
+												return null;
+											}
 
-			@Override
-			public void _invoke(IBoxContext context) {
-			}
+											@Override
+											public void _invoke( IBoxContext context ) {
+											}
 
-			@Override
-			public long getRunnableCompileVersion() {
-				return 1;
-			}
+											@Override
+											public long getRunnableCompileVersion() {
+												return 1;
+											}
 
-			@Override
-			public LocalDateTime getRunnableCompiledOn() {
-				return null;
-			}
+											@Override
+											public LocalDateTime getRunnableCompiledOn() {
+												return null;
+											}
 
-			@Override
-			public Object getRunnableAST() {
-				return null;
-			}
+											@Override
+											public Object getRunnableAST() {
+												return null;
+											}
 
-			@Override
-			public Path getRunnablePath() {
-				return Path.of("src/test/resources/app/Application.bx");
-			}
+											@Override
+											public Path getRunnablePath() {
+												return Path.of( "src/test/resources/app/Application.bx" );
+											}
 
-			public BoxSourceType getSourceType() {
-				return BoxSourceType.BOXSCRIPT;
-			}
+											public BoxSourceType getSourceType() {
+												return BoxSourceType.BOXSCRIPT;
+											}
 
-		};
-		ApplicationListener listener = new ApplicationTemplateListener(template, (RequestBoxContext) context);
+										};
+		ApplicationListener	listener	= new ApplicationTemplateListener( template, ( RequestBoxContext ) context );
 		listener.updateSettings(
-				Struct.of(
-						"ormSettings", Struct.of("database", "testDB"),
-						"name", "MyAppName"));
-		context.pushTemplate(template);
+		    Struct.of(
+		        "ormSettings", Struct.of( "datasource", "testDB" ),
+		        "datasources", Struct.of(
+		            "testDB", Struct.of(
+		                "driver", "derby",
+		                "connectionString", "jdbc:derby:memory:myDB;create=true" ) ),
+		        "name", "MyAppName" ) );
+		context.pushTemplate( template );
 		// Announce the event the interceptor listens to
 		interceptorService.announce(
-				Key.of("afterApplicationListenerLoad"),
-				Struct.of(
-						"listener", listener,
-						"context", context,
-						"template", template));
+		    Key.of( "afterApplicationListenerLoad" ),
+		    Struct.of(
+		        "listener", listener,
+		        "context", context,
+		        "template", template ) );
 
-		// Assertions go here
-		assertNotNull(ormEngine.getSessionFactoryForName(Key.of("MyAppName")));
+		assertNotNull( ormEngine.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
 
 	}
 
-	@DisplayName("It creates a SessionFactory on application startup")
+	@DisplayName( "It creates a SessionFactory on application startup" )
 	@Test
 	void testItStartsOnApplicationStart() {
-		interceptorService.register(new ApplicationLifecycle());
-		assertNull(ormEngine.getSessionFactoryForName(Key.of("MyAppName")));
+		interceptorService.register( new ApplicationLifecycle() );
+		assertNull( ormEngine.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
 		instance.executeSource(
-				"""
-						application name="MyApp" ormEnabled=true ormSettings={ database:"testDB" };
-						   """,
-				context);
+		    """
+		    application name="MyApp" ormEnabled=true ormSettings={ datasource:"testDB" };
+		       """,
+		    context );
 
-		Application targetApp = context.getParentOfType(ApplicationBoxContext.class).getApplication();
-		assertTrue(targetApp.hasStarted());
+		Application targetApp = context.getParentOfType( ApplicationBoxContext.class ).getApplication();
+		assertTrue( targetApp.hasStarted() );
 
-		assertNotNull(ormEngine.getSessionFactoryForName(Key.of("MyApp")));
+		assertNotNull( ormEngine.getSessionFactoryForName( Key.of( "MyApp" ) ) );
 	}
 
 }

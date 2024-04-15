@@ -25,14 +25,14 @@ public class ORMConfig {
 	 * The logger for this class. We may log warnings or errors if we encounter
 	 * unsupported ORM configuration.
 	 */
-	private static final Logger	logger	= LoggerFactory.getLogger( ORMConfig.class );
+	private static final Logger	logger		= LoggerFactory.getLogger( ORMConfig.class );
 
 	/**
 	 * Specifies whether ColdFusion should automatically generate entity mappings
 	 * for the persistent CFCs. If autogenmap=false, the mapping should be
-	 * provided in the form of <code>hbm.xml</code> files.
+	 * provided in the form of <code>orm.xml</code> files.
 	 */
-	private boolean				autoGenMap;
+	private boolean				autoGenMap	= true;
 
 	/**
 	 * Allows the engine to manage the Hibernate session. It is recommended not to
