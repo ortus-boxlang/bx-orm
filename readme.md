@@ -116,6 +116,13 @@ The github actions will clone, test, package, deploy your module to ForgeBox and
 
 > Please contact the admins in the `#infrastructure` channel for these credentials if needed
 
+## Development
+
+To get started hacking on boxlang-orm:
+
+1. Clone the repo
+2. Copy the latest boxlang binary jar to `src/test/resources/libs/boxlang-1.0.0-all.jar`
+3. Copy/unzip the latest JDBC module of your choice to `src/test/resources/libs/modules/`, for example `src/test/resources/modules/bx-derby`.
 
 ## Ortus Sponsors
 

@@ -6,7 +6,8 @@
         "mappings": {},
         // This can be more than one location
         "modulesDirectory": [
-            "${user-dir}/src/main"
+            "${user-dir}/src/main",
+            "${user-dir}/src/test/resources/modules"
         ],
         "datasources": {
             "testDB": {
