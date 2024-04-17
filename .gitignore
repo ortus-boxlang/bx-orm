@@ -2,6 +2,9 @@
 build/**
 !gradle/wrapper/gradle-wrapper.jar
 
+# Log files and derby artifacts
+derby.log
+
 ### IntelliJ IDEA ###
 .idea/
 
