@@ -17,6 +17,8 @@ plugins {
 ext {
 	buildID = System.getenv( 'BUILD_ID' ) ?: '0'
 	branch = System.getenv( 'BRANCH' ) ?: 'development'
+	derbyModuleVersion = '1.0.0';
+	testResourceDirectory = 'src/test/resources';
 }
 
 repositories {
@@ -192,6 +194,25 @@ task downloadBoxLang( type: Download ) {
     dest "src/test/resources/libs/boxlang-${boxlangVersion}-all.jar"
     overwrite true
     onlyIfModified false
+}
+
+/**
+ * TEMPORARY until we publish to maven
+ * Download the zip file from https://ortus-temp.s3.amazonaws.com/boxlang-modules/bx-derby/bx-derby-1.0.0.zip
+ */
+task downloadDerbyModule( type: Download ) {
+    // Configure the URL of the file to download
+    src "https://ortus-temp.s3.amazonaws.com/boxlang-modules/bx-derby/bx-derby-${derbyModuleVersion}.zip"
+    dest new File(buildDir, "bx-derby-${derbyModuleVersion}.zip")
+}
+
+/**
+ * TEMPORARY until we publish to maven
+ * Task to install the latest derby jar from https://ortus-temp.s3.amazonaws.com/boxlang-modules/bx-derby/bx-derby-1.0.0.zip
+ */
+task installDerbyModule(dependsOn: downloadDerbyModule, type: Copy) {
+	from zipTree(downloadDerbyModule.dest)
+	into "${testResourceDirectory}/modules/bx-derby"
 }
 
 /**
