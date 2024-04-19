@@ -7,8 +7,11 @@ import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ortussolutions.config.ORMKeys;
+
 import ch.qos.logback.classic.Level;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.loader.DynamicClassLoader;
 import ortus.boxlang.runtime.scopes.Key;
 
@@ -96,15 +99,16 @@ public class ORMEngine {
 		SessionFactory	sessionFactory	= getSessionFactoryForName( applicationName );
 
 		// Method One: Using Hibernate's session context tracker
-		return sessionFactory.getCurrentSession();
+		// return sessionFactory.getCurrentSession();
 
 		// Method Two: using Boxlang context attachments:
 		// Get the nearest JDBC capable context. This can be either a thread or a request.
-		// IJDBCCapableContext jdbcContext = context.getParentOfType( IJDBCCapableContext.class );
-		// if ( jdbcContext.hasAttachment( ORMKeys.ORMSession ) ) {
-		// return ( Session ) jdbcContext.getAttachment( ORMKeys.ORMSession );
-		// }
-		// return ( Session ) jdbcContext.putAttachment( ORMKeys.ORMSession, sessionFactory.openSession() );
+		IBoxContext		jdbcContext		= ( IBoxContext ) context.getParentOfType( IJDBCCapableContext.class );
+		if ( jdbcContext.hasAttachment( ORMKeys.ORMSession ) ) {
+			return jdbcContext.getAttachment( ORMKeys.ORMSession );
+		}
+		jdbcContext.putAttachment( ORMKeys.ORMSession, sessionFactory.openSession() );
+		return jdbcContext.getAttachment( ORMKeys.ORMSession );
 	}
 
 	/**

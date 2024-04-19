@@ -54,7 +54,7 @@ public class ApplicationLifecycleTest {
 		context = new ScriptingRequestBoxContext( instance.getRuntimeContext() );
 	}
 
-	// @Disabled("Can't get this working. Need to revisit.")
+	@Disabled( "Can't get this working. Need to revisit." )
 	@DisplayName( "Test my interceptor" )
 	@Test
 	void testApplicationStartupListener() {

@@ -10,7 +10,6 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.hibernate.Session;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -136,7 +135,7 @@ public class EntityLoadByPKTest {
 
 		assertNotNull( ormEngine.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
 
-		Session session = ORMEngine.getInstance().getSessionFactoryForName( Key.of( "MyAppName" ) ).openSession();
+		// Session session = ORMEngine.getInstance().getSessionFactoryForName( Key.of( "MyAppName" ) ).openSession();
 		// Transaction transaction = session.beginTransaction();
 
 		// @formatter:off
@@ -150,7 +149,7 @@ public class EntityLoadByPKTest {
 // @formatter:on
 
 		// transaction.commit();
-		session.close();
+		// session.close();
 		assertEquals( "CEO", variables.get( result ) );
 	}
 
