@@ -23,11 +23,13 @@ public class ORMKeys {
 	public static final Key	logSQL					= Key.of( "logSQL" );
 	public static final Key	namingStrategy			= Key.of( "namingStrategy" );
 	public static final Key	ormConfig				= Key.of( "ormConfig" );
+	public static final Key	ORMType					= Key.of( "ORMType" );
 	public static final Key	saveMapping				= Key.of( "saveMapping" );
 	public static final Key	schema					= Key.of( "schema" );
 	public static final Key	catalog					= Key.of( "catalog" );
 	public static final Key	secondaryCacheEnabled	= Key.of( "secondaryCacheEnabled" );
 	public static final Key	skipCFCWithError		= Key.of( "skipCFCWithError" );
 	public static final Key	sqlScript				= Key.of( "sqlScript" );
+	public static final Key	table					= Key.of( "table" );
 	public static final Key	useDBForMapping			= Key.of( "useDBForMapping" );
 }

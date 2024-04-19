@@ -32,6 +32,7 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.services.DatasourceService;
 import ortus.boxlang.runtime.services.InterceptorService;
+import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.Struct;
 import tools.JDBCTestUtils;
 
@@ -116,7 +117,10 @@ public class EntityLoadByPKTest {
 		listener.updateSettings(
 		    Struct.of(
 		        "ormEnabled", true,
-		        "ormSettings", Struct.of( "datasource", "TestDB" ),
+		        "ormSettings", Struct.of(
+		            "datasource", "TestDB",
+		            "cfcLocation", Array.of( "models" )
+		        ),
 		        "datasources", Struct.of(
 		            "TestDB", Struct.of(
 		                "driver", "derby",

@@ -2,6 +2,7 @@ package ortus.boxlang.orm.config;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.cfg.AvailableSettings;
@@ -15,6 +16,7 @@ import ortus.boxlang.orm.config.naming.MacroCaseNamingStrategy;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.runnables.RunnableLoader;
+import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
@@ -70,7 +72,7 @@ public class ORMConfig {
 	 * application directory, its sub-directories, and its mapped directories to
 	 * search for persistent CFCs.
 	 */
-	private String				cfclocation;
+	private String[]			cfcLocation;
 
 	/**
 	 * Define the data source to be utilized by the ORM. If not used,
@@ -249,9 +251,13 @@ public class ORMConfig {
 			cacheProvider = properties.getAsString( ORMKeys.cacheProvider );
 		}
 
-		if ( properties.containsKey( ORMKeys.cfclocation ) && properties.get( ORMKeys.cfclocation ) != null
-		    && !properties.getAsString( ORMKeys.cfclocation ).isBlank() ) {
-			cfclocation = properties.getAsString( ORMKeys.cfclocation );
+		if ( properties.containsKey( ORMKeys.cfclocation ) && properties.get( ORMKeys.cfclocation ) != null ) {
+			if ( properties.get( ORMKeys.cfclocation ) instanceof String cfcLocationString && !properties.getAsString( ORMKeys.cfclocation ).isBlank() ) {
+				this.cfcLocation = new String[] { cfcLocationString };
+			} else if ( properties.get( ORMKeys.cfclocation ) instanceof Array cfcLocationArray ) {
+				Object[] temp = properties.getAsArray( ORMKeys.cfclocation ).toArray();
+				cfcLocation = Arrays.copyOf( temp, temp.length, String[].class );
+			}
 		}
 
 		if ( properties.containsKey( ORMKeys.datasource ) && properties.get( ORMKeys.datasource ) != null ) {
@@ -309,8 +315,8 @@ public class ORMConfig {
 		return autoGenMap;
 	}
 
-	public String getCFCLocation() {
-		return cfclocation;
+	public String[] getCFCLocation() {
+		return cfcLocation;
 	}
 
 	public String getDatasource() {

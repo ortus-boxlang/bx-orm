@@ -1,6 +1,7 @@
 package ortus.boxlang.orm;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
@@ -17,11 +18,14 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.orm.config.ORMConfig;
 import ortus.boxlang.orm.config.ORMConnectionProvider;
 import ortus.boxlang.orm.hibernate.EntityTuplizer;
+import ortus.boxlang.orm.mapping.EntityRecord;
+import ortus.boxlang.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
@@ -32,6 +36,7 @@ public class SessionFactoryBuilder {
 	public static final String		BOXLANG_APPLICATION_ENTITYMAPPING	= "BOXLANG_APPLICATION_ENTITYMAPPING";
 	public static final String		BOXLANG_APPLICATION_CONTEXT			= "BOXLANG_APPLICATION_CONTEXT";
 	public static final String		BOXLANG_CONTEXT						= "BOXLANG_CONTEXT";
+	public static final String		BOXLANG_ENTITY_MAP					= "BOXLANG_ENTITY_MAP";
 
 	/**
 	 * The logger for this class. We may log warnings or errors if we encounter
@@ -64,12 +69,10 @@ public class SessionFactoryBuilder {
 	private IJDBCCapableContext		context;
 	private ApplicationBoxContext	applicationContext;
 
-	public static String lookupBoxLangEntity( SessionFactory sessionFactory, String entityName ) {
-		Map entityMap = ( Map ) sessionFactory.getProperties().computeIfAbsent(
-		    BOXLANG_APPLICATION_ENTITYMAPPING,
-		    ( x ) -> new HashMap<String, String>() );
+	public static Class<IClassRunnable> lookupBoxLangClass( SessionFactory sessionFactory, String entityName ) {
+		Map<String, EntityRecord> entityMap = ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
 
-		return ( String ) entityMap.get( entityName.toLowerCase() );
+		return entityMap.get( entityName ).entityClass();
 	}
 
 	public static ApplicationBoxContext getApplicationContext( SessionFactory sessionFactory ) {
@@ -90,10 +93,16 @@ public class SessionFactoryBuilder {
 	}
 
 	public SessionFactory build() {
-		Configuration configuration = buildConfiguration();
-		getORMMappingFiles().forEach( configuration::addFile );
+		Configuration	configuration	= buildConfiguration();
+		// getORMMappingFiles().forEach( configuration::addFile );
 
-		return configuration.buildSessionFactory();
+		SessionFactory	factory			= configuration.buildSessionFactory();
+
+		factory.getProperties().put( BOXLANG_APPLICATION_CONTEXT, configuration.getProperties().get( BOXLANG_APPLICATION_CONTEXT ) );
+		factory.getProperties().put( BOXLANG_CONTEXT, configuration.getProperties().get( BOXLANG_CONTEXT ) );
+		factory.getProperties().put( BOXLANG_ENTITY_MAP, configuration.getProperties().get( BOXLANG_ENTITY_MAP ) );
+
+		return factory;
 	}
 
 	/**
@@ -119,11 +128,11 @@ public class SessionFactoryBuilder {
 
 	private List<File> getORMMappingFiles() {
 		// @TODO: Should we use the application name, or the ORM configuration hash?
-		String xmlMappingLocation = FileSystemUtil.getTempDirectory() + "/orm_mappings/" + getAppName().getName();
+		String xmlMappingLocation = Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", getAppName().getName() ).toString();
 		if ( !ormConfig.isAutoGenMap() ) {
 			// Skip mapping generation and load the pre-generated mappings from this
 			// location.
-			xmlMappingLocation = ormConfig.getCFCLocation();
+			// xmlMappingLocation = ormConfig.getCFCLocation();
 			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
 		} else {
 			// @TODO: Here we generate entity mappings and populate the temp directory (aka
@@ -155,8 +164,10 @@ public class SessionFactoryBuilder {
 		// .map(filePath -> filePath.toFile())
 		// .toList();
 
+		Map<String, EntityRecord>	entities	= new MappingGenerator( xmlMappingLocation ).mapEntities( ( IBoxContext ) context, ormConfig.getCFCLocation() );
+
 		// Alternative test implementation
-		List<File> files = new java.util.ArrayList<>();
+		List<File>					files		= new java.util.ArrayList<>();
 		// Dummy file for testing
 		files.add( Paths.get( "src/test/resources/app/models/Event.hbm.xml" ).toFile() );
 		files.add( Paths.get( "src/test/resources/app/models/Developer.hbm.xml" ).toFile() );
@@ -174,10 +185,22 @@ public class SessionFactoryBuilder {
 		properties.put( BOXLANG_APPLICATION_ENTITYMAPPING, new HashMap<String, String>() );
 		properties.put( BOXLANG_APPLICATION_CONTEXT, applicationContext );
 		properties.put( BOXLANG_CONTEXT, context );
-		configuration.addProperties( properties );
 
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.POJO, EntityTuplizer.class );
+
+		String						xmlMappingLocation	= Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", getAppName().getName() ).toString();
+		Map<String, EntityRecord>	entities			= new MappingGenerator( xmlMappingLocation ).mapEntities( ( IBoxContext ) context,
+		    ormConfig.getCFCLocation() );
+		properties.put( BOXLANG_ENTITY_MAP, entities );
+
+		entities.values()
+		    .stream()
+		    .map( EntityRecord::mappingFile )
+		    .map( Path::toString )
+		    .forEach( configuration::addFile );
+
+		configuration.addProperties( properties );
 
 		return configuration;
 	}

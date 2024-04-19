@@ -8,7 +8,9 @@ import org.hibernate.tuple.entity.EntityMetamodel;
 
 import ortus.boxlang.orm.SessionFactoryBuilder;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.loader.ClassLocator;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 
 public class BoxClassInstantiator implements Instantiator {
 
@@ -24,13 +26,13 @@ public class BoxClassInstantiator implements Instantiator {
 
 	@Override
 	public Object instantiate( Serializable id ) {
-		String		boxClassName	= SessionFactoryBuilder.lookupBoxLangEntity( entityMetamodel.getSessionFactory(),
+		Class<IClassRunnable>	bxClass	= SessionFactoryBuilder.lookupBoxLangClass( entityMetamodel.getSessionFactory(),
 		    entityMetamodel.getName() );
 		// ApplicationBoxContext context = SessionFactoryBuilder
-		IBoxContext	context			= SessionFactoryBuilder
+		IBoxContext				context	= SessionFactoryBuilder
 		    .getContext( entityMetamodel.getSessionFactory() );
 
-		return classLocator.load( context, "models.Developer" ).invokeConstructor( context ).getTargetInstance();
+		return DynamicObject.of( bxClass ).invokeConstructor( context ).getTargetInstance();
 	}
 
 	@Override
