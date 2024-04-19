@@ -75,10 +75,14 @@ The project version, BoxLang Version and JDK version is defined in the `build.gr
 
 ## Gradle Tasks
 
-Before you get started, you need to run the `downloadBoxLang` task in order to download the latest BoxLang binary until we publish to Maven.
+Until we publish to Maven, you will also need to manually run these two gradle tasks to set up required dependencies:
+
+* `downloadBoxLang` - download the latest BoxLang binary
+* `installDerbyModule` - install the Apache Derby JDBC module for creating datasource connections
 
 ```bash
 gradle downloadBoxLang
+gradle installDerbyModule
 ```
 
 This will store the binary under `/src/test/resources/libs` for you to use in your tests and compiler. Here are some basic tasks

@@ -71,6 +71,7 @@ jobs:
       - name: Test Module
         run: |
           gradle downloadBoxLang
+          gradle installDerbyModule
           gradle test --stacktrace --console=plain
 
       - name: Upload Test Results
