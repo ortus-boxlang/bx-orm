@@ -36,7 +36,7 @@ class {
 	 * The BoxLang mapping for your module.  All BoxLang modules are registered with an internal
 	 * mapping prefix of : bxModules.{this.mapping}, /bxmodules/{this.mapping}. Ex: bxModules.test, /bxmodules/test
 	 */
-	this.mapping = "orm";
+	this.mapping = "bxorm";
 
 	/**
 	 * Who built the module
@@ -101,7 +101,7 @@ class {
 		 * The module interceptors to register into the runtime
 		 */
 		interceptors = [
-			{ class="#moduleRecord.invocationPath#.interceptors.ApplicationLifecycle", properties={} }
+			{ class="#moduleRecord.invocationPath#.ortus.boxlang.orm.interceptors.ApplicationLifecycle", properties={} }
 		];
 
 		/**
