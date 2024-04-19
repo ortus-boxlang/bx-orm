@@ -100,9 +100,7 @@ class {
 		/**
 		 * The module interceptors to register into the runtime
 		 */
-		interceptors = [
-			{ class="#moduleRecord.invocationPath#.ortus.boxlang.orm.interceptors.ApplicationLifecycle", properties={} }
-		];
+		interceptors = [];
 
 		/**
 		 * A list of custom interception points to register into the runtime
