@@ -3,7 +3,6 @@ package com.ortussolutions.bifs;
 import java.util.Set;
 
 import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 
 import com.ortussolutions.ORMEngine;
 import com.ortussolutions.config.ORMKeys;
@@ -38,11 +37,7 @@ public class EntityLoadByPK extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Key				applicationName	= context.getParentOfType( ortus.boxlang.runtime.context.ApplicationBoxContext.class )
-		    .getApplication().getName();
-		SessionFactory	sessionFactory	= ORMEngine.getInstance().getSessionFactoryForName( applicationName );
-
-		Session			session			= sessionFactory.getCurrentSession();
+		Session session = ORMEngine.getInstance().getSessionForContext( context );
 
 		session.beginTransaction();
 

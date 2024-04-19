@@ -79,6 +79,30 @@ public class ORMEngine {
 	}
 
 	/**
+	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 *
+	 * @param context The context for which to get a session.
+	 *
+	 * @return The Hibernate session.
+	 */
+	public Session getSessionForContext( IBoxContext context ) {
+		Key				applicationName	= context.getParentOfType( ortus.boxlang.runtime.context.ApplicationBoxContext.class )
+		    .getApplication().getName();
+		SessionFactory	sessionFactory	= getSessionFactoryForName( applicationName );
+
+		// Method One: Using Hibernate's session context tracker
+		return sessionFactory.getCurrentSession();
+
+		// Method Two: using Boxlang context attachments:
+		// Get the nearest JDBC capable context. This can be either a thread or a request.
+		// IJDBCCapableContext jdbcContext = context.getParentOfType( IJDBCCapableContext.class );
+		// if ( jdbcContext.hasAttachment( ORMKeys.ORMSession ) ) {
+		// return ( Session ) jdbcContext.getAttachment( ORMKeys.ORMSession );
+		// }
+		// return ( Session ) jdbcContext.putAttachment( ORMKeys.ORMSession, sessionFactory.openSession() );
+	}
+
+	/**
 	 * Shut down the ORM engine, closing all Hibernate session factories and
 	 * sessions, and releasing all resources.
 	 */
