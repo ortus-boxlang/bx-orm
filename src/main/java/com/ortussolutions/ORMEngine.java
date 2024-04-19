@@ -2,10 +2,14 @@ package com.ortussolutions;
 
 import java.util.Map;
 
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ch.qos.logback.classic.Level;
+import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.loader.DynamicClassLoader;
 import ortus.boxlang.runtime.scopes.Key;
 
 /**
@@ -40,6 +44,7 @@ public class ORMEngine {
 	 */
 	private ORMEngine() {
 		this.sessionFactories = new java.util.HashMap<>();
+		setupCustomLogLevels();
 	}
 
 	/**
@@ -71,7 +76,7 @@ public class ORMEngine {
 	 * Get a Hibernate session factory by name.
 	 *
 	 * @param name The name of the session factory.
-	 * 
+	 *
 	 * @return The Hibernate session factory.
 	 */
 	public SessionFactory getSessionFactoryForName( Key name ) {
@@ -113,5 +118,15 @@ public class ORMEngine {
 		sessionFactories.forEach( ( key, sessionFactory ) -> {
 			sessionFactory.close();
 		} );
+	}
+
+	/**
+	 * Set up custom log levels for the ORM engine.
+	 *
+	 * We can use this method or similar to adjust Hibernate logging levels and pipe them to a destination (log file) of choice.
+	 */
+	private void setupCustomLogLevels() {
+		// How can we put this graciously: the class loader logs are just too much.
+		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( DynamicClassLoader.class ) ).setLevel( Level.WARN );
 	}
 }
