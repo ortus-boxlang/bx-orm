@@ -1,54 +1,157 @@
 package com.ortussolutions.bifs;
 
+import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.nio.file.Path;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.List;
 
+import org.hibernate.Session;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.ortussolutions.ORMEngine;
+import com.ortussolutions.interceptors.ApplicationLifecycle;
+
+import ortus.boxlang.compiler.parser.BoxSourceType;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.application.ApplicationListener;
+import ortus.boxlang.runtime.application.ApplicationTemplateListener;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
+import ortus.boxlang.runtime.jdbc.DataSource;
+import ortus.boxlang.runtime.loader.ImportDefinition;
+import ortus.boxlang.runtime.runnables.BoxTemplate;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
+import ortus.boxlang.runtime.services.DatasourceService;
+import ortus.boxlang.runtime.services.InterceptorService;
+import ortus.boxlang.runtime.types.Struct;
+import tools.JDBCTestUtils;
 
-// TODO implement test
-@Disabled
 public class EntityLoadByPKTest {
 
-	static BoxRuntime	instance;
-	IBoxContext			context;
-	IScope				variables;
-	static Key			result	= new Key( "result" );
+	static BoxRuntime instance;
+	ScriptingRequestBoxContext context;
+	IScope variables;
+	static Key result = new Key("result");
+	static InterceptorService interceptorService;
+	static ORMEngine ormEngine;
+
+	static DataSource datasource;
+	static DatasourceService datasourceService;
 
 	@BeforeAll
 	public static void setUp() {
-		instance = BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
+		instance = BoxRuntime.getInstance(true, Path.of("src/test/resources/boxlang.json").toString());
+		ormEngine = ORMEngine.getInstance();
+		interceptorService = instance.getInterceptorService();
+		interceptorService.register(new ApplicationLifecycle());
+		datasourceService = instance.getDataSourceService();
+		datasource = JDBCTestUtils.constructTestDataSource("TestDB");
+	}
+
+	public static void teardown() throws SQLException {
+		// BaseJDBCTest.teardown();
+		JDBCTestUtils.dropDevelopersTable(datasource);
+		datasource.shutdown();
 	}
 
 	@BeforeEach
 	public void setupEach() {
-		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		variables	= context.getScopeNearby( VariablesScope.name );
+		context = new ScriptingRequestBoxContext(instance.getRuntimeContext());
+		variables = context.getScopeNearby(VariablesScope.name);
+		context.getConnectionManager().setDefaultDatasource(datasource);
+		assertDoesNotThrow(() -> JDBCTestUtils.resetDevelopersTable(datasource));
 	}
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName("It can load an entity by pk")
 	@Test
-	public void testExampleBIF() {
-		instance.executeSource( "result = ORMFlush()", context );
-		assertEquals( "Hello from an ORMFlush!", variables.get( result ) );
-	}
+	public void testEntityLoadByPK() {
+		assertNull(ormEngine.getSessionFactoryForName(Key.of("MyAppName")));
 
-	@DisplayName( "It can test the ExampleBIF" )
-	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+		BoxTemplate template = new BoxTemplate() {
+
+			@Override
+			public List<ImportDefinition> getImports() {
+				return null;
+			}
+
+			@Override
+			public void _invoke(IBoxContext context) {
+			}
+
+			@Override
+			public long getRunnableCompileVersion() {
+				return 1;
+			}
+
+			@Override
+			public LocalDateTime getRunnableCompiledOn() {
+				return null;
+			}
+
+			@Override
+			public Object getRunnableAST() {
+				return null;
+			}
+
+			@Override
+			public Path getRunnablePath() {
+				return Path.of("src/test/resources/app/Application.bx");
+			}
+
+			public BoxSourceType getSourceType() {
+				return BoxSourceType.BOXSCRIPT;
+			}
+
+		};
+		ApplicationListener listener = new ApplicationTemplateListener(template, (RequestBoxContext) context);
+		listener.updateSettings(
+				Struct.of(
+						"ormEnabled", true,
+						"ormSettings", Struct.of("datasource", "TestDB"),
+						"datasources", Struct.of(
+								"TestDB", Struct.of(
+										"driver", "derby",
+										"properties", Struct.of(
+												"connectionString", "jdbc:derby:memory:TestDB;create=true"))),
+						"name", "MyAppName"));
+		context.pushTemplate(template);
+		// Announce the event the interceptor listens to
+		interceptorService.announce(
+				Key.of("afterApplicationListenerLoad"),
+				Struct.of(
+						"listener", listener,
+						"context", context,
+						"template", template));
+
+		assertNotNull(ormEngine.getSessionFactoryForName(Key.of("MyAppName")));
+
+		Session session = ORMEngine.getInstance().getSessionFactoryForName(Key.of("MyAppName")).openSession();
+		// Transaction transaction = session.beginTransaction();
+
+		// @formatter:off
+		instance.executeSource(
+			"""
+				developer = entityLoadByPK( "Developer", 1 );
+				result = developer.getRole();
+			""",
+			context
+		);
+// @formatter:on
+
+		// transaction.commit();
+		session.close();
+		assertEquals("CEO", variables.get(result));
 	}
 
 }

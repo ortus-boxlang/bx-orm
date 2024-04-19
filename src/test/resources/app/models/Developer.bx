@@ -1,0 +1,5 @@
+class accessors=true {
+    property name="id";
+    property name="name";
+    property name="role";
+}
