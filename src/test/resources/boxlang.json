@@ -30,6 +30,22 @@
             "useLastAccessTimeouts": true
         },
         "caches": {
+			"sessions": {
+				"provider": "BoxCacheProvider",
+				"properties": {
+					"evictCount": 1,
+					"evictionPolicy": "LRU",
+					"freeMemoryPercentageThreshold": 0,
+					// TODO:  2147483647 is the largest integer allowed by Java but the ConcurrentStore will allocate 2147483647/4 as the initial size of the Concurent map and will result in OOM errors
+					"maxObjects": 100000,
+					"defaultLastAccessTimeout": 3600,
+					"defaultTimeout": 3600,
+					"objectStore": "ConcurrentStore",
+					"reapFrequency": 120,
+					"resetTimeoutOnAccess": true,
+					"useLastAccessTimeouts": true
+				}
+			},
             "imports": {
                 "provider": "BoxCacheProvider",
                 "properties": {
