@@ -28,28 +28,28 @@ public class JDBCTestUtils {
 	 */
 	public static boolean hasMySQLDriver() {
 		return DriverManager.drivers()
-				.filter(driver -> {
-					String driverName = driver.getClass().getName();
-					return driverName.equals("com.mysql.jdbc.Driver") || driverName.equals("com.mysql.cj.jdbc.Driver");
-				})
-				.findFirst()
-				.map(driver -> true)
-				.orElse(false);
+		    .filter( driver -> {
+			    String driverName = driver.getClass().getName();
+			    return driverName.equals( "com.mysql.jdbc.Driver" ) || driverName.equals( "com.mysql.cj.jdbc.Driver" );
+		    } )
+		    .findFirst()
+		    .map( driver -> true )
+		    .orElse( false );
 	}
 
-	public static IStruct getDatasourceConfig(String databaseName, String driver, IStruct properties) {
+	public static IStruct getDatasourceConfig( String databaseName, String driver, IStruct properties ) {
 
-		properties.computeIfAbsent(Key.of("connectionString"),
-				key -> "jdbc:derby:memory:" + databaseName + ";create=true");
+		properties.computeIfAbsent( Key.of( "connectionString" ),
+		    key -> "jdbc:derby:memory:" + databaseName + ";create=true" );
 
 		return Struct.of(
-				"name", databaseName,
-				"driver", driver,
-				"properties", properties);
+		    "name", databaseName,
+		    "driver", driver,
+		    "properties", properties );
 	}
 
-	public static IStruct getDatasourceConfig(String databaseName) {
-		return getDatasourceConfig(databaseName, "derby", new Struct());
+	public static IStruct getDatasourceConfig( String databaseName ) {
+		return getDatasourceConfig( databaseName, "derby", new Struct() );
 	}
 
 	/**
@@ -62,8 +62,8 @@ public class JDBCTestUtils {
 	 *                     to grab the caller class name and thus ensure uniqueness.
 	 * @param driver       String driver name or OTHER
 	 */
-	public static DataSource buildDatasource(String databaseName, String driver, IStruct properties) {
-		return DataSource.fromStruct(getDatasourceConfig(databaseName, driver, properties));
+	public static DataSource buildDatasource( String databaseName, String driver, IStruct properties ) {
+		return DataSource.fromStruct( getDatasourceConfig( databaseName, driver, properties ) );
 	}
 
 	/**
@@ -77,8 +77,8 @@ public class JDBCTestUtils {
 	 *                     to grab the caller class name and thus ensure uniqueness.
 	 * @param properties   The properties to merge in
 	 */
-	public static DataSource buildDatasource(String databaseName, IStruct properties) {
-		return buildDatasource(databaseName, "derby", properties);
+	public static DataSource buildDatasource( String databaseName, IStruct properties ) {
+		return buildDatasource( databaseName, "derby", properties );
 	}
 
 	/**
@@ -91,8 +91,8 @@ public class JDBCTestUtils {
 	 *                     or a stack trace
 	 *                     to grab the caller class name and thus ensure uniqueness.
 	 */
-	public static DataSource buildDatasource(String databaseName) {
-		return buildDatasource(databaseName, "derby", new Struct());
+	public static DataSource buildDatasource( String databaseName ) {
+		return buildDatasource( databaseName, "derby", new Struct() );
 	}
 
 	/**
@@ -110,21 +110,21 @@ public class JDBCTestUtils {
 	 *
 	 * @return A DataSource instance with a consistent `DEVELOPERS` table created.
 	 */
-	public static DataSource constructTestDataSource(String databaseName, String driver) {
-		DataSource datasource = DataSource.fromStruct(Struct.of(
-				"name", databaseName,
-				"driver", driver,
-				"properties", Struct.of("connectionString", "jdbc:derby:memory:" + databaseName + ";create=true")));
+	public static DataSource constructTestDataSource( String databaseName, String driver ) {
+		DataSource datasource = DataSource.fromStruct( Struct.of(
+		    "name", databaseName,
+		    "driver", driver,
+		    "properties", Struct.of( "connectionString", "jdbc:derby:memory:" + databaseName + ";create=true" ) ) );
 		try {
-			datasource.execute("CREATE TABLE developers ( id INTEGER, name VARCHAR(155), role VARCHAR(155) )");
-		} catch (DatabaseException e) {
+			datasource.execute( "CREATE TABLE developers ( id INTEGER, name VARCHAR(155), role VARCHAR(155) )" );
+		} catch ( DatabaseException e ) {
 			// Ignore the exception if the table already exists
 		}
 		return datasource;
 	}
 
-	public static DataSource constructTestDataSource(String databaseName) {
-		return constructTestDataSource(databaseName, "derby");
+	public static DataSource constructTestDataSource( String databaseName ) {
+		return constructTestDataSource( databaseName, "derby" );
 	}
 
 	/**
@@ -132,8 +132,8 @@ public class JDBCTestUtils {
 	 *
 	 * @param datasource
 	 */
-	public static void dropDevelopersTable(DataSource datasource) {
-		datasource.execute("DROP TABLE developers");
+	public static void dropDevelopersTable( DataSource datasource ) {
+		datasource.execute( "DROP TABLE developers" );
 	}
 
 	/**
@@ -141,10 +141,10 @@ public class JDBCTestUtils {
 	 *
 	 * @param datasource
 	 */
-	public static void resetDevelopersTable(DataSource datasource) {
-		datasource.execute("TRUNCATE TABLE developers");
-		datasource.execute("INSERT INTO developers ( id, name, role ) VALUES ( 77, 'Michael Born', 'Developer' )");
-		datasource.execute("INSERT INTO developers ( id, name, role ) VALUES ( 1, 'Luis Majano', 'CEO' )");
-		datasource.execute("INSERT INTO developers ( id, name, role ) VALUES ( 42, 'Eric Peterson', 'Developer' )");
+	public static void resetDevelopersTable( DataSource datasource ) {
+		datasource.execute( "TRUNCATE TABLE developers" );
+		datasource.execute( "INSERT INTO developers ( id, name, role ) VALUES ( 77, 'Michael Born', 'Developer' )" );
+		datasource.execute( "INSERT INTO developers ( id, name, role ) VALUES ( 1, 'Luis Majano', 'CEO' )" );
+		datasource.execute( "INSERT INTO developers ( id, name, role ) VALUES ( 42, 'Eric Peterson', 'Developer' )" );
 	}
 }

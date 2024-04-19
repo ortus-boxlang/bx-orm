@@ -39,104 +39,104 @@ import tools.JDBCTestUtils;
 
 public class EntityLoadByPKTest {
 
-	static BoxRuntime instance;
-	ScriptingRequestBoxContext context;
-	IScope variables;
-	static Key result = new Key("result");
-	static InterceptorService interceptorService;
-	static ORMEngine ormEngine;
+	static BoxRuntime			instance;
+	ScriptingRequestBoxContext	context;
+	IScope						variables;
+	static Key					result	= new Key( "result" );
+	static InterceptorService	interceptorService;
+	static ORMEngine			ormEngine;
 
-	static DataSource datasource;
-	static DatasourceService datasourceService;
+	static DataSource			datasource;
+	static DatasourceService	datasourceService;
 
 	@BeforeAll
 	public static void setUp() {
-		instance = BoxRuntime.getInstance(true, Path.of("src/test/resources/boxlang.json").toString());
-		ormEngine = ORMEngine.getInstance();
-		interceptorService = instance.getInterceptorService();
-		interceptorService.register(new ApplicationLifecycle());
-		datasourceService = instance.getDataSourceService();
-		datasource = JDBCTestUtils.constructTestDataSource("TestDB");
+		instance			= BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
+		ormEngine			= ORMEngine.getInstance();
+		interceptorService	= instance.getInterceptorService();
+		interceptorService.register( new ApplicationLifecycle() );
+		datasourceService	= instance.getDataSourceService();
+		datasource			= JDBCTestUtils.constructTestDataSource( "TestDB" );
 	}
 
 	public static void teardown() throws SQLException {
 		// BaseJDBCTest.teardown();
-		JDBCTestUtils.dropDevelopersTable(datasource);
+		JDBCTestUtils.dropDevelopersTable( datasource );
 		datasource.shutdown();
 	}
 
 	@BeforeEach
 	public void setupEach() {
-		context = new ScriptingRequestBoxContext(instance.getRuntimeContext());
-		variables = context.getScopeNearby(VariablesScope.name);
-		context.getConnectionManager().setDefaultDatasource(datasource);
-		assertDoesNotThrow(() -> JDBCTestUtils.resetDevelopersTable(datasource));
+		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
+		variables	= context.getScopeNearby( VariablesScope.name );
+		context.getConnectionManager().setDefaultDatasource( datasource );
+		assertDoesNotThrow( () -> JDBCTestUtils.resetDevelopersTable( datasource ) );
 	}
 
-	@DisplayName("It can load an entity by pk")
+	@DisplayName( "It can load an entity by pk" )
 	@Test
 	public void testEntityLoadByPK() {
-		assertNull(ormEngine.getSessionFactoryForName(Key.of("MyAppName")));
+		assertNull( ormEngine.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
 
-		BoxTemplate template = new BoxTemplate() {
+		BoxTemplate			template	= new BoxTemplate() {
 
-			@Override
-			public List<ImportDefinition> getImports() {
-				return null;
-			}
+											@Override
+											public List<ImportDefinition> getImports() {
+												return null;
+											}
 
-			@Override
-			public void _invoke(IBoxContext context) {
-			}
+											@Override
+											public void _invoke( IBoxContext context ) {
+											}
 
-			@Override
-			public long getRunnableCompileVersion() {
-				return 1;
-			}
+											@Override
+											public long getRunnableCompileVersion() {
+												return 1;
+											}
 
-			@Override
-			public LocalDateTime getRunnableCompiledOn() {
-				return null;
-			}
+											@Override
+											public LocalDateTime getRunnableCompiledOn() {
+												return null;
+											}
 
-			@Override
-			public Object getRunnableAST() {
-				return null;
-			}
+											@Override
+											public Object getRunnableAST() {
+												return null;
+											}
 
-			@Override
-			public Path getRunnablePath() {
-				return Path.of("src/test/resources/app/Application.bx");
-			}
+											@Override
+											public Path getRunnablePath() {
+												return Path.of( "src/test/resources/app/Application.bx" );
+											}
 
-			public BoxSourceType getSourceType() {
-				return BoxSourceType.BOXSCRIPT;
-			}
+											public BoxSourceType getSourceType() {
+												return BoxSourceType.BOXSCRIPT;
+											}
 
-		};
-		ApplicationListener listener = new ApplicationTemplateListener(template, (RequestBoxContext) context);
+										};
+		ApplicationListener	listener	= new ApplicationTemplateListener( template, ( RequestBoxContext ) context );
 		listener.updateSettings(
-				Struct.of(
-						"ormEnabled", true,
-						"ormSettings", Struct.of("datasource", "TestDB"),
-						"datasources", Struct.of(
-								"TestDB", Struct.of(
-										"driver", "derby",
-										"properties", Struct.of(
-												"connectionString", "jdbc:derby:memory:TestDB;create=true"))),
-						"name", "MyAppName"));
-		context.pushTemplate(template);
+		    Struct.of(
+		        "ormEnabled", true,
+		        "ormSettings", Struct.of( "datasource", "TestDB" ),
+		        "datasources", Struct.of(
+		            "TestDB", Struct.of(
+		                "driver", "derby",
+		                "properties", Struct.of(
+		                    "connectionString", "jdbc:derby:memory:TestDB;create=true" ) ) ),
+		        "name", "MyAppName" ) );
+		context.pushTemplate( template );
 		// Announce the event the interceptor listens to
 		interceptorService.announce(
-				Key.of("afterApplicationListenerLoad"),
-				Struct.of(
-						"listener", listener,
-						"context", context,
-						"template", template));
+		    Key.of( "afterApplicationListenerLoad" ),
+		    Struct.of(
+		        "listener", listener,
+		        "context", context,
+		        "template", template ) );
 
-		assertNotNull(ormEngine.getSessionFactoryForName(Key.of("MyAppName")));
+		assertNotNull( ormEngine.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
 
-		Session session = ORMEngine.getInstance().getSessionFactoryForName(Key.of("MyAppName")).openSession();
+		Session session = ORMEngine.getInstance().getSessionFactoryForName( Key.of( "MyAppName" ) ).openSession();
 		// Transaction transaction = session.beginTransaction();
 
 		// @formatter:off
@@ -151,7 +151,7 @@ public class EntityLoadByPKTest {
 
 		// transaction.commit();
 		session.close();
-		assertEquals("CEO", variables.get(result));
+		assertEquals( "CEO", variables.get( result ) );
 	}
 
 }

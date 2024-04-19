@@ -23,15 +23,15 @@ public class ORMConnectionProvider implements ConnectionProvider {
 	 */
 	private DataSource dataSource;
 
-	public ORMConnectionProvider(DataSource dataSource) {
+	public ORMConnectionProvider( DataSource dataSource ) {
 		this.dataSource = dataSource;
 	}
 
 	@Override
 	public <T> @UnknownKeyFor @NonNull @Initialized T unwrap(
-			@UnknownKeyFor @NonNull @Initialized Class<@UnknownKeyFor @NonNull @Initialized T> unwrapType) {
+	    @UnknownKeyFor @NonNull @Initialized Class<@UnknownKeyFor @NonNull @Initialized T> unwrapType ) {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'unwrap'");
+		throw new UnsupportedOperationException( "Unimplemented method 'unwrap'" );
 	}
 
 	@Override
@@ -40,7 +40,7 @@ public class ORMConnectionProvider implements ConnectionProvider {
 	}
 
 	@Override
-	public void closeConnection(Connection conn) throws SQLException {
+	public void closeConnection( Connection conn ) throws SQLException {
 		// Just do a regular connection.close(); BoxLang's connection pooling strategy
 		// (currently HikariCP) will intercept this and carefully release the
 		// connection back into the pool for later reuse.
@@ -56,9 +56,9 @@ public class ORMConnectionProvider implements ConnectionProvider {
 	}
 
 	@Override
-	public boolean isUnwrappableAs(Class unwrapType) {
+	public boolean isUnwrappableAs( Class unwrapType ) {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'isUnwrappableAs'");
+		throw new UnsupportedOperationException( "Unimplemented method 'isUnwrappableAs'" );
 	}
 
 }

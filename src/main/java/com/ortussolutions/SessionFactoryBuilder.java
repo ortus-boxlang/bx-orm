@@ -30,69 +30,69 @@ import ortus.boxlang.runtime.util.FileSystemUtil;
 
 public class SessionFactoryBuilder {
 
-	public static final String BOXLANG_APPLICATION_ENTITYMAPPING = "BOXLANG_APPLICATION_ENTITYMAPPING";
-	public static final String BOXLANG_APPLICATION_CONTEXT = "BOXLANG_APPLICATION_CONTEXT";
-	public static final String BOXLANG_CONTEXT = "BOXLANG_CONTEXT";
+	public static final String		BOXLANG_APPLICATION_ENTITYMAPPING	= "BOXLANG_APPLICATION_ENTITYMAPPING";
+	public static final String		BOXLANG_APPLICATION_CONTEXT			= "BOXLANG_APPLICATION_CONTEXT";
+	public static final String		BOXLANG_CONTEXT						= "BOXLANG_CONTEXT";
 
 	/**
 	 * The logger for this class. We may log warnings or errors if we encounter
 	 * unsupported ORM configuration.
 	 */
-	private static final Logger logger = LoggerFactory.getLogger(SessionFactoryBuilder.class);
+	private static final Logger		logger								= LoggerFactory.getLogger( SessionFactoryBuilder.class );
 
 	/**
 	 * The ORM datasource for this session factory.
 	 */
-	private DataSource datasource;
+	private DataSource				datasource;
 
 	/**
 	 * The ORM configuration for this session factory.
 	 */
-	private ORMConfig ormConfig;
+	private ORMConfig				ormConfig;
 
 	/**
 	 * The application name for this session factory. Used as an identifier in
 	 * hash maps.
 	 */
-	private Key appName;
+	private Key						appName;
 
 	/**
 	 * The context-level connection manager, used for retrieving datasources that we
 	 * can be sure have been registered with the datasource manager.
 	 */
-	private ConnectionManager connectionManager;
+	private ConnectionManager		connectionManager;
 
-	private IJDBCCapableContext context;
-	private ApplicationBoxContext applicationContext;
+	private IJDBCCapableContext		context;
+	private ApplicationBoxContext	applicationContext;
 
-	public static String lookupBoxLangEntity(SessionFactory sessionFactory, String entityName) {
-		Map entityMap = (Map) sessionFactory.getProperties().computeIfAbsent(
-				BOXLANG_APPLICATION_ENTITYMAPPING,
-				(x) -> new HashMap<String, String>());
+	public static String lookupBoxLangEntity( SessionFactory sessionFactory, String entityName ) {
+		Map entityMap = ( Map ) sessionFactory.getProperties().computeIfAbsent(
+		    BOXLANG_APPLICATION_ENTITYMAPPING,
+		    ( x ) -> new HashMap<String, String>() );
 
-		return (String) entityMap.get(entityName.toLowerCase());
+		return ( String ) entityMap.get( entityName.toLowerCase() );
 	}
 
-	public static ApplicationBoxContext getApplicationContext(SessionFactory sessionFactory) {
-		return (ApplicationBoxContext) sessionFactory.getProperties().get(BOXLANG_APPLICATION_CONTEXT);
+	public static ApplicationBoxContext getApplicationContext( SessionFactory sessionFactory ) {
+		return ( ApplicationBoxContext ) sessionFactory.getProperties().get( BOXLANG_APPLICATION_CONTEXT );
 	}
 
-	public static IBoxContext getContext(SessionFactory sessionFactory) {
-		return (IBoxContext) sessionFactory.getProperties().get(BOXLANG_CONTEXT);
+	public static IBoxContext getContext( SessionFactory sessionFactory ) {
+		return ( IBoxContext ) sessionFactory.getProperties().get( BOXLANG_CONTEXT );
 	}
 
-	public SessionFactoryBuilder(IJDBCCapableContext context, Key appName, IStruct properties) {
-		this.appName = appName;
-		this.connectionManager = context.getConnectionManager();
-		this.ormConfig = new ORMConfig(properties);
-		this.datasource = getORMDataSource();
-		this.context = context;
-		this.applicationContext = ((IBoxContext) context).getParentOfType(ApplicationBoxContext.class);
+	public SessionFactoryBuilder( IJDBCCapableContext context, Key appName, IStruct properties ) {
+		this.appName			= appName;
+		this.connectionManager	= context.getConnectionManager();
+		this.ormConfig			= new ORMConfig( properties );
+		this.datasource			= getORMDataSource();
+		this.context			= context;
+		this.applicationContext	= ( ( IBoxContext ) context ).getParentOfType( ApplicationBoxContext.class );
 	}
 
 	public SessionFactory build() {
 		Configuration configuration = buildConfiguration();
-		getORMMappingFiles().forEach(configuration::addFile);
+		getORMMappingFiles().forEach( configuration::addFile );
 
 		return configuration.buildSessionFactory();
 	}
@@ -104,14 +104,14 @@ public class SessionFactoryBuilder {
 	 */
 	private DataSource getORMDataSource() {
 		Object ormDatasource = this.ormConfig.getDatasource();
-		if (ormDatasource != null) {
-			if (ormDatasource instanceof IStruct datasourceStruct) {
-				return connectionManager.getOnTheFlyDataSource(datasourceStruct);
+		if ( ormDatasource != null ) {
+			if ( ormDatasource instanceof IStruct datasourceStruct ) {
+				return connectionManager.getOnTheFlyDataSource( datasourceStruct );
 			}
-			return connectionManager.getDatasourceOrThrow(Key.of(ormDatasource));
+			return connectionManager.getDatasourceOrThrow( Key.of( ormDatasource ) );
 		}
 		throw new BoxRuntimeException(
-				"ORM configuration is missing 'datasource' key, or named datasource is not found. Default datasources will be supported in a future iteration.");
+		    "ORM configuration is missing 'datasource' key, or named datasource is not found. Default datasources will be supported in a future iteration." );
 		// @TODO: Implement this. the hard part is knowing the context.
 		// logger.warn( "ORM configuration is missing 'datasource' key; falling back to
 		// default datasource" );
@@ -121,11 +121,11 @@ public class SessionFactoryBuilder {
 	private List<File> getORMMappingFiles() {
 		// @TODO: Should we use the application name, or the ORM configuration hash?
 		String xmlMappingLocation = FileSystemUtil.getTempDirectory() + "/orm_mappings/" + getAppName().getName();
-		if (!ormConfig.isAutoGenMap()) {
+		if ( !ormConfig.isAutoGenMap() ) {
 			// Skip mapping generation and load the pre-generated mappings from this
 			// location.
 			xmlMappingLocation = ormConfig.getCFCLocation();
-			throw new BoxRuntimeException("ORMConfiguration setting `autoGenMap=false` is currently unsupported.");
+			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
 		} else {
 			// @TODO: Here we generate entity mappings and populate the temp directory (aka
 			// xmlMappingLocation) with the generated files.
@@ -159,26 +159,26 @@ public class SessionFactoryBuilder {
 		// Alternative test implementation
 		List<File> files = new java.util.ArrayList<>();
 		// Dummy file for testing
-		files.add(Paths.get("src/test/resources/app/models/Event.hbm.xml").toFile());
-		files.add(Paths.get("src/test/resources/app/models/Developer.hbm.xml").toFile());
+		files.add( Paths.get( "src/test/resources/app/models/Event.hbm.xml" ).toFile() );
+		files.add( Paths.get( "src/test/resources/app/models/Developer.hbm.xml" ).toFile() );
 		return files;
 	}
 
 	private Configuration buildConfiguration() {
-		Configuration configuration = ormConfig.toHibernateConfig();
+		Configuration	configuration	= ormConfig.toHibernateConfig();
 
-		Properties properties = new Properties();
+		Properties		properties		= new Properties();
 		// @TODO: Any configuration which needs a specific java type (such as the
 		// connection provider instance) goes here
-		properties.put(AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider(this.datasource));
-		properties.put(AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread");
-		properties.put(BOXLANG_APPLICATION_ENTITYMAPPING, new HashMap<String, String>());
-		properties.put(BOXLANG_APPLICATION_CONTEXT, applicationContext);
-		properties.put(BOXLANG_CONTEXT, context);
-		configuration.addProperties(properties);
+		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasource ) );
+		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
+		properties.put( BOXLANG_APPLICATION_ENTITYMAPPING, new HashMap<String, String>() );
+		properties.put( BOXLANG_APPLICATION_CONTEXT, applicationContext );
+		properties.put( BOXLANG_CONTEXT, context );
+		configuration.addProperties( properties );
 
-		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass(EntityMode.MAP, EntityTuplizer.class);
-		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass(EntityMode.POJO, EntityTuplizer.class);
+		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
+		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.POJO, EntityTuplizer.class );
 
 		return configuration;
 	}

@@ -26,8 +26,8 @@ public class EntityLoadByPK extends BIF {
 	public EntityLoadByPK() {
 		super();
 		declaredArguments = new Argument[] {
-				new Argument(true, "String", ORMKeys.entity, Set.of(Validator.REQUIRED, Validator.NON_EMPTY)),
-				new Argument(true, "String", Key.id, Set.of(Validator.REQUIRED, Validator.NON_EMPTY))
+		    new Argument( true, "String", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		    new Argument( true, "String", Key.id, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) )
 		};
 	}
 
@@ -37,19 +37,19 @@ public class EntityLoadByPK extends BIF {
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
-	public Object _invoke(IBoxContext context, ArgumentsScope arguments) {
-		Key applicationName = context.getParentOfType(ortus.boxlang.runtime.context.ApplicationBoxContext.class)
-				.getApplication().getName();
-		SessionFactory sessionFactory = ORMEngine.getInstance().getSessionFactoryForName(applicationName);
+	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		Key				applicationName	= context.getParentOfType( ortus.boxlang.runtime.context.ApplicationBoxContext.class )
+		    .getApplication().getName();
+		SessionFactory	sessionFactory	= ORMEngine.getInstance().getSessionFactoryForName( applicationName );
 
-		Session session = sessionFactory.getCurrentSession();
+		Session			session			= sessionFactory.getCurrentSession();
 
 		session.beginTransaction();
 
 		// TODO we should not use IntegerCaster
 		// We need to cast the id argument to the correct java type based on the ormtype
 		// of the field
-		return session.get(arguments.getAsString(ORMKeys.entity), IntegerCaster.cast(arguments.get(Key.id)));
+		return session.get( arguments.getAsString( ORMKeys.entity ), IntegerCaster.cast( arguments.get( Key.id ) ) );
 	}
 
 }

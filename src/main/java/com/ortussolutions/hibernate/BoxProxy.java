@@ -8,13 +8,13 @@ public class BoxProxy implements HibernateProxy {
 	@Override
 	public Object writeReplace() {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'writeReplace'");
+		throw new UnsupportedOperationException( "Unimplemented method 'writeReplace'" );
 	}
 
 	@Override
 	public LazyInitializer getHibernateLazyInitializer() {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'getHibernateLazyInitializer'");
+		throw new UnsupportedOperationException( "Unimplemented method 'getHibernateLazyInitializer'" );
 	}
 
 }

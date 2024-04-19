@@ -18,8 +18,8 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	EntityMetamodel entityMetamodel;
 
-	public EntityTuplizer(EntityMetamodel entityMetamodel, PersistentClass mappingInfo) {
-		super(entityMetamodel, mappingInfo);
+	public EntityTuplizer( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
+		super( entityMetamodel, mappingInfo );
 
 		// this.entityMetamodel = entityMetamodel;
 	}
@@ -27,7 +27,7 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 	@Override
 	public EntityMode getEntityMode() {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'getEntityMode'");
+		throw new UnsupportedOperationException( "Unimplemented method 'getEntityMode'" );
 	}
 
 	@Override
@@ -41,37 +41,37 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 	}
 
 	@Override
-	public String determineConcreteSubclassEntityName(Object entityInstance, SessionFactoryImplementor factory) {
+	public String determineConcreteSubclassEntityName( Object entityInstance, SessionFactoryImplementor factory ) {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'determineConcreteSubclassEntityName'");
+		throw new UnsupportedOperationException( "Unimplemented method 'determineConcreteSubclassEntityName'" );
 	}
 
 	@Override
 	public Class getMappedClass() {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'getMappedClass'");
+		throw new UnsupportedOperationException( "Unimplemented method 'getMappedClass'" );
 	}
 
 	@Override
-	protected Getter buildPropertyGetter(Property mappedProperty, PersistentClass mappedEntity) {
-		return new BoxPropertyGetter(SessionFactoryBuilder.getContext(this.getEntityMetamodel().getSessionFactory()),
-				mappedProperty, mappedEntity);
+	protected Getter buildPropertyGetter( Property mappedProperty, PersistentClass mappedEntity ) {
+		return new BoxPropertyGetter( SessionFactoryBuilder.getContext( this.getEntityMetamodel().getSessionFactory() ),
+		    mappedProperty, mappedEntity );
 	}
 
 	@Override
-	protected Setter buildPropertySetter(Property mappedProperty, PersistentClass mappedEntity) {
-		return new BoxPropertySetter(SessionFactoryBuilder.getContext(this.getEntityMetamodel().getSessionFactory()),
-				mappedProperty, mappedEntity);
+	protected Setter buildPropertySetter( Property mappedProperty, PersistentClass mappedEntity ) {
+		return new BoxPropertySetter( SessionFactoryBuilder.getContext( this.getEntityMetamodel().getSessionFactory() ),
+		    mappedProperty, mappedEntity );
 	}
 
 	@Override
-	protected Instantiator buildInstantiator(EntityMetamodel entityMetamodel, PersistentClass mappingInfo) {
-		return new BoxClassInstantiator(entityMetamodel, mappingInfo);
+	protected Instantiator buildInstantiator( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
+		return new BoxClassInstantiator( entityMetamodel, mappingInfo );
 	}
 
 	@Override
-	protected ProxyFactory buildProxyFactory(PersistentClass mappingInfo, Getter idGetter, Setter idSetter) {
-		return new BoxProxyFactory(mappingInfo, idGetter, idSetter);
+	protected ProxyFactory buildProxyFactory( PersistentClass mappingInfo, Getter idGetter, Setter idSetter ) {
+		return new BoxProxyFactory( mappingInfo, idGetter, idSetter );
 	}
 
 }

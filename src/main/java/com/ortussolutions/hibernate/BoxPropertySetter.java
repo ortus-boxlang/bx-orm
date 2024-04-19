@@ -13,34 +13,34 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 
 public class BoxPropertySetter implements Setter {
 
-	private Property mappedProperty;
-	private PersistentClass mappedEntity;
-	private IBoxContext context;
+	private Property		mappedProperty;
+	private PersistentClass	mappedEntity;
+	private IBoxContext		context;
 
-	public BoxPropertySetter(IBoxContext context, Property mappedProperty, PersistentClass mappedEntity) {
-		this.mappedProperty = mappedProperty;
-		this.mappedEntity = mappedEntity;
-		this.context = context;
+	public BoxPropertySetter( IBoxContext context, Property mappedProperty, PersistentClass mappedEntity ) {
+		this.mappedProperty	= mappedProperty;
+		this.mappedEntity	= mappedEntity;
+		this.context		= context;
 	}
 
 	@Override
-	public void set(Object target, Object value, SessionFactoryImplementor factory) {
-		if (target instanceof IClassRunnable instance) {
+	public void set( Object target, Object value, SessionFactoryImplementor factory ) {
+		if ( target instanceof IClassRunnable instance ) {
 			VariablesScope variables = instance.getVariablesScope();
-			variables.put(mappedProperty.getName(), value);
+			variables.put( mappedProperty.getName(), value );
 		}
 	}
 
 	@Override
 	public String getMethodName() {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'getMethodName'");
+		throw new UnsupportedOperationException( "Unimplemented method 'getMethodName'" );
 	}
 
 	@Override
 	public Method getMethod() {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'getMethod'");
+		throw new UnsupportedOperationException( "Unimplemented method 'getMethod'" );
 	}
 
 }

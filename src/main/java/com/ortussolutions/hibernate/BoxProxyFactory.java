@@ -15,29 +15,29 @@ import org.hibernate.type.CompositeType;
 
 public class BoxProxyFactory implements ProxyFactory {
 
-	public PersistentClass mappingInfo;
-	public Getter idGetter;
-	public Setter idSetter;
+	public PersistentClass	mappingInfo;
+	public Getter			idGetter;
+	public Setter			idSetter;
 
-	public BoxProxyFactory(PersistentClass mappingInfo, Getter idGetter, Setter idSetter) {
-		this.mappingInfo = mappingInfo;
-		this.idGetter = idGetter;
-		this.idSetter = idSetter;
+	public BoxProxyFactory( PersistentClass mappingInfo, Getter idGetter, Setter idSetter ) {
+		this.mappingInfo	= mappingInfo;
+		this.idGetter		= idGetter;
+		this.idSetter		= idSetter;
 	}
 
 	@Override
-	public void postInstantiate(String entityName, Class persistentClass, Set<Class> interfaces,
-			Method getIdentifierMethod, Method setIdentifierMethod, CompositeType componentIdType)
-			throws HibernateException {
+	public void postInstantiate( String entityName, Class persistentClass, Set<Class> interfaces,
+	    Method getIdentifierMethod, Method setIdentifierMethod, CompositeType componentIdType )
+	    throws HibernateException {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'postInstantiate'");
+		throw new UnsupportedOperationException( "Unimplemented method 'postInstantiate'" );
 	}
 
 	@Override
-	public HibernateProxy getProxy(Serializable id, SharedSessionContractImplementor session)
-			throws HibernateException {
+	public HibernateProxy getProxy( Serializable id, SharedSessionContractImplementor session )
+	    throws HibernateException {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'getProxy'");
+		throw new UnsupportedOperationException( "Unimplemented method 'getProxy'" );
 	}
 
 }
