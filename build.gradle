@@ -101,7 +101,7 @@ serviceLoader {
 jar {
     archiveVersion =  "${version}"
  	manifest {
-	   attributes 'Description': 'ExampleBoxLangModule'
+	   attributes 'Description': 'BoxLang ORM'
     }
 }
 shadowJar {
