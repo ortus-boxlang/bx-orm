@@ -1,6 +1,6 @@
 {
 	"java.format.enabled": true,
-	"java.format.settings.url": "workbench/ortus-java-style.xml",
+	"java.format.settings.url" : "https://raw.githubusercontent.com/Ortus-Solutions/coding-standards/master/formatters/ortus-java-style.xml",
 	"java.configuration.updateBuildConfiguration": "automatic",
 	"java.dependency.packagePresentation": "hierarchical",
 	"java.project.explorer.showNonJavaResources": true,
