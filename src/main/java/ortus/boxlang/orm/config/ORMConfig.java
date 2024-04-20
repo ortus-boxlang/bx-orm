@@ -33,7 +33,7 @@ public class ORMConfig {
 	 * for the persistent CFCs. If autogenmap=false, the mapping should be
 	 * provided in the form of <code>orm.xml</code> files.
 	 */
-	private boolean				autoGenMap	= true;
+	public boolean				autoGenMap	= true;
 
 	/**
 	 * Allows the engine to manage the Hibernate session. It is recommended not to
@@ -42,14 +42,14 @@ public class ORMConfig {
 	 * Use transaction blocks in order to demarcate your regions that should start,
 	 * flush and end a transaction.
 	 */
-	private boolean				autoManageSession;
+	public boolean				autoManageSession;
 
 	/**
 	 * Specifies the location of the configuration file that the secondary cache
 	 * provider should use. This setting is used only when
 	 * secondaryCacheEnabled=true
 	 */
-	private boolean				cacheConfig;
+	public boolean				cacheConfig;
 
 	/**
 	 * Specifies the cache provider that ORM should use as a secondary cache. The
@@ -60,7 +60,7 @@ public class ORMConfig {
 	 *
 	 * The fully qualified name of the class for any other cache provider
 	 */
-	private String				cacheProvider;
+	public String				cacheProvider;
 
 	/**
 	 * Specifies the directory (or array of directories) that should be used to
@@ -72,13 +72,13 @@ public class ORMConfig {
 	 * application directory, its sub-directories, and its mapped directories to
 	 * search for persistent CFCs.
 	 */
-	private String[]			cfcLocation;
+	public String[]				cfcLocation;
 
 	/**
 	 * Define the data source to be utilized by the ORM. If not used,
 	 * defaults to the this.datasource in the Application.cfc.
 	 */
-	private String				datasource;
+	public String				datasource;
 
 	/**
 	 * <ul>
@@ -98,7 +98,7 @@ public class ORMConfig {
 	 * BoxLang.</strong></li>
 	 * </ul>
 	 */
-	private String				dbcreate;
+	public String				dbcreate;
 
 	/**
 	 * The dialect to use for your database. By default Hibernate will introspect
@@ -106,30 +106,30 @@ public class ORMConfig {
 	 *
 	 * You can also use the fully Java qualified name of the class.
 	 */
-	private String				dialect;
+	public String				dialect;
 
 	/**
 	 * If true, then it enables the ORM event callbacks in entities and globally via
 	 * the `eventHandler` property.
 	 */
-	private boolean				eventHandling;
+	public boolean				eventHandling;
 
 	/**
 	 * The CFC path of the CFC that will manage the global ORM events.
 	 */
-	private String				eventHandler;
+	public String				eventHandler;
 
 	/**
 	 * Specifies if an orm flush should be called automatically at the end of a
 	 * request. In our opinion this SHOULD never be true. Database persistence
 	 * should be done via transaction tags and good transaction demarcation.
 	 */
-	private boolean				flushAtRequestEnd;
+	public boolean				flushAtRequestEnd;
 
 	/**
 	 * Specifies if the SQL queries should be logged to the console.
 	 */
-	private boolean				logSQL;
+	public boolean				logSQL;
 
 	/**
 	 * Defines the naming convention to use on table and column names.
@@ -139,7 +139,7 @@ public class ORMConfig {
 	 * uppercase.
 	 * - CFC PATH : Use your own CFC to determine naming
 	 */
-	private String				namingStrategy;
+	public String				namingStrategy;
 
 	/**
 	 * The path to a custom Hibernate configuration file:
@@ -147,7 +147,7 @@ public class ORMConfig {
 	 * - hibernate.properties
 	 * - hibernate.cfc.xml
 	 */
-	private String				ormConfig;
+	public String				ormConfig;
 
 	/**
 	 * If enabled, the ORM will create the Hibernate mapping XML (*.hbmxml) files
@@ -155,37 +155,37 @@ public class ORMConfig {
 	 * relationships.
 	 *
 	 */
-	private boolean				saveMapping;
+	public boolean				saveMapping;
 
 	/**
 	 * The default database schema to use for database connections. This can be
 	 * overriden at the datasource level.
 	 */
-	private String				schema;
+	public String				schema;
 
 	/**
 	 * Specifies the default Database Catalog that ORM should use. This can be
 	 * overriden at the datasource level.
 	 */
-	private String				catalog;
+	public String				catalog;
 
 	/**
 	 * Enable or disable the secondary cache.
 	 */
-	private boolean				secondaryCacheEnabled;
+	public boolean				secondaryCacheEnabled;
 
 	/**
 	 * If true, then the ORM startup will ignore CFCs that have compile time errors
 	 * in them.
 	 * Use false to throw exceptions.
 	 */
-	private boolean				skipCFCWithError;
+	public boolean				skipCFCWithError;
 
 	/**
 	 * Path to a SQL script file that will be executed after the ORM is initialized.
 	 * Only used if dbcreate is set to <code>dropcreate</code>.
 	 */
-	private String				sqlScript;
+	public String				sqlScript;
 
 	/**
 	 * Specifies whether the database has to be inspected to identify the missing
@@ -194,7 +194,7 @@ public class ORMConfig {
 	 * The database is inspected to get the column data type, primary key and
 	 * foreign key information.
 	 */
-	private boolean				useDBForMapping;
+	public boolean				useDBForMapping;
 
 	/**
 	 * Constructor
@@ -309,18 +309,6 @@ public class ORMConfig {
 		    && !properties.getAsString( ORMKeys.catalog ).isBlank() ) {
 			catalog = properties.getAsString( ORMKeys.catalog );
 		}
-	}
-
-	public boolean isAutoGenMap() {
-		return autoGenMap;
-	}
-
-	public String[] getCFCLocation() {
-		return cfcLocation;
-	}
-
-	public String getDatasource() {
-		return datasource;
 	}
 
 	/**

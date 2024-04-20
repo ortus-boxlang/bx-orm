@@ -111,7 +111,7 @@ public class SessionFactoryBuilder {
 	 * configuration, but eventually we will support a default datasource.
 	 */
 	private DataSource getORMDataSource() {
-		Object ormDatasource = this.ormConfig.getDatasource();
+		Object ormDatasource = this.ormConfig.datasource;
 		if ( ormDatasource != null ) {
 			if ( ormDatasource instanceof IStruct datasourceStruct ) {
 				return connectionManager.getOnTheFlyDataSource( datasourceStruct );
@@ -129,10 +129,10 @@ public class SessionFactoryBuilder {
 	private List<File> getORMMappingFiles() {
 		// @TODO: Should we use the application name, or the ORM configuration hash?
 		String xmlMappingLocation = Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", getAppName().getName() ).toString();
-		if ( !ormConfig.isAutoGenMap() ) {
+		if ( !ormConfig.autoGenMap ) {
 			// Skip mapping generation and load the pre-generated mappings from this
 			// location.
-			// xmlMappingLocation = ormConfig.getCFCLocation();
+			// xmlMappingLocation = ormConfig.cfcLocation;
 			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
 		} else {
 			// @TODO: Here we generate entity mappings and populate the temp directory (aka
@@ -164,7 +164,7 @@ public class SessionFactoryBuilder {
 		// .map(filePath -> filePath.toFile())
 		// .toList();
 
-		Map<String, EntityRecord>	entities	= new MappingGenerator( xmlMappingLocation ).mapEntities( ( IBoxContext ) context, ormConfig.getCFCLocation() );
+		Map<String, EntityRecord>	entities	= new MappingGenerator( xmlMappingLocation ).mapEntities( ( IBoxContext ) context, ormConfig.cfcLocation );
 
 		// Alternative test implementation
 		List<File>					files		= new java.util.ArrayList<>();
@@ -191,7 +191,7 @@ public class SessionFactoryBuilder {
 
 		String						xmlMappingLocation	= Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", getAppName().getName() ).toString();
 		Map<String, EntityRecord>	entities			= new MappingGenerator( xmlMappingLocation ).mapEntities( ( IBoxContext ) context,
-		    ormConfig.getCFCLocation() );
+		    ormConfig.cfcLocation );
 		properties.put( BOXLANG_ENTITY_MAP, entities );
 
 		entities.values()
