@@ -29,6 +29,7 @@ import ortus.boxlang.runtime.runnables.BoxTemplate;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.InterceptorService;
+import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.Struct;
 
 public class ApplicationLifecycleTest {
@@ -53,11 +54,10 @@ public class ApplicationLifecycleTest {
 		context = new ScriptingRequestBoxContext( instance.getRuntimeContext() );
 	}
 
-	@Disabled( "Can't get this working. Need to revisit." )
 	@DisplayName( "Test my interceptor" )
 	@Test
 	void testApplicationStartupListener() {
-		assertNull( ormEngine.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
+		assertNull( ormEngine.getSessionFactoryForName( Key.of( "ApplicationLifecycleTest" ) ) );
 
 		BoxTemplate			template	= new BoxTemplate() {
 
@@ -99,13 +99,16 @@ public class ApplicationLifecycleTest {
 		listener.updateSettings(
 		    Struct.of(
 		        "ormEnabled", true,
-		        "ormSettings", Struct.of( "datasource", "testDB" ),
+		        "ormSettings", Struct.of(
+		            "cfcLocation", Array.of( "models" ),
+		            "datasource", "testDB"
+		        ),
 		        "datasources", Struct.of(
 		            "testDB", Struct.of(
 		                "driver", "derby",
 		                "properties", Struct.of(
 		                    "connectionString", "jdbc:derby:memory:myDB;create=true" ) ) ),
-		        "name", "MyAppName" ) );
+		        "name", "ApplicationLifecycleTest" ) );
 		context.pushTemplate( template );
 		// Announce the event the interceptor listens to
 		interceptorService.announce(
@@ -115,7 +118,7 @@ public class ApplicationLifecycleTest {
 		        "context", context,
 		        "template", template ) );
 
-		assertNotNull( ormEngine.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
+		assertNotNull( ormEngine.getSessionFactoryForName( Key.of( "ApplicationLifecycleTest" ) ) );
 
 	}
 
@@ -123,17 +126,17 @@ public class ApplicationLifecycleTest {
 	@DisplayName( "It creates a SessionFactory on application startup" )
 	@Test
 	void testItStartsOnApplicationStart() {
-		assertNull( ormEngine.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
+		assertNull( ormEngine.getSessionFactoryForName( Key.of( "ApplicationLifecycleTest2" ) ) );
 		instance.executeSource(
 		    """
-		    application name="MyAppName" ormEnabled=true ormSettings={ datasource:"testDB" };
+		    application name="ApplicationLifecycleTest2" ormEnabled=true ormSettings={ datasource:"testDB" };
 		       """,
 		    context );
 
 		Application targetApp = context.getParentOfType( ApplicationBoxContext.class ).getApplication();
 		assertTrue( targetApp.hasStarted() );
 
-		assertNotNull( ormEngine.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
+		assertNotNull( ormEngine.getSessionFactoryForName( Key.of( "ApplicationLifecycleTest2" ) ) );
 	}
 
 }
