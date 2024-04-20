@@ -129,6 +129,8 @@ public class ORMEngine {
 	 * We can use this method or similar to adjust Hibernate logging levels and pipe them to a destination (log file) of choice.
 	 */
 	private void setupCustomLogLevels() {
+		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "com.zaxxer.hikari" ) ).setLevel( Level.WARN );
+		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "org.hibernate" ) ).setLevel( Level.WARN );
 		// How can we put this graciously: the class loader logs are just too much.
 		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( DynamicClassLoader.class ) ).setLevel( Level.WARN );
 	}
