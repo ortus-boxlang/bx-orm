@@ -186,6 +186,16 @@ public class SessionFactoryBuilder {
 		properties.put( BOXLANG_APPLICATION_CONTEXT, applicationContext );
 		properties.put( BOXLANG_CONTEXT, context );
 
+		if ( ormConfig.secondaryCacheEnabled ) {
+			properties.put( AvailableSettings.USE_SECOND_LEVEL_CACHE, true );
+			properties.put( AvailableSettings.USE_QUERY_CACHE, true );
+			properties.put( AvailableSettings.CACHE_REGION_FACTORY, "jcache" );
+			properties.put( "hibernate.javax.cache.provider", ormConfig.getJCacheProviderClassPath() );
+			if ( ormConfig.cacheConfig != null && !ormConfig.cacheConfig.isEmpty() ) {
+				properties.put( "hibernate.javax.cache.uri", ormConfig.cacheConfig );
+			}
+		}
+
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.POJO, EntityTuplizer.class );
 

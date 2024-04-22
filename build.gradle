@@ -41,6 +41,10 @@ dependencies {
 	// Actual Hibernate dependencies
 	// https://mvnrepository.com/artifact/org.hibernate.orm/hibernate-core
 	implementation 'org.hibernate:hibernate-core:5.6.15.Final'
+	// https://mvnrepository.com/artifact/org.hibernate/hibernate-jcache
+	implementation 'org.hibernate:hibernate-jcache:5.6.15.Final'
+	// https://mvnrepository.com/artifact/org.ehcache/ehcache
+	implementation 'org.ehcache:ehcache:3.10.8'
 }
 
 java {

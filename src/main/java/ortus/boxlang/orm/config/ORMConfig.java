@@ -45,20 +45,17 @@ public class ORMConfig {
 	public boolean				autoManageSession;
 
 	/**
-	 * Specifies the location of the configuration file that the secondary cache
-	 * provider should use. This setting is used only when
-	 * secondaryCacheEnabled=true
+	 * Specify a string path to the secondary cache configuration file. This configuration file must be formatted to the specification of the jCache
+	 * provider specified in the `cacheProvider` setting.
 	 */
-	public boolean				cacheConfig;
+	public String				cacheConfig;
 
 	/**
-	 * Specifies the cache provider that ORM should use as a secondary cache. The
-	 * values can be:
-	 *
-	 * Ehcache
-	 * ConcurrentHashMap
-	 *
-	 * The fully qualified name of the class for any other cache provider
+	 * Specify the alias name OR full class path of a jCache provider to use for the second-level cache. Must be one of the following:
+	 * <ul>
+	 * <li><code>ehcache</code> - use the EHCache jCache implementation bundled with the BoxLang ORM module</li>
+	 * <li><code>com.foo.MyJCacheProvider</code> - String path to a custom jCache provider loaded into your BoxLang application.</li>
+	 * </ul>
 	 */
 	public String				cacheProvider;
 
@@ -229,7 +226,7 @@ public class ORMConfig {
 		}
 
 		if ( properties.containsKey( ORMKeys.cacheConfig ) && properties.get( ORMKeys.cacheConfig ) != null ) {
-			cacheConfig = properties.getAsBoolean( ORMKeys.cacheConfig );
+			cacheConfig = properties.getAsString( ORMKeys.cacheConfig );
 		}
 
 		if ( properties.containsKey( ORMKeys.eventHandling ) && properties.get( ORMKeys.eventHandling ) != null ) {
@@ -422,8 +419,45 @@ public class ORMConfig {
 		    BoxRuntime.getInstance().getRuntimeContext() );
 	}
 
+	/**
+	 * Retrieve the `dbcreate` setting as a Hibernate `Action` value.
+	 */
 	public Action toHibernateDBCreate() {
 		return DBCreate.valueOf( dbcreate.toUpperCase() ).toHibernateSetting();
+	}
+
+	/**
+	 * Get the `cacheProvider` setting as a path to a JCache provider.
+	 */
+	public String getJCacheProviderClassPath() {
+		String upperAliasName = cacheProvider.toUpperCase();
+		return JCacheProvider.contains( upperAliasName ) ? JCacheProvider.valueOf( upperAliasName ).toClassPath()
+		    : cacheProvider;
+	}
+
+	/**
+	 * Enumeration of possible values for the `cacheProvider` configuration setting.
+	 * <p>
+	 * Each value must be a JCache provider.
+	 */
+	private enum JCacheProvider {
+
+		EHCACHE;
+
+		public String toClassPath() {
+			return switch ( this ) {
+				case EHCACHE -> "org.ehcache.jsr107.EhcacheCachingProvider";
+			};
+		}
+
+		/**
+		 * Check if the provided alias is a valid JCache provider.
+		 *
+		 * @param alias String alias name to look for in the JCacheProvider enum.
+		 */
+		public static boolean contains( String alias ) {
+			return Arrays.stream( JCacheProvider.values() ).anyMatch( provider -> provider.name().equals( alias ) );
+		}
 	}
 
 	/**

@@ -38,7 +38,6 @@ public class ApplicationLifecycle extends BaseInterceptor {
 		ApplicationListener	listener	= ( ApplicationListener ) args.get( "listener" );
 		RequestBoxContext	context		= ( RequestBoxContext ) args.get( "context" );
 
-		// grab the ORMSettings struct from the application config
 		IStruct				appSettings	= ( IStruct ) context.getConfigItem( Key.applicationSettings );
 		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
 		    || Boolean.FALSE.equals( appSettings.getAsBoolean( ORMKeys.ORMEnabled ) ) ) {
