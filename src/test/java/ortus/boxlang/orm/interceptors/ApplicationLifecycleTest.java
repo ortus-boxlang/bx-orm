@@ -54,6 +54,7 @@ public class ApplicationLifecycleTest {
 		context = new ScriptingRequestBoxContext( instance.getRuntimeContext() );
 	}
 
+	// @TODO: Clean this crazy-ugly test!
 	@DisplayName( "Test my interceptor" )
 	@Test
 	void testApplicationStartupListener() {
@@ -126,10 +127,17 @@ public class ApplicationLifecycleTest {
 	@Test
 	void testItStartsOnApplicationStart() {
 		assertNull( ormService.getSessionFactoryForName( Key.of( "ApplicationLifecycleTest2" ) ) );
+
+		// @TODO: Find a better way to test this, because the application tag does not start an application (and thus doesn't fire the event)... it merely
+		// updates the existing application settings... which fails to trigger any sort of interception event which we can listen for.
 		instance.executeSource(
 		    """
-		    application name="ApplicationLifecycleTest2" ormEnabled=true ormSettings={ datasource:"testDB" };
-		       """,
+		    application
+		              name="ApplicationLifecycleTest2"
+		              ormEnabled="true"
+		              ormSettings='{ cfcLocation: ["models/"], datasource:"testDB" }'
+		              ;
+		    """,
 		    context );
 
 		Application targetApp = context.getParentOfType( ApplicationBoxContext.class ).getApplication();
