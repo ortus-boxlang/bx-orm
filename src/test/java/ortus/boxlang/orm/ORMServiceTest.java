@@ -22,7 +22,7 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.types.IStruct;
 
-public class ORMEngineTest {
+public class ORMServiceTest {
 
 	static BoxRuntime	instance;
 	IBoxContext			context;
@@ -40,19 +40,19 @@ public class ORMEngineTest {
 		variables	= context.getScopeNearby( VariablesScope.name );
 	}
 
-	@Disabled( "Switch to module-based configuration" )
+	@Disabled( "Not implemented." )
 	@DisplayName( "It can start up, register a runtime-wide session factory, and shut down." )
 	@Test
 	public void testRuntimeSessionFactoryLifeCycle() {
-		ORMEngine	ormEngine	= ORMEngine.getInstance();
+		ORMService	ormService	= ORMService.getInstance();
 		IStruct		ORMSettings	= ( IStruct ) context.getConfigItem( ORMKeys.ORMSettings );
 		assertNotNull( ORMSettings );
 
-		ormEngine.setSessionFactoryForName( Key.runtime,
+		ormService.setSessionFactoryForName( Key.runtime,
 		    new SessionFactoryBuilder( ( IJDBCCapableContext ) context, Key.runtime, ORMSettings ).build() );
-		SessionFactory sessionFactory = ormEngine.getSessionFactoryForName( Key.runtime );
+		SessionFactory sessionFactory = ormService.getSessionFactoryForName( Key.runtime );
 
-		ormEngine.shutdown();
+		ormService.onShutdown( true );
 		assertTrue( sessionFactory.isClosed() );
 	}
 

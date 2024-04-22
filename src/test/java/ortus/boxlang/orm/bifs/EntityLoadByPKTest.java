@@ -16,7 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.compiler.parser.BoxSourceType;
-import ortus.boxlang.orm.ORMEngine;
+import ortus.boxlang.orm.ORMService;
 import ortus.boxlang.orm.interceptors.ApplicationLifecycle;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.ApplicationListener;
@@ -43,7 +43,7 @@ public class EntityLoadByPKTest {
 	IScope						variables;
 	static Key					result	= new Key( "result" );
 	static InterceptorService	interceptorService;
-	static ORMEngine			ormEngine;
+	static ORMService			ormService;
 
 	static DataSource			datasource;
 	static DatasourceService	datasourceService;
@@ -51,7 +51,7 @@ public class EntityLoadByPKTest {
 	@BeforeAll
 	public static void setUp() {
 		instance			= BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
-		ormEngine			= ORMEngine.getInstance();
+		ormService			= ORMService.getInstance();
 		interceptorService	= instance.getInterceptorService();
 		interceptorService.register( new ApplicationLifecycle() );
 		datasourceService	= instance.getDataSourceService();
@@ -75,7 +75,7 @@ public class EntityLoadByPKTest {
 	@DisplayName( "It can load an entity by pk" )
 	@Test
 	public void testEntityLoadByPK() {
-		assertNull( ormEngine.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
+		assertNull( ormService.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
 
 		BoxTemplate			template	= new BoxTemplate() {
 
@@ -136,7 +136,7 @@ public class EntityLoadByPKTest {
 		        "context", context,
 		        "template", template ) );
 
-		assertNotNull( ormEngine.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
+		assertNotNull( ormService.getSessionFactoryForName( Key.of( "MyAppName" ) ) );
 
 		// Session session = ORMEngine.getInstance().getSessionFactoryForName( Key.of( "MyAppName" ) ).openSession();
 		// Transaction transaction = session.beginTransaction();

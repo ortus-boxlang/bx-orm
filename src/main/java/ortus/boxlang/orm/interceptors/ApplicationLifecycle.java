@@ -2,10 +2,9 @@ package ortus.boxlang.orm.interceptors;
 
 import org.slf4j.LoggerFactory;
 
-import ortus.boxlang.orm.ORMEngine;
+import ortus.boxlang.orm.ORMService;
 import ortus.boxlang.orm.SessionFactoryBuilder;
 import ortus.boxlang.orm.config.ORMKeys;
-import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.ApplicationListener;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
@@ -51,21 +50,29 @@ public class ApplicationLifecycle extends BaseInterceptor {
 			return;
 		}
 		IStruct		ormSettings	= ( IStruct ) appSettings.get( ORMKeys.ORMSettings );
-		ORMEngine	ormEngine	= ORMEngine.getInstance();
+		ORMService	ormService	= ORMService.getInstance();
 
-		ormEngine.setSessionFactoryForName( listener.getAppName(),
+		ormService.setSessionFactoryForName( listener.getAppName(),
 		    new SessionFactoryBuilder( ( IJDBCCapableContext ) context, listener.getAppName(), ormSettings ).build() );
-		this.logger.info( "Session factory created! {}", ormEngine.getSessionFactoryForName( listener.getAppName() ) );
+		this.logger.info( "Session factory created! {}", ormService.getSessionFactoryForName( listener.getAppName() ) );
 	}
 
 	/**
-	 * Listen for runtime shutdown and shut down the ORM engine; mainly cleaning up
-	 * Hibernate session factories.
+	 * Listen for application shutdown and clean up application-specific Hibernate resources.
 	 */
 	@InterceptionPoint
-	public void onRuntimeShutdown( BoxRuntime runtime, Boolean force ) {
-		logger.info( "onRuntimeShutdown fired; cleaning up Hibernate session factories" );
-		ORMEngine.getInstance().shutdown();
+	public void onApplicationEnd( IStruct args ) {
+		logger.info( "onApplicationEnd fired; cleaning up ORM resources for this application context" );
+		// @TODO: clean up Hibernate resources
+	}
+
+	/**
+	 * Listen for application restart and clean up application-specific Hibernate resources.
+	 */
+	@InterceptionPoint
+	public void onApplicationRestart( IStruct args ) {
+		logger.info( "onApplicationRestart fired; cleaning up ORM resources for this application context" );
+		// @TODO: clean up Hibernate resources
 	}
 
 }
