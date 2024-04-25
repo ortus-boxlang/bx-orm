@@ -25,6 +25,7 @@ public class ORMKeys {
 	public static final Key	namingStrategy			= Key.of( "namingStrategy" );
 	public static final Key	ormConfig				= Key.of( "ormConfig" );
 	public static final Key	ORMType					= Key.of( "ORMType" );
+	public static final Key	persistent				= Key.of( "persistent" );
 	public static final Key	saveMapping				= Key.of( "saveMapping" );
 	public static final Key	schema					= Key.of( "schema" );
 	public static final Key	catalog					= Key.of( "catalog" );

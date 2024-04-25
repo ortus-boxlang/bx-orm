@@ -8,8 +8,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
 
-import ortus.boxlang.runtime.scopes.Key;
-
 public class HibernateXMLWriter implements IPersistenceWriter {
 
 	@Override
@@ -55,11 +53,17 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		// get properties
 
 		inspector.getProperties().stream()
-		    .filter( ( prop ) -> !prop.annotations().containsKey( Key.id ) )
+		    .filter( ( prop ) -> ORMAnnotationInspector.isIDProperty( prop ) )
+		    .filter( ORMAnnotationInspector::isMappableProperty )
 		    .forEach( ( prop ) -> {
 			    Element propEl = doc.createElement( "property" );
 			    propEl.setAttribute( "name", inspector.getPropertyName( prop ) );
 			    propEl.setAttribute( "type", inspector.getPropertyType( prop ) );
+
+			    String column = inspector.getPropertyColumn( prop );
+			    if ( column != null ) {
+				    propEl.setAttribute( "column", column );
+			    }
 
 			    classElement.appendChild( propEl );
 		    } );

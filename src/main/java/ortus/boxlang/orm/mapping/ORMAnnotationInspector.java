@@ -13,6 +13,15 @@ public class ORMAnnotationInspector {
 
 	private IClassRunnable bxInstance;
 
+	public static boolean isIDProperty( Property prop ) {
+		return !prop.annotations().containsKey( Key.id );
+	}
+
+	public static boolean isMappableProperty( Property prop ) {
+		return !prop.annotations().containsKey( ORMKeys.persistent )
+		    || prop.annotations().getAsBoolean( ORMKeys.persistent );
+	}
+
 	public ORMAnnotationInspector( IClassRunnable bxInstance ) {
 		this.bxInstance = bxInstance;
 	}
@@ -29,6 +38,12 @@ public class ORMAnnotationInspector {
 		return prop.annotations().containsKey( ORMKeys.ORMType )
 		    ? prop.annotations().getAsString( ORMKeys.ORMType )
 		    : "string";
+	}
+
+	public String getPropertyColumn( Property prop ) {
+		return prop.annotations().containsKey( Key.column )
+		    ? prop.annotations().getAsString( Key.column )
+		    : null;
 	}
 
 	public String getIdPropertyName() {
