@@ -1,13 +1,13 @@
 @Entity
-@Table "developers"
 class accessors=true {
     @id
     @ORMType "integer"
-    property name="theid";
+    property name="theId";
 
     @ORMType "string"
+    @Column "the_name"
     property name="name";
 
-    @ORMType "string"
+    @Persistent false
     property name="role";
 }
