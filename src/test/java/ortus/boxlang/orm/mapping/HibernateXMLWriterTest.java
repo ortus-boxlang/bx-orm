@@ -15,6 +15,7 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.interop.DynamicObject;
+import ortus.boxlang.runtime.runnables.IBoxRunnable;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.runnables.RunnableLoader;
 import ortus.boxlang.runtime.scopes.IScope;
@@ -44,7 +45,7 @@ public class HibernateXMLWriterTest {
 	public void testMapping() {
 
 		// @formatter:off
-		Class<IClassRunnable> bxClass = RunnableLoader.getInstance().loadClass(
+		Class<IBoxRunnable> bxClass = RunnableLoader.getInstance().loadClass(
 			"""
 				@Entity "Car"
 				class {

@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.orm.config.naming.BoxLangClassNamingStrategy;
 import ortus.boxlang.orm.config.naming.MacroCaseNamingStrategy;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.runnables.IBoxRunnable;
 import ortus.boxlang.runtime.runnables.RunnableLoader;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
@@ -413,7 +413,7 @@ public class ORMConfig {
 	 * @param classPath The path to the Boxlang class, either slash or dot
 	 *                  delimited.
 	 */
-	private Class<IClassRunnable> loadBoxlangClassByPath( String classPath ) {
+	private Class<IBoxRunnable> loadBoxlangClassByPath( String classPath ) {
 		String packageName = Paths.get( classPath ).getParent().toString().replace( "/", "." );
 		return RunnableLoader.getInstance().loadClass( Paths.get( classPath ), packageName,
 		    BoxRuntime.getInstance().getRuntimeContext() );

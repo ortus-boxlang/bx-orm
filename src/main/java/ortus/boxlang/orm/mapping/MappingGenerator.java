@@ -19,12 +19,13 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.Document;
 
-import ortus.boxlang.compiler.IBoxpiler;
 import ortus.boxlang.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.interop.DynamicObject;
+import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
-import ortus.boxlang.runtime.runnables.RunnableLoader;
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.util.FQN;
 import ortus.boxlang.runtime.util.FileSystemUtil;
 
 public class MappingGenerator {
@@ -36,26 +37,28 @@ public class MappingGenerator {
 	}
 
 	public Map<String, EntityRecord> mapEntities( IBoxContext context, String[] cfcLocations ) {
-		Path			cfcPath	= Path.of( FileSystemUtil.expandPath( ( IBoxContext ) context, cfcLocations[ 0 ] ) );
-		RunnableLoader	loader	= RunnableLoader.getInstance();
+		Path cfcPath = Path.of( FileSystemUtil.expandPath( ( IBoxContext ) context, cfcLocations[ 0 ] ) );
 		try {
 			return Files
 			    .walk( cfcPath )
 			    .filter( Files::isRegularFile )
 			    .filter( ( path ) -> StringUtils.endsWithAny( path.toString(), ".bx", ".cfc" ) )
 			    .map( ( clazzPath ) -> {
-				    // TODO figure out the package path
-				    return DynamicObject.of( loader.loadClass( clazzPath,
-				        IBoxpiler.getPackageName( clazzPath.toFile() ),
-				        ( IBoxContext ) context ) ).invokeConstructor( context );
+				    DynamicObject bxClass = ClassLocator.getInstance().load( ( IBoxContext ) context,
+				        new FQN( cfcPath.getParent(), clazzPath ).toString(),
+				        "bx" );
+
+				    bxClass.invokeConstructor( context, Key.noInit );
+				    return bxClass;
 			    } )
 			    .filter( MappingGenerator::isEntity )
 			    .map( ( bxClass ) -> {
+
+				    // TODO stop saving the IClassRunnable and switch to box mapping
 				    return new EntityRecord(
 				        extractName( ( IClassRunnable ) bxClass.getTargetInstance() ),
-				        ( Class<IClassRunnable> ) bxClass.getTargetClass(),
-				        writeXMLFile( bxClass )
-				    );
+				        ( ( IClassRunnable ) bxClass.getTargetInstance() ).getName().toString(),
+				        writeXMLFile( bxClass ) );
 			    } )
 			    .collect( Collectors.toMap( ( record ) -> record.entityName(), ( record ) -> record ) );
 		} catch ( IOException e ) {
@@ -115,6 +118,10 @@ public class MappingGenerator {
 	}
 
 	public static boolean isEntity( DynamicObject bxClass ) {
+		if ( bxClass.isInterface() ) {
+			return false;
+		}
+
 		return ( ( IClassRunnable ) bxClass.getTargetInstance() ).getAnnotations().containsKey( ORMKeys.entity );
 	}
 

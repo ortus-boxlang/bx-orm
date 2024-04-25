@@ -25,7 +25,6 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
-import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
@@ -69,10 +68,10 @@ public class SessionFactoryBuilder {
 	private IJDBCCapableContext		context;
 	private ApplicationBoxContext	applicationContext;
 
-	public static Class<IClassRunnable> lookupBoxLangClass( SessionFactory sessionFactory, String entityName ) {
+	public static String lookupBoxLangClass( SessionFactory sessionFactory, String entityName ) {
 		Map<String, EntityRecord> entityMap = ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
 
-		return entityMap.get( entityName ).entityClass();
+		return entityMap.get( entityName ).classFQN();
 	}
 
 	public static ApplicationBoxContext getApplicationContext( SessionFactory sessionFactory ) {

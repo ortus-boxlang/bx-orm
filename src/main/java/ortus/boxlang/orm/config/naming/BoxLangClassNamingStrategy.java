@@ -4,7 +4,7 @@ import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 
-import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.runnables.IBoxRunnable;
 
 /**
  * A physical naming strategy that fires the appropriate methods on a named
@@ -26,9 +26,9 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
  */
 public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 
-	private final Class<IClassRunnable> customNamingStrategy;
+	private final Class<IBoxRunnable> customNamingStrategy;
 
-	public BoxLangClassNamingStrategy( Class<IClassRunnable> customNamingStrategy ) {
+	public BoxLangClassNamingStrategy( Class<IBoxRunnable> customNamingStrategy ) {
 		this.customNamingStrategy = customNamingStrategy;
 	}
 
