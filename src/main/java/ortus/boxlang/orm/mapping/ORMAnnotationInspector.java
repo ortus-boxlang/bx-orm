@@ -14,7 +14,7 @@ public class ORMAnnotationInspector {
 	private IClassRunnable bxInstance;
 
 	public static boolean isIDProperty( Property prop ) {
-		return !prop.annotations().containsKey( Key.id );
+		return prop.annotations().containsKey( Key.id );
 	}
 
 	public static boolean isMappableProperty( Property prop ) {

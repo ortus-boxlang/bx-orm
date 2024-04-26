@@ -1,5 +1,7 @@
 package ortus.boxlang.orm.mapping;
 
+import java.util.function.Predicate;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -53,7 +55,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		// get properties
 
 		inspector.getProperties().stream()
-		    .filter( ( prop ) -> ORMAnnotationInspector.isIDProperty( prop ) )
+		    .filter( Predicate.not( ORMAnnotationInspector::isIDProperty ) )
 		    .filter( ORMAnnotationInspector::isMappableProperty )
 		    .forEach( ( prop ) -> {
 			    Element propEl = doc.createElement( "property" );
