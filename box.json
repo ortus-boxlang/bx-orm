@@ -16,6 +16,10 @@
     "keywords": [
         "boxlang"
     ],
+    "boxlang" : {
+        "minimumVersion" : "1.0.0",
+        "moduleName" : "orm"
+    },
     "private": false,
     "license": [
         {
