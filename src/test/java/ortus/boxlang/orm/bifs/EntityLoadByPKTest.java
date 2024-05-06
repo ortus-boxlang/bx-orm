@@ -16,8 +16,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.compiler.parser.BoxSourceType;
-import ortus.boxlang.orm.ORMService;
-import ortus.boxlang.orm.interceptors.ApplicationLifecycle;
+import ortus.boxlang.modules.orm.ORMService;
+import ortus.boxlang.modules.orm.interceptors.ApplicationLifecycle;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.ApplicationListener;
 import ortus.boxlang.runtime.application.ApplicationTemplateListener;
