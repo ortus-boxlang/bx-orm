@@ -114,7 +114,7 @@ The github actions will clone, test, package, deploy your module to ForgeBox and
 
 > Please note that most of them are already defined at the org level
 
-* `FORGEBOX_TOKEN` - The Ortus ForgeBox API Token
+* `FORGEBOX_API_TOKEN` - The Ortus ForgeBox API Token
 * `AWS_ACCESS_KEY` - The travis user S3 account
 * `AWS_ACCESS_SECRET` - The travis secret S3
 
