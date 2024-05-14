@@ -134,8 +134,10 @@ jobs:
       #     SOURCE_DIR: "build-coldbox/apidocs"
       #     DEST_DIR: ""
 
-      # - name: Publish to Maven Central
-      #   run: |
+      - name: Publish to ForgeBox
+        run: |
+          cd build/module
+          box forgebox publish --force
 
       - name: Create Github Release
         uses: taiki-e/create-gh-release-action@v1.8.0
