@@ -5,8 +5,10 @@ plugins {
     id "com.diffplug.spotless" version "6.25.0"
 	// https://github.com/harbby/gradle-serviceloader
     id "com.github.harbby.gradle.serviceloader" version "1.1.8"
-	// https://github.com/johnrengelman/shadow
-	id 'com.github.johnrengelman.shadow' version '8.1.1'
+	// For building shadow jars with jdk 17 ONLY
+    //id 'com.github.johnrengelman.shadow' version '8.1.1'
+    // For building shadow jars using JDK 21 +, they had to fork
+    id "io.github.goooler.shadow" version "8.1.7"
     // Download task
     id "de.undercouch.download" version "5.6.0"
 }
@@ -14,6 +16,8 @@ plugins {
 /**
  * Project Properties
  */
+sourceCompatibility = jdkVersion
+targetCompatibility = jdkVersion
 ext {
 	buildID = System.getenv( 'BUILD_ID' ) ?: '0'
 	branch = System.getenv( 'BRANCH' ) ?: 'development'
@@ -48,11 +52,6 @@ dependencies {
 }
 
 java {
-	// See: https://docs.gradle.org/current/userguide/toolchains.html#toolchains
-    // This is to provide build consistency across developers and CI/CD
-    toolchain {
-        languageVersion = JavaLanguageVersion.of( project.properties[ "jdkVersion" ] )
-    }
     // Produces a javadocs jar
 	withJavadocJar()
 }
@@ -60,7 +59,6 @@ java {
 compileJava {
 	// Compiler Options
 	options.incremental = true
-	options.release = Integer.parseInt( project.properties[ "jdkVersion" ] )
 	options.encoding = 'UTF-8'
 	options.debug()
 }
@@ -193,7 +191,7 @@ task downloadBoxLang( type: Download ) {
 		file( "src/test/resources/libs" ).mkdirs()
 	}
     // Configure the URL of the file to download
-    src "https://ortus-temp.s3.amazonaws.com/jericho/libs/boxlang-${boxlangVersion}-all.jar"
+    src "https://downloads.ortussolutions.com/ortussolutions/boxlang/${boxlangVersion}/boxlang-${boxlangVersion}-all.jar"
     // Specify the destination directory for the downloaded file
     dest "src/test/resources/libs/boxlang-${boxlangVersion}-all.jar"
     overwrite true

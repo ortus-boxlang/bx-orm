@@ -1,7 +1,6 @@
 {
     "name": "BoxLang ORM",
     "version": "@build.version@+@build.number@",
-	"unlisted" : true,
     "location": "https://downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-orm/@build.version@/bx-orm-@build.version@.zip",
     "author": "Ortus Solutions",
     "homepage": "https://github.com/boxlang-modules/bx-orm",
