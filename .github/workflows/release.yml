@@ -34,7 +34,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       checks: write
+      pull-requests: write
       contents: write
+      issues: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -138,6 +140,7 @@ jobs:
         run: |
           cd build/module
           box forgebox publish --force
+          cd $GITHUB_WORKSPACE
 
       - name: Create Github Release
         uses: taiki-e/create-gh-release-action@v1.8.0
@@ -149,19 +152,6 @@ jobs:
           changelog: changelog.md
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: refs/tags/v${{ env.VERSION }}
-
-      - name: Upload Release Asset
-        uses: sekwah41/upload-release-assets@v1
-        if: env.SNAPSHOT == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_name: boxlang-${{ env.VERSION }}.zip
-          asset_content_type: application/zip
-          asset_path: |
-            build/distributions/**
-            changelog.md
 
       - name: Inform Slack
         if: ${{ always() }}
@@ -185,7 +175,9 @@ jobs:
     needs: [build]
     permissions:
       checks: write
+      pull-requests: write
       contents: write
+      issues: write
     steps:
       - name: Checkout Development Repository
         uses: actions/checkout@v4
@@ -196,6 +188,11 @@ jobs:
       - name: Checkout LTS Repository
         uses: actions/checkout@v4
         if: env.LTS == 'true'
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: ${{ env.GRADLE }}
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -211,9 +208,9 @@ jobs:
         run: |
           if [ $LTS == 'true' ]
           then
-            ./gradlew bumpPatchVersion --stacktrace --console=plain
+            gradle bumpPatchVersion --stacktrace --console=plain
           else
-            ./gradlew bumpMinorVersion --stacktrace --console=plain
+            gradle bumpMinorVersion --stacktrace --console=plain
           fi
           git pull
 
