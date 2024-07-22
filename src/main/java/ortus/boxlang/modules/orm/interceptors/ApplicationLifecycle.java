@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.application.ApplicationListener;
+import ortus.boxlang.runtime.application.ApplicationClassListener;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
@@ -35,10 +35,10 @@ public class ApplicationLifecycle extends BaseInterceptor {
 		logger.info(
 		    "afterApplicationListenerLoad fired; checking for ORM configuration in the application context config" );
 
-		ApplicationListener	listener	= ( ApplicationListener ) args.get( "listener" );
-		RequestBoxContext	context		= ( RequestBoxContext ) args.get( "context" );
+		ApplicationClassListener	listener	= ( ApplicationClassListener ) args.get( "listener" );
+		RequestBoxContext			context		= ( RequestBoxContext ) args.get( "context" );
 
-		IStruct				appSettings	= ( IStruct ) context.getConfigItem( Key.applicationSettings );
+		IStruct						appSettings	= ( IStruct ) context.getConfigItem( Key.applicationSettings );
 		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
 		    || Boolean.FALSE.equals( appSettings.getAsBoolean( ORMKeys.ORMEnabled ) ) ) {
 			logger.info( "ORMEnabled is false or not specified; Refusing to start ORM Service for this application." );

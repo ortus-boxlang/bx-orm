@@ -19,6 +19,7 @@ import ortus.boxlang.runtime.runnables.RunnableLoader;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 public class ORMConfig {
 
@@ -415,7 +416,7 @@ public class ORMConfig {
 	 */
 	private Class<IBoxRunnable> loadBoxlangClassByPath( String classPath ) {
 		String packageName = Paths.get( classPath ).getParent().toString().replace( "/", "." );
-		return RunnableLoader.getInstance().loadClass( Paths.get( classPath ), packageName,
+		return RunnableLoader.getInstance().loadClass( ResolvedFilePath.of( Paths.get( classPath ) ),
 		    BoxRuntime.getInstance().getRuntimeContext() );
 	}
 

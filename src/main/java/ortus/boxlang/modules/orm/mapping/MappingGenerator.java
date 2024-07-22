@@ -37,7 +37,7 @@ public class MappingGenerator {
 	}
 
 	public Map<String, EntityRecord> mapEntities( IBoxContext context, String[] cfcLocations ) {
-		Path cfcPath = Path.of( FileSystemUtil.expandPath( ( IBoxContext ) context, cfcLocations[ 0 ] ) );
+		Path cfcPath = FileSystemUtil.expandPath( ( IBoxContext ) context, cfcLocations[ 0 ] ).absolutePath();
 		try {
 			return Files
 			    .walk( cfcPath )
