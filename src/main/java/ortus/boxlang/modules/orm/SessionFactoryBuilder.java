@@ -163,7 +163,9 @@ public class SessionFactoryBuilder {
 		// .map(filePath -> filePath.toFile())
 		// .toList();
 
-		Map<String, EntityRecord>	entities	= new MappingGenerator( xmlMappingLocation ).mapEntities( ( IBoxContext ) context, ormConfig.cfcLocation );
+		Map<String, EntityRecord>	entities	= new MappingGenerator( ( IBoxContext ) context, ormConfig.cfcLocation, xmlMappingLocation )
+		    .generateMappings()
+		    .getEntityMap();
 
 		// Alternative test implementation
 		List<File>					files		= new java.util.ArrayList<>();
@@ -199,8 +201,9 @@ public class SessionFactoryBuilder {
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.POJO, EntityTuplizer.class );
 
 		String						xmlMappingLocation	= Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", getAppName().getName() ).toString();
-		Map<String, EntityRecord>	entities			= new MappingGenerator( xmlMappingLocation ).mapEntities( ( IBoxContext ) context,
-		    ormConfig.cfcLocation );
+		Map<String, EntityRecord>	entities			= new MappingGenerator( ( IBoxContext ) context, ormConfig.cfcLocation, xmlMappingLocation )
+		    .generateMappings()
+		    .getEntityMap();
 		properties.put( BOXLANG_ENTITY_MAP, entities );
 
 		entities.values()

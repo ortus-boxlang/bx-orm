@@ -6,7 +6,6 @@ import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -17,6 +16,8 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -30,43 +31,66 @@ import ortus.boxlang.runtime.util.FileSystemUtil;
 
 public class MappingGenerator {
 
-	private String xmlMappingLocation;
+	private String						xmlMappingLocation;
 
-	public MappingGenerator( String tempDirectory ) {
-		this.xmlMappingLocation = tempDirectory;
+	/**
+	 * Map of discovered entities.
+	 */
+	private Map<String, EntityRecord>	entityMap;
+
+	private Path						cfcPath;
+
+	private IBoxContext					context;
+
+	private static final Logger			logger	= LoggerFactory.getLogger( MappingGenerator.class );
+
+	public MappingGenerator( IBoxContext context, String[] cfcLocations, String tempDirectory ) {
+		this.entityMap			= new java.util.HashMap<>();
+		this.context			= context;
+		this.xmlMappingLocation	= tempDirectory;
+		this.cfcPath			= FileSystemUtil.expandPath( context, cfcLocations[ 0 ] ).absolutePath();
 	}
 
-	public Map<String, EntityRecord> mapEntities( IBoxContext context, String[] cfcLocations ) {
-		Path cfcPath = FileSystemUtil.expandPath( ( IBoxContext ) context, cfcLocations[ 0 ] ).absolutePath();
+	public MappingGenerator generateMappings() {
 		try {
-			return Files
-			    .walk( cfcPath )
+			Files
+			    .walk( this.cfcPath )
 			    .filter( Files::isRegularFile )
 			    .filter( ( path ) -> StringUtils.endsWithAny( path.toString(), ".bx", ".cfc" ) )
 			    .map( ( clazzPath ) -> {
-				    DynamicObject bxClass = ClassLocator.getInstance().load( ( IBoxContext ) context,
-				        new FQN( cfcPath.getParent(), clazzPath ).toString(),
-				        "bx" );
+				    logger.warn( "Discovered BoxLang class at path {} ", clazzPath.toString() );
+				    FQN lookupPath = new FQN( this.cfcPath.getParent(), Path.of( "/", clazzPath.toString() ) );
+				    logger.warn( lookupPath.toString() );
+				    DynamicObject bxClass = ClassLocator.getInstance().load( this.context, lookupPath.toString(), "bx" );
 
-				    bxClass.invokeConstructor( context, Key.noInit );
+				    bxClass.invokeConstructor( this.context, Key.noInit );
 				    return bxClass;
 			    } )
 			    .filter( MappingGenerator::isEntity )
-			    .map( ( bxClass ) -> {
-
-				    // TODO stop saving the IClassRunnable and switch to box mapping
-				    return new EntityRecord(
-				        extractName( ( IClassRunnable ) bxClass.getTargetInstance() ),
+			    .forEach( ( DynamicObject bxClass ) -> {
+				    // @TODO stop saving the IClassRunnable and switch to box mapping
+				    String entityName = extractName( ( IClassRunnable ) bxClass.getTargetInstance() );
+				    entityMap.put( entityName, new EntityRecord(
+				        entityName,
 				        ( ( IClassRunnable ) bxClass.getTargetInstance() ).getName().toString(),
-				        writeXMLFile( bxClass ) );
-			    } )
-			    .collect( Collectors.toMap( ( record ) -> record.entityName(), ( record ) -> record ) );
+				        writeXMLFile( bxClass ) )
+				    );
+			    } );
 		} catch ( IOException e ) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
-		return null;
+		return this;
+	}
+
+	/**
+	 * Get the map of discovered entities. Obviously, this is only useful once `mapEntities` has been called.
+	 * 
+	 * @return The map of discovered entities, where the key is the entity name and the value is an EntityRecord instance.
+	 */
+	public Map<String, EntityRecord> getEntityMap() {
+		return entityMap;
 	}
 
 	private Path writeXMLFile( DynamicObject bxClass ) {

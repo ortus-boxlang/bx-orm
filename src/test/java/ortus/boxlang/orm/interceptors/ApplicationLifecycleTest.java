@@ -4,9 +4,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.net.URI;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,19 +13,14 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import ortus.boxlang.compiler.parser.BoxSourceType;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.interceptors.ApplicationLifecycle;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.Application;
-import ortus.boxlang.runtime.application.ApplicationListener;
-import ortus.boxlang.runtime.application.ApplicationTemplateListener;
+import ortus.boxlang.runtime.application.BaseApplicationListener;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
-import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
-import ortus.boxlang.runtime.loader.ImportDefinition;
-import ortus.boxlang.runtime.runnables.BoxTemplate;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.InterceptorService;
@@ -38,7 +32,7 @@ public class ApplicationLifecycleTest {
 	static BoxRuntime			instance;
 	static ORMService			ormService;
 	static InterceptorService	interceptorService;
-	IBoxContext					context;
+	RequestBoxContext			context;
 	IScope						variables;
 	static Key					result	= new Key( "result" );
 
@@ -61,63 +55,28 @@ public class ApplicationLifecycleTest {
 	void testApplicationStartupListener() {
 		assertNull( ormService.getSessionFactoryForName( Key.of( "ApplicationLifecycleTest" ) ) );
 
-		BoxTemplate			template	= new BoxTemplate() {
-
-											@Override
-											public List<ImportDefinition> getImports() {
-												return null;
-											}
-
-											@Override
-											public void _invoke( IBoxContext context ) {
-											}
-
-											@Override
-											public long getRunnableCompileVersion() {
-												return 1;
-											}
-
-											@Override
-											public LocalDateTime getRunnableCompiledOn() {
-												return null;
-											}
-
-											@Override
-											public Object getRunnableAST() {
-												return null;
-											}
-
-											@Override
-											public Path getRunnablePath() {
-												return Path.of( "src/test/resources/app/Application.bx" );
-											}
-
-											public BoxSourceType getSourceType() {
-												return BoxSourceType.BOXSCRIPT;
-											}
-
-										};
-		ApplicationListener	listener	= new ApplicationTemplateListener( template, ( RequestBoxContext ) context );
+		context.loadApplicationDescriptor( URI.create( "src/test/resources/app/Application.bx" ) );
+		BaseApplicationListener listener = context.getApplicationListener();
 		listener.updateSettings(
 		    Struct.of(
 		        "ormEnabled", true,
 		        "ormSettings", Struct.of(
-		            "cfcLocation", Array.of( "models" ),
-		            "datasource", "testDB"
+		            "datasource", "TestDB",
+		            "cfcLocation", Array.of( "models" )
 		        ),
 		        "datasources", Struct.of(
-		            "testDB", Struct.of(
+		            "TestDB", Struct.of(
 		                "driver", "derby",
 		                "properties", Struct.of(
-		                    "connectionString", "jdbc:derby:memory:myDB;create=true" ) ) ),
-		        "name", "ApplicationLifecycleTest" ) );
-		context.pushTemplate( template );
+		                    "connectionString", "jdbc:derby:memory:TestDB;create=true" ) ) ),
+		        "name", "MyAppName" ) );
 		// Announce the event the interceptor listens to
 		interceptorService.announce(
 		    Key.of( "afterApplicationListenerLoad" ),
 		    Struct.of(
 		        "listener", listener,
-		        "context", context ) );
+		        "context", context,
+		        "template", null ) );
 
 		assertNotNull( ormService.getSessionFactoryForName( Key.of( "ApplicationLifecycleTest" ) ) );
 
