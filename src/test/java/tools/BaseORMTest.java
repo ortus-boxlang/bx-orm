@@ -56,7 +56,8 @@ public class BaseORMTest {
 		    		datasources={
 		    			"TestDB" = {
 		    				driver = "derby",
-		    				database = "test"
+		    				database = "test",
+		    				connectionString = "jdbc:derby:memory:ORMTest;create=true"
 		    			}
 		    		}
 		    		ormEnabled = "true"

@@ -26,7 +26,6 @@ import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.util.FQN;
 import ortus.boxlang.runtime.util.FileSystemUtil;
 
 public class MappingGenerator {
@@ -58,9 +57,10 @@ public class MappingGenerator {
 			    .filter( Files::isRegularFile )
 			    .filter( ( path ) -> StringUtils.endsWithAny( path.toString(), ".bx", ".cfc" ) )
 			    .map( ( clazzPath ) -> {
-				    logger.warn( "Discovered BoxLang class at path {} ", clazzPath.toString() );
-				    FQN lookupPath = new FQN( this.cfcPath.getParent(), Path.of( "/", clazzPath.toString() ) );
+				    logger.warn( "Discovered BoxLang class at path {} ", clazzPath );
+				    BetterFQN lookupPath = new BetterFQN( this.cfcPath.getParent(), clazzPath );
 				    logger.warn( lookupPath.toString() );
+				    logger.warn( lookupPath.getParts().toString() );
 				    DynamicObject bxClass = ClassLocator.getInstance().load( this.context, lookupPath.toString(), "bx" );
 
 				    bxClass.invokeConstructor( this.context, Key.noInit );
