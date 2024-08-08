@@ -60,7 +60,7 @@ public class MappingGenerator {
 				    logger.warn( "Discovered BoxLang class at path {} ", clazzPath );
 				    BetterFQN lookupPath = new BetterFQN( this.cfcPath.getParent(), clazzPath );
 				    logger.warn( lookupPath.toString() );
-				    logger.warn( lookupPath.getParts().toString() );
+				    // logger.warn( lookupPath.getParts().toString() );
 				    DynamicObject bxClass = ClassLocator.getInstance().load( this.context, lookupPath.toString(), "bx" );
 
 				    bxClass.invokeConstructor( this.context, Key.noInit );
