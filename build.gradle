@@ -38,8 +38,8 @@ dependencies {
     compileOnly files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '-all.jar' )
 
     // Testing Dependencies
-	//testImplementation files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '-all.jar' )
-	testImplementation files( 'src/test/resources/libs/boxlang-1.0.0-all.jar' )
+	// testImplementation files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '-all.jar' )
+	testImplementation files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '-all.jar' )
     testImplementation "org.junit.jupiter:junit-jupiter:5.+"
 	testImplementation "org.mockito:mockito-core:5.+"
 	testImplementation "com.google.truth:truth:1.+"
@@ -141,11 +141,11 @@ task createModuleStructure(type: Copy) {
     from( 'src/main/bx' ) {
 		include '**/*.bx'
 		// Token Replacements Go Here
-		filter( line -> line.replaceAll( '@build.version@', project.version ) )
+		filter { line -> line.replaceAll('@build.version@', project.version) }
 		if( project.branch == "development" ){
-			filter( line -> line.replaceAll( '\\+@build.number@', '-SNAPSHOT' ) )
+			filter { line -> line.replaceAll( '\\+@build.number@', '-SNAPSHOT' ) }
 		} else {
-			filter( line -> line.replaceAll( '@build.number@', project.buildID ) )
+			filter { line -> line.replaceAll( '@build.number@', project.buildID ) }
 		}
     }
     from( '.' ) {
@@ -153,11 +153,11 @@ task createModuleStructure(type: Copy) {
 		include 'readme.md'
 		include 'changelog.md'
 		// Token Replacements Go Here
-		filter( line -> line.replaceAll( '@build.version@', project.version ) )
+		filter { line -> line.replaceAll( '@build.version@', project.version ) }
 		if( project.branch == "development" ){
-			filter( line -> line.replaceAll( '\\+@build.number@', '-SNAPSHOT' ) )
+			filter { line -> line.replaceAll( '\\+@build.number@', '-SNAPSHOT' ) }
 		} else {
-			filter( line -> line.replaceAll( '@build.number@', project.buildID ) )
+			filter { line -> line.replaceAll( '@build.number@', project.buildID ) }
 		}
     }
 
