@@ -5,16 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.nio.file.Path;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.util.List;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ortus.boxlang.compiler.parser.BoxSourceType;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -23,14 +19,11 @@ import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
-import ortus.boxlang.runtime.loader.ImportDefinition;
-import ortus.boxlang.runtime.runnables.IBoxRunnable;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.services.DatasourceService;
 import ortus.boxlang.runtime.types.IStruct;
-import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 public class BaseORMTest {
 
@@ -99,47 +92,5 @@ public class BaseORMTest {
 		variables = context.getScopeNearby( VariablesScope.name );
 		context.getConnectionManager().setDefaultDatasource( datasource );
 		assertDoesNotThrow( () -> JDBCTestUtils.resetDevelopersTable( datasource ) );
-		context.pushTemplate( grabDummyTemplate() );
-	}
-
-	@AfterEach
-	public void cleanupTemplate() {
-		context.popTemplate();
-	}
-
-	public IBoxRunnable grabDummyTemplate() {
-		return new IBoxRunnable() {
-
-			@Override
-			public List<ImportDefinition> getImports() {
-				return List.of();
-			}
-
-			@Override
-			public long getRunnableCompileVersion() {
-				return 0L;
-			}
-
-			@Override
-			public LocalDateTime getRunnableCompiledOn() {
-				return null;
-			}
-
-			@Override
-			public Object getRunnableAST() {
-				return null;
-			}
-
-			@Override
-			public ResolvedFilePath getRunnablePath() {
-				return ResolvedFilePath.of( Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath() );
-			}
-
-			@Override
-			public BoxSourceType getSourceType() {
-				return BoxSourceType.BOXTEMPLATE;
-			}
-
-		};
 	}
 }
