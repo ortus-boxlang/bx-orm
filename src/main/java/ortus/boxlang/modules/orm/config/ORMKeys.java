@@ -13,7 +13,6 @@ public class ORMKeys {
 	public static final Key	autoManageSession		= Key.of( "autoManageSession" );
 	public static final Key	cacheConfig				= Key.of( "cacheConfig" );
 	public static final Key	cacheProvider			= Key.of( "cacheProvider" );
-	public static final Key	cfclocation				= Key.of( "cfclocation" );
 	public static final Key	datasource				= Key.of( "datasource" );
 	public static final Key	dbcreate				= Key.of( "dbcreate" );
 	public static final Key	dialect					= Key.of( "dialect" );
@@ -34,4 +33,14 @@ public class ORMKeys {
 	public static final Key	sqlScript				= Key.of( "sqlScript" );
 	public static final Key	table					= Key.of( "table" );
 	public static final Key	useDBForMapping			= Key.of( "useDBForMapping" );
+	/**
+	 * OLD setting name. Deprecated. Use {@link entityPaths} instead.
+	 */
+	public static final Key	cfclocation				= Key.of( "cfclocation" );
+	/**
+	 * Path to locations of boxlang entity classes.
+	 * <p>
+	 * Usually relative to the application root, aka to `Application.bx`.
+	 */
+	public static final Key	entityPaths				= Key.of( "entityPaths" );
 }

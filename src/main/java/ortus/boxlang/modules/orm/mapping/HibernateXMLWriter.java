@@ -10,6 +10,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
 
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.IStruct;
+
 public class HibernateXMLWriter implements IPersistenceWriter {
 
 	@Override
@@ -40,18 +43,25 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		classElement.setAttribute( "entity-name", inspector.getEntityName() );
 		classElement.setAttribute( "table", inspector.getTable() );
 
-		Element idEl = doc.createElement( "id" );
-		idEl.setAttribute( "name", inspector.getIdPropertyName() );
-		idEl.setAttribute( "column", inspector.getIdPropertyName() );
-		idEl.setAttribute( "type", inspector.getIDPropertyType() );
-		idEl.setAttribute( "column", inspector.getIdPropertyName() );
+		inspector.getPrimaryKeyProperties().stream()
+		    .forEach( ( prop ) -> {
+			    IStruct propStruct = ( IStruct ) prop;
+			    Element keyColumn = doc.createElement( "id" );
+			    keyColumn.setAttribute( "name", propStruct.getAsString( Key._name ) );
+			    if ( propStruct.containsKey( Key.type ) ) {
+				    keyColumn.setAttribute( "type", propStruct.getAsString( Key.type ) );
+			    }
+			    // @TODO: Where's the best place to compute these if absent? Here or in the ORMMetaInspector?
+			    if ( propStruct.containsKey( Key.column ) ) {
+				    keyColumn.setAttribute( "column", propStruct.getAsString( Key.column ) );
+			    }
+			    // Element idGeneratorEl = doc.createElement( "generator" );
+			    // idGeneratorEl.setAttribute( "class", inspector.getIDPropertyGenerator() );
+			    // keyColumn.appendChild( idGeneratorEl );
 
-		Element idGeneratorEl = doc.createElement( "generator" );
-		idGeneratorEl.setAttribute( "class", inspector.getIDPropertyGenerator() );
+			    classElement.appendChild( keyColumn );
+		    } );
 
-		idEl.appendChild( idGeneratorEl );
-
-		classElement.appendChild( idEl );
 		// get properties
 
 		inspector.getProperties().stream()
