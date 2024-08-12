@@ -41,7 +41,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	private Element populateClassElement( Document doc, ORMAnnotationInspector inspector ) {
 		Element classElement = doc.createElement( "class" );
 		classElement.setAttribute( "entity-name", inspector.getEntityName() );
-		classElement.setAttribute( "table", inspector.getTable() );
+		classElement.setAttribute( "table", inspector.getTableName() );
 
 		inspector.getPrimaryKeyProperties().stream()
 		    .forEach( ( prop ) -> {
@@ -51,7 +51,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 			    if ( propStruct.containsKey( Key.type ) ) {
 				    keyColumn.setAttribute( "type", propStruct.getAsString( Key.type ) );
 			    }
-			    // @TODO: Where's the best place to compute these if absent? Here or in the ORMMetaInspector?
+			    // @TODO: Where's the best place to compute these if absent? Here or in the ORMAnnotationInspector?
 			    if ( propStruct.containsKey( Key.column ) ) {
 				    keyColumn.setAttribute( "column", propStruct.getAsString( Key.column ) );
 			    }
@@ -65,6 +65,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		// get properties
 
 		inspector.getProperties().stream()
+		    .map( IStruct.class::cast )
 		    .filter( Predicate.not( ORMAnnotationInspector::isIDProperty ) )
 		    .filter( ORMAnnotationInspector::isMappableProperty )
 		    .forEach( ( prop ) -> {

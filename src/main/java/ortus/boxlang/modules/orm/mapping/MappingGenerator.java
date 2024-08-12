@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 import javax.xml.transform.OutputKeys;
@@ -28,11 +29,17 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.types.exceptions.ParseException;
 import ortus.boxlang.runtime.util.FileSystemUtil;
 
 public class MappingGenerator {
 
+	/**
+	 * The location to save the generated XML mapping files.
+	 * <p>
+	 * This could be a temporary directory, or (when `savemapping` is enabled) the same as the entity directory.
+	 */
 	private String						xmlMappingLocation;
 
 	/**
@@ -40,56 +47,66 @@ public class MappingGenerator {
 	 */
 	private Map<String, EntityRecord>	entityMap;
 
-	private Path						entityPaths;
+	/**
+	 * 
+	 */
+	private List<Path>					entityPaths;
 
 	private IBoxContext					context;
 
 	private static final Logger			logger	= LoggerFactory.getLogger( MappingGenerator.class );
 
-	public MappingGenerator( IBoxContext context, String[] entityPaths, String tempDirectory ) {
+	public MappingGenerator( IBoxContext context, String[] entityPaths, String saveDirectory ) {
 		this.entityMap			= new java.util.HashMap<>();
 		this.context			= context;
-		this.xmlMappingLocation	= tempDirectory;
-		this.entityPaths		= FileSystemUtil.expandPath( context, entityPaths[ 0 ] ).absolutePath();
+		this.xmlMappingLocation	= saveDirectory;
+		this.entityPaths		= new java.util.ArrayList<>();
+		for ( String entityPath : entityPaths ) {
+			this.entityPaths.add( FileSystemUtil.expandPath( context, entityPath ).absolutePath() );
+		}
 	}
 
 	public MappingGenerator generateMappings() {
-		try {
-			Files
-			    // TODO: Rename to entityPaths
-			    .walk( this.entityPaths )
-			    // TODO: resolve, in case it's a mapping
-			    // TODO: ensure directory exists - if not, EITHER warn or throw exception
-			    // TODO: Once this is all working, switch to parallel streams IF > 20ish entities
-			    .filter( Files::isRegularFile )
-			    .filter( ( path ) -> StringUtils.endsWithAny( path.toString(), ".bx", ".cfc" ) )
-			    .map( ( clazzPath ) -> {
-				    logger.warn( "Discovered BoxLang class at path {}; loading entity metadata", clazzPath );
-				    return getClassMeta( new File( clazzPath.toString() ) );
-			    } )
-			    .filter( ( IStruct meta ) -> {
-				    // if it's in a CFC location, it's persistent by default
-				    IStruct classAnnotations = meta.getAsStruct( Key.annotations );
-				    logger.warn( "Checking class {} for 'persistent' annotation", meta.getAsString( Key.path ) );
-				    classAnnotations.computeIfAbsent( ORMKeys.persistent, ( key ) -> true );
-				    if ( BooleanCaster.cast( classAnnotations.getOrDefault( ORMKeys.persistent, true ), false ) ) {
-					    logger.warn( "A 'persistent' annotation found in entity; and is falsey; skipping class as non-persistent.",
-					        meta.getAsString( Key.path ) );
-					    return false;
-				    } else {
-					    logger.warn( "No 'persistent' annotation found OR is truthy; treating class as persistent.",
-					        meta.getAsString( Key.path ) );
-					    return true;
-				    }
-			    } )
-			    .forEach( ( IStruct meta ) -> {
-				    logger.warn( "Working with persistent entity: {}", meta.getAsString( Key.path ) );
-				    writeXMLFile( meta );
-			    } );
-		} catch ( IOException e ) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		this.entityPaths.stream()
+		    .filter( Files::isDirectory )
+		    // TODO: resolve, in case it's a mapping
+		    // TODO: ensure directory exists - if not, EITHER warn or throw exception
+		    .forEach( ( path ) -> {
+			    logger.warn( "Checking path for entities: [{}]", path );
+			    try {
+				    Files
+				        .walk( path )
+				        // TODO: Once this is all working, switch to parallel streams IF > 20ish entities
+				        .filter( Files::isRegularFile )
+				        .filter( ( file ) -> StringUtils.endsWithAny( file.toString(), ".bx", ".cfc" ) )
+				        .map( ( clazzPath ) -> {
+					        logger.trace( "Discovered BoxLang class at path {}; loading entity metadata", clazzPath );
+					        return getClassMeta( new File( clazzPath.toString() ) );
+				        } )
+				        .filter( ( IStruct meta ) -> {
+					        // if it's in a CFC location, it's persistent by default
+					        IStruct classAnnotations = meta.getAsStruct( Key.annotations );
+					        logger.trace( "Checking class [{}] for 'persistent' annotation", meta.getAsString( Key.path ) );
+					        classAnnotations.computeIfAbsent( ORMKeys.persistent, ( key ) -> true );
+					        if ( BooleanCaster.cast( classAnnotations.getOrDefault( ORMKeys.persistent, true ), false ) ) {
+						        logger.trace( "A 'persistent' annotation found in entity [{}]; and is falsey; skipping class as non-persistent.",
+						            meta.getAsString( Key.path ) );
+						        return false;
+					        } else {
+						        logger.trace( "No 'persistent' annotation found (OR is truthy) for class [{}]; treating class as persistent.",
+						            meta.getAsString( Key.path ) );
+						        return true;
+					        }
+				        } )
+				        .forEach( ( IStruct meta ) -> {
+					        logger.warn( "Working with persistent entity: {}", meta.getAsString( Key.path ) );
+					        writeXMLFile( meta );
+				        } );
+			    } catch ( IOException e ) {
+				    // TODO Auto-generated catch block
+				    e.printStackTrace();
+			    }
+		    } );
 
 		return this;
 	}
@@ -104,7 +121,8 @@ public class MappingGenerator {
 			result.getRoot().accept( visitor );
 			return visitor.getMetadata();
 		} catch ( IOException e ) {
-			throw new RuntimeException( e );
+			// @TODO: Check `skipCFCWithError` setting before throwing exception
+			throw new BoxRuntimeException( String.format( "Failed to parse metadata for class: [{}]", entityFile.getAbsolutePath() ), e );
 		}
 	}
 
@@ -123,11 +141,14 @@ public class MappingGenerator {
 		try {
 			new File( xmlMappingLocation ).mkdirs();
 
+			logger.warn( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
 			Files.write( xmlPath, generateXML( meta ).getBytes() );
 
 		} catch ( IOException e ) {
 			// TODO Auto-generated catch block
+			// @TODO: Check `skipCFCWithError` setting before throwing exception
 			e.printStackTrace();
+			throw new BoxRuntimeException( String.format( "Failed to generate Hibernate XML for class: [{}]", name ), e );
 		}
 
 		return xmlPath;

@@ -11,14 +11,15 @@ public class ORMAnnotationInspector {
 	private IStruct	annotations;
 	private Array	properties;
 
-	// public static boolean isIDProperty( Property prop ) {
-	// return prop.annotations().containsKey( Key.id );
-	// }
+	public static boolean isIDProperty( IStruct prop ) {
+		return prop.getAsStruct( Key.annotations ).containsKey( Key.id );
+	}
 
-	// public static boolean isMappableProperty( Property prop ) {
-	// return !prop.annotations().containsKey( ORMKeys.persistent )
-	// || prop.annotations().getAsBoolean( ORMKeys.persistent );
-	// }
+	public static boolean isMappableProperty( IStruct prop ) {
+		var propAnnotations = prop.getAsStruct( Key.annotations );
+		return !propAnnotations.containsKey( ORMKeys.persistent )
+		    || propAnnotations.getAsBoolean( ORMKeys.persistent );
+	}
 
 	public ORMAnnotationInspector( IStruct entityMeta ) {
 		this.meta			= entityMeta;
@@ -27,28 +28,30 @@ public class ORMAnnotationInspector {
 
 		// set sane defaults
 		this.annotations.computeIfAbsent( ORMKeys.entity, ( key ) -> this.meta.getAsString( Key._name ) );
-		this.annotations.computeIfAbsent( Key.table, ( key ) -> this.meta.getAsString( Key.table ) );
+		this.annotations.computeIfAbsent( Key.table, ( key ) -> this.meta.getAsString( Key._name ) );
 	}
 
-	// public Collection<Property> getProperties() {
-	// return this.bxInstance.getProperties().values();
-	// }
+	public Array getProperties() {
+		return this.properties;
+	}
 
-	// public String getPropertyName( Property prop ) {
-	// return prop.name().toString();
-	// }
+	public String getPropertyName( IStruct prop ) {
+		return prop.getAsString( Key._name );
+	}
 
-	// public String getPropertyType( Property prop ) {
-	// return prop.annotations().containsKey( ORMKeys.ORMType )
-	// ? prop.annotations().getAsString( ORMKeys.ORMType )
-	// : "string";
-	// }
+	public String getPropertyType( IStruct prop ) {
+		var propAnnotations = prop.getAsStruct( Key.annotations );
+		return propAnnotations.containsKey( ORMKeys.ORMType )
+		    ? propAnnotations.getAsString( ORMKeys.ORMType )
+		    : "string";
+	}
 
-	// public String getPropertyColumn( Property prop ) {
-	// return prop.annotations().containsKey( Key.column )
-	// ? prop.annotations().getAsString( Key.column )
-	// : null;
-	// }
+	public String getPropertyColumn( IStruct prop ) {
+		var propAnnotations = prop.getAsStruct( Key.annotations );
+		return propAnnotations.containsKey( Key.column )
+		    ? propAnnotations.getAsString( Key.column )
+		    : null;
+	}
 
 	public Array getPrimaryKeyProperties() {
 		return this.properties
@@ -90,19 +93,8 @@ public class ORMAnnotationInspector {
 		return this.annotations.getAsString( ORMKeys.entity );
 	}
 
-	// public String getTable() {
-	// String tableAnnotationValue = bxInstance.getAnnotations().containsKey( ORMKeys.table ) ? bxInstance.getAnnotations().getAsString( ORMKeys.table ) :
-	// "";
-
-	// if ( tableAnnotationValue.length() > 0 ) {
-	// return tableAnnotationValue;
-	// }
-
-	// return extractName();
-	// }
-
-	// private String extractName() {
-	// return StringUtils.substringAfterLast( bxInstance.getName().toString(), "." );
-	// }
+	public String getTableName() {
+		return this.annotations.getAsString( ORMKeys.table );
+	}
 
 }
