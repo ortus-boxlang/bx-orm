@@ -1,10 +1,7 @@
 package ortus.boxlang.modules.orm;
 
-import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -28,7 +25,6 @@ import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
-import ortus.boxlang.runtime.util.FileSystemUtil;
 
 public class SessionFactoryBuilder {
 
@@ -93,7 +89,6 @@ public class SessionFactoryBuilder {
 
 	public SessionFactory build() {
 		Configuration	configuration	= buildConfiguration();
-		// getORMMappingFiles().forEach( configuration::addFile );
 
 		SessionFactory	factory			= configuration.buildSessionFactory();
 
@@ -125,56 +120,11 @@ public class SessionFactoryBuilder {
 		// return currentContext.getConnectionManager().getDefaultDatasourceOrThrow();
 	}
 
-	private List<File> getORMMappingFiles() {
-		// @TODO: Should we use the application name, or the ORM configuration hash?
-		String xmlMappingLocation = Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", getAppName().getName() ).toString();
-		if ( !ormConfig.autoGenMap ) {
-			// Skip mapping generation and load the pre-generated mappings from this
-			// location.
-			// xmlMappingLocation = ormConfig.cfcLocation;
-			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
-		} else {
-			// @TODO: Here we generate entity mappings and populate the temp directory (aka
-			// xmlMappingLocation) with the generated files.
-			// If `ormConfig.getAsBoolean(ORMKeys.savemapping)` is true, we should save the
-			// generated files to `ormConfig.getAsString(ORMKeys.cfclocation)`. Else, we
-			// should save them to the temp directory.
-			// @TODO: Also remember to use the
-			// `ormConfig.getAsBoolean(ORMKeys.skipCFCWithError)` setting to determine
-			// whether to throw exceptions on compile-time errors.
-		}
-		// Regardless of the autoGenMap configuration value, we now have a directory
-		// populated with JPA orm.xml mapping files.
-		// We now need to load these files into the Hibernate configuration.
-		// return Arrays.stream(xmlMappingLocation.split(","))
-		// .flatMap(path -> {
-		// try {
-		// return Files.walk(Paths.get(path), 1);
-		// } catch (IOException e) {
-		// throw new BoxRuntimeException("Error walking cfclcation path: " +
-		// path.toString(), e);
-		// }
-		// })
-		// // filter to valid orm.xml files
-		// .filter(filePath -> FilePath.endsWith(".orm.xml"))
-		// // @TODO: I'm unsure, but we may need to convert the string path to a File
-		// // object to work around JPA's classpath limitations.
-		// // We should first try this without the conversion and see if it works.
-		// .map(filePath -> filePath.toFile())
-		// .toList();
-
-		Map<String, EntityRecord>	entities	= new MappingGenerator( ( IBoxContext ) context, ormConfig.cfcLocation, xmlMappingLocation )
-		    .generateMappings()
-		    .getEntityMap();
-
-		// Alternative test implementation
-		List<File>					files		= new java.util.ArrayList<>();
-		// Dummy file for testing
-		files.add( Paths.get( "src/test/resources/app/models/Event.hbm.xml" ).toFile() );
-		files.add( Paths.get( "src/test/resources/app/models/Developer.hbm.xml" ).toFile() );
-		return files;
-	}
-
+	/**
+	 * Configure the Hibernate session factory with the ORM configuration, entity mappings, etc.
+	 * 
+	 * @return a populated Hibernate configuration object
+	 */
 	private Configuration buildConfiguration() {
 		Configuration	configuration	= ormConfig.toHibernateConfig();
 
@@ -200,21 +150,42 @@ public class SessionFactoryBuilder {
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.POJO, EntityTuplizer.class );
 
-		String						xmlMappingLocation	= Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", getAppName().getName() ).toString();
-		Map<String, EntityRecord>	entities			= new MappingGenerator( ( IBoxContext ) context, ormConfig.cfcLocation, xmlMappingLocation )
-		    .generateMappings()
-		    .getEntityMap();
+		Map<String, EntityRecord> entities = getEntityMap();
 		properties.put( BOXLANG_ENTITY_MAP, entities );
 
 		entities.values()
 		    .stream()
 		    .map( EntityRecord::mappingFile )
 		    .map( Path::toString )
-		    .forEach( configuration::addFile );
+		    .forEach( ( path ) -> {
+			    logger.error( "Adding entity mapping file: {}", path );
+			    configuration.addFile( path );
+		    } );
 
 		configuration.addProperties( properties );
 
 		return configuration;
+	}
+
+	/**
+	 * Read or generate entity mappings and return a map of entity names to entity file paths
+	 * 
+	 * @return
+	 */
+	private Map<String, EntityRecord> getEntityMap() {
+		if ( !ormConfig.autoGenMap ) {
+			// Skip mapping generation and load the pre-generated mappings from `ormConfig.cfcLocation`
+			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
+		} else {
+			// @TODO: Here we generate entity mappings and populate the temp directory (aka
+			// xmlMappingLocation) with the generated files.
+			// If `ormConfig.getAsBoolean(ORMKeys.savemapping)` is true, we should save the
+			// generated files to `ormConfig.getAsString(ORMKeys.cfcLocation)`. Else, we
+			// should save them to the temp directory.
+			return new MappingGenerator( ( IBoxContext ) context, ormConfig )
+			    .generateMappings()
+			    .getEntityMap();
+		}
 	}
 
 	/**

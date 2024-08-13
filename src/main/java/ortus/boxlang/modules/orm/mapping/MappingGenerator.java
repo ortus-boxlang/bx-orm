@@ -10,7 +10,6 @@ import java.util.Map;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -24,6 +23,7 @@ import org.w3c.dom.Document;
 import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
 import ortus.boxlang.compiler.parser.BoxScriptParser;
 import ortus.boxlang.compiler.parser.ParsingResult;
+import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
@@ -40,7 +40,17 @@ public class MappingGenerator {
 	 * <p>
 	 * This could be a temporary directory, or (when `savemapping` is enabled) the same as the entity directory.
 	 */
-	private String						xmlMappingLocation;
+	private String						saveDirectory;
+
+	/**
+	 * Whether to save the mapping files alongside the entity files. (Default: false)
+	 * <p>
+	 * Alias for {@link ORMConfig#saveMapping}.
+	 *
+	 * <p>
+	 * If true, the mapping files will be saved in the same directory as the entity files and {@link #xmlMappingLocation} will be ignored.
+	 */
+	private boolean						saveMappingAlongsideEntity;
 
 	/**
 	 * Map of discovered entities.
@@ -48,20 +58,38 @@ public class MappingGenerator {
 	private Map<String, EntityRecord>	entityMap;
 
 	/**
-	 * 
+	 * List of paths to search for entities.
 	 */
 	private List<Path>					entityPaths;
 
+	/**
+	 * ALL ORM configuration.
+	 */
+	private ORMConfig					config;
+
+	/**
+	 * IBoxContext - we shouldn't need this, but it's here for now.
+	 * <p>
+	 * 
+	 * @TODO: Drop once development stabilizes.
+	 */
 	private IBoxContext					context;
 
 	private static final Logger			logger	= LoggerFactory.getLogger( MappingGenerator.class );
 
-	public MappingGenerator( IBoxContext context, String[] entityPaths, String saveDirectory ) {
-		this.entityMap			= new java.util.HashMap<>();
-		this.context			= context;
-		this.xmlMappingLocation	= saveDirectory;
-		this.entityPaths		= new java.util.ArrayList<>();
-		for ( String entityPath : entityPaths ) {
+	public MappingGenerator( IBoxContext context, ORMConfig config ) {
+		this.entityMap					= new java.util.HashMap<>();
+		this.context					= context;
+		this.config						= config;
+		this.saveDirectory				= Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", String.valueOf( config.hashCode() ) ).toString();
+		this.saveMappingAlongsideEntity	= config.saveMapping;
+		this.entityPaths				= new java.util.ArrayList<>();
+
+		if ( !this.saveMappingAlongsideEntity ) {
+			new File( this.saveDirectory ).mkdirs();
+		}
+
+		for ( String entityPath : config.cfcLocation ) {
 			this.entityPaths.add( FileSystemUtil.expandPath( context, entityPath ).absolutePath() );
 		}
 	}
@@ -74,6 +102,7 @@ public class MappingGenerator {
 		    .forEach( ( path ) -> {
 			    logger.warn( "Checking path for entities: [{}]", path );
 			    try {
+				    // @TODO: Switch to .reduce() to build a list of .bx/.cfc files so we can process metadata in parallel
 				    Files
 				        .walk( path )
 				        // TODO: Once this is all working, switch to parallel streams IF > 20ish entities
@@ -100,7 +129,13 @@ public class MappingGenerator {
 				        } )
 				        .forEach( ( IStruct meta ) -> {
 					        logger.warn( "Working with persistent entity: {}", meta.getAsString( Key.path ) );
-					        writeXMLFile( meta );
+					        entityMap.put( meta.getAsString( Key._name ),
+					            new EntityRecord(
+					                meta.getAsString( Key._name ),
+					                "foo.foo",
+					                writeXMLFile( meta )
+					            )
+					        );
 				        } );
 			    } catch ( IOException e ) {
 				    // TODO Auto-generated catch block
@@ -135,26 +170,51 @@ public class MappingGenerator {
 		return entityMap;
 	}
 
+	/**
+	 * Write the XML mapping file for the given entity metadata.
+	 * 
+	 * @param meta The entity metadata.
+	 * 
+	 * @return The path to the generated XML mapping file If `saveMappingAlongsideEntity` is true, the path will be the same as the entity file, but with
+	 *         a `.hbm.xml` extension.
+	 */
 	private Path writeXMLFile( IStruct meta ) {
 		String	name	= meta.getAsString( Key._name );
-		Path	xmlPath	= Path.of( xmlMappingLocation, name + ".hbm.xml" );
+		Path	xmlPath	= this.saveMappingAlongsideEntity
+		    ? Path.of( meta.getAsString( Key.path ).replace( ".bx", ".hbm.xml" ) )
+		    : Path.of( this.saveDirectory, name + ".hbm.xml" );
 		try {
-			new File( xmlMappingLocation ).mkdirs();
-
 			logger.warn( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
-			Files.write( xmlPath, generateXML( meta ).getBytes() );
+			String finalXML = generateXML( meta );
+			if ( finalXML.isEmpty() ) {
+				logger.warn( "No XML mapping generated for entity [{}]; skipping file write", name );
+			} else {
+				Files.write( xmlPath, finalXML.getBytes() );
+			}
 
 		} catch ( IOException e ) {
-			// TODO Auto-generated catch block
-			// @TODO: Check `skipCFCWithError` setting before throwing exception
-			e.printStackTrace();
-			throw new BoxRuntimeException( String.format( "Failed to generate Hibernate XML for class: [{}]", name ), e );
+			String message = String.format( "Failed to save XML mapping for class: [%s]", name );
+			if ( config.skipCFCWithError ) {
+				logger.error( message );
+				return null;
+			}
+			throw new BoxRuntimeException( message, e );
 		}
 
 		return xmlPath;
 	}
 
-	public String generateXML( IStruct meta ) {
+	/**
+	 * Generate the XML mapping for the given entity metadata.
+	 * <p>
+	 * Calls the HibernateXMLWriter to generate the XML mapping, then wraps it with a bit of pre and post XML to close out the file.
+	 * 
+	 * @param meta The entity metadata.
+	 * 
+	 * @return The full XML mapping for the entity as a string. If an exception was encountered and {@link ORMConfig#skipCFCWithError} is true, an empty
+	 *         string will be returned.
+	 */
+	private String generateXML( IStruct meta ) {
 		try {
 			ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( meta );
 			Document				doc			= new HibernateXMLWriter().generateXML( inspector );
@@ -174,14 +234,14 @@ public class MappingGenerator {
 			transformer.transform( new DOMSource( doc ), new StreamResult( writer ) );
 
 			return writer.getBuffer().toString();
-		} catch ( TransformerConfigurationException e ) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch ( TransformerException e ) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			String entityName = meta.getAsString( Key._name );
+			logger.warn( "Failed to transform XML to string for entity [{}]", entityName, e );
+			if ( !config.skipCFCWithError ) {
+				throw new BoxRuntimeException( String.format( "Failed to transform XML to string for entity [%s]", entityName ), e );
+			}
 		}
 
-		return "test";
+		return "";
 	}
 }
