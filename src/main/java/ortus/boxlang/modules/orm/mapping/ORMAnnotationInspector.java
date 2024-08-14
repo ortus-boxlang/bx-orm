@@ -61,7 +61,7 @@ public class ORMAnnotationInspector {
 	}
 
 	/**
-	 * @TODO: Convert this to support muiltiple ID properties.
+	 * @TODO: Convert this to support multiple ID properties.
 	 *        And... shouldn't we also be looking at the `fieldtype` annotation?
 	 * 
 	 * @return
