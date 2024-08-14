@@ -150,6 +150,9 @@ public class SessionFactoryBuilder {
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.POJO, EntityTuplizer.class );
 
+		// Don't pretend our BL entities are POJOs.
+		configuration.setProperty( AvailableSettings.DEFAULT_ENTITY_MODE, "dynamic-map" );
+
 		Map<String, EntityRecord> entities = getEntityMap();
 		properties.put( BOXLANG_ENTITY_MAP, entities );
 

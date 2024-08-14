@@ -109,22 +109,22 @@ public class MappingGenerator {
 				        .filter( Files::isRegularFile )
 				        .filter( ( file ) -> StringUtils.endsWithAny( file.toString(), ".bx", ".cfc" ) )
 				        .map( ( clazzPath ) -> {
-					        logger.trace( "Discovered BoxLang class at path {}; loading entity metadata", clazzPath );
+					        logger.warn( "Discovered BoxLang class at path {}; loading entity metadata", clazzPath );
 					        return getClassMeta( new File( clazzPath.toString() ) );
 				        } )
 				        .filter( ( IStruct meta ) -> {
 					        // if it's in a CFC location, it's persistent by default
 					        IStruct classAnnotations = meta.getAsStruct( Key.annotations );
-					        logger.trace( "Checking class [{}] for 'persistent' annotation", meta.getAsString( Key.path ) );
+					        logger.warn( "Checking class [{}] for 'persistent' annotation", meta.getAsString( Key.path ) );
 					        classAnnotations.computeIfAbsent( ORMKeys.persistent, ( key ) -> true );
 					        if ( BooleanCaster.cast( classAnnotations.getOrDefault( ORMKeys.persistent, true ), false ) ) {
-						        logger.trace( "A 'persistent' annotation found in entity [{}]; and is falsey; skipping class as non-persistent.",
-						            meta.getAsString( Key.path ) );
-						        return false;
-					        } else {
-						        logger.trace( "No 'persistent' annotation found (OR is truthy) for class [{}]; treating class as persistent.",
+						        logger.warn( "No 'persistent' annotation found (OR is truthy) for class [{}]; treating class as persistent.",
 						            meta.getAsString( Key.path ) );
 						        return true;
+					        } else {
+						        logger.warn( "A 'persistent' annotation found in entity [{}]; and is falsey; skipping class as non-persistent.",
+						            meta.getAsString( Key.path ) );
+						        return false;
 					        }
 				        } )
 				        .forEach( ( IStruct meta ) -> {
@@ -138,7 +138,7 @@ public class MappingGenerator {
 					        );
 				        } );
 			    } catch ( IOException e ) {
-				    // TODO Auto-generated catch block
+				    // @TODO: Check `skipCFCWithError` setting before throwing exception; allow 'true' behavior to not halt the file walking.
 				    e.printStackTrace();
 			    }
 		    } );

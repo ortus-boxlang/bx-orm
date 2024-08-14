@@ -177,7 +177,9 @@ public class ORMConfig {
 	/**
 	 * If true, then the ORM startup will ignore CFCs that have compile time errors
 	 * in them.
-	 * Use false to throw exceptions.
+	 * If `false`, exceptions will be thrown during the ORM startup for any class that could not be converted to a mapping.
+	 * 
+	 * @TODO: Rename to `strictParsing` or similar.
 	 */
 	public boolean				skipCFCWithError;
 

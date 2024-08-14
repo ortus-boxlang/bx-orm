@@ -56,38 +56,16 @@ public class ORMAnnotationInspector {
 	public Array getPrimaryKeyProperties() {
 		return this.properties
 		    .stream()
-		    .filter( ( prop ) -> ( ( IStruct ) prop ).getAsStruct( Key.annotations ).containsKey( Key.id ) )
+		    .filter( ( prop ) -> {
+			    var propAnnotations = ( ( IStruct ) prop ).getAsStruct( Key.annotations );
+			    return
+			    // JPA annotations:
+			    propAnnotations.containsKey( Key.id )
+			        // CFML/BL syntax
+			        || propAnnotations.containsKey( ORMKeys.fieldtype ) && propAnnotations.getAsString( ORMKeys.fieldtype ).equals( "id" );
+		    } )
 		    .collect( Array::new, Array::add, Array::addAll );
 	}
-
-	/**
-	 * @TODO: Convert this to support multiple ID properties.
-	 *        And... shouldn't we also be looking at the `fieldtype` annotation?
-	 * 
-	 * @return
-	 */
-	public String getIdPropertyName() {
-		IStruct firstIDProperty = ( IStruct ) this.properties
-		    .stream()
-		    .filter( ( prop ) -> ( ( IStruct ) prop ).getAsStruct( Key.annotations ).containsKey( Key.id ) )
-		    .findFirst()
-		    .get();
-		return firstIDProperty
-		    .getAsStruct( Key.annotations )
-		    .get( Key.of( "name" ) )
-		    .toString();
-	}
-
-	// public String getIDPropertyType() {
-	// // TODO should probably refactor getIdPropertyName : String -> getIdProperty() : Property
-	// // that way we can reuse the generic properties for id as well
-	// return "integer";
-	// }
-
-	// public String getIDPropertyGenerator() {
-	// // TODO see @getIDPropertyType() todo
-	// return "increment";
-	// }
 
 	public String getEntityName() {
 		return this.annotations.getAsString( ORMKeys.entity );

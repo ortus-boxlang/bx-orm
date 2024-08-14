@@ -43,4 +43,9 @@ public class ORMKeys {
 	 * Usually relative to the application root, aka to `Application.bx`.
 	 */
 	public static final Key	entityPaths				= Key.of( "entityPaths" );
+
+	/**
+	 * Entity annotations
+	 */
+	public static final Key	fieldtype				= Key.of( "fieldtype" );
 }
