@@ -63,7 +63,7 @@ public class BaseORMTest {
 		    		ormEnabled = "true"
 		    		ormsettings = {
 		    			datasource = "TestDB",
-		    			cfcLocation = ["src/test/resources/app/models"]
+		    			entityPaths = ["src/test/resources/app/models"]
 		    		};
 		    """, startupContext );
 

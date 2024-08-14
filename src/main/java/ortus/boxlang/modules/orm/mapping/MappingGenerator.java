@@ -89,7 +89,7 @@ public class MappingGenerator {
 			new File( this.saveDirectory ).mkdirs();
 		}
 
-		for ( String entityPath : config.cfcLocation ) {
+		for ( String entityPath : config.entityPaths ) {
 			this.entityPaths.add( FileSystemUtil.expandPath( context, entityPath ).absolutePath() );
 		}
 	}

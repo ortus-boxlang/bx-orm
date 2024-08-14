@@ -69,8 +69,10 @@ public class ORMConfig {
 	 * <strong>Important:</strong> If it is not set, the extension looks at the
 	 * application directory, its sub-directories, and its mapped directories to
 	 * search for persistent CFCs.
+	 * <p>
+	 * Aliased as `cfclocation` for Adobe and Lucee CFML compatibility.
 	 */
-	public String[]				cfcLocation;
+	public String[]				entityPaths;
 
 	/**
 	 * Define the data source to be utilized by the ORM. If not used,
@@ -249,12 +251,12 @@ public class ORMConfig {
 			cacheProvider = properties.getAsString( ORMKeys.cacheProvider );
 		}
 
-		if ( properties.containsKey( ORMKeys.cfclocation ) && properties.get( ORMKeys.cfclocation ) != null ) {
-			if ( properties.get( ORMKeys.cfclocation ) instanceof String cfcLocationString && !properties.getAsString( ORMKeys.cfclocation ).isBlank() ) {
-				this.cfcLocation = new String[] { cfcLocationString };
-			} else if ( properties.get( ORMKeys.cfclocation ) instanceof Array cfcLocationArray ) {
-				Object[] temp = properties.getAsArray( ORMKeys.cfclocation ).toArray();
-				cfcLocation = Arrays.copyOf( temp, temp.length, String[].class );
+		if ( properties.containsKey( ORMKeys.entityPaths ) && properties.get( ORMKeys.entityPaths ) != null ) {
+			setEntityPaths( properties.get( ORMKeys.entityPaths ) );
+		} else {
+			// CFML-compatible `cfcLocation` configuration support
+			if ( properties.containsKey( ORMKeys.cfclocation ) ) {
+				setEntityPaths( properties.get( ORMKeys.cfclocation ) );
 			}
 		}
 
@@ -306,6 +308,23 @@ public class ORMConfig {
 		if ( properties.containsKey( ORMKeys.catalog ) && properties.get( ORMKeys.catalog ) != null
 		    && !properties.getAsString( ORMKeys.catalog ).isBlank() ) {
 			catalog = properties.getAsString( ORMKeys.catalog );
+		}
+	}
+
+	/**
+	 * Encapsulates the logic for setting the `entityPaths` configuration setting based on a string, list of strings, array, or null value.
+	 * 
+	 * @param entityPaths The value of the `entityPaths` or (deprecated) `cfcLocation` configuration setting.
+	 */
+	private void setEntityPaths( Object entityPaths ) {
+		if ( entityPaths == null ) {
+			return;
+		}
+		if ( entityPaths instanceof String entityPathString && !entityPathString.isBlank() ) {
+			this.entityPaths = new String[] { entityPathString };
+		} else if ( entityPaths instanceof Array pathArray ) {
+			Object[] temp = pathArray.toArray();
+			this.entityPaths = Arrays.copyOf( temp, temp.length, String[].class );
 		}
 	}
 

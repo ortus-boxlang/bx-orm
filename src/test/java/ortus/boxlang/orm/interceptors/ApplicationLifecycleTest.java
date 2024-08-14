@@ -62,7 +62,7 @@ public class ApplicationLifecycleTest {
 		        "ormEnabled", true,
 		        "ormSettings", Struct.of(
 		            "datasource", "TestDB",
-		            "cfcLocation", Array.of( "models" )
+		            "entityPaths", Array.of( "models" )
 		        ),
 		        "datasources", Struct.of(
 		            "TestDB", Struct.of(
@@ -95,7 +95,7 @@ public class ApplicationLifecycleTest {
 		    application
 		              name="ApplicationLifecycleTest2"
 		              ormEnabled="true"
-		              ormSettings='{ cfcLocation: ["models/"], datasource:"testDB" }'
+		              ormSettings='{ entityPaths: ["models/"], datasource:"testDB" }'
 		              ;
 		    """,
 		    context );

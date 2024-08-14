@@ -174,14 +174,10 @@ public class SessionFactoryBuilder {
 	 */
 	private Map<String, EntityRecord> getEntityMap() {
 		if ( !ormConfig.autoGenMap ) {
-			// Skip mapping generation and load the pre-generated mappings from `ormConfig.cfcLocation`
+			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
 			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
 		} else {
-			// @TODO: Here we generate entity mappings and populate the temp directory (aka
-			// xmlMappingLocation) with the generated files.
-			// If `ormConfig.getAsBoolean(ORMKeys.savemapping)` is true, we should save the
-			// generated files to `ormConfig.getAsString(ORMKeys.cfcLocation)`. Else, we
-			// should save them to the temp directory.
+			// generate xml mappings on the fly, saving them either to a temp directory or alongside the entity class files if `ormConfig.saveMapping` is true.
 			return new MappingGenerator( ( IBoxContext ) context, ormConfig )
 			    .generateMappings()
 			    .getEntityMap();
