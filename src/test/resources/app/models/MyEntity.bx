@@ -1,8 +1,19 @@
 class entityName="Auto" persistent="true" {
 
-	property name="id" type="string" fieldtype="id" ormtype="string";
-	property name="make" type="string";
-	property name="model" type="string";
+	property 
+        name="id" 
+        type="string" 
+        fieldtype="id" 
+        ormtype="string" 
+        generator="sequence"
+        params='{"sequence":"auto_seq"}';
+        
+	property 
+        name="make" 
+        type="string";
+	property 
+        name="model" 
+        type="string";
 
     function onPreInsert(){
         log.info( "Inserting new Auto: #getMake()# #getModel()#" );

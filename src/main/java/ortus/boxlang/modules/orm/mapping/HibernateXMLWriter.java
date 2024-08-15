@@ -12,8 +12,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
 
+import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 
 public class HibernateXMLWriter implements IPersistenceWriter {
 
@@ -45,6 +48,15 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 
 	/**
 	 * Generate a &lt;property /&gt; element for the given property metadata.
+	 * <p>
+	 * Uses these annotations:
+	 * <ul>
+	 * <li>name</li>
+	 * <li>type</li>
+	 * <li>column</li>
+	 * <li>unsavedValue</li>
+	 * <li>and many, many more to come</li>
+	 * </ul>
 	 * 
 	 * @param doc       Parent document to use for creating the element
 	 * @param prop      Property metadata in struct form
@@ -61,12 +73,24 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		if ( column != null ) {
 			theNode.setAttribute( "column", column );
 		}
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
+			theNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
+		}
 
 		return theNode;
 	}
 
 	/**
 	 * Generate a &lt;id /&gt; element for the given property metadata.
+	 * <p>
+	 * Uses these annotations:
+	 * <ul>
+	 * <li>name</li>
+	 * <li>type</li>
+	 * <li>column</li>
+	 * <li>unsavedValue</li>
+	 * <li>and many, many more to come</li>
+	 * </ul>
 	 * 
 	 * @param doc       Parent document to use for creating the element
 	 * @param prop      Property metadata in struct form
@@ -75,19 +99,75 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * @return A &lt;id /&gt; element ready to add to a Hibernate mapping document
 	 */
 	private Element generateKeyElement( Document doc, IStruct prop, ORMAnnotationInspector inspector ) {
-		Element theNode = doc.createElement( "id" );
-		theNode.setAttribute( "name", prop.getAsString( Key._name ) );
+		Element	theNode		= doc.createElement( "id" );
+		String	propName	= prop.getAsString( Key._name );
+		theNode.setAttribute( "name", propName );
 		if ( prop.containsKey( Key.type ) ) {
 			theNode.setAttribute( "type", prop.getAsString( Key.type ) );
 		}
-		// @TODO: Where's the best place to compute these if absent? Here or in the ORMAnnotationInspector?
-		if ( prop.containsKey( Key.column ) ) {
-			theNode.setAttribute( "column", prop.getAsString( Key.column ) );
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
+			theNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
 		}
-		// Element idGeneratorEl = doc.createElement( "generator" );
-		// idGeneratorEl.setAttribute( "class", inspector.getIDPropertyGenerator() );
-		// theNode.appendChild( idGeneratorEl );
+		// @TODO: Where's the best place to compute these if absent? Here or in the ORMAnnotationInspector?
+		if ( inspector.hasPropertyAnnotation( prop, Key.column ) ) {
+			theNode.setAttribute( "column", inspector.getPropertyAnnotation( prop, Key.column ) );
+		}
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generator ) ) {
+			theNode.appendChild( generateGeneratorElement( doc, prop, inspector ) );
+		}
 
+		return theNode;
+	}
+
+	/**
+	 * Generate a &lt;generator/&gt; element for the given property metadata.
+	 * <p>
+	 * Uses these annotations:
+	 * <ul>
+	 * <li>generator</li>
+	 * <li>params</li>
+	 * <li>sequence</li>
+	 * <li>selectKey</li>
+	 * <li>generated</li>
+	 * </ul>
+	 * 
+	 * @param doc       Parent document to use for creating the element
+	 * @param prop      Property metadata in struct form
+	 * @param inspector ORMAnnotationInspector instance to use for inspecting and manipulating property metadata
+	 * 
+	 * @return A &lt;generator /&gt; element ready to add to a Hibernate mapping document
+	 */
+	private Element generateGeneratorElement( Document doc, IStruct prop, ORMAnnotationInspector inspector ) {
+		String	propName	= prop.getAsString( Key._name );
+
+		Element	theNode		= doc.createElement( "generator" );
+		theNode.setAttribute( "class", inspector.getPropertyAnnotation( prop, ORMKeys.generator ) );
+		IStruct params = Struct.EMPTY;
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.selectKey ) ) {
+			params.put( "key", inspector.getPropertyAnnotation( prop, ORMKeys.selectKey ) );
+		}
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generated ) ) {
+			params.put( "generated", inspector.getPropertyAnnotation( prop, ORMKeys.generated ) );
+		}
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.sequence ) ) {
+			params.put( "sequence", inspector.getPropertyAnnotation( prop, ORMKeys.sequence ) );
+		}
+		if ( inspector.hasPropertyAnnotation( prop, Key.params ) ) {
+			Object	paramValue			= prop.getAsStruct( Key.annotations ).get( Key.params );
+			IStruct	additionalParams	= StructCaster.cast( paramValue, false );
+			if ( params == null ) {
+				logger.warn( "Property '{}' has a 'params' annotation that could not be cast to a struct: {}", propName, paramValue );
+				return theNode;
+			} else {
+				params.putAll( additionalParams );
+			}
+		}
+		params.forEach( ( key, value ) -> {
+			Element paramEl = doc.createElement( "param" );
+			paramEl.setAttribute( "name", key.getNameNoCase() );
+			paramEl.setNodeValue( value.toString() );
+			theNode.appendChild( paramEl );
+		} );
 		return theNode;
 	}
 
@@ -106,7 +186,6 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 
 		inspector.getPrimaryKeyProperties().stream()
 		    .forEach( ( prop ) -> {
-			    logger.warn( "Generating key element for property: {}", prop.toString() );
 			    classElement.appendChild( generateKeyElement( doc, ( IStruct ) prop, inspector ) );
 		    } );
 

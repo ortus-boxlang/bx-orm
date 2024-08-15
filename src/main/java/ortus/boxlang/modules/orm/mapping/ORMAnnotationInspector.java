@@ -39,6 +39,17 @@ public class ORMAnnotationInspector {
 		return prop.getAsString( Key._name );
 	}
 
+	public boolean hasPropertyAnnotation( IStruct prop, Key annotation ) {
+		return prop.getAsStruct( Key.annotations ).containsKey( annotation );
+	}
+
+	public String getPropertyAnnotation( IStruct prop, Key annotation ) {
+		var propAnnotations = prop.getAsStruct( Key.annotations );
+		return propAnnotations.containsKey( annotation )
+		    ? propAnnotations.getAsString( annotation )
+		    : null;
+	}
+
 	public String getPropertyType( IStruct prop ) {
 		var propAnnotations = prop.getAsStruct( Key.annotations );
 		return propAnnotations.containsKey( ORMKeys.ORMType )

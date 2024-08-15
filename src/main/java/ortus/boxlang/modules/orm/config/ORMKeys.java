@@ -48,4 +48,9 @@ public class ORMKeys {
 	 * Entity annotations
 	 */
 	public static final Key	fieldtype				= Key.of( "fieldtype" );
+	public static final Key	generator				= Key.of( "generator" );
+	public static final Key	unsavedValue			= Key.of( "unsavedValue" );
+	public static final Key	generated				= Key.of( "generated" );
+	public static final Key	sequence				= Key.of( "sequence" );
+	public static final Key	selectKey				= Key.of( "selectKey" );
 }
