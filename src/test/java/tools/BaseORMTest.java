@@ -57,15 +57,14 @@ public class BaseORMTest {
 		    			"TestDB" = {
 		    				driver = "derby",
 		    				database = "test",
-		    				connectionString = "jdbc:derby:memory:ORMTest;create=true"
+		    				connectionString = "jdbc:derby:memory:TestDB;create=true"
 		    			}
 		    		}
 		    		ormEnabled = "true"
 		    		ormsettings = {
 		    			datasource = "TestDB",
 		    			entityPaths = ["src/test/resources/app/models"],
-		    			saveMapping = "true",
-		    			dbcreate = "create"
+		    			saveMapping = "true"
 		    		};
 		    """, startupContext );
 

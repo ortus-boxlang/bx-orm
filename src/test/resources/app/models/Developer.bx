@@ -3,7 +3,7 @@
 class accessors=true {
     @id
     @ORMType "integer"
-    property name="theid";
+    property name="id";
 
     @ORMType "string"
     property name="name";

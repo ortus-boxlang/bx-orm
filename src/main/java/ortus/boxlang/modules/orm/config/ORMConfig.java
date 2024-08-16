@@ -338,8 +338,14 @@ public class ORMConfig {
 		Configuration configuration = new Configuration();
 
 		if ( this.dbcreate != null ) {
-			// @TODO: Fix our `dbcreate` coercion to actually work. For now, we'll pass through values directly.
-			configuration.setProperty( AvailableSettings.HBM2DDL_AUTO, dbcreate );
+			switch ( dbcreate ) {
+				case "dropcreate" :
+					this.dbcreate = "drop-and-create";
+					break;
+				default :
+					break;
+			}
+			configuration.setProperty( AvailableSettings.HBM2DDL_AUTO, Action.interpretHbm2ddlSetting( dbcreate ).getExternalHbm2ddlName() );
 		}
 
 		if ( this.namingStrategy != null ) {
@@ -441,13 +447,6 @@ public class ORMConfig {
 	}
 
 	/**
-	 * Retrieve the `dbcreate` setting as a Hibernate `Action` value.
-	 */
-	public Action toHibernateDBCreate() {
-		return DBCreate.valueOf( dbcreate.toUpperCase() ).toHibernateSetting();
-	}
-
-	/**
 	 * Get the `cacheProvider` setting as a path to a JCache provider.
 	 */
 	public String getJCacheProviderClassPath() {
@@ -478,89 +477,6 @@ public class ORMConfig {
 		 */
 		public static boolean contains( String alias ) {
 			return Arrays.stream( JCacheProvider.values() ).anyMatch( provider -> provider.name().equals( alias ) );
-		}
-	}
-
-	/**
-	 * Enumeration of possible values for the `dbcreate` configuration setting.
-	 * <p>
-	 * Each value can be converted to a Hibernate `Action` value via the
-	 * `toHibernateSetting` method.
-	 */
-	private enum DBCreate {
-
-	    // Standard settings in CFML:
-		/**
-		 * Update existing schema on Hibernate startup.
-		 */
-		UPDATE,
-
-		/**
-		 * Drop and recreate database schema on Hibernate startup.
-		 *
-		 * @see https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/tool/schema/Action.html#CREATE
-		 */
-		DROPCREATE,
-
-		/**
-		 * Do no schema generation on Hibernate startup. Default if no `dbcreate`
-		 * configuration is specified.
-		 *
-		 * @see https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/tool/schema/Action.html#NONE
-		 */
-		NONE,
-
-		/**
-		 * "create-only" Hibernate setting. Create schema on Hibernate
-		 * startup if it does not exist, but do not drop or update if it already exists.
-		 * <p>
-		 * NEW for BoxLang, not supported in Adobe or Lucee CFML engines.
-		 *
-		 * @see https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/tool/schema/Action.html#CREATE_ONLY
-		 */
-		CREATE,
-
-		/**
-		 * Drop schema on hibernate startup, create the schema, then drop the schema on
-		 * hibernate shutdown.
-		 * <p>
-		 * NEW for BoxLang, not supported in Adobe or Lucee CFML engines.
-		 *
-		 * @see https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/tool/schema/Action.html#CREATE_DROP
-		 */
-		DROPCREATEDROP,
-
-		/**
-		 * Validate schema on Hibernate startup.
-		 * <p>
-		 * NEW for BoxLang, not supported in Adobe or Lucee CFML engines.
-		 *
-		 * @see https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/tool/schema/Action.html#VALIDATE
-		 */
-		VALIDATE,
-
-		/**
-		 * Truncate tables on Hibernate startup.
-		 * <p>
-		 * NEW for BoxLang, not supported in Adobe or Lucee CFML engines.
-		 *
-		 * @see https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/tool/schema/Action.html#TRUNCATE
-		 */
-		TRUNCATE;
-
-		public Action toHibernateSetting() {
-			switch ( this ) {
-				case CREATE :
-					return Action.CREATE_ONLY;
-				case UPDATE :
-					return Action.UPDATE;
-				case DROPCREATE :
-					return Action.CREATE;
-				case NONE :
-					return Action.NONE;
-				default :
-					return Action.NONE;
-			}
 		}
 	}
 }

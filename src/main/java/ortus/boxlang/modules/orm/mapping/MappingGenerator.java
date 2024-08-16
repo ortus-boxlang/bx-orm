@@ -82,6 +82,7 @@ public class MappingGenerator {
 		this.saveDirectory				= Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", String.valueOf( config.hashCode() ) ).toString();
 		this.saveMappingAlongsideEntity	= config.saveMapping;
 		this.entityPaths				= new java.util.ArrayList<>();
+		// this.appDirectory = context.getParentOfType( ApplicationBoxContext.class ).getApplication().getApplicationDirectory();
 
 		if ( !this.saveMappingAlongsideEntity ) {
 			new File( this.saveDirectory ).mkdirs();
@@ -97,12 +98,12 @@ public class MappingGenerator {
 		    .filter( Files::isDirectory )
 		    // TODO: resolve, in case it's a mapping
 		    // TODO: ensure directory exists - if not, EITHER warn or throw exception
-		    .forEach( ( path ) -> {
-			    logger.warn( "Checking path for entities: [{}]", path );
+		    .forEach( ( entityLookupPath ) -> {
+			    logger.warn( "Checking path for entities: [{}]", entityLookupPath );
 			    try {
 				    // @TODO: Switch to .reduce() to build a list of .bx/.cfc files so we can process metadata in parallel
 				    Files
-				        .walk( path )
+				        .walk( entityLookupPath )
 				        // TODO: Once this is all working, switch to parallel streams IF > 20ish entities
 				        .filter( Files::isRegularFile )
 				        .filter( ( file ) -> StringUtils.endsWithAny( file.toString(), ".bx", ".cfc" ) )
@@ -124,11 +125,11 @@ public class MappingGenerator {
 					        }
 				        } )
 				        .forEach( ( IStruct meta ) -> {
-					        logger.warn( "Working with persistent entity: {}", meta.getAsString( Key.path ) );
+					        logger.warn( "Working with persistent entity: {}, {}", meta.getAsString( Key.path ), meta );
 					        entityMap.put( meta.getAsString( Key._name ),
 					            new EntityRecord(
 					                meta.getAsString( Key._name ),
-					                "foo.foo",
+					                new BetterFQN( entityLookupPath.getParent(), Path.of( meta.getAsString( Key.path ) ) ).toString(),
 					                writeXMLFile( meta )
 					            )
 					        );
