@@ -63,7 +63,9 @@ public class BaseORMTest {
 		    		ormEnabled = "true"
 		    		ormsettings = {
 		    			datasource = "TestDB",
-		    			entityPaths = ["src/test/resources/app/models"]
+		    			entityPaths = ["src/test/resources/app/models"],
+		    			saveMapping = "true",
+		    			dbcreate = "create"
 		    		};
 		    """, startupContext );
 

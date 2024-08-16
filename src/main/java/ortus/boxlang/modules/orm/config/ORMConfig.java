@@ -338,9 +338,8 @@ public class ORMConfig {
 		Configuration configuration = new Configuration();
 
 		if ( this.dbcreate != null ) {
-			// @TODO: Use an enum for the dbcreate values, because `create` should be
-			// coerced to `create-only`, and a few others need manipulation as well.
-			configuration.setProperty( AvailableSettings.HBM2DDL_AUTO, toHibernateDBCreate().toString() );
+			// @TODO: Fix our `dbcreate` coercion to actually work. For now, we'll pass through values directly.
+			configuration.setProperty( AvailableSettings.HBM2DDL_AUTO, dbcreate );
 		}
 
 		if ( this.namingStrategy != null ) {

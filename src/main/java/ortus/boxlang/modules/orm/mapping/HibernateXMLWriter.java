@@ -74,6 +74,9 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		if ( column != null ) {
 			theNode.setAttribute( "column", column );
 		}
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.notNull ) ) {
+			theNode.setAttribute( "not-null", inspector.getPropertyAnnotation( prop, ORMKeys.notNull ) );
+		}
 		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
 			theNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
 		}
@@ -90,6 +93,8 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * <li>type</li>
 	 * <li>column</li>
 	 * <li>unsavedValue</li>
+	 * <li>access</li>
+	 * <li>length</li>
 	 * <li>and many, many more to come</li>
 	 * </ul>
 	 * 
@@ -99,22 +104,27 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * 
 	 * @return A &lt;id /&gt; element ready to add to a Hibernate mapping document
 	 */
-	private Element generateKeyElement( Document doc, IStruct prop, ORMAnnotationInspector inspector ) {
+	private Element generateIdElement( Document doc, IStruct prop, ORMAnnotationInspector inspector ) {
 		Element	theNode		= doc.createElement( "id" );
 		String	propName	= prop.getAsString( Key._name );
-		theNode.setAttribute( "name", propName );
-		if ( prop.containsKey( Key.type ) ) {
-			theNode.setAttribute( "type", prop.getAsString( Key.type ) );
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generator ) ) {
+			theNode.appendChild( generateGeneratorElement( doc, prop, inspector ) );
+			// @TODO: Determine ID type from generator type IF a generator is specified.
 		}
+
+		// compute defaults - move to ORMAnnotationInspector?
+		// prop.getAsStruct( Key.annotations ).computeIfAbsent( ORMKeys.ORMType, ( key ) -> "string" );
+
+		// set common attributes
+		theNode.setAttribute( "name", propName );
+		theNode.setAttribute( "type", inspector.getPropertyAnnotation( prop, ORMKeys.ORMType ) );
+
+		// set conditional attributes
 		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
 			theNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
 		}
-		// @TODO: Where's the best place to compute these if absent? Here or in the ORMAnnotationInspector?
 		if ( inspector.hasPropertyAnnotation( prop, Key.column ) ) {
 			theNode.setAttribute( "column", inspector.getPropertyAnnotation( prop, Key.column ) );
-		}
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generator ) ) {
-			theNode.appendChild( generateGeneratorElement( doc, prop, inspector ) );
 		}
 
 		return theNode;
@@ -193,20 +203,45 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		classElement.setAttribute( "entity-name", inspector.getEntityName() );
 		classElement.setAttribute( "table", inspector.getTableName() );
 
+		// general class attributes:
+		// entity-name
+		// batch-size
+		// dynamic-insert
+		// dynamic-update
+		// lazy
+		// select-before-update
+		// optimistic-lock
+		// mutable
+		// rowid
+		// where
+		// And, if no discriminator or joinColumn is present:
+		// schema
+		// catalog
+		// table
+
+		// generate keys, aka <id> elements
 		inspector.getPrimaryKeyProperties().stream()
 		    .forEach( ( prop ) -> {
-			    classElement.appendChild( generateKeyElement( doc, ( IStruct ) prop, inspector ) );
+			    classElement.appendChild( generateIdElement( doc, ( IStruct ) prop, inspector ) );
 		    } );
 
-		// get properties
-
+		// generate properties, aka <property> elements
 		inspector.getProperties().stream()
 		    .map( IStruct.class::cast )
 		    .filter( Predicate.not( ORMAnnotationInspector::isIDProperty ) )
-		    .filter( ORMAnnotationInspector::isMappableProperty )
+		    .filter( ORMAnnotationInspector::isPersistentProperty )
 		    .forEach( ( prop ) -> {
 			    classElement.appendChild( generatePropertyElement( doc, prop, inspector ) );
 		    } );
+
+		// @TODO: generate <discriminator> elements
+		// @TODO: generate <subclass> elements
+		// @TODO: generate <joined-subclass> elements
+		// @TODO: generate <union-subclass> elements
+		// @TODO: generate <version>
+		// @TODO: generate <many-to-one>
+		// @TODO: generate <one-to-one>
+		// @TODO: generate <version>
 
 		return classElement;
 	}

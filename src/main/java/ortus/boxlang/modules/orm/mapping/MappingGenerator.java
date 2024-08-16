@@ -24,9 +24,7 @@ import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
 import ortus.boxlang.compiler.parser.BoxScriptParser;
 import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.modules.orm.config.ORMConfig;
-import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
@@ -114,10 +112,8 @@ public class MappingGenerator {
 				        } )
 				        .filter( ( IStruct meta ) -> {
 					        // if it's in a CFC location, it's persistent by default
-					        IStruct classAnnotations = meta.getAsStruct( Key.annotations );
 					        logger.warn( "Checking class [{}] for 'persistent' annotation", meta.getAsString( Key.path ) );
-					        classAnnotations.computeIfAbsent( ORMKeys.persistent, ( key ) -> true );
-					        if ( BooleanCaster.cast( classAnnotations.getOrDefault( ORMKeys.persistent, true ), false ) ) {
+					        if ( ORMAnnotationInspector.isPersistentEntity( meta ) ) {
 						        logger.warn( "No 'persistent' annotation found (OR is truthy) for class [{}]; treating class as persistent.",
 						            meta.getAsString( Key.path ) );
 						        return true;
