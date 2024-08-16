@@ -53,4 +53,6 @@ public class ORMKeys {
 	public static final Key	generated				= Key.of( "generated" );
 	public static final Key	sequence				= Key.of( "sequence" );
 	public static final Key	selectKey				= Key.of( "selectKey" );
+	public static final Key	property				= Key.of( "property" );
+
 }

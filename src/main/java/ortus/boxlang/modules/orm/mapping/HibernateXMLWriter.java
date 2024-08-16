@@ -1,5 +1,6 @@
 package ortus.boxlang.modules.orm.mapping;
 
+import java.util.Map;
 import java.util.function.Predicate;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -13,10 +14,10 @@ import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.util.JSONUtil;
 
 public class HibernateXMLWriter implements IPersistenceWriter {
 
@@ -138,23 +139,31 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * @return A &lt;generator /&gt; element ready to add to a Hibernate mapping document
 	 */
 	private Element generateGeneratorElement( Document doc, IStruct prop, ORMAnnotationInspector inspector ) {
-		String	propName	= prop.getAsString( Key._name );
+		String	propName		= prop.getAsString( Key._name );
 
-		Element	theNode		= doc.createElement( "generator" );
-		theNode.setAttribute( "class", inspector.getPropertyAnnotation( prop, ORMKeys.generator ) );
-		IStruct params = Struct.EMPTY;
+		Element	theNode			= doc.createElement( "generator" );
+		String	generatorType	= inspector.getPropertyAnnotation( prop, ORMKeys.generator );
+		theNode.setAttribute( "class", generatorType );
+		IStruct params = new Struct();
+
+		// generator=foreign
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.property ) ) {
+			params.put( "property", inspector.getPropertyAnnotation( prop, ORMKeys.property ) );
+		}
+		// generator=select
 		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.selectKey ) ) {
 			params.put( "key", inspector.getPropertyAnnotation( prop, ORMKeys.selectKey ) );
 		}
 		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generated ) ) {
 			params.put( "generated", inspector.getPropertyAnnotation( prop, ORMKeys.generated ) );
 		}
+		// generator=sequence|sequence-identity
 		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.sequence ) ) {
 			params.put( "sequence", inspector.getPropertyAnnotation( prop, ORMKeys.sequence ) );
 		}
 		if ( inspector.hasPropertyAnnotation( prop, Key.params ) ) {
-			Object	paramValue			= prop.getAsStruct( Key.annotations ).get( Key.params );
-			IStruct	additionalParams	= StructCaster.cast( paramValue, false );
+			Object	paramValue			= prop.getAsStruct( Key.annotations ).getAsString( Key.params );
+			IStruct	additionalParams	= Struct.fromMap( ( Map ) JSONUtil.fromJSON( paramValue ) );
 			if ( params == null ) {
 				logger.warn( "Property '{}' has a 'params' annotation that could not be cast to a struct: {}", propName, paramValue );
 				return theNode;
@@ -164,8 +173,8 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		}
 		params.forEach( ( key, value ) -> {
 			Element paramEl = doc.createElement( "param" );
-			paramEl.setAttribute( "name", key.getNameNoCase() );
-			paramEl.setNodeValue( value.toString() );
+			paramEl.setAttribute( "name", key.getName() );
+			paramEl.setTextContent( value.toString() );
 			theNode.appendChild( paramEl );
 		} );
 		return theNode;
