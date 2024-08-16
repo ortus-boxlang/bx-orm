@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.modules.orm.config.naming.BoxLangClassNamingStrategy;
 import ortus.boxlang.modules.orm.config.naming.MacroCaseNamingStrategy;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.runnables.IBoxRunnable;
 import ortus.boxlang.runtime.runnables.RunnableLoader;
 import ortus.boxlang.runtime.types.Array;
@@ -223,31 +224,30 @@ public class ORMConfig {
 		 * boolean.
 		 */
 		if ( properties.containsKey( ORMKeys.autoGenMap ) && properties.get( ORMKeys.autoGenMap ) != null ) {
-			autoGenMap = properties.getAsBoolean( ORMKeys.autoGenMap );
+			autoGenMap = BooleanCaster.cast( properties.get( ORMKeys.autoGenMap ) );
 		}
 
 		if ( properties.containsKey( ORMKeys.autoManageSession ) && properties.get( ORMKeys.autoManageSession ) != null ) {
-			autoManageSession = properties.getAsBoolean( ORMKeys.autoManageSession );
-		}
-
-		if ( properties.containsKey( ORMKeys.cacheConfig ) && properties.get( ORMKeys.cacheConfig ) != null ) {
-			cacheConfig = properties.getAsString( ORMKeys.cacheConfig );
+			autoManageSession = BooleanCaster.cast( properties.get( ORMKeys.autoManageSession ) );
 		}
 
 		if ( properties.containsKey( ORMKeys.eventHandling ) && properties.get( ORMKeys.eventHandling ) != null ) {
-			eventHandling = properties.getAsBoolean( ORMKeys.eventHandling );
+			eventHandling = BooleanCaster.cast( properties.get( ORMKeys.eventHandling ) );
 		}
 
 		if ( properties.containsKey( ORMKeys.flushAtRequestEnd ) && properties.get( ORMKeys.flushAtRequestEnd ) != null ) {
-			flushAtRequestEnd = properties.getAsBoolean( ORMKeys.flushAtRequestEnd );
+			flushAtRequestEnd = BooleanCaster.cast( properties.get( ORMKeys.flushAtRequestEnd ) );
 		}
 
 		if ( properties.containsKey( ORMKeys.logSQL ) && properties.get( ORMKeys.logSQL ) != null ) {
-			logSQL = properties.getAsBoolean( ORMKeys.logSQL );
+			logSQL = BooleanCaster.cast( properties.get( ORMKeys.logSQL ) );
 		}
 
 		// String properties: Check key existence, check for null, and check for empty
 		// or blank (whitespace-only) strings
+		if ( properties.containsKey( ORMKeys.cacheConfig ) && properties.get( ORMKeys.cacheConfig ) != null ) {
+			cacheConfig = properties.getAsString( ORMKeys.cacheConfig );
+		}
 		if ( properties.containsKey( ORMKeys.cacheProvider ) && properties.get( ORMKeys.cacheProvider ) != null
 		    && !properties.getAsString( ORMKeys.cacheProvider ).isBlank() ) {
 			cacheProvider = properties.getAsString( ORMKeys.cacheProvider );
@@ -299,7 +299,7 @@ public class ORMConfig {
 		}
 
 		if ( properties.containsKey( ORMKeys.saveMapping ) && properties.get( ORMKeys.saveMapping ) != null ) {
-			saveMapping = properties.getAsBoolean( ORMKeys.saveMapping );
+			saveMapping = BooleanCaster.cast( properties.get( ORMKeys.saveMapping ) );
 		}
 
 		if ( properties.containsKey( ORMKeys.schema ) && properties.get( ORMKeys.schema ) != null
