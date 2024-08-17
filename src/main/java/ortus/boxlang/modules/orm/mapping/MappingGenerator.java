@@ -125,7 +125,7 @@ public class MappingGenerator {
 					        }
 				        } )
 				        .forEach( ( IStruct meta ) -> {
-					        logger.warn( "Working with persistent entity: {}, {}", meta.getAsString( Key.path ), meta );
+					        logger.warn( "Working with persistent entity: {}, {}", meta.getAsString( Key.path ) );
 					        entityMap.put( meta.getAsString( Key._name ),
 					            new EntityRecord(
 					                meta.getAsString( Key._name ),

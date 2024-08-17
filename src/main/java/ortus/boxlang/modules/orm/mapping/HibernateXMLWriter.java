@@ -1,7 +1,6 @@
 package ortus.boxlang.modules.orm.mapping;
 
 import java.util.Map;
-import java.util.function.Predicate;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -70,15 +69,59 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		theNode.setAttribute( "name", inspector.getPropertyName( prop ) );
 		theNode.setAttribute( "type", inspector.getPropertyType( prop ) );
 
-		String column = inspector.getPropertyColumn( prop );
-		if ( column != null ) {
-			theNode.setAttribute( "column", column );
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.formula ) ) {
+			theNode.setAttribute( "formula", "(" + inspector.getPropertyAnnotation( prop, ORMKeys.formula ) + ")" );
+		} else {
+			Element columnNode = doc.createElement( "column" );
+			theNode.appendChild( columnNode );
+			String column = inspector.getPropertyColumn( prop );
+			if ( column != null ) {
+				columnNode.setAttribute( "name", column );
+			}
+			if ( inspector.isPropertyNotNull( prop ) ) {
+				columnNode.setAttribute( "not-null", "true" );
+			}
+			if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
+				columnNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
+			}
+			if ( inspector.hasPropertyAnnotation( prop, ORMKeys.check ) ) {
+				columnNode.setAttribute( "check", inspector.getPropertyAnnotation( prop, ORMKeys.check ) );
+			}
+			if ( inspector.hasPropertyAnnotation( prop, ORMKeys.dbDefault ) ) {
+				columnNode.setAttribute( "default", inspector.getPropertyAnnotation( prop, ORMKeys.dbDefault ) );
+			}
+			if ( inspector.hasPropertyAnnotation( prop, Key.length ) ) {
+				columnNode.setAttribute( "length", inspector.getPropertyAnnotation( prop, Key.length ) );
+			}
+			if ( inspector.hasPropertyAnnotation( prop, ORMKeys.precision ) ) {
+				columnNode.setAttribute( "precision", inspector.getPropertyAnnotation( prop, ORMKeys.precision ) );
+			}
+			if ( inspector.hasPropertyAnnotation( prop, ORMKeys.scale ) ) {
+				columnNode.setAttribute( "scale", inspector.getPropertyAnnotation( prop, ORMKeys.scale ) );
+			}
+			if ( inspector.hasPropertyAnnotation( prop, Key.sqltype ) ) {
+				columnNode.setAttribute( "sql-type", inspector.getPropertySqlType( prop ) );
+			}
+			if ( inspector.isPropertyUnique( prop ) ) {
+				columnNode.setAttribute( "unique", "true" );
+			}
+			String uniqueKey = inspector.getPropertyUniqueKey( prop );
+			if ( uniqueKey != null ) {
+				columnNode.setAttribute( "unique-key", uniqueKey );
+			}
 		}
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.notNull ) ) {
-			theNode.setAttribute( "not-null", inspector.getPropertyAnnotation( prop, ORMKeys.notNull ) );
+		// @TODO: generated
+		if ( !inspector.isPropertyInsertable( prop ) ) {
+			theNode.setAttribute( "insert", "false" );
 		}
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
-			theNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
+		if ( !inspector.isPropertyUpdatable( prop ) ) {
+			theNode.setAttribute( "update", "false" );
+		}
+		if ( inspector.isPropertyLazy( prop ) ) {
+			theNode.setAttribute( "lazy", "true" );
+		}
+		if ( !inspector.isPropertyLockable( prop ) ) {
+			theNode.setAttribute( "optimistic-lock", "false" );
 		}
 
 		return theNode;
@@ -200,27 +243,53 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 */
 	private Element generateClassElement( Document doc, ORMAnnotationInspector inspector ) {
 		Element classElement = doc.createElement( "class" );
-		classElement.setAttribute( "entity-name", inspector.getEntityName() );
-		classElement.setAttribute( "table", inspector.getTableName() );
 
 		// general class attributes:
-		// entity-name
-		// batch-size
-		// dynamic-insert
-		// dynamic-update
-		// lazy
-		// select-before-update
-		// optimistic-lock
-		// mutable
-		// rowid
-		// where
+		classElement.setAttribute( "entity-name", inspector.getEntityName() );
+		if ( inspector.hasEntityAnnotation( ORMKeys.batchsize ) ) {
+			classElement.setAttribute( "batch-size", inspector.getEntityAnnotation( ORMKeys.batchsize ) );
+		}
+		if ( inspector.isDynamicInsert() ) {
+			classElement.setAttribute( "dynamic-insert", "true" );
+		}
+		if ( inspector.isDynamicUpdate() ) {
+			classElement.setAttribute( "dynamic-update", "true" );
+		}
+		if ( inspector.hasEntityAnnotation( ORMKeys.lazy ) ) {
+			classElement.setAttribute( "lazy", inspector.getEntityAnnotation( ORMKeys.lazy ) );
+		}
+		if ( inspector.isSelectBeforeUpdate() ) {
+			classElement.setAttribute( "rowid", "true" );
+		}
+		if ( inspector.hasEntityAnnotation( ORMKeys.optimisticLock ) ) {
+			classElement.setAttribute( "optimistic-lock", inspector.getEntityAnnotation( ORMKeys.optimisticLock ) );
+		}
+		if ( inspector.isReadOnly() ) {
+			classElement.setAttribute( "mutable", "false" );
+		}
+		if ( inspector.hasEntityAnnotation( ORMKeys.rowid ) ) {
+			classElement.setAttribute( "rowid", inspector.getEntityAnnotation( ORMKeys.rowid ) );
+		}
+		if ( inspector.hasEntityAnnotation( ORMKeys.where ) ) {
+			classElement.setAttribute( "where", inspector.getEntityAnnotation( ORMKeys.where ) );
+		}
+
 		// And, if no discriminator or joinColumn is present:
-		// schema
-		// catalog
-		// table
+		if ( inspector.needsTableCatalogSchema() ) {
+			String tableName = inspector.getTableName();
+			if ( tableName != null ) {
+				classElement.setAttribute( "table", tableName );
+			}
+			if ( inspector.hasEntityAnnotation( ORMKeys.schema ) ) {
+				classElement.setAttribute( "schema", inspector.getEntityAnnotation( ORMKeys.schema ) );
+			}
+			if ( inspector.hasEntityAnnotation( ORMKeys.catalog ) ) {
+				classElement.setAttribute( "catalog", inspector.getEntityAnnotation( ORMKeys.catalog ) );
+			}
+		}
 
 		// generate keys, aka <id> elements
-		inspector.getPrimaryKeyProperties().stream()
+		inspector.getIdProperties().stream()
 		    .forEach( ( prop ) -> {
 			    classElement.appendChild( generateIdElement( doc, ( IStruct ) prop, inspector ) );
 		    } );
@@ -228,8 +297,6 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		// generate properties, aka <property> elements
 		inspector.getProperties().stream()
 		    .map( IStruct.class::cast )
-		    .filter( Predicate.not( ORMAnnotationInspector::isIDProperty ) )
-		    .filter( ORMAnnotationInspector::isPersistentProperty )
 		    .forEach( ( prop ) -> {
 			    classElement.appendChild( generatePropertyElement( doc, prop, inspector ) );
 		    } );

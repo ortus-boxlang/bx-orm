@@ -160,13 +160,13 @@ public class ORMConfig {
 
 	/**
 	 * The default database schema to use for database connections. This can be
-	 * overriden at the datasource level.
+	 * overriden at the datasource level, as well as on each entity.
 	 */
 	public String				schema;
 
 	/**
 	 * Specifies the default Database Catalog that ORM should use. This can be
-	 * overriden at the datasource level.
+	 * overriden at the datasource level, as well as on each entity.
 	 */
 	public String				catalog;
 

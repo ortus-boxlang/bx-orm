@@ -29,10 +29,13 @@ public class ORMKeys {
 	public static final Key	schema					= Key.of( "schema" );
 	public static final Key	catalog					= Key.of( "catalog" );
 	public static final Key	secondaryCacheEnabled	= Key.of( "secondaryCacheEnabled" );
-	public static final Key	skipCFCWithError		= Key.of( "skipCFCWithError" );
 	public static final Key	sqlScript				= Key.of( "sqlScript" );
 	public static final Key	table					= Key.of( "table" );
 	public static final Key	useDBForMapping			= Key.of( "useDBForMapping" );
+	/**
+	 * OLD setting name. Deprecated. Use {@link ???} instead.
+	 */
+	public static final Key	skipCFCWithError		= Key.of( "skipCFCWithError" );
 	/**
 	 * OLD setting name. Deprecated. Use {@link entityPaths} instead.
 	 */
@@ -55,5 +58,29 @@ public class ORMKeys {
 	public static final Key	selectKey				= Key.of( "selectKey" );
 	public static final Key	property				= Key.of( "property" );
 	public static final Key	notNull					= Key.of( "notNull" );
+	public static final Key	immutable				= Key.of( "immutable" );
+	public static final Key	readOnly				= Key.of( "readOnly" );
+	public static final Key	where					= Key.of( "where" );
+	public static final Key	rowid					= Key.of( "rowid" );
+	public static final Key	optimisticLock			= Key.of( "optimisticLock" );
+	public static final Key	selectBeforeUpdate		= Key.of( "selectBeforeUpdate" );
+	public static final Key	lazy					= Key.of( "lazy" );
+	public static final Key	batchsize				= Key.of( "batchsize" );
+	public static final Key	dynamicInsert			= Key.of( "dynamicInsert" );
+	public static final Key	dynamicUpdate			= Key.of( "dynamicUpdate" );
+	public static final Key	discriminatorValue		= Key.of( "discriminatorValue" );
+	public static final Key	joinColumn				= Key.of( "joinColumn" );
+	public static final Key	formula					= Key.of( "formula" );
+	public static final Key	check					= Key.of( "check" );
+	public static final Key	dbDefault				= Key.of( "dbDefault" );
+	public static final Key	index					= Key.of( "index" );
+	public static final Key	length					= Key.of( "length" );
+	public static final Key	precision				= Key.of( "precision" );
+	public static final Key	scale					= Key.of( "scale" );
+	public static final Key	unique					= Key.of( "unique" );
+	public static final Key	uniqueKey				= Key.of( "uniqueKey" );
+	public static final Key	update					= Key.of( "update" );
+	public static final Key	insert					= Key.of( "insert" );
+	public static final Key	uniqueKeyName			= Key.of( "uniqueKeyName" );
 
 }
