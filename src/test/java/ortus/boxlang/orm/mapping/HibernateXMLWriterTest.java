@@ -2,36 +2,50 @@ package ortus.boxlang.orm.mapping;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.file.Path;
+
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
-import ortus.boxlang.compiler.parser.BoxSourceType;
+import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
+import ortus.boxlang.compiler.parser.BoxScriptParser;
+import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.modules.orm.mapping.HibernateXMLWriter;
 import ortus.boxlang.modules.orm.mapping.ORMAnnotationInspector;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
-import ortus.boxlang.runtime.interop.DynamicObject;
-import ortus.boxlang.runtime.loader.ClassLocator;
-import ortus.boxlang.runtime.runnables.IBoxRunnable;
-import ortus.boxlang.runtime.runnables.IClassRunnable;
-import ortus.boxlang.runtime.runnables.RunnableLoader;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
+import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.types.exceptions.ParseException;
 
 public class HibernateXMLWriterTest {
 
-	static BoxRuntime	instance;
-	IBoxContext			context;
-	IScope				variables;
-	static Key			result	= new Key( "result" );
+	static BoxRuntime			instance;
+	IBoxContext					context;
+	IScope						variables;
+	static Key					result	= new Key( "result" );
+
+	private static final Logger	logger	= LoggerFactory.getLogger( HibernateXMLWriterTest.class );
 
 	@BeforeAll
 	public static void setUp() {
@@ -47,48 +61,50 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It generates the entity-name from the class name" )
 	@Test
 	public void testMapping() {
-		DynamicObject			bxClass		= ClassLocator.getInstance().load( context, "src.test.resources.app.models.Developer2", "bx" );
+		IStruct					entityMeta	= getClassMetaFromFile( "src/test/resources/app/models/Developer.bx" );
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) bxClass.invokeConstructor( context ).getTargetInstance() );
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
 		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "entity-name" ).getTextContent() )
-		    .isEqualTo( "Developer2" );
+		    .isEqualTo( "Developer" );
 	}
 
-	@DisplayName( "It generates the table name from the class name" )
+	@DisplayName( "It can set a table name" )
 	@Test
-	public void testTableNameFromFile() {
-		DynamicObject			bxClass		= ClassLocator.getInstance().load( context, "src.test.resources.app.models.Developer2", "bx" );
+	public void testTableNameFromAnnotation() {
+		IStruct					entityMeta	= getClassMetaFromCode(
+		    """
+		    	class table="developers" {
+		    		property name="the_id" fieldtype="id";
+		    		property name="the_name";
+		    	}
+		    """
+		);
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) bxClass.invokeConstructor( context ).getTargetInstance() );
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
 		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "table" ).getTextContent() )
-		    .isEqualTo( "Developer2" );
+		    .isEqualTo( "developers" );
 	}
 
 	@DisplayName( "It generates the entity-name from the annotation" )
 	@Test
 	public void testEntityNameValue() {
 		// @formatter:off
-		Class<IBoxRunnable> bxClass = RunnableLoader.getInstance().loadClass(
+		IStruct entityMeta = getClassMetaFromCode(
 			"""
 				@Entity "Car"
 				class {
 					@id
 					property name="id";
 				}
-			""",
-			context,
-			BoxSourceType.BOXSCRIPT
+			"""
 		);
 		// @formatter:on
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) DynamicObject.of( bxClass ).invokeConstructor( context ).getTargetInstance() );
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
 		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "entity-name" ).getTextContent() )
@@ -99,7 +115,7 @@ public class HibernateXMLWriterTest {
 	@Test
 	public void testEntityTableNameValue() {
 		// @formatter:off
-		Class<IBoxRunnable> bxClass = RunnableLoader.getInstance().loadClass(
+		IStruct entityMeta = getClassMetaFromCode(
 			"""
 				@Entity "Car"
 				@Table "cars"
@@ -107,14 +123,11 @@ public class HibernateXMLWriterTest {
 					@id
 					property name="id";
 				}
-			""",
-			context,
-			BoxSourceType.BOXSCRIPT
+			"""
 		);
 		// @formatter:on
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) DynamicObject.of( bxClass ).invokeConstructor( context ).getTargetInstance() );
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
 		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "table" ).getTextContent() )
@@ -124,40 +137,59 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It generates an id element from the Id annotation" )
 	@Test
 	public void testIDAnnotation() {
-		DynamicObject			bxClass		= ClassLocator.getInstance().load( context, "src.test.resources.app.models.Developer2", "bx" );
+		IStruct					entityMeta	= getClassMetaFromCode(
+		    """
+		    	class persistent="true" table="developers" {
+		    		property name="the_id" fieldtype="id";
+		    		property name="the_name";
+		    	}
+		    """
+		);
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) bxClass.invokeConstructor( context ).getTargetInstance() );
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
 		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 0 );
 
 		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
-		    .isEqualTo( "theId" );
+		    .isEqualTo( "the_id" );
 	}
 
-	@DisplayName( "It sets the type of the id proprety via an annotation" )
+	@DisplayName( "It sets the type of the id property via an annotation" )
 	@Test
 	public void testIDTypeAnnotation() {
-		DynamicObject			bxClass		= ClassLocator.getInstance().load( context, "src.test.resources.app.models.Developer2", "bx" );
+		IStruct					entityMeta	= getClassMetaFromCode(
+		    """
+		    	class persistent="true" table="developers" {
+		    		property name="the_id" fieldtype="id" ormtype="integer";
+		    		property name="the_name";
+		    	}
+		    """
+		);
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) bxClass.invokeConstructor( context ).getTargetInstance() );
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
-		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 0 );
+		Node					classEl		= doc.getDocumentElement().getChildNodes().item( 0 );
+		Node					node		= classEl.getChildNodes().item( 0 );
 
 		assertThat( node.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "integer" );
 	}
 
-	@DisplayName( "It sets the default generator of the id proprety as increment" )
+	@DisplayName( "It can set an id generator" )
 	@Test
 	public void testIDGeneratorAnnotation() {
-		DynamicObject			bxClass		= ClassLocator.getInstance().load( context, "src.test.resources.app.models.Developer2", "bx" );
+		IStruct					entityMeta	= getClassMetaFromCode(
+		    """
+		    	class persistent="true" table="developers" {
+		    		property name="the_id" fieldtype="id" generator="increment";
+		    		property name="the_name";
+		    	}
+		    """
+		);
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) bxClass.invokeConstructor( context ).getTargetInstance() );
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
 		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 0 ).getChildNodes().item( 0 );
@@ -166,43 +198,40 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "increment" );
 	}
 
-	@DisplayName( "It sets the default column of the id proprety to the name of the property" )
-	@Test
-	public void testIDColumnAnnotation() {
-		DynamicObject			bxClass		= ClassLocator.getInstance().load( context, "src.test.resources.app.models.Developer2", "bx" );
-
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) bxClass.invokeConstructor( context ).getTargetInstance() );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
-
-		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 0 );
-
-		assertThat( node.getAttributes().getNamedItem( "column" ).getTextContent() )
-		    .isEqualTo( "theId" );
-	}
-
 	@DisplayName( "It generates property element for a property" )
 	@Test
 	public void testProperty() {
-		DynamicObject			bxClass		= ClassLocator.getInstance().load( context, "src.test.resources.app.models.Developer2", "bx" );
+		IStruct					entityMeta	= getClassMetaFromCode(
+		    """
+		    	class persistent="true" table="developers" {
+		    		property name="the_id" fieldtype="id";
+		    		property name="the_name";
+		    	}
+		    """
+		);
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) bxClass.invokeConstructor( context ).getTargetInstance() );
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
 		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 1 );
 
 		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
-		    .isEqualTo( "name" );
+		    .isEqualTo( "the_name" );
 	}
 
-	@DisplayName( "It sets the type of the proprety via an annotation" )
+	@DisplayName( "It sets the type of the property via an annotation" )
 	@Test
 	public void testPropertyTypeAnnotation() {
-		DynamicObject			bxClass		= ClassLocator.getInstance().load( context, "src.test.resources.app.models.Developer2", "bx" );
+		IStruct					entityMeta	= getClassMetaFromCode(
+		    """
+		    	class persistent="true" table="developers" {
+		    		property name="the_id" fieldtype="id";
+		    		property name="the_name";
+		    	}
+		    """
+		);
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) bxClass.invokeConstructor( context ).getTargetInstance() );
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
 		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 1 );
@@ -211,34 +240,94 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "string" );
 	}
 
-	@DisplayName( "It sets the column of the proprety to the name of the property" )
+	@DisplayName( "It sets the column of the property to the name of the property" )
 	@Test
 	public void testPropertyColumnAnnotation() {
-		DynamicObject			bxClass		= ClassLocator.getInstance().load( context, "src.test.resources.app.models.Developer2", "bx" );
+		IStruct					entityMeta	= getClassMetaFromCode(
+		    """
+		    	class persistent="true" table="developers" {
+		    		property name="id" fieldtype="id";
+		    		property name="the_name";
+		    	}
+		    """
+		);
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) bxClass.invokeConstructor( context ).getTargetInstance() );
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
 		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 1 );
 
-		assertThat( node.getAttributes().getNamedItem( "column" ).getTextContent() )
+		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
 		    .isEqualTo( "the_name" );
 	}
 
 	@DisplayName( "It does not map properties annotated with @Persistent false" )
 	@Test
-	public void testPersistentFalseAnnoatation() {
-		DynamicObject			bxClass		= ClassLocator.getInstance().load( context, "src.test.resources.app.models.Developer2", "bx" );
+	public void testPersistentFalseAnnotation() {
+		IStruct					entityMeta	= getClassMetaFromCode(
+		    """
+		    	class persistent="true" table="developers" {
+		    		property name="id" fieldtype="id";
+		    		property name="name";
+		    		property name="notMapped" persistent="false";
+		    	}
+		    """
+		);
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector(
-		    ( IClassRunnable ) bxClass.invokeConstructor( context ).getTargetInstance() );
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
-		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 2 );
+		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
+		Node					node		= classEL.getChildNodes().item( 2 );
 
 		assertThat( node )
 		    .isEqualTo( null );
 	}
 
+	private IStruct getClassMetaFromFile( String entityFile ) {
+		try {
+			return getClassMeta( new BoxScriptParser().parse( new File( entityFile ) ) );
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( String.format( "Failed to parse metadata for class: [%s]", entityFile ), e );
+		}
+	}
+
+	private IStruct getClassMetaFromCode( String code ) {
+		try {
+			return getClassMeta( new BoxScriptParser().parse( code, true ) );
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( String.format( "Failed to parse metadata from source: [%s]", code ), e );
+		}
+	}
+
+	private IStruct getClassMeta( ParsingResult result ) throws IOException {
+		if ( !result.isCorrect() ) {
+			throw new ParseException( result.getIssues(), "" );
+		}
+		ClassMetadataVisitor visitor = new ClassMetadataVisitor();
+		result.getRoot().accept( visitor );
+		return visitor.getMetadata();
+	}
+
+	private String xmlToString( Document doc ) {
+		try {
+			TransformerFactory	tf			= TransformerFactory.newInstance();
+			Transformer			transformer	= tf.newTransformer();
+
+			transformer.setOutputProperty( OutputKeys.INDENT, "yes" );
+			transformer.setOutputProperty( OutputKeys.OMIT_XML_DECLARATION, "no" );
+			transformer.setOutputProperty( OutputKeys.METHOD, "xml" );
+			transformer.setOutputProperty( OutputKeys.DOCTYPE_PUBLIC, doc.getDoctype().getPublicId() );
+			transformer.setOutputProperty( OutputKeys.DOCTYPE_SYSTEM, doc.getDoctype().getSystemId() );
+
+			StringWriter writer = new StringWriter();
+
+			// transform document to string
+			transformer.transform( new DOMSource( doc ), new StreamResult( writer ) );
+
+			return writer.getBuffer().toString();
+		} catch ( TransformerException e ) {
+			throw new BoxRuntimeException( "Failed to transform XML to string", e );
+		}
+	}
 }

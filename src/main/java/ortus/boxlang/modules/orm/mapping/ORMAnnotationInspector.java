@@ -70,7 +70,7 @@ public class ORMAnnotationInspector {
 		    // JPA style, i.e. `@Column`
 		    || propAnnotations.containsKey( Key.column )
 			// verbose CFML syntax, i.e. `persistent="true"`
-		    || propAnnotations.getAsBoolean( ORMKeys.persistent );
+		    || BooleanCaster.cast( propAnnotations.getOrDefault( ORMKeys.persistent, true ), false );
 	}
 
 	public ORMAnnotationInspector( IStruct entityMeta ) {
