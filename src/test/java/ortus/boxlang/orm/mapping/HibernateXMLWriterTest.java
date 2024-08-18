@@ -18,6 +18,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -111,21 +113,18 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "Car" );
 	}
 
-	@DisplayName( "It generates the table name from the annotation" )
-	@Test
-	public void testEntityTableNameValue() {
-		// @formatter:off
-		IStruct entityMeta = getClassMetaFromCode(
-			"""
-				@Entity "Car"
-				@Table "cars"
-				class {
-					@id
-					property name="id";
-				}
-			"""
-		);
-		// @formatter:on
+	@DisplayName( "It sets the entity table name from the table annotation" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    // CFML style
+	    "class table=\"cars\"{ property name=\"the_id\" fieldtype=\"id\"; }",
+	    // JPA style
+	    "@Entity @Table \"cars\" class{ @Id property name=\"the_id\"; }",
+	    // test default table name
+	    "@Entity \"cars\" class{ @Id property name=\"the_id\"; }"
+	} )
+	public void testEntityTableNameValue( String sourceCode ) {
+		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
@@ -135,16 +134,13 @@ public class HibernateXMLWriterTest {
 	}
 
 	@DisplayName( "It generates an id element from the Id annotation" )
-	@Test
-	public void testIDAnnotation() {
-		IStruct					entityMeta	= getClassMetaFromCode(
-		    """
-		    	class persistent="true" table="developers" {
-		    		property name="the_id" fieldtype="id";
-		    		property name="the_name";
-		    	}
-		    """
-		);
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    "class{ property name=\"the_id\" fieldtype=\"id\"; }",
+	    "class{ @Id property name=\"the_id\"; }"
+	} )
+	public void testIDAnnotation( String sourceCode ) {
+		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
@@ -262,26 +258,40 @@ public class HibernateXMLWriterTest {
 	}
 
 	@DisplayName( "It does not map properties annotated with @Persistent false" )
-	@Test
-	public void testPersistentFalseAnnotation() {
-		IStruct					entityMeta	= getClassMetaFromCode(
-		    """
-		    	class persistent="true" table="developers" {
-		    		property name="id" fieldtype="id";
-		    		property name="name";
-		    		property name="notMapped" persistent="false";
-		    	}
-		    """
-		);
+	@ValueSource( strings = {
+	    "class { property name=\"name\"; property name=\"notMapped\" persistent=\"false\"; }",
+	    "class { @Persistent property name=\"name\"; @Persistent false property name=\"notMapped\"; }"
+	} )
+	@ParameterizedTest
+	public void testPersistentFalseAnnotation( String sourceCode ) {
+		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
 
 		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
-		Node					node		= classEL.getChildNodes().item( 2 );
+		Node					node		= classEL.getChildNodes().item( 1 );
 
 		assertThat( node )
 		    .isEqualTo( null );
+	}
+
+	@DisplayName( "It recognizes immutable entities" )
+	@ValueSource( strings = {
+	    "class readonly=\"true\" {}",
+	    "@Immutable \r\nclass {}"
+	} )
+	@ParameterizedTest
+	public void testImmutableEntities( String sourceCode ) {
+		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
+		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+
+		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
+
+		assertThat( classEL.getAttributes().getNamedItem( "mutable" ).getTextContent() )
+		    .isEqualTo( "false" );
 	}
 
 	private IStruct getClassMetaFromFile( String entityFile ) {

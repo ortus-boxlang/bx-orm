@@ -49,11 +49,14 @@ public class ORMAnnotationInspector {
 		entityAnnotations.computeIfAbsent( ORMKeys.persistent, ( key ) -> true );
 
 		// if it's in a CFC location, it's persistent by default
-		return !entityAnnotations.containsKey( ORMKeys.persistent )
+		if ( !entityAnnotations.containsKey( ORMKeys.persistent )
 		    // JPA style, i.e. `@Entity`
-		    || entityAnnotations.containsKey( ORMKeys.entity )
-			// verbose CFML syntax, i.e. `persistent="true"`
-		    || BooleanCaster.cast( entityAnnotations.getOrDefault( ORMKeys.persistent, true ), false );
+		    || entityAnnotations.containsKey( ORMKeys.entity ) ) {
+			return true;
+		}
+		// verbose CFML syntax, i.e. `persistent="true"`
+		Object isPersistent = BooleanCaster.cast( entityAnnotations.getOrDefault( ORMKeys.persistent, true ), false );
+		return !Boolean.FALSE.equals( isPersistent );
 	}
 
 	/**
@@ -66,29 +69,35 @@ public class ORMAnnotationInspector {
 	public static boolean isPersistentProperty( IStruct prop ) {
 		var propAnnotations = prop.getAsStruct( Key.annotations );
 		// ommitted persistent defaults to true
-		return !propAnnotations.containsKey( ORMKeys.persistent )
+		if ( !propAnnotations.containsKey( ORMKeys.persistent )
 		    // JPA style, i.e. `@Column`
-		    || propAnnotations.containsKey( Key.column )
-			// verbose CFML syntax, i.e. `persistent="true"`
-		    || BooleanCaster.cast( propAnnotations.getOrDefault( ORMKeys.persistent, true ), false );
+		    || propAnnotations.containsKey( Key.column ) ) {
+			return true;
+		}
+		// verbose CFML syntax, i.e. `persistent="true"`
+		Object isPersistent = BooleanCaster.cast( propAnnotations.getOrDefault( ORMKeys.persistent, true ), false );
+		return !Boolean.FALSE.equals( isPersistent );
 	}
 
 	public ORMAnnotationInspector( IStruct entityMeta ) {
 		this.meta			= entityMeta;
 		this.annotations	= entityMeta.getAsStruct( Key.annotations );
+
 		this.properties		= entityMeta.getAsArray( Key.properties ).stream()
 		    .map( IStruct.class::cast )
 		    .filter( ORMAnnotationInspector::isPersistentProperty )
 		    .filter( ORMAnnotationInspector::isColumnFieldType )
 		    .collect( Array::new, Array::add, Array::addAll );
+
 		this.idProperties	= entityMeta.getAsArray( Key.properties ).stream()
 		    .map( IStruct.class::cast )
 		    .filter( ORMAnnotationInspector::isIDFieldType )
 		    .collect( Array::new, Array::add, Array::addAll );
 
 		// set sane defaults
-		this.annotations.computeIfAbsent( ORMKeys.entity, ( key ) -> this.meta.getAsString( Key._name ) );
-		// @TODO: Pass in the ORMConfig object to get defaults from
+		this.annotations.computeIfAbsent( ORMKeys.entity, key -> this.meta.getAsString( Key._name ) );
+		this.annotations.computeIfAbsent( ORMKeys.table, key -> this.getEntityName() );
+		// @TODO: Default these values using ORMConfig.catalog and ORMConfig.schema
 		// this.annotations.computeIfAbsent( Key.table, ( key ) -> config.catalog );
 		// this.annotations.computeIfAbsent( ORMKeys.schema, ( key ) -> config.schema );
 	}
@@ -141,11 +150,7 @@ public class ORMAnnotationInspector {
 
 	public String getTableName() {
 		// @TODO: Use the naming strategy to generate or massage the table name
-		String tableName = this.annotations.getAsString( ORMKeys.table );
-		if ( tableName == null || tableName.isEmpty() ) {
-			tableName = this.meta.getAsString( Key._name );
-		}
-		return tableName;
+		return this.annotations.getAsString( ORMKeys.table );
 	}
 
 	public String getSchema() {
@@ -168,24 +173,23 @@ public class ORMAnnotationInspector {
 
 	public boolean isReadOnly() {
 		return this.annotations.containsKey( ORMKeys.readOnly )
-		    && this.annotations.getAsBoolean( ORMKeys.readOnly )
-		    || ( this.annotations.containsKey( ORMKeys.immutable )
-		        && this.annotations.getAsBoolean( ORMKeys.immutable ) );
+		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.readOnly, "false" ), false )
+		    || this.annotations.containsKey( ORMKeys.immutable );
 	}
 
 	public boolean isDynamicInsert() {
 		return this.annotations.containsKey( ORMKeys.dynamicInsert )
-		    && this.annotations.getAsBoolean( ORMKeys.dynamicInsert );
+		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.dynamicInsert, false ) );
 	}
 
 	public boolean isDynamicUpdate() {
 		return this.annotations.containsKey( ORMKeys.dynamicUpdate )
-		    && this.annotations.getAsBoolean( ORMKeys.dynamicUpdate );
+		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.dynamicUpdate, false ) );
 	}
 
 	public boolean isSelectBeforeUpdate() {
 		return this.annotations.containsKey( ORMKeys.selectBeforeUpdate )
-		    && this.annotations.getAsBoolean( ORMKeys.selectBeforeUpdate );
+		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.selectBeforeUpdate, false ) );
 	}
 
 	public boolean needsTableCatalogSchema() {
