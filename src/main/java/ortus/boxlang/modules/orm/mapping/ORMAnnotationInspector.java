@@ -95,7 +95,7 @@ public class ORMAnnotationInspector {
 		    .collect( Array::new, Array::add, Array::addAll );
 
 		// set sane defaults
-		this.annotations.computeIfAbsent( ORMKeys.entity, key -> this.meta.getAsString( Key._name ) );
+		this.annotations.computeIfAbsent( ORMKeys.entityName, key -> this.meta.getAsString( Key._name ) );
 		this.annotations.computeIfAbsent( ORMKeys.table, key -> this.getEntityName() );
 		// @TODO: Default these values using ORMConfig.catalog and ORMConfig.schema
 		// this.annotations.computeIfAbsent( Key.table, ( key ) -> config.catalog );
@@ -141,9 +141,12 @@ public class ORMAnnotationInspector {
 	}
 
 	public String getEntityName() {
-		String entityName = this.annotations.getAsString( ORMKeys.entity );
+		String entityName = this.annotations.getAsString( ORMKeys.entityName );
 		if ( entityName == null || entityName.isEmpty() ) {
-			entityName = this.meta.getAsString( Key._name );
+			entityName = this.annotations.getAsString( ORMKeys.entity );
+			if ( entityName == null || entityName.isEmpty() ) {
+				entityName = this.meta.getAsString( Key._name );
+			}
 		}
 		return entityName;
 	}

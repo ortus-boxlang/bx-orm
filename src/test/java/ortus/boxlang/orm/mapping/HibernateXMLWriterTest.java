@@ -92,19 +92,15 @@ public class HibernateXMLWriterTest {
 	}
 
 	@DisplayName( "It generates the entity-name from the annotation" )
-	@Test
-	public void testEntityNameValue() {
-		// @formatter:off
-		IStruct entityMeta = getClassMetaFromCode(
-			"""
-				@Entity "Car"
-				class {
-					@id
-					property name="id";
-				}
-			"""
-		);
-		// @formatter:on
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    // CFML style
+	    "class entityName=\"Car\"{ property name=\"the_id\" fieldtype=\"id\"; }",
+	    // JPA style
+	    "@Entity \"Car\" class{ @Id property name=\"the_id\"; }"
+	} )
+	public void testEntityNameValue( String sourceCode ) {
+		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
@@ -156,7 +152,7 @@ public class HibernateXMLWriterTest {
 	public void testIDTypeAnnotation() {
 		IStruct					entityMeta	= getClassMetaFromCode(
 		    """
-		    	class persistent="true" table="developers" {
+		    	class table="developers" {
 		    		property name="the_id" fieldtype="id" ormtype="integer";
 		    		property name="the_name";
 		    	}
@@ -178,7 +174,7 @@ public class HibernateXMLWriterTest {
 	public void testIDGeneratorAnnotation() {
 		IStruct					entityMeta	= getClassMetaFromCode(
 		    """
-		    	class persistent="true" table="developers" {
+		    	class table="developers" {
 		    		property name="the_id" fieldtype="id" generator="increment";
 		    		property name="the_name";
 		    	}
@@ -199,7 +195,7 @@ public class HibernateXMLWriterTest {
 	public void testProperty() {
 		IStruct					entityMeta	= getClassMetaFromCode(
 		    """
-		    	class persistent="true" table="developers" {
+		    	class table="developers" {
 		    		property name="the_id" fieldtype="id";
 		    		property name="the_name";
 		    	}
@@ -220,7 +216,7 @@ public class HibernateXMLWriterTest {
 	public void testPropertyTypeAnnotation() {
 		IStruct					entityMeta	= getClassMetaFromCode(
 		    """
-		    	class persistent="true" table="developers" {
+		    	class table="developers" {
 		    		property name="the_id" fieldtype="id";
 		    		property name="the_name";
 		    	}
@@ -241,7 +237,7 @@ public class HibernateXMLWriterTest {
 	public void testPropertyColumnAnnotation() {
 		IStruct					entityMeta	= getClassMetaFromCode(
 		    """
-		    	class persistent="true" table="developers" {
+		    	class table="developers" {
 		    		property name="id" fieldtype="id";
 		    		property name="the_name";
 		    	}
