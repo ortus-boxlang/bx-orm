@@ -7,6 +7,7 @@ import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 
 public class ORMAnnotationInspector {
 
@@ -195,8 +196,43 @@ public class ORMAnnotationInspector {
 		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.selectBeforeUpdate, false ) );
 	}
 
-	public boolean needsTableCatalogSchema() {
-		return !this.isExtended() || ( !this.hasEntityAnnotation( ORMKeys.discriminatorValue ) && !this.hasEntityAnnotation( ORMKeys.joinColumn ) );
+	/**
+	 * Get the discriminator info for this entity.
+	 * 
+	 * @return A struct of discriminator info - EMPTY if none defined, else a struct with the following keys (any of which may be null):
+	 *         <ul>
+	 *         <li>{@link Key#value} - The value of the discriminator column</li>
+	 *         <li>{@link Key#_name} - The name of the discriminator column</li>
+	 *         <li>{@link Key#type} - The type of the discriminator column</li>
+	 *         <li>{@link Key#force} - Whether to force the discriminator column to be created</li>
+	 *         <li>{@link ORMKeys#insert} - Whether to insert the discriminator column</li>
+	 *         <li>{@link ORMKeys#formula} - A formula to use for the discriminator column</li>
+	 *         </ul>
+	 */
+	public IStruct getDiscriminatorData() {
+		if ( this.annotations.containsKey( ORMKeys.discriminator ) ) {
+			return this.annotations.getAsStruct( ORMKeys.discriminator );
+		}
+		IStruct newStruct = new Struct();
+		// copy the old-school discriminatorColumn and discriminatorValue annotations into the new struct
+		newStruct.computeIfAbsent( Key._name, key -> this.annotations.getAsString( ORMKeys.discriminatorColumn ) );
+		newStruct.computeIfAbsent( Key.value, key -> this.annotations.getAsString( ORMKeys.discriminatorValue ) );
+		// support and cast keys from the @DiscriminatorColumn {} struct
+		newStruct.computeIfPresent( Key.force, ( key, object ) -> BooleanCaster.cast( object, false ) );
+		newStruct.computeIfPresent( ORMKeys.insert, ( key, object ) -> BooleanCaster.cast( object, false ) );
+		// If 'formula' is set, just pass it through - no casting needed.
+		return newStruct;
+	}
+
+	/**
+	 * Determining whether thisEntity is "direct" or "derived". Aka, is the table name explicitly defined in the entity
+	 * metadata, or is it derived from a parent class plus discriminator metadata.
+	 * 
+	 * @return true if the entity is simple and NOT derived from a parent class, a join, or discriminator metadata; else false.
+	 */
+	public boolean isSimpleEntity() {
+		return !this.isExtended() || ( !this.hasEntityAnnotation( ORMKeys.discriminatorColumn ) && !this.hasEntityAnnotation( ORMKeys.discriminatorValue )
+		    && !this.hasEntityAnnotation( ORMKeys.joinColumn ) );
 	}
 
 	public boolean isExtended() {

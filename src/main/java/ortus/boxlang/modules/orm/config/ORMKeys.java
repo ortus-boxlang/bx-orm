@@ -69,7 +69,11 @@ public class ORMKeys {
 	public static final Key	batchsize				= Key.of( "batchsize" );
 	public static final Key	dynamicInsert			= Key.of( "dynamicInsert" );
 	public static final Key	dynamicUpdate			= Key.of( "dynamicUpdate" );
+	public static final Key	discriminator			= Key.of( "discriminator" );
 	public static final Key	discriminatorValue		= Key.of( "discriminatorValue" );
+	public static final Key	discriminatorColumn		= Key.of( "discriminatorColumn" );
+	public static final Key	discriminatorType		= Key.of( "discriminatorType" );
+	public static final Key	discriminatorFormula	= Key.of( "discriminatorFormula" );
 	public static final Key	joinColumn				= Key.of( "joinColumn" );
 	public static final Key	formula					= Key.of( "formula" );
 	public static final Key	check					= Key.of( "check" );

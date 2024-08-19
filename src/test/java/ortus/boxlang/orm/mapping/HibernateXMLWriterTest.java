@@ -148,16 +148,14 @@ public class HibernateXMLWriterTest {
 	}
 
 	@DisplayName( "It sets the type of the id property via an annotation" )
-	@Test
-	public void testIDTypeAnnotation() {
-		IStruct					entityMeta	= getClassMetaFromCode(
-		    """
-		    	class table="developers" {
-		    		property name="the_id" fieldtype="id" ormtype="integer";
-		    		property name="the_name";
-		    	}
-		    """
-		);
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    "class { property name=\"the_id\" fieldtype=\"id\" ormtype=\"integer\"; }",
+	    "class { @ORMType \"integer\" property name=\"the_id\" fieldtype=\"id\"; }"
+	// "class { @ORMType integer property name=\"the_id\" fieldtype=\"id\"; }"
+	} )
+	public void testIDTypeAnnotation( String sourceCode ) {
+		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
@@ -290,12 +288,60 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "false" );
 	}
 
+	@DisplayName( "It maps immutable properties" )
+	@ValueSource( strings = {
+	    "class { property name=\"name\" insert=false update=false; }",
+	    "class { @insert false @update false property name=\"name\" insert=false update=false; }"
+	} )
+	@ParameterizedTest
+	public void testImmutableProperties( String sourceCode ) {
+		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
+		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+
+		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
+		Node					node		= classEL.getChildNodes().item( 0 );
+
+		assertThat( node.getAttributes().getNamedItem( "insert" ).getTextContent() )
+		    .isEqualTo( "false" );
+		assertThat( node.getAttributes().getNamedItem( "update" ).getTextContent() )
+		    .isEqualTo( "false" );
+	}
+
+	// @formatter:off
+	@DisplayName( "It maps discriminator info" )
+	@ValueSource( strings = {
+	    "class discriminatorValue=\"Ford\" discriminatorColumn=\"autoType\" {}",
+	    "@DiscriminatorValue \"Ford\" @DiscriminatorColumn \"autoType\"\r\nclass {}",
+	    // Hopefully we can support this in the future. Currently stuck on BL's parser not supporting structs in annotations.
+	    """
+			@Discriminator {
+				"name" : "autoType",
+				"value" : "Ford"
+			}
+			class {}
+		"""
+	} )
+	// @formatter:on
+	@ParameterizedTest
+	public void testDiscriminator( String sourceCode ) {
+		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
+		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+
+		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
+		Node					node		= classEL.getChildNodes().item( 0 );
+
+		assertThat( classEL.getAttributes().getNamedItem( "discriminator-value" ).getTextContent() )
+		    .isEqualTo( "Ford" );
+		assertThat( node.getAttributes().getNamedItem( "column" ).getTextContent() )
+		    .isEqualTo( "autoType" );
+	}
+
 	private IStruct getClassMetaFromFile( String entityFile ) {
-		try {
-			return getClassMeta( new BoxScriptParser().parse( new File( entityFile ) ) );
-		} catch ( IOException e ) {
-			throw new BoxRuntimeException( String.format( "Failed to parse metadata for class: [%s]", entityFile ), e );
-		}
+		return getClassMeta( new Parser().parse( new File( entityFile ) ) );
 	}
 
 	private IStruct getClassMetaFromCode( String code ) {
@@ -306,7 +352,7 @@ public class HibernateXMLWriterTest {
 		}
 	}
 
-	private IStruct getClassMeta( ParsingResult result ) throws IOException {
+	private IStruct getClassMeta( ParsingResult result ) {
 		if ( !result.isCorrect() ) {
 			throw new ParseException( result.getIssues(), "" );
 		}

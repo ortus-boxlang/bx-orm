@@ -174,6 +174,61 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	}
 
 	/**
+	 * Generate a &lt;discriminator&gt; element for the entity metadata.
+	 * <p>
+	 * Uses these annotations:
+	 * <ul>
+	 * <li>discriminatorColumn</li>
+	 * <li>discriminatorType</li>
+	 * <li>discriminatorFormula</li>
+	 * </ul>
+	 * <p>
+	 * The resulting XML might look something like this:
+	 * <code>
+	 * <discriminator
+				column="discriminator_column"
+				type="discriminator_type"
+				force="true|false"
+				insert="true|false"
+				formula="arbitrary sql expression"
+		/>
+		</code>
+	 * 
+	 * @param doc     Parent document to use for creating the element
+	 * @param classEl Parent &lt;class&gt; element to add the &lt;discriminator&gt; element to
+	 * @param data    Discriminator metadata in struct form. If this is empty, no amendments will be made.
+	 * 
+	 * @return nothing - document mutation is done in place
+	 */
+	private void addDiscriminatorData( Document doc, Element classEl, IStruct data ) {
+		if ( data.isEmpty() ) {
+			return;
+		}
+		if ( data.containsKey( Key.value ) ) {
+			classEl.setAttribute( "discriminator-value", data.getAsString( Key.value ) );
+		}
+		if ( data.containsKey( Key._name ) ) {
+			Element theNode = doc.createElement( "discriminator" );
+			theNode.setAttribute( "column", data.getAsString( Key._name ) );
+
+			// set conditional attributes
+			if ( data.containsKey( Key.type ) ) {
+				theNode.setAttribute( "type", data.getAsString( Key.type ) );
+			}
+			if ( data.containsKey( Key.force ) ) {
+				theNode.setAttribute( "force", data.getAsString( Key.force ) );
+			}
+			if ( data.containsKey( ORMKeys.insert ) ) {
+				theNode.setAttribute( "insert", data.getAsString( ORMKeys.insert ) );
+			}
+			if ( data.containsKey( ORMKeys.formula ) ) {
+				theNode.setAttribute( "formula", data.getAsString( ORMKeys.formula ) );
+			}
+			classEl.appendChild( theNode );
+		}
+	}
+
+	/**
 	 * Generate a &lt;generator/&gt; element for the given property metadata.
 	 * <p>
 	 * Uses these annotations:
@@ -242,10 +297,13 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * @return A &lt;class /&gt; element containing entity keys, properties, and other Hibernate mapping metadata.
 	 */
 	private Element generateClassElement( Document doc, ORMAnnotationInspector inspector ) {
-		Element classElement = doc.createElement( "class" );
+		Element	classElement	= doc.createElement( "class" );
 
 		// general class attributes:
-		classElement.setAttribute( "entity-name", inspector.getEntityName() );
+		String	entityName		= inspector.getEntityName();
+		if ( !entityName.isEmpty() ) {
+			classElement.setAttribute( "entity-name", entityName );
+		}
 		if ( inspector.hasEntityAnnotation( ORMKeys.batchsize ) ) {
 			classElement.setAttribute( "batch-size", inspector.getEntityAnnotation( ORMKeys.batchsize ) );
 		}
@@ -275,7 +333,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		}
 
 		// And, if no discriminator or joinColumn is present:
-		if ( inspector.needsTableCatalogSchema() ) {
+		if ( inspector.isSimpleEntity() ) {
 			String tableName = inspector.getTableName();
 			if ( tableName != null ) {
 				classElement.setAttribute( "table", tableName );
@@ -301,7 +359,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 			    classElement.appendChild( generatePropertyElement( doc, prop, inspector ) );
 		    } );
 
-		// @TODO: generate <discriminator> elements
+		addDiscriminatorData( doc, classElement, inspector.getDiscriminatorData() );
 		// @TODO: generate <subclass> elements
 		// @TODO: generate <joined-subclass> elements
 		// @TODO: generate <union-subclass> elements
