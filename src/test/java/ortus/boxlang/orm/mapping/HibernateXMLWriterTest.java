@@ -27,6 +27,7 @@ import org.w3c.dom.Node;
 
 import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
 import ortus.boxlang.compiler.parser.BoxScriptParser;
+import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.modules.orm.mapping.HibernateXMLWriter;
 import ortus.boxlang.modules.orm.mapping.ORMAnnotationInspector;
@@ -66,7 +67,7 @@ public class HibernateXMLWriterTest {
 		IStruct					entityMeta	= getClassMetaFromFile( "src/test/resources/app/models/Developer.bx" );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "entity-name" ).getTextContent() )
 		    .isEqualTo( "Developer" );
@@ -85,7 +86,7 @@ public class HibernateXMLWriterTest {
 		);
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "table" ).getTextContent() )
 		    .isEqualTo( "developers" );
@@ -103,7 +104,9 @@ public class HibernateXMLWriterTest {
 		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+
+		String					xml			= xmlToString( doc );
 
 		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "entity-name" ).getTextContent() )
 		    .isEqualTo( "Car" );
@@ -123,7 +126,7 @@ public class HibernateXMLWriterTest {
 		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "table" ).getTextContent() )
 		    .isEqualTo( "cars" );
@@ -139,7 +142,7 @@ public class HibernateXMLWriterTest {
 		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 0 );
 
@@ -158,7 +161,7 @@ public class HibernateXMLWriterTest {
 		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		Node					classEl		= doc.getDocumentElement().getChildNodes().item( 0 );
 		Node					node		= classEl.getChildNodes().item( 0 );
@@ -180,7 +183,7 @@ public class HibernateXMLWriterTest {
 		);
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 0 ).getChildNodes().item( 0 );
 
@@ -201,7 +204,7 @@ public class HibernateXMLWriterTest {
 		);
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 1 );
 
@@ -222,7 +225,7 @@ public class HibernateXMLWriterTest {
 		);
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 1 );
 
@@ -243,7 +246,7 @@ public class HibernateXMLWriterTest {
 		);
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 1 );
 
@@ -261,7 +264,7 @@ public class HibernateXMLWriterTest {
 		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
 		Node					node		= classEL.getChildNodes().item( 1 );
@@ -280,7 +283,7 @@ public class HibernateXMLWriterTest {
 		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
 
@@ -298,7 +301,7 @@ public class HibernateXMLWriterTest {
 		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
 		Node					node		= classEL.getChildNodes().item( 0 );
@@ -329,7 +332,7 @@ public class HibernateXMLWriterTest {
 		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
 
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
 		Node					node		= classEL.getChildNodes().item( 0 );

@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
 import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
-import ortus.boxlang.compiler.parser.BoxScriptParser;
+import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -144,18 +144,13 @@ public class MappingGenerator {
 	}
 
 	private IStruct getClassMeta( File entityFile ) {
-		try {
-			ParsingResult result = new BoxScriptParser().parse( entityFile );
-			if ( !result.isCorrect() ) {
-				throw new ParseException( result.getIssues(), "" );
-			}
-			ClassMetadataVisitor visitor = new ClassMetadataVisitor();
-			result.getRoot().accept( visitor );
-			return visitor.getMetadata();
-		} catch ( IOException e ) {
-			// @TODO: Check `skipCFCWithError` setting before throwing exception
-			throw new BoxRuntimeException( String.format( "Failed to parse metadata for class: [{}]", entityFile.getAbsolutePath() ), e );
+		ParsingResult result = new Parser().parse( entityFile );
+		if ( !result.isCorrect() ) {
+			throw new ParseException( result.getIssues(), "" );
 		}
+		ClassMetadataVisitor visitor = new ClassMetadataVisitor();
+		result.getRoot().accept( visitor );
+		return visitor.getMetadata();
 	}
 
 	/**
@@ -214,7 +209,7 @@ public class MappingGenerator {
 	private String generateXML( IStruct meta ) {
 		try {
 			ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( meta );
-			Document				doc			= new HibernateXMLWriter().generateXML( inspector );
+			Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
 			TransformerFactory		tf			= TransformerFactory.newInstance();
 			Transformer				transformer	= tf.newTransformer();
