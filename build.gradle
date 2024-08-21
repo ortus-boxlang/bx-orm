@@ -51,6 +51,13 @@ dependencies {
 	implementation 'org.hibernate:hibernate-jcache:5.6.15.Final'
 	// https://mvnrepository.com/artifact/org.ehcache/ehcache
 	implementation 'org.ehcache:ehcache:3.10.8'
+	// @TODO: Figure out why we need this for running tests - they should be included in the boxlang dep.
+	// https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
+	testImplementation 'ch.qos.logback:logback-classic:1.5.7'
+	// https://mvnrepository.com/artifact/org.apache.derby/derby
+	testImplementation 'org.apache.derby:derby:10.17.1.0'
+	// https://mvnrepository.com/artifact/com.zaxxer/HikariCP
+	testImplementation 'com.zaxxer:HikariCP:5.1.0'
 }
 
 java {
