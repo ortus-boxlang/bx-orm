@@ -20,8 +20,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
@@ -43,12 +41,10 @@ import ortus.boxlang.runtime.types.exceptions.ParseException;
 
 public class HibernateXMLWriterTest {
 
-	static BoxRuntime			instance;
-	IBoxContext					context;
-	IScope						variables;
-	static Key					result	= new Key( "result" );
-
-	private static final Logger	logger	= LoggerFactory.getLogger( HibernateXMLWriterTest.class );
+	static BoxRuntime	instance;
+	IBoxContext			context;
+	IScope				variables;
+	static Key			result	= new Key( "result" );
 
 	@BeforeAll
 	public static void setUp() {

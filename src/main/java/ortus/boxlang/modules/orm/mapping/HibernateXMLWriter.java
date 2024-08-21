@@ -97,43 +97,8 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.formula ) ) {
 			theNode.setAttribute( "formula", "(" + inspector.getPropertyAnnotation( prop, ORMKeys.formula ) + ")" );
 		} else {
-			Element columnNode = this.document.createElement( "column" );
-			theNode.appendChild( columnNode );
-			String column = inspector.getPropertyColumn( prop );
-			if ( column != null ) {
-				columnNode.setAttribute( "name", column );
-			}
-			if ( inspector.isPropertyNotNull( prop ) ) {
-				columnNode.setAttribute( "not-null", "true" );
-			}
-			if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
-				columnNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
-			}
-			if ( inspector.hasPropertyAnnotation( prop, ORMKeys.check ) ) {
-				columnNode.setAttribute( "check", inspector.getPropertyAnnotation( prop, ORMKeys.check ) );
-			}
-			if ( inspector.hasPropertyAnnotation( prop, ORMKeys.dbDefault ) ) {
-				columnNode.setAttribute( "default", inspector.getPropertyAnnotation( prop, ORMKeys.dbDefault ) );
-			}
-			if ( inspector.hasPropertyAnnotation( prop, Key.length ) ) {
-				columnNode.setAttribute( "length", inspector.getPropertyAnnotation( prop, Key.length ) );
-			}
-			if ( inspector.hasPropertyAnnotation( prop, ORMKeys.precision ) ) {
-				columnNode.setAttribute( "precision", inspector.getPropertyAnnotation( prop, ORMKeys.precision ) );
-			}
-			if ( inspector.hasPropertyAnnotation( prop, ORMKeys.scale ) ) {
-				columnNode.setAttribute( "scale", inspector.getPropertyAnnotation( prop, ORMKeys.scale ) );
-			}
-			if ( inspector.hasPropertyAnnotation( prop, Key.sqltype ) ) {
-				columnNode.setAttribute( "sql-type", inspector.getPropertySqlType( prop ) );
-			}
-			if ( inspector.isPropertyUnique( prop ) ) {
-				columnNode.setAttribute( "unique", "true" );
-			}
-			String uniqueKey = inspector.getPropertyUniqueKey( prop );
-			if ( uniqueKey != null ) {
-				columnNode.setAttribute( "unique-key", uniqueKey );
-			}
+			// @TODO: Refactor to pass an inspector.getPropertyColumn() method call
+			theNode.appendChild( generateColumnElement( prop ) );
 		}
 		// @TODO: generated
 		if ( !inspector.isPropertyInsertable( prop ) ) {
@@ -202,6 +167,57 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		 */
 
 		return theNode;
+	}
+
+	/**
+	 * Generate a &lt;column /&gt; element for the given column metadata.
+	 * <p>
+	 * A column element can be used in a property, id, key, or other element to define column metadata.
+	 * 
+	 * @TODO: Refactor all key logic into a getPropertyColumn() method which groups and combines all the various column-specific annotations.
+	 * 
+	 * @param prop Column metadata in struct form
+	 * 
+	 * @return A &lt;column /&gt; element ready to add to a Hibernate mapping document
+	 */
+	private Element generateColumnElement( IStruct prop ) {
+		Element	columnNode	= this.document.createElement( "column" );
+		String	column		= inspector.getPropertyColumn( prop );
+		if ( column != null ) {
+			columnNode.setAttribute( "name", column );
+		}
+		if ( inspector.isPropertyNotNull( prop ) ) {
+			columnNode.setAttribute( "not-null", "true" );
+		}
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
+			columnNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
+		}
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.check ) ) {
+			columnNode.setAttribute( "check", inspector.getPropertyAnnotation( prop, ORMKeys.check ) );
+		}
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.dbDefault ) ) {
+			columnNode.setAttribute( "default", inspector.getPropertyAnnotation( prop, ORMKeys.dbDefault ) );
+		}
+		if ( inspector.hasPropertyAnnotation( prop, Key.length ) ) {
+			columnNode.setAttribute( "length", inspector.getPropertyAnnotation( prop, Key.length ) );
+		}
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.precision ) ) {
+			columnNode.setAttribute( "precision", inspector.getPropertyAnnotation( prop, ORMKeys.precision ) );
+		}
+		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.scale ) ) {
+			columnNode.setAttribute( "scale", inspector.getPropertyAnnotation( prop, ORMKeys.scale ) );
+		}
+		if ( inspector.hasPropertyAnnotation( prop, Key.sqltype ) ) {
+			columnNode.setAttribute( "sql-type", inspector.getPropertySqlType( prop ) );
+		}
+		if ( inspector.isPropertyUnique( prop ) ) {
+			columnNode.setAttribute( "unique", "true" );
+		}
+		String uniqueKey = inspector.getPropertyUniqueKey( prop );
+		if ( uniqueKey != null ) {
+			columnNode.setAttribute( "unique-key", uniqueKey );
+		}
+		return columnNode;
 	}
 
 	/**
