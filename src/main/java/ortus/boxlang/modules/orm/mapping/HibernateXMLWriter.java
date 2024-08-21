@@ -16,6 +16,7 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.types.util.JSONUtil;
 
 public class HibernateXMLWriter implements IPersistenceWriter {
@@ -27,32 +28,40 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 */
 	ORMAnnotationInspector		inspector;
 
+	/**
+	 * XML Document root, created by the constructor.
+	 * <p>
+	 * This is the root element of the Hibernate mapping document, and will be returned by {@link #generateXML()}.
+	 */
+	Document					document;
+
 	public HibernateXMLWriter( ORMAnnotationInspector inspector ) {
-		this.inspector = inspector;
+		this.inspector	= inspector;
+		this.document	= createDocument();
 	}
 
-	@Override
-	public Document generateXML() {
+	public Document createDocument() {
 		DocumentBuilderFactory	factory	= DocumentBuilderFactory.newInstance();
 		DocumentBuilder			builder;
 		try {
 			builder = factory.newDocumentBuilder();
 
-			DocumentType	doctype	= builder.getDOMImplementation().createDocumentType( "doctype", "-//Hibernate/Hibernate Mapping DTD 3.0//EN",
+			DocumentType doctype = builder.getDOMImplementation().createDocumentType( "doctype", "-//Hibernate/Hibernate Mapping DTD 3.0//EN",
 			    "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd" );
-			Document		doc		= builder.getDOMImplementation().createDocument( null,
+			return builder.getDOMImplementation().createDocument( null,
 			    "hibernate-mapping", doctype );
-
-			doc.getDocumentElement().appendChild( generateClassElement( doc ) );
-
-			return doc;
 		} catch ( ParserConfigurationException e ) {
 			// @TODO: Check ORMConfig.skipCFCWithError and throw if false.
 			e.printStackTrace();
 			logger.error( "Error creating Hibernate XML document: {}", e.getMessage(), e );
+			throw new BoxRuntimeException( "Error creating Hibernate XML document: " + e.getMessage(), e );
 		}
+	}
 
-		return null;
+	@Override
+	public Document generateXML() {
+		this.document.getDocumentElement().appendChild( generateClassElement() );
+		return this.document;
 	}
 
 	/**
@@ -67,20 +76,19 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * <li>and many, many more to come</li>
 	 * </ul>
 	 * 
-	 * @param doc  Parent document to use for creating the element
 	 * @param prop Property metadata in struct form
 	 * 
 	 * @return A &lt;property /&gt; element ready to add to a Hibernate mapping document
 	 */
-	private Element generatePropertyElement( Document doc, IStruct prop ) {
-		Element theNode = doc.createElement( "property" );
+	private Element generatePropertyElement( IStruct prop ) {
+		Element theNode = this.document.createElement( "property" );
 		theNode.setAttribute( "name", inspector.getPropertyName( prop ) );
 		theNode.setAttribute( "type", inspector.getPropertyType( prop ) );
 
 		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.formula ) ) {
 			theNode.setAttribute( "formula", "(" + inspector.getPropertyAnnotation( prop, ORMKeys.formula ) + ")" );
 		} else {
-			Element columnNode = doc.createElement( "column" );
+			Element columnNode = this.document.createElement( "column" );
 			theNode.appendChild( columnNode );
 			String column = inspector.getPropertyColumn( prop );
 			if ( column != null ) {
@@ -149,16 +157,15 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * <li>and many, many more to come</li>
 	 * </ul>
 	 * 
-	 * @param doc  Parent document to use for creating the element
 	 * @param prop Property metadata in struct form
 	 * 
 	 * @return A &lt;id /&gt; element ready to add to a Hibernate mapping document
 	 */
-	private Element generateIdElement( Document doc, IStruct prop ) {
-		Element	theNode		= doc.createElement( "id" );
+	private Element generateIdElement( IStruct prop ) {
+		Element	theNode		= this.document.createElement( "id" );
 		String	propName	= prop.getAsString( Key._name );
 		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generator ) ) {
-			theNode.appendChild( generateGeneratorElement( doc, prop ) );
+			theNode.appendChild( generateGeneratorElement( prop ) );
 			// @TODO: Determine ID type from generator type IF a generator is specified.
 		}
 
@@ -201,13 +208,12 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		/>
 		</code>
 	 * 
-	 * @param doc     Parent document to use for creating the element
 	 * @param classEl Parent &lt;class&gt; element to add the &lt;discriminator&gt; element to
 	 * @param data    Discriminator metadata in struct form. If this is empty, no amendments will be made.
 	 * 
 	 * @return nothing - document mutation is done in place
 	 */
-	private void addDiscriminatorData( Document doc, Element classEl, IStruct data ) {
+	private void addDiscriminatorData( Element classEl, IStruct data ) {
 		if ( data.isEmpty() ) {
 			return;
 		}
@@ -215,7 +221,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 			classEl.setAttribute( "discriminator-value", data.getAsString( Key.value ) );
 		}
 		if ( data.containsKey( Key._name ) ) {
-			Element theNode = doc.createElement( "discriminator" );
+			Element theNode = this.document.createElement( "discriminator" );
 			theNode.setAttribute( "column", data.getAsString( Key._name ) );
 
 			// set conditional attributes
@@ -247,15 +253,14 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * <li>generated</li>
 	 * </ul>
 	 * 
-	 * @param doc  Parent document to use for creating the element
 	 * @param prop Property metadata in struct form
 	 * 
 	 * @return A &lt;generator /&gt; element ready to add to a Hibernate mapping document
 	 */
-	private Element generateGeneratorElement( Document doc, IStruct prop ) {
+	private Element generateGeneratorElement( IStruct prop ) {
 		String	propName		= prop.getAsString( Key._name );
 
-		Element	theNode			= doc.createElement( "generator" );
+		Element	theNode			= this.document.createElement( "generator" );
 		String	generatorType	= inspector.getPropertyAnnotation( prop, ORMKeys.generator );
 		theNode.setAttribute( "class", generatorType );
 		IStruct params = new Struct();
@@ -286,7 +291,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 			}
 		}
 		params.forEach( ( key, value ) -> {
-			Element paramEl = doc.createElement( "param" );
+			Element paramEl = this.document.createElement( "param" );
 			paramEl.setAttribute( "name", key.getName() );
 			paramEl.setTextContent( value.toString() );
 			theNode.appendChild( paramEl );
@@ -297,12 +302,10 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	/**
 	 * Generate the top-level &lt;class /&gt; element containing entity mapping metadata.
 	 * 
-	 * @param doc Parent document to use for creating the element
-	 * 
 	 * @return A &lt;class /&gt; element containing entity keys, properties, and other Hibernate mapping metadata.
 	 */
-	private Element generateClassElement( Document doc ) {
-		Element	classElement	= doc.createElement( "class" );
+	private Element generateClassElement() {
+		Element	classElement	= this.document.createElement( "class" );
 
 		// general class attributes:
 		String	entityName		= inspector.getEntityName();
@@ -354,17 +357,17 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		// generate keys, aka <id> elements
 		inspector.getIdProperties().stream()
 		    .forEach( ( prop ) -> {
-			    classElement.appendChild( generateIdElement( doc, ( IStruct ) prop ) );
+			    classElement.appendChild( generateIdElement( ( IStruct ) prop ) );
 		    } );
 
 		// generate properties, aka <property> elements
 		inspector.getProperties().stream()
 		    .map( IStruct.class::cast )
 		    .forEach( ( prop ) -> {
-			    classElement.appendChild( generatePropertyElement( doc, prop ) );
+			    classElement.appendChild( generatePropertyElement( prop ) );
 		    } );
 
-		addDiscriminatorData( doc, classElement, inspector.getDiscriminatorData() );
+		addDiscriminatorData( classElement, inspector.getDiscriminatorData() );
 		// @TODO: generate <subclass> elements
 		// @TODO: generate <joined-subclass> elements
 		// @TODO: generate <union-subclass> elements
