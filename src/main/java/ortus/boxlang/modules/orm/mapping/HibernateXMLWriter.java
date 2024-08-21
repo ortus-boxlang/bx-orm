@@ -192,9 +192,9 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * <p>
 	 * Uses these annotations:
 	 * <ul>
-	 * <li>discriminatorColumn</li>
-	 * <li>discriminatorType</li>
-	 * <li>discriminatorFormula</li>
+	 * <li>@discriminator</li>
+	 * <li>@discriminatorColumn</li>
+	 * <li>@discriminatorType</li>
 	 * </ul>
 	 * <p>
 	 * The resulting XML might look something like this:

@@ -294,7 +294,7 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It maps immutable properties" )
 	@ValueSource( strings = {
 	    "class { property name=\"name\" insert=false update=false; }",
-	    "class { @insert false @update false property name=\"name\" insert=false update=false; }"
+	    "class { @insert false @update false property name=\"name\"; }"
 	} )
 	@ParameterizedTest
 	public void testImmutableProperties( String sourceCode ) {
@@ -317,11 +317,15 @@ public class HibernateXMLWriterTest {
 	@ValueSource( strings = {
 	    "class discriminatorValue=\"Ford\" discriminatorColumn=\"autoType\" {}",
 	    "@DiscriminatorValue \"Ford\" @DiscriminatorColumn \"autoType\"\r\nclass {}",
-	    // Hopefully we can support this in the future. Currently stuck on BL's parser not supporting structs in annotations.
+		// Note we can't test the `type`, `formula`, `force`, and `insert` keys with the parameterized test, as the older annotation style doesn't support them
 	    """
 			@Discriminator {
 				"name" : "autoType",
-				"value" : "Ford"
+				"value" : "Ford",
+				"type" : "string",
+				"formula" : "foo",
+				"force" : "false",
+				"insert" : "true",
 			}
 			class {}
 		"""
