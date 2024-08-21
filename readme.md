@@ -37,12 +37,12 @@ this.ormSettings = {
 By default, all boxlang class files located in your entity path directory(ies) are considered persistent. To expressly mark a class file as not an ORM entity, use the `persistent` annotation:
 
 ```js
-class persistent="false" {
+@Persistent false
+class {
 ...
 }
 // OR
-@Persistent false
-class {
+class persistent="false" {
 ...
 }
 ```
@@ -50,14 +50,16 @@ class {
 In the same vein, properties within an entity class file are considered persistent unless annotated otherwise:
 
 ```js
-class persistent="false" {
+class {
 	// this property is persistent by default:
 	property name="name", type="string";
+
 	// this property is NOT persistent
-	property name="name", type="string", persistent="false";
-	// or
 	@Persistent false
 	property name="name", type="string";
+	
+	// or
+	property name="name", type="string", persistent="false";
 }
 ```
 
@@ -155,16 +157,127 @@ class readonly="true" MyEntity {
 
 ## Property Annotations
 
-To document:
+### Column (string)
 
-* `persistent` and `transient`
-* `insert` and `update`
-* `unique`
-* `notnull`
-* `fieldtype`
-* `id`
+Specifies the name of the database column. You can normally leave this blank, as bx-orm will use the property name as the column name.
 
-### Insert
+```js
+@Column "foo"
+private name="bar";
+
+// Older style
+property name="bar" column="foo";
+```
+
+### NotNull (boolean)
+
+Indicates that the column cannot contain null values.
+
+```js
+@NotNull
+private name="bar";
+
+// Older style
+property name="bar" notNull="true";
+```
+
+### UnsavedValue (string)
+
+Specifies the value that indicates an unsaved entity.
+
+```js
+@UnsavedValue "bar"
+private name="bar";
+
+// Older style
+property name="bar" unsavedValue="foo";
+```
+
+### Check (string)
+
+Adds an arbitrary SQL expression check constraint to the column.
+
+```js
+@check "foo > 0"
+private name="bar";
+
+// Older style
+property name="bar" check="foo > 0";
+```
+
+### DBDefault (any)
+
+Specifies the default value for the column in the database.
+
+```js
+@DBDefault "undefined"
+private name="bar";
+
+// Older style
+property name="bar" dbDefault="undefined";
+```
+
+### Length (numeric)
+
+Defines the length of a string column. For string columns, this will influence the `CHAR` or `VARCHAR` length.
+
+```js
+@length 255
+private name="bar";
+
+// Older style
+property name="bar" length="255";
+```
+
+### Precision (numeric)
+
+Specifies the precision for a decimal column.
+
+```js
+@Precision 10
+private name="bar";
+
+// Older style
+property name="bar" precision="10";
+```
+
+### Scale (numeric)
+
+Specifies the scale for a decimal column.
+
+```js
+@Scale "2"
+private name="bar";
+
+// Older style
+property name="bar" scale="2";
+```
+
+### Sqltype (string)
+
+Defines the SQL type of the column.
+
+```js
+@Sqltype "varchar"
+private name="bar";
+
+// Older style
+property name="bar" sqltype="varchar";
+```
+
+### Unique (boolean)
+
+Set a unique constraint on this column.
+
+```js
+@Unique
+private name="bar";
+
+// Older style
+property name="bar" unique="true";
+```
+
+### Insert (boolean)
 
 Specify whether the property should be included in SQL INSERT statements. Boolean.
 
@@ -174,7 +287,7 @@ property name="name";
 property name="name" insert="false";
 ```
 
-### Update
+### Update (boolean)
 
 Specify whether the property should be included in SQL UPDATE statements. Boolean.
 

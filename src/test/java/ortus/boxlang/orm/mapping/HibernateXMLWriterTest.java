@@ -347,6 +347,58 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "autoType" );
 	}
 
+	/**
+	 * TODO: Test each below property annotation:
+	 * table
+	 * catalog ** ACF only?
+	 * schema ** ACF only?
+	 * column
+	 * formula
+	 * persistent / transient
+	 * where
+	 * dbdefault
+	 * sqltype
+	 * cfc
+	 * mappedBy
+	 * scale
+	 * precision
+	 * length
+	 * optimisticlock
+	 * insert
+	 * update
+	 * unique
+	 * notnull
+	 * uniqueKey
+	 * constrained
+	 * cascade
+	 * fetch
+	 * lazy
+	 * orderby
+	 * missingRowIgnored
+	 * linktable
+	 * linkcatalog
+	 * linkschema
+	 * joinColumn
+	 * inverse
+	 * inversejoincolumn
+	 * structkeycolumn
+	 * structkeytype
+	 * structkeydatatype ?? ACF only?
+	 * elementcolumn
+	 * elementtype
+	 * index
+	 * ormType
+	 * fieldtype
+	 * unSavedValue - deprecated
+	 * 
+	 * ## Generator annotations
+	 * generated
+	 * generator
+	 * params
+	 * sequence
+	 * selectKey
+	 */
+
 	private IStruct getClassMetaFromFile( String entityFile ) {
 		return getClassMeta( new Parser().parse( new File( entityFile ) ) );
 	}
