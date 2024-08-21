@@ -14,7 +14,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 	@DisplayName( "It can load an entity by pk" )
 	@Test
 	public void testEntityLoadByPK() {
-		assertNotNull( ormService.getSessionFactoryForName( ORMAppName ) );
+		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
 		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
 
 		// Session session = ORMEngine.getInstance().getSessionFactoryForName( Key.of( "MyAppName" ) ).openSession();

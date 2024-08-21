@@ -27,7 +27,7 @@ public class BoxClassInstantiator implements Instantiator {
 		String		bxClassFQN	= SessionFactoryBuilder.lookupBoxLangClass( entityMetamodel.getSessionFactory(),
 		    entityMetamodel.getName() );
 		IBoxContext	context		= SessionFactoryBuilder
-		    .getContext( entityMetamodel.getSessionFactory() );
+		    .getApplicationContext( entityMetamodel.getSessionFactory() );
 
 		return classLocator.load( context, bxClassFQN, "bx" ).invokeConstructor( context ).unWrapBoxLangClass();
 	}

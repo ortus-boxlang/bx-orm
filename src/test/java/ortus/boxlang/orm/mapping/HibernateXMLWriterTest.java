@@ -69,7 +69,7 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "entity-name" ).getTextContent() )
+		assertThat( doc.getDocumentElement().getFirstChild().getAttributes().getNamedItem( "entity-name" ).getTextContent() )
 		    .isEqualTo( "Developer" );
 	}
 
@@ -88,7 +88,7 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "table" ).getTextContent() )
+		assertThat( doc.getDocumentElement().getFirstChild().getAttributes().getNamedItem( "table" ).getTextContent() )
 		    .isEqualTo( "developers" );
 	}
 
@@ -108,7 +108,7 @@ public class HibernateXMLWriterTest {
 
 		String					xml			= xmlToString( doc );
 
-		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "entity-name" ).getTextContent() )
+		assertThat( doc.getDocumentElement().getFirstChild().getAttributes().getNamedItem( "entity-name" ).getTextContent() )
 		    .isEqualTo( "Car" );
 	}
 
@@ -128,7 +128,7 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		assertThat( doc.getDocumentElement().getChildNodes().item( 0 ).getAttributes().getNamedItem( "table" ).getTextContent() )
+		assertThat( doc.getDocumentElement().getFirstChild().getAttributes().getNamedItem( "table" ).getTextContent() )
 		    .isEqualTo( "cars" );
 	}
 
@@ -144,7 +144,7 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 0 );
+		Node					node		= doc.getDocumentElement().getFirstChild().getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
 		    .isEqualTo( "the_id" );
@@ -163,8 +163,8 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		Node					classEl		= doc.getDocumentElement().getChildNodes().item( 0 );
-		Node					node		= classEl.getChildNodes().item( 0 );
+		Node					classEl		= doc.getDocumentElement().getFirstChild();
+		Node					node		= classEl.getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "integer" );
@@ -175,7 +175,7 @@ public class HibernateXMLWriterTest {
 	public void testIDGeneratorAnnotation() {
 		IStruct					entityMeta	= getClassMetaFromCode(
 		    """
-		    	class table="developers" {
+		    	class {
 		    		property name="the_id" fieldtype="id" generator="increment";
 		    		property name="the_name";
 		    	}
@@ -185,7 +185,7 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 0 ).getChildNodes().item( 0 );
+		Node					node		= doc.getDocumentElement().getFirstChild().getFirstChild().getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "class" ).getTextContent() )
 		    .isEqualTo( "increment" );
@@ -196,8 +196,7 @@ public class HibernateXMLWriterTest {
 	public void testProperty() {
 		IStruct					entityMeta	= getClassMetaFromCode(
 		    """
-		    	class table="developers" {
-		    		property name="the_id" fieldtype="id";
+		    	class {
 		    		property name="the_name";
 		    	}
 		    """
@@ -206,7 +205,7 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 1 );
+		Node					node		= doc.getDocumentElement().getFirstChild().getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
 		    .isEqualTo( "the_name" );
@@ -217,8 +216,7 @@ public class HibernateXMLWriterTest {
 	public void testPropertyTypeAnnotation() {
 		IStruct					entityMeta	= getClassMetaFromCode(
 		    """
-		    	class table="developers" {
-		    		property name="the_id" fieldtype="id";
+		    	class {
 		    		property name="the_name";
 		    	}
 		    """
@@ -227,31 +225,10 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 1 );
+		Node					node		= doc.getDocumentElement().getFirstChild().getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "string" );
-	}
-
-	@DisplayName( "It sets the column of the property to the name of the property" )
-	@Test
-	public void testPropertyColumnAnnotation() {
-		IStruct					entityMeta	= getClassMetaFromCode(
-		    """
-		    	class table="developers" {
-		    		property name="id" fieldtype="id";
-		    		property name="the_name";
-		    	}
-		    """
-		);
-
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
-
-		Node					node		= doc.getDocumentElement().getChildNodes().item( 0 ).getChildNodes().item( 1 );
-
-		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
-		    .isEqualTo( "the_name" );
 	}
 
 	@DisplayName( "It does not map properties annotated with @Persistent false" )
@@ -266,7 +243,7 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
+		Node					classEL		= doc.getDocumentElement().getFirstChild();
 		Node					node		= classEL.getChildNodes().item( 1 );
 
 		assertThat( node )
@@ -285,7 +262,7 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
+		Node					classEL		= doc.getDocumentElement().getFirstChild();
 
 		assertThat( classEL.getAttributes().getNamedItem( "mutable" ).getTextContent() )
 		    .isEqualTo( "false" );
@@ -303,8 +280,8 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
-		Node					node		= classEL.getChildNodes().item( 0 );
+		Node					classEL		= doc.getDocumentElement().getFirstChild();
+		Node					node		= classEL.getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "insert" ).getTextContent() )
 		    .isEqualTo( "false" );
@@ -338,13 +315,40 @@ public class HibernateXMLWriterTest {
 		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
 		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
 
-		Node					classEL		= doc.getDocumentElement().getChildNodes().item( 0 );
-		Node					node		= classEL.getChildNodes().item( 0 );
+		Node					classEL		= doc.getDocumentElement().getFirstChild();
+		Node					node		= classEL.getFirstChild();
 
 		assertThat( classEL.getAttributes().getNamedItem( "discriminator-value" ).getTextContent() )
 		    .isEqualTo( "Ford" );
 		assertThat( node.getAttributes().getNamedItem( "column" ).getTextContent() )
 		    .isEqualTo( "autoType" );
+	}
+
+	// @formatter:off
+	@DisplayName( "It maps length, precision, and scale" )
+	@ValueSource( strings = {
+	    "class { property length=12 scale=10 precision=2 name=\"amount\"; }",
+	    "class { @length 12 @scale 10 @precision 2 property name=\"amount\";}"
+	} )
+	// @formatter:on
+	@ParameterizedTest
+	public void testLengthPrecisionScale( String sourceCode ) {
+		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+
+		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
+		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+
+		Node					classEL		= doc.getDocumentElement().getFirstChild();
+		Node					node		= classEL.getFirstChild().getFirstChild();
+
+		String					xml			= xmlToString( doc );
+
+		assertThat( node.getAttributes().getNamedItem( "length" ).getTextContent() )
+		    .isEqualTo( "12" );
+		assertThat( node.getAttributes().getNamedItem( "precision" ).getTextContent() )
+		    .isEqualTo( "2" );
+		assertThat( node.getAttributes().getNamedItem( "scale" ).getTextContent() )
+		    .isEqualTo( "10" );
 	}
 
 	/**
@@ -360,9 +364,6 @@ public class HibernateXMLWriterTest {
 	 * sqltype
 	 * cfc
 	 * mappedBy
-	 * scale
-	 * precision
-	 * length
 	 * optimisticlock
 	 * insert
 	 * update
