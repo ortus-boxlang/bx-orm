@@ -115,17 +115,17 @@ public class MappingGenerator {
 					        // if it's in a CFC location, it's persistent by default
 					        logger.warn( "Checking class [{}] for 'persistent' annotation", meta.getAsString( Key.path ) );
 					        if ( ORMAnnotationInspector.isPersistentEntity( meta ) ) {
-						        logger.warn( "No 'persistent' annotation found (OR is truthy) for class [{}]; treating class as persistent.",
+						        logger.warn( "Class is marked as persistent: [{}]",
 						            meta.getAsString( Key.path ) );
 						        return true;
 					        } else {
-						        logger.warn( "A 'persistent' annotation found in entity [{}]; and is falsey; skipping class as non-persistent.",
+						        logger.warn( "Class is unmarked or marked as as non-persistent; skipping: [{}]",
 						            meta.getAsString( Key.path ) );
 						        return false;
 					        }
 				        } )
 				        .forEach( ( IStruct meta ) -> {
-					        logger.warn( "Working with persistent entity: {}, {}", meta.getAsString( Key.path ) );
+					        logger.warn( "Working with persistent entity: {}", meta.getAsString( Key.path ) );
 					        entityMap.put( meta.getAsString( Key._name ),
 					            new EntityRecord(
 					                meta.getAsString( Key._name ),

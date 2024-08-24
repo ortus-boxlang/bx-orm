@@ -17,6 +17,7 @@ public class ORMKeys {
 	public static final Key	dbcreate				= Key.of( "dbcreate" );
 	public static final Key	dialect					= Key.of( "dialect" );
 	public static final Key	entity					= Key.of( "entity" );
+	public static final Key	_transient				= Key.of( "transient" );
 	public static final Key	eventHandling			= Key.of( "eventHandling" );
 	public static final Key	eventHandler			= Key.of( "eventHandler" );
 	public static final Key	flushAtRequestEnd		= Key.of( "flushAtRequestEnd" );
