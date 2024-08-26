@@ -24,6 +24,10 @@ import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
 import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.inspectors.ClassicEntityMeta;
+import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
+import ortus.boxlang.modules.orm.mapping.inspectors.ModernEntityMeta;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -112,20 +116,19 @@ public class MappingGenerator {
 					        return getClassMeta( new File( clazzPath.toString() ) );
 				        } )
 				        .filter( ( IStruct meta ) -> {
-					        // if it's in a CFC location, it's persistent by default
-					        logger.warn( "Checking class [{}] for 'persistent' annotation", meta.getAsString( Key.path ) );
-					        if ( ORMAnnotationInspector.isPersistentEntity( meta ) ) {
-						        logger.warn( "Class is marked as persistent: [{}]",
+					        IStruct annotations = meta.getAsStruct( Key.annotations );
+					        if ( annotations.containsKey( ORMKeys.persistent ) || annotations.containsKey( ORMKeys.entity ) ) {
+						        logger.debug(
+						            "Class is 'persistent'; generating XML: [{}] ",
 						            meta.getAsString( Key.path ) );
 						        return true;
 					        } else {
-						        logger.warn( "Class is unmarked or marked as as non-persistent; skipping: [{}]",
+						        logger.debug( "Class is unmarked or marked as as non-persistent; skipping: [{}]",
 						            meta.getAsString( Key.path ) );
 						        return false;
 					        }
 				        } )
 				        .forEach( ( IStruct meta ) -> {
-					        logger.warn( "Working with persistent entity: {}", meta.getAsString( Key.path ) );
 					        entityMap.put( meta.getAsString( Key._name ),
 					            new EntityRecord(
 					                meta.getAsString( Key._name ),
@@ -208,11 +211,20 @@ public class MappingGenerator {
 	 */
 	private String generateXML( IStruct meta ) {
 		try {
-			ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( meta );
-			Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+			IEntityMeta entity = null;
+			if ( meta.getAsStruct( Key.annotations ).containsKey( ORMKeys.persistent ) ) {
+				logger.warn( "Class contains 'persistent' annotation; using ClassicEntityMeta: [{}]",
+				    meta.getAsString( Key.path ) );
+				entity = new ClassicEntityMeta( meta );
+			} else {
+				logger.debug( "Using ModernEntityMeta: [{}]",
+				    meta.getAsString( Key.path ) );
+				entity = new ModernEntityMeta( meta );
+			}
+			Document			doc			= new HibernateXMLWriter( entity ).generateXML();
 
-			TransformerFactory		tf			= TransformerFactory.newInstance();
-			Transformer				transformer	= tf.newTransformer();
+			TransformerFactory	tf			= TransformerFactory.newInstance();
+			Transformer			transformer	= tf.newTransformer();
 
 			transformer.setOutputProperty( OutputKeys.INDENT, "yes" );
 			transformer.setOutputProperty( OutputKeys.OMIT_XML_DECLARATION, "no" );

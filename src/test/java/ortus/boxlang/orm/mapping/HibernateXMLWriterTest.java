@@ -28,7 +28,8 @@ import ortus.boxlang.compiler.parser.BoxScriptParser;
 import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.modules.orm.mapping.HibernateXMLWriter;
-import ortus.boxlang.modules.orm.mapping.ORMAnnotationInspector;
+import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
+import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
@@ -60,87 +61,81 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It generates the entity-name from the class name" )
 	@Test
 	public void testMapping() {
-		IStruct					entityMeta	= getClassMetaFromFile( "src/test/resources/app/models/Developer.bx" );
+		IStruct		meta		= getClassMetaFromFile( "src/test/resources/app/models/Developer.bx" );
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		assertThat( doc.getDocumentElement().getFirstChild().getAttributes().getNamedItem( "entity-name" ).getTextContent() )
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
+
+		assertThat( classEl.getAttributes().getNamedItem( "entity-name" ).getTextContent() )
 		    .isEqualTo( "Developer" );
 	}
 
-	@DisplayName( "It can set a table name" )
-	@Test
-	public void testTableNameFromAnnotation() {
-		IStruct					entityMeta	= getClassMetaFromCode(
-		    """
-		    	class table="developers" {
-		    		property name="the_id" fieldtype="id";
-		    		property name="the_name";
-		    	}
-		    """
-		);
+	@DisplayName( "It can set a table name, schema, and catalog" )
+	@ValueSource( strings = {
+	    "class persistent table=\"developers\" schema=\"foo\" catalog=\"morefoo\" {}",
+	    """
+	    @Table{
+	    	"name"   : "developers",
+	    	"schema" : "foo",
+	    	"catalog": "morefoo"
+	    }
+	    class {}
+	    """
+	} )
+	@ParameterizedTest
+	public void testTableNameFromAnnotation( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
 
-		assertThat( doc.getDocumentElement().getFirstChild().getAttributes().getNamedItem( "table" ).getTextContent() )
+		assertThat( classEl.getAttributes().getNamedItem( "table" ).getTextContent() )
 		    .isEqualTo( "developers" );
+
+		assertThat( classEl.getAttributes().getNamedItem( "schema" ).getTextContent() )
+		    .isEqualTo( "foo" );
+
+		assertThat( classEl.getAttributes().getNamedItem( "catalog" ).getTextContent() )
+		    .isEqualTo( "morefoo" );
 	}
 
 	@DisplayName( "It generates the entity-name from the annotation" )
 	@ParameterizedTest
 	@ValueSource( strings = {
 	    // CFML style
-	    "class entityName=\"Car\"{ property name=\"the_id\" fieldtype=\"id\"; }",
+	    "class persistent entityName=\"Car\"{ property name=\"the_id\" fieldtype=\"id\"; }",
 	    // JPA style
 	    "@Entity \"Car\" class{ @Id property name=\"the_id\"; }"
 	} )
 	public void testEntityNameValue( String sourceCode ) {
-		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		String					xml			= xmlToString( doc );
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
 
-		assertThat( doc.getDocumentElement().getFirstChild().getAttributes().getNamedItem( "entity-name" ).getTextContent() )
+		assertThat( classEl.getAttributes().getNamedItem( "entity-name" ).getTextContent() )
 		    .isEqualTo( "Car" );
-	}
-
-	@DisplayName( "It sets the entity table name from the table annotation" )
-	@ParameterizedTest
-	@ValueSource( strings = {
-	    // CFML style
-	    "class table=\"cars\"{ property name=\"the_id\" fieldtype=\"id\"; }",
-	    // JPA style
-	    "@Entity @Table \"cars\" class{ @Id property name=\"the_id\"; }",
-	    // test default table name
-	    "@Entity \"cars\" class{ @Id property name=\"the_id\"; }"
-	} )
-	public void testEntityTableNameValue( String sourceCode ) {
-		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
-
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
-
-		assertThat( doc.getDocumentElement().getFirstChild().getAttributes().getNamedItem( "table" ).getTextContent() )
-		    .isEqualTo( "cars" );
 	}
 
 	@DisplayName( "It generates an id element from the Id annotation" )
 	@ParameterizedTest
 	@ValueSource( strings = {
-	    "class{ property name=\"the_id\" fieldtype=\"id\"; }",
+	    "class persistent{ property name=\"the_id\" fieldtype=\"id\"; }",
 	    "class{ @Id property name=\"the_id\"; }"
 	} )
 	public void testIDAnnotation( String sourceCode ) {
-		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node					node		= doc.getDocumentElement().getFirstChild().getFirstChild();
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
+		Node		node		= classEl.getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
 		    .isEqualTo( "the_id" );
@@ -149,18 +144,18 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It sets the type of the id property via an annotation" )
 	@ParameterizedTest
 	@ValueSource( strings = {
-	    "class { property name=\"the_id\" fieldtype=\"id\" ormtype=\"integer\"; }",
+	    "class persistent { property name=\"the_id\" fieldtype=\"id\" ormtype=\"integer\"; }",
 	    "class { @ORMType \"integer\" property name=\"the_id\" fieldtype=\"id\"; }"
 	// "class { @ORMType integer property name=\"the_id\" fieldtype=\"id\"; }"
 	} )
 	public void testIDTypeAnnotation( String sourceCode ) {
-		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node					classEl		= doc.getDocumentElement().getFirstChild();
-		Node					node		= classEl.getFirstChild();
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
+		Node		node		= classEl.getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "integer" );
@@ -169,19 +164,19 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It can set an id generator" )
 	@Test
 	public void testIDGeneratorAnnotation() {
-		IStruct					entityMeta	= getClassMetaFromCode(
+		IStruct		meta		= getClassMetaFromCode(
 		    """
-		    	class {
+		    	class persistent {
 		    		property name="the_id" fieldtype="id" generator="increment";
 		    		property name="the_name";
 		    	}
 		    """
 		);
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node					node		= doc.getDocumentElement().getFirstChild().getFirstChild().getFirstChild();
+		Node		node		= doc.getDocumentElement().getFirstChild().getFirstChild().getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "class" ).getTextContent() )
 		    .isEqualTo( "increment" );
@@ -190,18 +185,18 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It generates property element for a property" )
 	@Test
 	public void testProperty() {
-		IStruct					entityMeta	= getClassMetaFromCode(
+		IStruct		meta		= getClassMetaFromCode(
 		    """
-		    	class {
+		    	class persistent {
 		    		property name="the_name";
 		    	}
 		    """
 		);
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node					node		= doc.getDocumentElement().getFirstChild().getFirstChild();
+		Node		node		= doc.getDocumentElement().getFirstChild().getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
 		    .isEqualTo( "the_name" );
@@ -210,18 +205,18 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It sets the type of the property via an annotation" )
 	@Test
 	public void testPropertyTypeAnnotation() {
-		IStruct					entityMeta	= getClassMetaFromCode(
+		IStruct		meta		= getClassMetaFromCode(
 		    """
-		    	class {
+		    	class persistent {
 		    		property name="the_name";
 		    	}
 		    """
 		);
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node					node		= doc.getDocumentElement().getFirstChild().getFirstChild();
+		Node		node		= doc.getDocumentElement().getFirstChild().getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "string" );
@@ -229,18 +224,18 @@ public class HibernateXMLWriterTest {
 
 	@DisplayName( "It does not map properties annotated with @Persistent false" )
 	@ValueSource( strings = {
-	    "class { property name=\"name\"; property name=\"notMapped\" persistent=\"false\"; }",
+	    "class persistent { property name=\"name\"; property name=\"notMapped\" persistent=\"false\"; }",
 	    "class { @Persistent property name=\"name\"; @Persistent false property name=\"notMapped\"; }"
 	} )
 	@ParameterizedTest
 	public void testPersistentFalseAnnotation( String sourceCode ) {
-		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node					classEL		= doc.getDocumentElement().getFirstChild();
-		Node					node		= classEL.getChildNodes().item( 1 );
+		Node		classEL		= doc.getDocumentElement().getFirstChild();
+		Node		node		= classEL.getChildNodes().item( 1 );
 
 		assertThat( node )
 		    .isEqualTo( null );
@@ -248,17 +243,17 @@ public class HibernateXMLWriterTest {
 
 	@DisplayName( "It recognizes immutable entities" )
 	@ValueSource( strings = {
-	    "class readonly=\"true\" {}",
+	    "class persistent readonly=\"true\" {}",
 	    "@Immutable \r\nclass {}"
 	} )
 	@ParameterizedTest
 	public void testImmutableEntities( String sourceCode ) {
-		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node					classEL		= doc.getDocumentElement().getFirstChild();
+		Node		classEL		= doc.getDocumentElement().getFirstChild();
 
 		assertThat( classEL.getAttributes().getNamedItem( "mutable" ).getTextContent() )
 		    .isEqualTo( "false" );
@@ -266,18 +261,18 @@ public class HibernateXMLWriterTest {
 
 	@DisplayName( "It maps immutable properties" )
 	@ValueSource( strings = {
-	    "class { property name=\"name\" insert=false update=false; }",
+	    "class persistent { property name=\"name\" insert=false update=false; }",
 	    "class { @insert false @update false property name=\"name\"; }"
 	} )
 	@ParameterizedTest
 	public void testImmutableProperties( String sourceCode ) {
-		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node					classEL		= doc.getDocumentElement().getFirstChild();
-		Node					node		= classEL.getFirstChild();
+		Node		classEL		= doc.getDocumentElement().getFirstChild();
+		Node		node		= classEL.getFirstChild();
 
 		assertThat( node.getAttributes().getNamedItem( "insert" ).getTextContent() )
 		    .isEqualTo( "false" );
@@ -288,7 +283,7 @@ public class HibernateXMLWriterTest {
 	// @formatter:off
 	@DisplayName( "It maps discriminator info" )
 	@ValueSource( strings = {
-	    "class discriminatorValue=\"Ford\" discriminatorColumn=\"autoType\" {}",
+	    "class persistent discriminatorValue=\"Ford\" discriminatorColumn=\"autoType\" {}",
 	    "@DiscriminatorValue \"Ford\" @DiscriminatorColumn \"autoType\"\r\nclass {}",
 		// Note we can't test the `type`, `formula`, `force`, and `insert` keys with the parameterized test, as the older annotation style doesn't support them
 	    """
@@ -306,13 +301,13 @@ public class HibernateXMLWriterTest {
 	// @formatter:on
 	@ParameterizedTest
 	public void testDiscriminator( String sourceCode ) {
-		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node					classEL		= doc.getDocumentElement().getFirstChild();
-		Node					node		= classEL.getFirstChild();
+		Node		classEL		= doc.getDocumentElement().getFirstChild();
+		Node		node		= classEL.getFirstChild();
 
 		assertThat( classEL.getAttributes().getNamedItem( "discriminator-value" ).getTextContent() )
 		    .isEqualTo( "Ford" );
@@ -323,21 +318,21 @@ public class HibernateXMLWriterTest {
 	// @formatter:off
 	@DisplayName( "It maps length, precision, and scale" )
 	@ValueSource( strings = {
-	    "class { property length=12 scale=10 precision=2 name=\"amount\"; }",
+	    "class persistent { property length=12 scale=10 precision=2 name=\"amount\"; }",
 	    "class { @length 12 @scale 10 @precision 2 property name=\"amount\";}"
 	} )
 	// @formatter:on
 	@ParameterizedTest
 	public void testLengthPrecisionScale( String sourceCode ) {
-		IStruct					entityMeta	= getClassMetaFromCode( sourceCode );
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		ORMAnnotationInspector	inspector	= new ORMAnnotationInspector( entityMeta );
-		Document				doc			= new HibernateXMLWriter( inspector ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node					classEL		= doc.getDocumentElement().getFirstChild();
-		Node					node		= classEL.getFirstChild().getFirstChild();
+		Node		classEL		= doc.getDocumentElement().getFirstChild();
+		Node		node		= classEL.getFirstChild().getFirstChild();
 
-		String					xml			= xmlToString( doc );
+		String		xml			= xmlToString( doc );
 
 		assertThat( node.getAttributes().getNamedItem( "length" ).getTextContent() )
 		    .isEqualTo( "12" );

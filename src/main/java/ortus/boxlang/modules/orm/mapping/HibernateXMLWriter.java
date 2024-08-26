@@ -1,7 +1,5 @@
 package ortus.boxlang.modules.orm.mapping;
 
-import java.util.Map;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -12,21 +10,21 @@ import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
 
-import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.types.IStruct;
-import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
-import ortus.boxlang.runtime.types.util.JSONUtil;
 
 public class HibernateXMLWriter implements IPersistenceWriter {
 
 	private static final Logger	logger	= LoggerFactory.getLogger( HibernateXMLWriter.class );
 
 	/**
-	 * ORMAnnotationInspector instance to use for inspecting entity metadata.
+	 * IEntityMeta instance which represents the parsed entity metadata in a normalized form.
+	 * <p>
+	 * The source of this metadata could be CFML persistent
+	 * annotations like `persistent=true` and `fieldtype="id"` OR modern BoxLang-syntax, JPA-style annotations like `@Entity` and `@Id`.
 	 */
-	ORMAnnotationInspector		inspector;
+	IEntityMeta					entity;
 
 	/**
 	 * XML Document root, created by the constructor.
@@ -35,8 +33,8 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 */
 	Document					document;
 
-	public HibernateXMLWriter( ORMAnnotationInspector inspector ) {
-		this.inspector	= inspector;
+	public HibernateXMLWriter( IEntityMeta entity ) {
+		this.entity		= entity;
 		this.document	= createDocument();
 	}
 
@@ -73,308 +71,308 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		return this.document;
 	}
 
-	/**
-	 * Generate a &lt;property /&gt; element for the given property metadata.
-	 * <p>
-	 * Uses these annotations:
-	 * <ul>
-	 * <li>name</li>
-	 * <li>type</li>
-	 * <li>column</li>
-	 * <li>unsavedValue</li>
-	 * <li>and many, many more to come</li>
-	 * </ul>
-	 * 
-	 * @param prop Property metadata in struct form
-	 * 
-	 * @return A &lt;property /&gt; element ready to add to a Hibernate mapping document
-	 */
-	private Element generatePropertyElement( IStruct prop ) {
-		Element theNode = this.document.createElement( "property" );
-		theNode.setAttribute( "name", inspector.getPropertyName( prop ) );
-		theNode.setAttribute( "type", inspector.getPropertyType( prop ) );
+	// /**
+	// * Generate a &lt;property /&gt; element for the given property metadata.
+	// * <p>
+	// * Uses these annotations:
+	// * <ul>
+	// * <li>name</li>
+	// * <li>type</li>
+	// * <li>column</li>
+	// * <li>unsavedValue</li>
+	// * <li>and many, many more to come</li>
+	// * </ul>
+	// *
+	// * @param prop Property metadata in struct form
+	// *
+	// * @return A &lt;property /&gt; element ready to add to a Hibernate mapping document
+	// */
+	// private Element generatePropertyElement( IStruct prop ) {
+	// Element theNode = this.document.createElement( "property" );
+	// theNode.setAttribute( "name", inspector.getPropertyName( prop ) );
+	// theNode.setAttribute( "type", inspector.getPropertyType( prop ) );
 
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.formula ) ) {
-			theNode.setAttribute( "formula", "(" + inspector.getPropertyAnnotation( prop, ORMKeys.formula ) + ")" );
-		} else {
-			// @TODO: Refactor to pass an inspector.getPropertyColumn() method call
-			theNode.appendChild( generateColumnElement( prop ) );
-		}
-		// @TODO: generated
-		if ( !inspector.isPropertyInsertable( prop ) ) {
-			theNode.setAttribute( "insert", "false" );
-		}
-		if ( !inspector.isPropertyUpdatable( prop ) ) {
-			theNode.setAttribute( "update", "false" );
-		}
-		if ( inspector.isPropertyLazy( prop ) ) {
-			theNode.setAttribute( "lazy", "true" );
-		}
-		if ( !inspector.isPropertyLockable( prop ) ) {
-			theNode.setAttribute( "optimistic-lock", "false" );
-		}
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.formula ) ) {
+	// theNode.setAttribute( "formula", "(" + inspector.getPropertyAnnotation( prop, ORMKeys.formula ) + ")" );
+	// } else {
+	// // @TODO: Refactor to pass an inspector.getPropertyColumn() method call
+	// theNode.appendChild( generateColumnElement( prop ) );
+	// }
+	// // @TODO: generated
+	// if ( !inspector.isPropertyInsertable( prop ) ) {
+	// theNode.setAttribute( "insert", "false" );
+	// }
+	// if ( !inspector.isPropertyUpdatable( prop ) ) {
+	// theNode.setAttribute( "update", "false" );
+	// }
+	// if ( inspector.isPropertyLazy( prop ) ) {
+	// theNode.setAttribute( "lazy", "true" );
+	// }
+	// if ( !inspector.isOptimisticLock( prop ) ) {
+	// theNode.setAttribute( "optimistic-lock", "false" );
+	// }
 
-		/**
-		 * TODO: Implement or test all the below:
-		 * table
-		 * catalog ** ACF only?
-		 * schema ** ACF only?
-		 * column
-		 * formula
-		 * persistent / transient
-		 * where
-		 * dbdefault
-		 * sqltype
-		 * cfc
-		 * mappedBy
-		 * scale
-		 * precision
-		 * length
-		 * optimisticlock
-		 * insert
-		 * update
-		 * unique
-		 * notnull
-		 * uniqueKey
-		 * constrained
-		 * cascade
-		 * fetch
-		 * lazy
-		 * orderby
-		 * missingRowIgnored
-		 * linktable
-		 * linkcatalog
-		 * linkschema
-		 * joinColumn
-		 * inverse
-		 * inversejoincolumn
-		 * structkeycolumn
-		 * structkeytype
-		 * structkeydatatype ?? ACF only?
-		 * elementcolumn
-		 * elementtype
-		 * index
-		 * ormType
-		 * fieldtype
-		 * unSavedValue - deprecated
-		 * 
-		 * ## Generator annotations
-		 * generated
-		 * generator
-		 * params
-		 * sequence
-		 * selectKey
-		 */
+	// /**
+	// * TODO: Implement or test all the below:
+	// * table
+	// * catalog ** ACF only?
+	// * schema ** ACF only?
+	// * column
+	// * formula
+	// * persistent / transient
+	// * where
+	// * dbdefault
+	// * sqltype
+	// * cfc
+	// * mappedBy
+	// * scale
+	// * precision
+	// * length
+	// * optimisticlock
+	// * insert
+	// * update
+	// * unique
+	// * notnull
+	// * uniqueKey
+	// * constrained
+	// * cascade
+	// * fetch
+	// * lazy
+	// * orderby
+	// * missingRowIgnored
+	// * linktable
+	// * linkcatalog
+	// * linkschema
+	// * joinColumn
+	// * inverse
+	// * inversejoincolumn
+	// * structkeycolumn
+	// * structkeytype
+	// * structkeydatatype ?? ACF only?
+	// * elementcolumn
+	// * elementtype
+	// * index
+	// * ormType
+	// * fieldtype
+	// * unSavedValue - deprecated
+	// *
+	// * ## Generator annotations
+	// * generated
+	// * generator
+	// * params
+	// * sequence
+	// * selectKey
+	// */
 
-		return theNode;
-	}
+	// return theNode;
+	// }
 
-	/**
-	 * Generate a &lt;column /&gt; element for the given column metadata.
-	 * <p>
-	 * A column element can be used in a property, id, key, or other element to define column metadata.
-	 * 
-	 * @TODO: Refactor all key logic into a getPropertyColumn() method which groups and combines all the various column-specific annotations.
-	 * 
-	 * @param prop Column metadata in struct form
-	 * 
-	 * @return A &lt;column /&gt; element ready to add to a Hibernate mapping document
-	 */
-	private Element generateColumnElement( IStruct prop ) {
-		Element	columnNode	= this.document.createElement( "column" );
-		String	column		= inspector.getPropertyColumn( prop );
-		if ( column != null ) {
-			columnNode.setAttribute( "name", column );
-		}
-		if ( inspector.isPropertyNotNull( prop ) ) {
-			columnNode.setAttribute( "not-null", "true" );
-		}
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
-			columnNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
-		}
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.check ) ) {
-			columnNode.setAttribute( "check", inspector.getPropertyAnnotation( prop, ORMKeys.check ) );
-		}
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.dbDefault ) ) {
-			columnNode.setAttribute( "default", inspector.getPropertyAnnotation( prop, ORMKeys.dbDefault ) );
-		}
-		if ( inspector.hasPropertyAnnotation( prop, Key.length ) ) {
-			columnNode.setAttribute( "length", inspector.getPropertyAnnotation( prop, Key.length ) );
-		}
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.precision ) ) {
-			columnNode.setAttribute( "precision", inspector.getPropertyAnnotation( prop, ORMKeys.precision ) );
-		}
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.scale ) ) {
-			columnNode.setAttribute( "scale", inspector.getPropertyAnnotation( prop, ORMKeys.scale ) );
-		}
-		if ( inspector.hasPropertyAnnotation( prop, Key.sqltype ) ) {
-			columnNode.setAttribute( "sql-type", inspector.getPropertySqlType( prop ) );
-		}
-		if ( inspector.isPropertyUnique( prop ) ) {
-			columnNode.setAttribute( "unique", "true" );
-		}
-		String uniqueKey = inspector.getPropertyUniqueKey( prop );
-		if ( uniqueKey != null ) {
-			columnNode.setAttribute( "unique-key", uniqueKey );
-		}
-		return columnNode;
-	}
+	// /**
+	// * Generate a &lt;column /&gt; element for the given column metadata.
+	// * <p>
+	// * A column element can be used in a property, id, key, or other element to define column metadata.
+	// *
+	// * @TODO: Refactor all key logic into a getPropertyColumn() method which groups and combines all the various column-specific annotations.
+	// *
+	// * @param prop Column metadata in struct form
+	// *
+	// * @return A &lt;column /&gt; element ready to add to a Hibernate mapping document
+	// */
+	// private Element generateColumnElement( IStruct prop ) {
+	// Element columnNode = this.document.createElement( "column" );
+	// String column = inspector.getPropertyColumn( prop );
+	// if ( column != null ) {
+	// columnNode.setAttribute( "name", column );
+	// }
+	// if ( inspector.isPropertyNotNull( prop ) ) {
+	// columnNode.setAttribute( "not-null", "true" );
+	// }
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
+	// columnNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
+	// }
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.check ) ) {
+	// columnNode.setAttribute( "check", inspector.getPropertyAnnotation( prop, ORMKeys.check ) );
+	// }
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.dbDefault ) ) {
+	// columnNode.setAttribute( "default", inspector.getPropertyAnnotation( prop, ORMKeys.dbDefault ) );
+	// }
+	// if ( inspector.hasPropertyAnnotation( prop, Key.length ) ) {
+	// columnNode.setAttribute( "length", inspector.getPropertyAnnotation( prop, Key.length ) );
+	// }
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.precision ) ) {
+	// columnNode.setAttribute( "precision", inspector.getPropertyAnnotation( prop, ORMKeys.precision ) );
+	// }
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.scale ) ) {
+	// columnNode.setAttribute( "scale", inspector.getPropertyAnnotation( prop, ORMKeys.scale ) );
+	// }
+	// if ( inspector.hasPropertyAnnotation( prop, Key.sqltype ) ) {
+	// columnNode.setAttribute( "sql-type", inspector.getPropertySqlType( prop ) );
+	// }
+	// if ( inspector.isPropertyUnique( prop ) ) {
+	// columnNode.setAttribute( "unique", "true" );
+	// }
+	// String uniqueKey = inspector.getPropertyUniqueKey( prop );
+	// if ( uniqueKey != null ) {
+	// columnNode.setAttribute( "unique-key", uniqueKey );
+	// }
+	// return columnNode;
+	// }
 
-	/**
-	 * Generate a &lt;id /&gt; element for the given property metadata.
-	 * <p>
-	 * Uses these annotations:
-	 * <ul>
-	 * <li>name</li>
-	 * <li>type</li>
-	 * <li>column</li>
-	 * <li>unsavedValue</li>
-	 * <li>access</li>
-	 * <li>length</li>
-	 * <li>and many, many more to come</li>
-	 * </ul>
-	 * 
-	 * @param prop Property metadata in struct form
-	 * 
-	 * @return A &lt;id /&gt; element ready to add to a Hibernate mapping document
-	 */
-	private Element generateIdElement( IStruct prop ) {
-		Element	theNode		= this.document.createElement( "id" );
-		String	propName	= prop.getAsString( Key._name );
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generator ) ) {
-			theNode.appendChild( generateGeneratorElement( prop ) );
-			// @TODO: Determine ID type from generator type IF a generator is specified.
-		}
+	// /**
+	// * Generate a &lt;id /&gt; element for the given property metadata.
+	// * <p>
+	// * Uses these annotations:
+	// * <ul>
+	// * <li>name</li>
+	// * <li>type</li>
+	// * <li>column</li>
+	// * <li>unsavedValue</li>
+	// * <li>access</li>
+	// * <li>length</li>
+	// * <li>and many, many more to come</li>
+	// * </ul>
+	// *
+	// * @param prop Property metadata in struct form
+	// *
+	// * @return A &lt;id /&gt; element ready to add to a Hibernate mapping document
+	// */
+	// private Element generateIdElement( IStruct prop ) {
+	// Element theNode = this.document.createElement( "id" );
+	// String propName = prop.getAsString( Key._name );
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generator ) ) {
+	// theNode.appendChild( generateGeneratorElement( prop ) );
+	// // @TODO: Determine ID type from generator type IF a generator is specified.
+	// }
 
-		// compute defaults - move to ORMAnnotationInspector?
-		// prop.getAsStruct( Key.annotations ).computeIfAbsent( ORMKeys.ORMType, ( key ) -> "string" );
+	// // compute defaults - move to ORMAnnotationInspector?
+	// // prop.getAsStruct( Key.annotations ).computeIfAbsent( ORMKeys.ORMType, ( key ) -> "string" );
 
-		// set common attributes
-		theNode.setAttribute( "name", propName );
-		theNode.setAttribute( "type", inspector.getPropertyAnnotation( prop, ORMKeys.ORMType ) );
+	// // set common attributes
+	// theNode.setAttribute( "name", propName );
+	// theNode.setAttribute( "type", inspector.getPropertyAnnotation( prop, ORMKeys.ORMType ) );
 
-		// set conditional attributes
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
-			theNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
-		}
-		if ( inspector.hasPropertyAnnotation( prop, Key.column ) ) {
-			theNode.setAttribute( "column", inspector.getPropertyAnnotation( prop, Key.column ) );
-		}
+	// // set conditional attributes
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
+	// theNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
+	// }
+	// if ( inspector.hasPropertyAnnotation( prop, Key.column ) ) {
+	// theNode.setAttribute( "column", inspector.getPropertyAnnotation( prop, Key.column ) );
+	// }
 
-		return theNode;
-	}
+	// return theNode;
+	// }
 
-	/**
-	 * Generate a &lt;discriminator&gt; element for the entity metadata.
-	 * <p>
-	 * Uses these annotations:
-	 * <ul>
-	 * <li>@discriminator</li>
-	 * <li>@discriminatorColumn</li>
-	 * <li>@discriminatorType</li>
-	 * </ul>
-	 * <p>
-	 * The resulting XML might look something like this:
-	 * <code>
-	 * <discriminator
-				column="discriminator_column"
-				type="discriminator_type"
-				force="true|false"
-				insert="true|false"
-				formula="arbitrary sql expression"
-		/>
-		</code>
-	 * 
-	 * @param classEl Parent &lt;class&gt; element to add the &lt;discriminator&gt; element to
-	 * @param data    Discriminator metadata in struct form. If this is empty, no amendments will be made.
-	 * 
-	 * @return nothing - document mutation is done in place
-	 */
-	private void addDiscriminatorData( Element classEl, IStruct data ) {
-		if ( data.isEmpty() ) {
-			return;
-		}
-		if ( data.containsKey( Key.value ) ) {
-			classEl.setAttribute( "discriminator-value", data.getAsString( Key.value ) );
-		}
-		if ( data.containsKey( Key._name ) ) {
-			Element theNode = this.document.createElement( "discriminator" );
-			theNode.setAttribute( "column", data.getAsString( Key._name ) );
+	// /**
+	// * Generate a &lt;discriminator&gt; element for the entity metadata.
+	// * <p>
+	// * Uses these annotations:
+	// * <ul>
+	// * <li>@discriminator</li>
+	// * <li>@discriminatorColumn</li>
+	// * <li>@discriminatorType</li>
+	// * </ul>
+	// * <p>
+	// * The resulting XML might look something like this:
+	// * <code>
+	// * <discriminator
+	// column="discriminator_column"
+	// type="discriminator_type"
+	// force="true|false"
+	// insert="true|false"
+	// formula="arbitrary sql expression"
+	// />
+	// </code>
+	// *
+	// * @param classEl Parent &lt;class&gt; element to add the &lt;discriminator&gt; element to
+	// * @param data Discriminator metadata in struct form. If this is empty, no amendments will be made.
+	// *
+	// * @return nothing - document mutation is done in place
+	// */
+	// private void addDiscriminatorData( Element classEl, IStruct data ) {
+	// if ( data.isEmpty() ) {
+	// return;
+	// }
+	// if ( data.containsKey( Key.value ) ) {
+	// classEl.setAttribute( "discriminator-value", data.getAsString( Key.value ) );
+	// }
+	// if ( data.containsKey( Key._name ) ) {
+	// Element theNode = this.document.createElement( "discriminator" );
+	// theNode.setAttribute( "column", data.getAsString( Key._name ) );
 
-			// set conditional attributes
-			if ( data.containsKey( Key.type ) ) {
-				theNode.setAttribute( "type", data.getAsString( Key.type ) );
-			}
-			if ( data.containsKey( Key.force ) ) {
-				theNode.setAttribute( "force", data.getAsString( Key.force ) );
-			}
-			if ( data.containsKey( ORMKeys.insert ) ) {
-				theNode.setAttribute( "insert", data.getAsString( ORMKeys.insert ) );
-			}
-			if ( data.containsKey( ORMKeys.formula ) ) {
-				theNode.setAttribute( "formula", data.getAsString( ORMKeys.formula ) );
-			}
-			classEl.appendChild( theNode );
-		}
-	}
+	// // set conditional attributes
+	// if ( data.containsKey( Key.type ) ) {
+	// theNode.setAttribute( "type", data.getAsString( Key.type ) );
+	// }
+	// if ( data.containsKey( Key.force ) ) {
+	// theNode.setAttribute( "force", data.getAsString( Key.force ) );
+	// }
+	// if ( data.containsKey( ORMKeys.insert ) ) {
+	// theNode.setAttribute( "insert", data.getAsString( ORMKeys.insert ) );
+	// }
+	// if ( data.containsKey( ORMKeys.formula ) ) {
+	// theNode.setAttribute( "formula", data.getAsString( ORMKeys.formula ) );
+	// }
+	// classEl.appendChild( theNode );
+	// }
+	// }
 
-	/**
-	 * Generate a &lt;generator/&gt; element for the given property metadata.
-	 * <p>
-	 * Uses these annotations:
-	 * <ul>
-	 * <li>generator</li>
-	 * <li>params</li>
-	 * <li>sequence</li>
-	 * <li>selectKey</li>
-	 * <li>generated</li>
-	 * </ul>
-	 * 
-	 * @param prop Property metadata in struct form
-	 * 
-	 * @return A &lt;generator /&gt; element ready to add to a Hibernate mapping document
-	 */
-	private Element generateGeneratorElement( IStruct prop ) {
-		String	propName		= prop.getAsString( Key._name );
+	// /**
+	// * Generate a &lt;generator/&gt; element for the given property metadata.
+	// * <p>
+	// * Uses these annotations:
+	// * <ul>
+	// * <li>generator</li>
+	// * <li>params</li>
+	// * <li>sequence</li>
+	// * <li>selectKey</li>
+	// * <li>generated</li>
+	// * </ul>
+	// *
+	// * @param prop Property metadata in struct form
+	// *
+	// * @return A &lt;generator /&gt; element ready to add to a Hibernate mapping document
+	// */
+	// private Element generateGeneratorElement( IStruct prop ) {
+	// String propName = prop.getAsString( Key._name );
 
-		Element	theNode			= this.document.createElement( "generator" );
-		String	generatorType	= inspector.getPropertyAnnotation( prop, ORMKeys.generator );
-		theNode.setAttribute( "class", generatorType );
-		IStruct params = new Struct();
+	// Element theNode = this.document.createElement( "generator" );
+	// String generatorType = inspector.getPropertyAnnotation( prop, ORMKeys.generator );
+	// theNode.setAttribute( "class", generatorType );
+	// IStruct params = new Struct();
 
-		// generator=foreign
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.property ) ) {
-			params.put( "property", inspector.getPropertyAnnotation( prop, ORMKeys.property ) );
-		}
-		// generator=select
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.selectKey ) ) {
-			params.put( "key", inspector.getPropertyAnnotation( prop, ORMKeys.selectKey ) );
-		}
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generated ) ) {
-			params.put( "generated", inspector.getPropertyAnnotation( prop, ORMKeys.generated ) );
-		}
-		// generator=sequence|sequence-identity
-		if ( inspector.hasPropertyAnnotation( prop, ORMKeys.sequence ) ) {
-			params.put( "sequence", inspector.getPropertyAnnotation( prop, ORMKeys.sequence ) );
-		}
-		if ( inspector.hasPropertyAnnotation( prop, Key.params ) ) {
-			Object	paramValue			= prop.getAsStruct( Key.annotations ).getAsString( Key.params );
-			IStruct	additionalParams	= Struct.fromMap( ( Map ) JSONUtil.fromJSON( paramValue ) );
-			if ( params == null ) {
-				logger.warn( "Property '{}' has a 'params' annotation that could not be cast to a struct: {}", propName, paramValue );
-				return theNode;
-			} else {
-				params.putAll( additionalParams );
-			}
-		}
-		params.forEach( ( key, value ) -> {
-			Element paramEl = this.document.createElement( "param" );
-			paramEl.setAttribute( "name", key.getName() );
-			paramEl.setTextContent( value.toString() );
-			theNode.appendChild( paramEl );
-		} );
-		return theNode;
-	}
+	// // generator=foreign
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.property ) ) {
+	// params.put( "property", inspector.getPropertyAnnotation( prop, ORMKeys.property ) );
+	// }
+	// // generator=select
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.selectKey ) ) {
+	// params.put( "key", inspector.getPropertyAnnotation( prop, ORMKeys.selectKey ) );
+	// }
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generated ) ) {
+	// params.put( "generated", inspector.getPropertyAnnotation( prop, ORMKeys.generated ) );
+	// }
+	// // generator=sequence|sequence-identity
+	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.sequence ) ) {
+	// params.put( "sequence", inspector.getPropertyAnnotation( prop, ORMKeys.sequence ) );
+	// }
+	// if ( inspector.hasPropertyAnnotation( prop, Key.params ) ) {
+	// Object paramValue = prop.getAsStruct( Key.annotations ).getAsString( Key.params );
+	// IStruct additionalParams = Struct.fromMap( ( Map ) JSONUtil.fromJSON( paramValue ) );
+	// if ( params == null ) {
+	// logger.warn( "Property '{}' has a 'params' annotation that could not be cast to a struct: {}", propName, paramValue );
+	// return theNode;
+	// } else {
+	// params.putAll( additionalParams );
+	// }
+	// }
+	// params.forEach( ( key, value ) -> {
+	// Element paramEl = this.document.createElement( "param" );
+	// paramEl.setAttribute( "name", key.getName() );
+	// paramEl.setTextContent( value.toString() );
+	// theNode.appendChild( paramEl );
+	// } );
+	// return theNode;
+	// }
 
 	/**
 	 * Generate the top-level &lt;class /&gt; element containing entity mapping metadata.
@@ -382,68 +380,67 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * @return A &lt;class /&gt; element containing entity keys, properties, and other Hibernate mapping metadata.
 	 */
 	private Element generateClassElement() {
-		Element	classElement	= this.document.createElement( "class" );
+		Element classElement = this.document.createElement( "class" );
 
 		// general class attributes:
-		String	entityName		= inspector.getEntityName();
-		if ( entityName != null && !entityName.isEmpty() ) {
-			classElement.setAttribute( "entity-name", entityName );
+		if ( entity.getEntityName() != null && !entity.getEntityName().isEmpty() ) {
+			classElement.setAttribute( "entity-name", entity.getEntityName() );
 		}
-		if ( inspector.hasEntityAnnotation( ORMKeys.batchsize ) ) {
-			classElement.setAttribute( "batch-size", inspector.getEntityAnnotation( ORMKeys.batchsize ) );
-		}
-		if ( inspector.isDynamicInsert() ) {
+		if ( entity.isDynamicInsert() ) {
 			classElement.setAttribute( "dynamic-insert", "true" );
 		}
-		if ( inspector.isDynamicUpdate() ) {
+		if ( entity.isDynamicUpdate() ) {
 			classElement.setAttribute( "dynamic-update", "true" );
 		}
-		if ( inspector.hasEntityAnnotation( ORMKeys.lazy ) ) {
-			classElement.setAttribute( "lazy", inspector.getEntityAnnotation( ORMKeys.lazy ) );
+		if ( entity.getBatchSize() != null ) {
+			classElement.setAttribute( "batch-size", StringCaster.cast( entity.getBatchSize() ) );
 		}
-		if ( inspector.isSelectBeforeUpdate() ) {
+		if ( entity.isLazy() ) {
+			classElement.setAttribute( "lazy", "true" );
+		}
+		if ( entity.isSelectBeforeUpdate() ) {
 			classElement.setAttribute( "rowid", "true" );
 		}
-		if ( inspector.hasEntityAnnotation( ORMKeys.optimisticLock ) ) {
-			classElement.setAttribute( "optimistic-lock", inspector.getEntityAnnotation( ORMKeys.optimisticLock ) );
+		if ( entity.getOptimisticLock() != null ) {
+			classElement.setAttribute( "optimistic-lock", entity.getOptimisticLock() );
 		}
-		if ( inspector.isReadOnly() ) {
+		if ( entity.isImmutable() ) {
 			classElement.setAttribute( "mutable", "false" );
 		}
-		if ( inspector.hasEntityAnnotation( ORMKeys.rowid ) ) {
-			classElement.setAttribute( "rowid", inspector.getEntityAnnotation( ORMKeys.rowid ) );
+		if ( entity.getRowID() != null ) {
+			classElement.setAttribute( "rowid", entity.getRowID() );
 		}
-		if ( inspector.hasEntityAnnotation( ORMKeys.where ) ) {
-			classElement.setAttribute( "where", inspector.getEntityAnnotation( ORMKeys.where ) );
+		if ( entity.getWhere() != null ) {
+			classElement.setAttribute( "where", entity.getWhere() );
 		}
 
 		// And, if no discriminator or joinColumn is present:
-		if ( inspector.isSimpleEntity() ) {
-			String tableName = inspector.getTableName();
-			if ( tableName != null ) {
-				classElement.setAttribute( "table", tableName );
-			}
-			if ( inspector.hasEntityAnnotation( ORMKeys.schema ) ) {
-				classElement.setAttribute( "schema", inspector.getEntityAnnotation( ORMKeys.schema ) );
-			}
-			if ( inspector.hasEntityAnnotation( ORMKeys.catalog ) ) {
-				classElement.setAttribute( "catalog", inspector.getEntityAnnotation( ORMKeys.catalog ) );
-			}
+		// if ( entity.isSimpleEntity() ) {
+		String tableName = entity.getTableName();
+		if ( tableName != null ) {
+			classElement.setAttribute( "table", tableName );
 		}
+		if ( entity.getSchema() != null ) {
+			classElement.setAttribute( "schema", entity.getSchema() );
+		}
+		if ( entity.getCatalog() != null ) {
+			classElement.setAttribute( "catalog", entity.getCatalog() );
+		}
+		// }
 
 		// generate keys, aka <id> elements
-		inspector.getIdProperties().stream().forEach( ( prop ) ->
+		// entity.getIdProperties().stream().forEach( ( prop ) ->
 
-		{
-			classElement.appendChild( generateIdElement( ( IStruct ) prop ) );
-		} );
+		// {
+		// classElement.appendChild( generateIdElement( ( IStruct ) prop ) );
+		// } );
 
-		// generate properties, aka <property> elements
-		inspector.getProperties().stream().map( IStruct.class::cast ).forEach( ( prop ) -> {
-			classElement.appendChild( generatePropertyElement( prop ) );
-		} );
+		// // generate properties, aka <property> elements
+		// entity.getProperties().stream().map( IStruct.class::cast ).forEach( ( prop ) -> {
+		// classElement.appendChild( generatePropertyElement( prop ) );
+		// } );
 
-		addDiscriminatorData( classElement, inspector.getDiscriminatorData() );
+		// addDiscriminatorData( classElement, entity.getDiscriminator() );
 		// @TODO: generate <subclass> elements
 		// @TODO: generate <joined-subclass> elements
 		// @TODO: generate <union-subclass> elements
