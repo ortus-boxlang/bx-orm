@@ -1,5 +1,7 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.List;
+
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.scopes.Key;
@@ -8,40 +10,44 @@ import ortus.boxlang.runtime.types.Struct;
 
 public abstract class AbstractEntityMeta implements IEntityMeta {
 
-	protected IStruct	meta;
-	protected IStruct	annotations;
+	protected IStruct				meta;
+	protected IStruct				annotations;
 
-	protected String	entityName;
+	protected List<IPropertyMeta>	idProperties;
 
-	protected boolean	isSimpleEntity;
+	protected List<IPropertyMeta>	properties;
 
-	protected boolean	isExtended;
+	protected String				entityName;
 
-	protected boolean	isImmutable;
+	protected boolean				isSimpleEntity;
 
-	protected boolean	isDynamicInsert;
+	protected boolean				isExtended;
 
-	protected boolean	isDynamicUpdate;
+	protected boolean				isImmutable;
 
-	protected boolean	isLazy;
+	protected boolean				isDynamicInsert;
 
-	protected boolean	isSelectBeforeUpdate;
+	protected boolean				isDynamicUpdate;
 
-	protected String	tableName;
+	protected boolean				isLazy;
 
-	protected String	schemaName;
+	protected boolean				isSelectBeforeUpdate;
 
-	protected String	catalogName;
+	protected String				tableName;
 
-	protected Integer	batchsize;
+	protected String				schemaName;
 
-	protected String	optimisticLock;
+	protected String				catalogName;
 
-	protected String	rowid;
+	protected Integer				batchsize;
 
-	protected String	where;
+	protected String				optimisticLock;
 
-	protected IStruct	discriminator	= Struct.EMPTY;
+	protected String				rowid;
+
+	protected String				where;
+
+	protected IStruct				discriminator	= Struct.EMPTY;
 
 	public AbstractEntityMeta( IStruct entityMeta ) {
 
@@ -63,12 +69,19 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.selectBeforeUpdate, false ) );
 	}
 
-	public static IEntityMeta discoverEntityMeta( IStruct entityMeta ) {
-		var annotations = entityMeta.getAsStruct( Key.annotations );
+	/**
+	 * Auto-discovers the entity metadata type (Modern or Classic) based on the presence of the `persistent` annotation.
+	 * 
+	 * @param meta Struct of entity metadata to inspect.
+	 * 
+	 * @return Instance of IEntityMeta, either ClassicEntityMeta or ModernEntityMeta.
+	 */
+	public static IEntityMeta autoDiscoverMetaType( IStruct meta ) {
+		var annotations = meta.getAsStruct( Key.annotations );
 		if ( annotations.containsKey( ORMKeys.persistent ) ) {
-			return new ClassicEntityMeta( entityMeta );
+			return new ClassicEntityMeta( meta );
 		}
-		return new ModernEntityMeta( entityMeta );
+		return new ModernEntityMeta( meta );
 	}
 
 	public String getEntityName() {
@@ -147,4 +160,15 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	// public String getCatalog() {
 	// return this.catalogName;
 	// }
+
+	/**
+	 * Property methods
+	 */
+	public List<IPropertyMeta> getIdProperties() {
+		return this.idProperties;
+	}
+
+	public List<IPropertyMeta> getProperties() {
+		return this.properties;
+	}
 }

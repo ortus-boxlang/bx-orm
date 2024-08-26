@@ -1,5 +1,7 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.stream.Collectors;
+
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.IntegerCaster;
@@ -35,9 +37,6 @@ public class ModernEntityMeta extends AbstractEntityMeta {
 
 		if ( this.annotations.containsKey( ORMKeys.discriminator ) ) {
 			this.discriminator = this.annotations.getAsStruct( ORMKeys.discriminator );
-			// Perform casting on boolean keys
-			this.discriminator.computeIfPresent( Key.force, ( key, object ) -> BooleanCaster.cast( object, false ) );
-			this.discriminator.computeIfPresent( ORMKeys.insert, ( key, object ) -> BooleanCaster.cast( object, false ) );
 		}
 
 		if ( this.annotations.containsKey( ORMKeys.lazy ) ) {
@@ -74,28 +73,16 @@ public class ModernEntityMeta extends AbstractEntityMeta {
 			}
 		}
 
-		// if ( this.annotations.containsKey( ORMKeys.rowid ) ) {
-		// this.rowid = this.annotations.get( ORMKeys.rowid );
-		// }
+		this.properties		= entityMeta.getAsArray( Key.properties ).stream()
+		    .map( IStruct.class::cast )
+		    .filter( ( prop ) -> prop.getAsStruct( Key.annotations ).containsKey( Key.column ) )
+		    .map( ModernPropertyMeta::new )
+		    .collect( Collectors.toList() );
 
-		// if ( this.annotations.containsKey( ORMKeys.rowid ) ) {
-		// this.rowid = this.annotations.get( ORMKeys.rowid );
-		// }
-
-		// if ( this.annotations.containsKey( ORMKeys.rowid ) ) {
-		// this.rowid = this.annotations.get( ORMKeys.rowid );
-		// }
-
-		// if ( this.annotations.containsKey( ORMKeys.rowid ) ) {
-		// this.rowid = this.annotations.get( ORMKeys.rowid );
-		// }
-
-		// if ( this.annotations.containsKey( ORMKeys.rowid ) ) {
-		// this.rowid = this.annotations.get( ORMKeys.rowid );
-		// }
-
-		// if ( this.annotations.containsKey( ORMKeys.rowid ) ) {
-		// this.rowid = this.annotations.get( ORMKeys.rowid );
-		// }
+		this.idProperties	= entityMeta.getAsArray( Key.properties ).stream()
+		    .map( IStruct.class::cast )
+		    .filter( ( prop ) -> prop.getAsStruct( Key.annotations ).containsKey( Key.id ) )
+		    .map( ModernPropertyMeta::new )
+		    .collect( Collectors.toList() );
 	}
 }

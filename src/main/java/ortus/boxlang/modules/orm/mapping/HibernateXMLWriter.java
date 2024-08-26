@@ -10,8 +10,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
 
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 public class HibernateXMLWriter implements IPersistenceWriter {
@@ -262,59 +265,59 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	// return theNode;
 	// }
 
-	// /**
-	// * Generate a &lt;discriminator&gt; element for the entity metadata.
-	// * <p>
-	// * Uses these annotations:
-	// * <ul>
-	// * <li>@discriminator</li>
-	// * <li>@discriminatorColumn</li>
-	// * <li>@discriminatorType</li>
-	// * </ul>
-	// * <p>
-	// * The resulting XML might look something like this:
-	// * <code>
-	// * <discriminator
-	// column="discriminator_column"
-	// type="discriminator_type"
-	// force="true|false"
-	// insert="true|false"
-	// formula="arbitrary sql expression"
-	// />
-	// </code>
-	// *
-	// * @param classEl Parent &lt;class&gt; element to add the &lt;discriminator&gt; element to
-	// * @param data Discriminator metadata in struct form. If this is empty, no amendments will be made.
-	// *
-	// * @return nothing - document mutation is done in place
-	// */
-	// private void addDiscriminatorData( Element classEl, IStruct data ) {
-	// if ( data.isEmpty() ) {
-	// return;
-	// }
-	// if ( data.containsKey( Key.value ) ) {
-	// classEl.setAttribute( "discriminator-value", data.getAsString( Key.value ) );
-	// }
-	// if ( data.containsKey( Key._name ) ) {
-	// Element theNode = this.document.createElement( "discriminator" );
-	// theNode.setAttribute( "column", data.getAsString( Key._name ) );
+	/**
+	 * Generate a &lt;discriminator&gt; element for the entity metadata.
+	 * <p>
+	 * Uses these annotations:
+	 * <ul>
+	 * <li>@discriminator</li>
+	 * <li>@discriminatorColumn</li>
+	 * <li>@discriminatorType</li>
+	 * </ul>
+	 * <p>
+	 * The resulting XML might look something like this:
+	 * <code>
+	* <discriminator
+	column="discriminator_column"
+	type="discriminator_type"
+	force="true|false"
+	insert="true|false"
+	formula="arbitrary sql expression"
+	/>
+	</code>
+	 *
+	 * @param classEl Parent &lt;class&gt; element to add the &lt;discriminator&gt; element to
+	 * @param data    Discriminator metadata in struct form. If this is empty, no amendments will be made.
+	 *
+	 * @return nothing - document mutation is done in place
+	 */
+	private void addDiscriminatorData( Element classEl, IStruct data ) {
+		if ( data.isEmpty() ) {
+			return;
+		}
+		if ( data.containsKey( Key.value ) ) {
+			classEl.setAttribute( "discriminator-value", data.getAsString( Key.value ) );
+		}
+		if ( data.containsKey( Key._name ) ) {
+			Element theNode = this.document.createElement( "discriminator" );
+			theNode.setAttribute( "column", data.getAsString( Key._name ) );
 
-	// // set conditional attributes
-	// if ( data.containsKey( Key.type ) ) {
-	// theNode.setAttribute( "type", data.getAsString( Key.type ) );
-	// }
-	// if ( data.containsKey( Key.force ) ) {
-	// theNode.setAttribute( "force", data.getAsString( Key.force ) );
-	// }
-	// if ( data.containsKey( ORMKeys.insert ) ) {
-	// theNode.setAttribute( "insert", data.getAsString( ORMKeys.insert ) );
-	// }
-	// if ( data.containsKey( ORMKeys.formula ) ) {
-	// theNode.setAttribute( "formula", data.getAsString( ORMKeys.formula ) );
-	// }
-	// classEl.appendChild( theNode );
-	// }
-	// }
+			// set conditional attributes
+			if ( data.containsKey( Key.type ) ) {
+				theNode.setAttribute( "type", data.getAsString( Key.type ) );
+			}
+			if ( data.containsKey( Key.force ) ) {
+				theNode.setAttribute( "force", ( String ) data.get( Key.force ) );
+			}
+			if ( data.containsKey( ORMKeys.insert ) ) {
+				theNode.setAttribute( "insert", ( String ) data.get( ORMKeys.insert ) );
+			}
+			if ( data.containsKey( ORMKeys.formula ) ) {
+				theNode.setAttribute( "formula", ( String ) data.get( ORMKeys.formula ) );
+			}
+			classEl.appendChild( theNode );
+		}
+	}
 
 	// /**
 	// * Generate a &lt;generator/&gt; element for the given property metadata.
@@ -440,7 +443,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		// classElement.appendChild( generatePropertyElement( prop ) );
 		// } );
 
-		// addDiscriminatorData( classElement, entity.getDiscriminator() );
+		addDiscriminatorData( classElement, entity.getDiscriminator() );
 		// @TODO: generate <subclass> elements
 		// @TODO: generate <joined-subclass> elements
 		// @TODO: generate <union-subclass> elements

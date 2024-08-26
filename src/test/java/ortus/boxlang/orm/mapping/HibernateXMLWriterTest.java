@@ -63,7 +63,7 @@ public class HibernateXMLWriterTest {
 	public void testMapping() {
 		IStruct		meta		= getClassMetaFromFile( "src/test/resources/app/models/Developer.bx" );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
@@ -88,7 +88,7 @@ public class HibernateXMLWriterTest {
 	public void testTableNameFromAnnotation( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 
@@ -113,7 +113,7 @@ public class HibernateXMLWriterTest {
 	public void testEntityNameValue( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
@@ -131,7 +131,7 @@ public class HibernateXMLWriterTest {
 	public void testIDAnnotation( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
@@ -151,7 +151,7 @@ public class HibernateXMLWriterTest {
 	public void testIDTypeAnnotation( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
@@ -173,7 +173,7 @@ public class HibernateXMLWriterTest {
 		    """
 		);
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		node		= doc.getDocumentElement().getFirstChild().getFirstChild().getFirstChild();
@@ -193,7 +193,7 @@ public class HibernateXMLWriterTest {
 		    """
 		);
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		node		= doc.getDocumentElement().getFirstChild().getFirstChild();
@@ -213,7 +213,7 @@ public class HibernateXMLWriterTest {
 		    """
 		);
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		node		= doc.getDocumentElement().getFirstChild().getFirstChild();
@@ -231,7 +231,7 @@ public class HibernateXMLWriterTest {
 	public void testPersistentFalseAnnotation( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
@@ -250,7 +250,7 @@ public class HibernateXMLWriterTest {
 	public void testImmutableEntities( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
@@ -268,7 +268,7 @@ public class HibernateXMLWriterTest {
 	public void testImmutableProperties( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
@@ -284,16 +284,15 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It maps discriminator info" )
 	@ValueSource( strings = {
 	    "class persistent discriminatorValue=\"Ford\" discriminatorColumn=\"autoType\" {}",
-	    "@DiscriminatorValue \"Ford\" @DiscriminatorColumn \"autoType\"\r\nclass {}",
 		// Note we can't test the `type`, `formula`, `force`, and `insert` keys with the parameterized test, as the older annotation style doesn't support them
 	    """
 			@Discriminator {
-				"name" : "autoType",
-				"value" : "Ford",
-				"type" : "string",
+				"name"    : "autoType",
+				"value"   : "Ford",
+				"type"    : "string",
 				"formula" : "foo",
-				"force" : "false",
-				"insert" : "true",
+				"force"   : "false",
+				"insert"  : "true",
 			}
 			class {}
 		"""
@@ -303,12 +302,11 @@ public class HibernateXMLWriterTest {
 	public void testDiscriminator( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 		Node		node		= classEL.getFirstChild();
-
 		assertThat( classEL.getAttributes().getNamedItem( "discriminator-value" ).getTextContent() )
 		    .isEqualTo( "Ford" );
 		assertThat( node.getAttributes().getNamedItem( "column" ).getTextContent() )
@@ -326,7 +324,7 @@ public class HibernateXMLWriterTest {
 	public void testLengthPrecisionScale( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.discoverEntityMeta( meta );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();

@@ -1,5 +1,7 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.List;
+
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -62,4 +64,11 @@ public interface IEntityMeta {
 	public String getOptimisticLock();
 
 	public String getWhere();
+
+	/**
+	 * Property methods
+	 */
+	public List<IPropertyMeta> getIdProperties();
+
+	public List<IPropertyMeta> getProperties();
 }

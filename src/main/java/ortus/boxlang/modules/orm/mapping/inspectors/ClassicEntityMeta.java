@@ -1,5 +1,7 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.stream.Collectors;
+
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.scopes.Key;
@@ -28,11 +30,34 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		this.isImmutable = this.annotations.containsKey( ORMKeys.readOnly )
 		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.readOnly, "false" ), false );
 
-		if ( this.annotations.containsKey( ORMKeys.discriminator ) ) {
+		if ( this.annotations.containsKey( ORMKeys.discriminatorColumn ) || this.annotations.containsKey( ORMKeys.discriminatorValue ) ) {
 			this.discriminator = new Struct();
 			// copy the old-school discriminatorColumn and discriminatorValue annotations into the new struct
 			this.discriminator.computeIfAbsent( Key._name, key -> this.annotations.getAsString( ORMKeys.discriminatorColumn ) );
 			this.discriminator.computeIfAbsent( Key.value, key -> this.annotations.getAsString( ORMKeys.discriminatorValue ) );
 		}
+
+		this.properties		= entityMeta.getAsArray( Key.properties ).stream()
+		    .map( IStruct.class::cast )
+		    .filter( ( IStruct prop ) -> {
+								    var annotations = prop.getAsStruct( Key.annotations );
+								    return !annotations.containsKey( ORMKeys.persistent ) || BooleanCaster.cast( annotations.get( ORMKeys.persistent ), false );
+							    } )
+		    .filter( ( IStruct prop ) -> {
+			    var annotations = prop.getAsStruct( Key.annotations );
+			    return !annotations.containsKey( ORMKeys.fieldtype ) || annotations.getAsString( ORMKeys.fieldtype ).equals( "column" );
+		    } )
+		    .map( ClassicPropertyMeta::new )
+		    .collect( Collectors.toList() );
+
+		this.idProperties	= entityMeta.getAsArray( Key.properties ).stream()
+		    .map( IStruct.class::cast )
+		    .filter( ( IStruct prop ) -> {
+								    var annotations = prop.getAsStruct( Key.annotations );
+								    return annotations.containsKey( ORMKeys.fieldtype ) && annotations.getAsString( ORMKeys.fieldtype ).equals( "id" );
+							    } )
+		    .map( ClassicPropertyMeta::new )
+		    .collect( Collectors.toList() );
+
 	}
 }
