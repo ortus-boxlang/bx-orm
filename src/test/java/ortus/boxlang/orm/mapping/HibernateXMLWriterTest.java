@@ -58,6 +58,10 @@ public class HibernateXMLWriterTest {
 		variables	= context.getScopeNearby( VariablesScope.name );
 	}
 
+	/**********************
+	 * Entity tests
+	 *********************/
+
 	@DisplayName( "It generates the entity-name from the class name" )
 	@Test
 	public void testMapping() {
@@ -70,6 +74,26 @@ public class HibernateXMLWriterTest {
 
 		assertThat( classEl.getAttributes().getNamedItem( "entity-name" ).getTextContent() )
 		    .isEqualTo( "Developer" );
+	}
+
+	@DisplayName( "It generates the entity-name from the annotation" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    // CFML style
+	    "class persistent entityName=\"Car\"{}",
+	    // JPA style
+	    "@Entity \"Car\" class{}"
+	} )
+	public void testEntityNameValue( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
+
+		assertThat( classEl.getAttributes().getNamedItem( "entity-name" ).getTextContent() )
+		    .isEqualTo( "Car" );
 	}
 
 	@DisplayName( "It can set a table name, schema, and catalog" )
@@ -102,26 +126,60 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "morefoo" );
 	}
 
-	@DisplayName( "It generates the entity-name from the annotation" )
-	@ParameterizedTest
+	@DisplayName( "It recognizes immutable entities" )
 	@ValueSource( strings = {
-	    // CFML style
-	    "class persistent entityName=\"Car\"{ property name=\"the_id\" fieldtype=\"id\"; }",
-	    // JPA style
-	    "@Entity \"Car\" class{ @Id property name=\"the_id\"; }"
+	    "class persistent readonly=\"true\" {}",
+	    "@Immutable \r\nclass {}"
 	} )
-	public void testEntityNameValue( String sourceCode ) {
+	@ParameterizedTest
+	public void testImmutableEntities( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node		classEl		= doc.getDocumentElement().getFirstChild();
+		Node		classEL		= doc.getDocumentElement().getFirstChild();
 
-		assertThat( classEl.getAttributes().getNamedItem( "entity-name" ).getTextContent() )
-		    .isEqualTo( "Car" );
+		assertThat( classEL.getAttributes().getNamedItem( "mutable" ).getTextContent() )
+		    .isEqualTo( "false" );
 	}
 
+	// @formatter:off
+	@DisplayName( "It maps discriminator info" )
+	@ValueSource( strings = {
+	    "class persistent discriminatorValue=\"Ford\" discriminatorColumn=\"autoType\" {}",
+		// Note we can't test the `type`, `formula`, `force`, and `insert` keys with the parameterized test, as the older annotation style doesn't support them
+	    """
+			@Discriminator {
+				"name"    : "autoType",
+				"value"   : "Ford",
+				"type"    : "string",
+				"formula" : "foo",
+				"force"   : "false",
+				"insert"  : "true",
+			}
+			class {}
+		"""
+	} )
+	// @formatter:on
+	@ParameterizedTest
+	public void testDiscriminator( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		Node		classEL		= doc.getDocumentElement().getFirstChild();
+		Node		node		= classEL.getFirstChild();
+		assertThat( classEL.getAttributes().getNamedItem( "discriminator-value" ).getTextContent() )
+		    .isEqualTo( "Ford" );
+		assertThat( node.getAttributes().getNamedItem( "column" ).getTextContent() )
+		    .isEqualTo( "autoType" );
+	}
+
+	/**********************
+	 * Identifier tests
+	 *********************/
 	@DisplayName( "It generates an id element from the Id annotation" )
 	@ParameterizedTest
 	@ValueSource( strings = {
@@ -133,6 +191,7 @@ public class HibernateXMLWriterTest {
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+		String		xml			= xmlToString( doc );
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		Node		node		= classEl.getFirstChild();
@@ -144,15 +203,28 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It sets the type of the id property via an annotation" )
 	@ParameterizedTest
 	@ValueSource( strings = {
-	    "class persistent { property name=\"the_id\" fieldtype=\"id\" ormtype=\"integer\"; }",
-	    "class { @ORMType \"integer\" property name=\"the_id\" fieldtype=\"id\"; }"
-	// "class { @ORMType integer property name=\"the_id\" fieldtype=\"id\"; }"
+	    """
+	    class persistent {
+	    	property
+	    		name="the_id"
+	    		fieldtype="id"
+	    		ormtype="integer";
+	    }
+	    """,
+	    """
+	    class {
+	    	@Id
+	    	@ORMType "integer"
+	    	property name="the_id";
+	    }
+	    """
 	} )
 	public void testIDTypeAnnotation( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+		String		xml			= xmlToString( doc );
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		Node		node		= classEl.getFirstChild();
@@ -182,6 +254,9 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "increment" );
 	}
 
+	/**********************
+	 * General property tests
+	 *********************/
 	@DisplayName( "It generates property element for a property" )
 	@Test
 	public void testProperty() {
@@ -241,24 +316,6 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( null );
 	}
 
-	@DisplayName( "It recognizes immutable entities" )
-	@ValueSource( strings = {
-	    "class persistent readonly=\"true\" {}",
-	    "@Immutable \r\nclass {}"
-	} )
-	@ParameterizedTest
-	public void testImmutableEntities( String sourceCode ) {
-		IStruct		meta		= getClassMetaFromCode( sourceCode );
-
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
-
-		Node		classEL		= doc.getDocumentElement().getFirstChild();
-
-		assertThat( classEL.getAttributes().getNamedItem( "mutable" ).getTextContent() )
-		    .isEqualTo( "false" );
-	}
-
 	@DisplayName( "It maps immutable properties" )
 	@ValueSource( strings = {
 	    "class persistent { property name=\"name\" insert=false update=false; }",
@@ -281,42 +338,17 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
-	@DisplayName( "It maps discriminator info" )
+	@DisplayName( "It maps name, length, precision, and scale" )
 	@ValueSource( strings = {
-	    "class persistent discriminatorValue=\"Ford\" discriminatorColumn=\"autoType\" {}",
-		// Note we can't test the `type`, `formula`, `force`, and `insert` keys with the parameterized test, as the older annotation style doesn't support them
 	    """
-			@Discriminator {
-				"name"    : "autoType",
-				"value"   : "Ford",
-				"type"    : "string",
-				"formula" : "foo",
-				"force"   : "false",
-				"insert"  : "true",
-			}
-			class {}
-		"""
-	} )
-	// @formatter:on
-	@ParameterizedTest
-	public void testDiscriminator( String sourceCode ) {
-		IStruct		meta		= getClassMetaFromCode( sourceCode );
-
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
-
-		Node		classEL		= doc.getDocumentElement().getFirstChild();
-		Node		node		= classEL.getFirstChild();
-		assertThat( classEL.getAttributes().getNamedItem( "discriminator-value" ).getTextContent() )
-		    .isEqualTo( "Ford" );
-		assertThat( node.getAttributes().getNamedItem( "column" ).getTextContent() )
-		    .isEqualTo( "autoType" );
-	}
-
-	// @formatter:off
-	@DisplayName( "It maps length, precision, and scale" )
-	@ValueSource( strings = {
-	    "class persistent { property length=12 scale=10 precision=2 name=\"amount\"; }",
+		class persistent {
+			property 
+				length=12 
+				scale=10 
+				precision=2 
+				name="amount";
+		}
+		""",
 	    """
 		@Entity
 		class {
@@ -340,14 +372,66 @@ public class HibernateXMLWriterTest {
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 		Node		node		= classEL.getFirstChild().getFirstChild();
 
-		String		xml			= xmlToString( doc );
-
+		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
+		    .isEqualTo( "amount" );
 		assertThat( node.getAttributes().getNamedItem( "length" ).getTextContent() )
 		    .isEqualTo( "12" );
 		assertThat( node.getAttributes().getNamedItem( "precision" ).getTextContent() )
 		    .isEqualTo( "2" );
 		assertThat( node.getAttributes().getNamedItem( "scale" ).getTextContent() )
 		    .isEqualTo( "10" );
+	}
+
+	// @formatter:off
+	@DisplayName( "It maps other column attributes" )
+	@ValueSource( strings = {
+	    """
+		class persistent {
+			property 
+				insert=false 
+				update=false 
+				unique=true 
+				table="foo"
+				notNull=true
+				dbDefault="test"
+				name="title";
+		}
+		""",
+	    """
+		@Entity
+		class {
+			@Column{
+				"table"      : "foo",
+				"unique"     : true,
+				"nullable"   : false,
+				"insertable" : false,
+				"updateable" : false
+			}
+			property name="title";
+		}
+		"""
+	} )
+	// @formatter:on
+	@ParameterizedTest
+	public void testOtherColumnAttributes( String sourceCode ) {
+		// IStruct meta = getClassMetaFromCode( sourceCode );
+
+		// IEntityMeta entityMeta = AbstractEntityMeta.autoDiscoverMetaType( meta );
+		// Document doc = new HibernateXMLWriter( entityMeta ).generateXML();
+
+		// Node classEL = doc.getDocumentElement().getFirstChild();
+		// Node node = classEL.getFirstChild().getFirstChild();
+
+		// String xml = xmlToString( doc );
+
+		// assertThat( node.getAttributes().getNamedItem( "table" ).getTextContent() )
+		// .isEqualTo( "foo" );
+		// assertThat( node.getAttributes().getNamedItem( "unique" ).getTextContent() )
+		// .isEqualTo( "true" );
+		// assertThat( node.getAttributes().getNamedItem( "not-null" ).getTextContent() )
+		// .isEqualTo( "true" );
+		// assertThat( node.getAttributes().getNamedItem( "default" ).getTextContent() )
+		// .isEqualTo( "test" );
 	}
 
 	/**

@@ -18,7 +18,7 @@ public class ModernEntityMeta extends AbstractEntityMeta {
 
 		// @TODO: Attempt to support @Entity.foo syntax
 		this.annotations.computeIfAbsent( ORMKeys.entity, key -> this.meta.getAsString( Key._name ) );
-		this.entityName				= this.annotations.getAsString( ORMKeys.entity );
+		this.entityName				= ( String ) this.annotations.getOrDefault( ORMKeys.entity, this.meta.getAsString( ( Key._NAME ) ) );
 
 		/**
 		 * All properties set here MUST be specific to the modern entity metadata. If they are applicable to both modern and classic metadata, they should be

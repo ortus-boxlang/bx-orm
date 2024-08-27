@@ -16,6 +16,7 @@ public class AbstractPropertyMeta implements IPropertyMeta {
 	protected IStruct	types;
 	protected IStruct	generator;
 	protected IStruct	column;
+	protected String	unsavedValue;
 
 	public AbstractPropertyMeta( IStruct meta ) {
 		this.meta			= meta;
@@ -67,6 +68,10 @@ public class AbstractPropertyMeta implements IPropertyMeta {
 	@Override
 	public IStruct getGenerator() {
 		return this.generator;
+	}
+
+	public String getUnsavedValue() {
+		return this.unsavedValue;
 	}
 
 }

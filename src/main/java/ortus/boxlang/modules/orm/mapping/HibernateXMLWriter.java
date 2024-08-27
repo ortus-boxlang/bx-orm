@@ -91,7 +91,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 *
 	 * @return A &lt;property /&gt; element ready to add to a Hibernate mapping document
 	 */
-	private Element generatePropertyElement( IPropertyMeta prop ) {
+	public Element generatePropertyElement( IPropertyMeta prop ) {
 		IStruct	column	= prop.getColumn();
 		IStruct	types	= prop.getTypes();
 
@@ -181,10 +181,12 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 *
 	 * @return A &lt;column /&gt; element ready to add to a Hibernate mapping document
 	 */
-	private Element generateColumnElement( IPropertyMeta prop ) {
-		Element columnNode = this.document.createElement( "column" );
+	public Element generateColumnElement( IPropertyMeta prop ) {
+		Element	columnNode	= this.document.createElement( "column" );
+		IStruct	columnInfo	= prop.getColumn();
+		IStruct	types		= prop.getTypes();
+
 		columnNode.setAttribute( "name", prop.getName() );
-		IStruct columnInfo = prop.getColumn();
 		if ( columnInfo.containsKey( ORMKeys.nullable ) && Boolean.TRUE.equals( columnInfo.getAsBoolean( ORMKeys.nullable ) ) ) {
 			columnNode.setAttribute( "not-null", "true" );
 		}
@@ -209,9 +211,9 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		// if ( prop.hasPropertyAnnotation( prop, ORMKeys.dbDefault ) ) {
 		// columnNode.setAttribute( "default", prop.getPropertyAnnotation( prop, ORMKeys.dbDefault ) );
 		// }
-		// if ( prop.hasPropertyAnnotation( prop, Key.sqltype ) ) {
-		// columnNode.setAttribute( "sql-type", prop.getPropertySqlType( prop ) );
-		// }
+		if ( types.containsKey( Key.sqltype ) ) {
+			columnNode.setAttribute( "sql-type", types.getAsString( Key.sqltype ) );
+		}
 		// String uniqueKey = prop.getPropertyUniqueKey( prop );
 		// if ( uniqueKey != null ) {
 		// columnNode.setAttribute( "unique-key", uniqueKey );
@@ -219,49 +221,48 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		return columnNode;
 	}
 
-	// /**
-	// * Generate a &lt;id /&gt; element for the given property metadata.
-	// * <p>
-	// * Uses these annotations:
-	// * <ul>
-	// * <li>name</li>
-	// * <li>type</li>
-	// * <li>column</li>
-	// * <li>unsavedValue</li>
-	// * <li>access</li>
-	// * <li>length</li>
-	// * <li>and many, many more to come</li>
-	// * </ul>
-	// *
-	// * @param prop Property metadata in struct form
-	// *
-	// * @return A &lt;id /&gt; element ready to add to a Hibernate mapping document
-	// */
-	// private Element generateIdElement( IStruct prop ) {
-	// Element theNode = this.document.createElement( "id" );
-	// String propName = prop.getAsString( Key._name );
-	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generator ) ) {
-	// theNode.appendChild( generateGeneratorElement( prop ) );
-	// // @TODO: Determine ID type from generator type IF a generator is specified.
-	// }
+	/**
+	 * Generate a &lt;id /&gt; element for the given property metadata.
+	 * <p>
+	 * Uses these annotations:
+	 * <ul>
+	 * <li>name</li>
+	 * <li>type</li>
+	 * <li>column</li>
+	 * <li>unsavedValue</li>
+	 * <li>access</li>
+	 * <li>length</li>
+	 * <li>and many, many more to come</li>
+	 * </ul>
+	 *
+	 * @param prop Property metadata in struct form
+	 *
+	 * @return A &lt;id /&gt; element ready to add to a Hibernate mapping document
+	 */
+	public Element generateIdElement( IPropertyMeta prop ) {
+		Element theNode = this.document.createElement( "id" );
+		// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generator ) ) {
+		// theNode.appendChild( generateGeneratorElement( prop ) );
+		// // @TODO: Determine ID type from generator type IF a generator is specified.
+		// }
 
-	// // compute defaults - move to ORMAnnotationInspector?
-	// // prop.getAsStruct( Key.annotations ).computeIfAbsent( ORMKeys.ORMType, ( key ) -> "string" );
+		// compute defaults - move to ORMAnnotationInspector?
+		// prop.getAsStruct( Key.annotations ).computeIfAbsent( ORMKeys.ORMType, ( key ) -> "string" );
 
-	// // set common attributes
-	// theNode.setAttribute( "name", propName );
-	// theNode.setAttribute( "type", inspector.getPropertyAnnotation( prop, ORMKeys.ORMType ) );
+		// set common attributes
+		theNode.setAttribute( "name", prop.getName() );
+		IStruct types = prop.getTypes();
+		if ( types.containsKey( ORMKeys.ORMType ) ) {
+			theNode.setAttribute( "type", types.getAsString( ORMKeys.ORMType ) );
+		}
+		if ( prop.getUnsavedValue() != null ) {
+			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );
+		}
 
-	// // set conditional attributes
-	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
-	// theNode.setAttribute( "unsaved-value", inspector.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
-	// }
-	// if ( inspector.hasPropertyAnnotation( prop, Key.column ) ) {
-	// theNode.setAttribute( "column", inspector.getPropertyAnnotation( prop, Key.column ) );
-	// }
+		theNode.appendChild( generateColumnElement( prop ) );
 
-	// return theNode;
-	// }
+		return theNode;
+	}
 
 	/**
 	 * Generate a &lt;discriminator&gt; element for the entity metadata.
@@ -289,7 +290,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 *
 	 * @return nothing - document mutation is done in place
 	 */
-	private void addDiscriminatorData( Element classEl, IStruct data ) {
+	public void addDiscriminatorData( Element classEl, IStruct data ) {
 		if ( data.isEmpty() ) {
 			return;
 		}
@@ -333,7 +334,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	// *
 	// * @return A &lt;generator /&gt; element ready to add to a Hibernate mapping document
 	// */
-	// private Element generateGeneratorElement( IStruct prop ) {
+	// public Element generateGeneratorElement( IStruct prop ) {
 	// String propName = prop.getAsString( Key._name );
 
 	// Element theNode = this.document.createElement( "generator" );
@@ -380,7 +381,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * 
 	 * @return A &lt;class /&gt; element containing entity keys, properties, and other Hibernate mapping metadata.
 	 */
-	private Element generateClassElement() {
+	public Element generateClassElement() {
 		Element classElement = this.document.createElement( "class" );
 
 		// general class attributes:
@@ -416,25 +417,25 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		}
 
 		// And, if no discriminator or joinColumn is present:
-		// if ( entity.isSimpleEntity() ) {
-		String tableName = entity.getTableName();
-		if ( tableName != null ) {
-			classElement.setAttribute( "table", tableName );
+		if ( entity.isSimpleEntity() ) {
+			String tableName = entity.getTableName();
+			if ( tableName != null ) {
+				classElement.setAttribute( "table", tableName );
+			}
+			if ( entity.getSchema() != null ) {
+				classElement.setAttribute( "schema", entity.getSchema() );
+			}
+			if ( entity.getCatalog() != null ) {
+				classElement.setAttribute( "catalog", entity.getCatalog() );
+			}
 		}
-		if ( entity.getSchema() != null ) {
-			classElement.setAttribute( "schema", entity.getSchema() );
-		}
-		if ( entity.getCatalog() != null ) {
-			classElement.setAttribute( "catalog", entity.getCatalog() );
-		}
-		// }
 
 		// generate keys, aka <id> elements
-		// entity.getIdProperties().stream().forEach( ( prop ) ->
+		entity.getIdProperties().stream().forEach( ( propertyMeta ) ->
 
-		// {
-		// classElement.appendChild( generateIdElement( ( IStruct ) prop ) );
-		// } );
+		{
+			classElement.appendChild( generateIdElement( propertyMeta ) );
+		} );
 
 		// generate properties, aka <property> elements
 		entity.getProperties().stream().forEach( ( propertyMeta ) -> {

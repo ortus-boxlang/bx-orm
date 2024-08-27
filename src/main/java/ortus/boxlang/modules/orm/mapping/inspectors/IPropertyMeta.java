@@ -24,6 +24,8 @@ public interface IPropertyMeta {
 
 	public String getFormula();
 
+	public String getUnsavedValue();
+
 	/**
 	 * Get all annotations set on this property.
 	 * <p>
