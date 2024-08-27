@@ -8,41 +8,78 @@ import ortus.boxlang.runtime.types.IStruct;
 public interface IPropertyMeta {
 
 	/**
-	 * Get the persistent true/false nature of this property. This will ALWAYS be true, or this PropertyMeta instance would/should not exist.
+	 * Get the name of the property.
+	 * <p>
+	 * A more straightforward way to get the name of the property, which is also returned from the `getColumn()` struct method.
+	 * 
+	 * @return
 	 */
-	public boolean isPersistent();
-
-	/**
-	 * Get all property types:
-	 * * simple `type`
-	 * * SQL type
-	 * * ORM type
-	 * * fieldtype
-	 */
-	public IStruct getType();
+	public String getName();
 
 	public boolean isImmutable();
 
-	public boolean isUnique();
-
-	public boolean isNullable();
-
 	public boolean isOptimisticLock();
-
-	public boolean isInsertable();
-
-	public boolean isUpdatable();
 
 	public boolean isLazy();
 
+	public String getFormula();
+
 	/**
-	 * Get all generator info keys:
-	 * * generated=boolean (always true)
-	 * * class=string class name
-	 * * sequence=string
-	 * * selectKey=string
-	 * * params=struct
+	 * Get all annotations set on this property.
+	 * <p>
+	 * Allows for easy access to all annotations set on this property, without needing to update the IPropertyMeta interface and both implementations.
+	 * 
+	 * @return Struct with all annotations set on this property.
+	 */
+	public IStruct getAnnotations();
+
+	/**
+	 * Get all property type keys.
+	 * <p>
+	 * A full list of keys is shown below. Any or all of these keys may be absent.
+	 * <ul>
+	 * <li>`type` - Property type used in BoxLang class instances</li>
+	 * <li>`sqltype` - Database column type used in table creation only</li>
+	 * <li>`ormtype` - ORM type</li>
+	 * <li>`fieldtype` - One of `id`, `column`, `one`-to-one, `one`-to-many, `many`-to-many, `many`-to-one, `collection`, `timestamp`, `version`</li>
+	 * </ul>
+	 */
+	public IStruct getTypes();
+
+	/**
+	 * Get all generator info keys.
+	 * <p>
+	 * A full list of keys is shown below. Any or all of these keys may be absent.
+	 * <ul>
+	 * <li>generated=boolean (always true)</li>
+	 * <li>class=string class name</li>
+	 * <li>sequence=string</li>
+	 * <li>selectKey=string</li>
+	 * <li>params=struct</li>
+	 * </ul>
 	 */
 	public IStruct getGenerator();
+
+	/**
+	 * Get all column info keys.
+	 * <p>
+	 * A full list of keys is shown below. Any of these keys may be absent from the struct EXCEPT `name`.
+	 * <ul>
+	 * <li>name=string</li>
+	 * <li>length=integer</li>
+	 * <li>precision=integer</li>
+	 * <li>scale=integer</li>
+	 * <li>unique=boolean</li>
+	 * <li>nullable=boolean</li>
+	 * <li>insertable=boolean</li>
+	 * <li>updatable=boolean</li>
+	 * <li>table=string</li>
+	 * </ul>
+	 * 
+	 * @see https://jakarta.ee/specifications/persistence/3.0/jakarta-persistence-spec-3.0#a14330
+	 * 
+	 * @return Struct with column info keys.
+	 */
+	public IStruct getColumn();
 
 }

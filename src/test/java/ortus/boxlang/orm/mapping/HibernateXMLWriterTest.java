@@ -317,7 +317,17 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It maps length, precision, and scale" )
 	@ValueSource( strings = {
 	    "class persistent { property length=12 scale=10 precision=2 name=\"amount\"; }",
-	    "class { @length 12 @scale 10 @precision 2 property name=\"amount\";}"
+	    """
+		@Entity
+		class {
+			@Column{
+				"length"    : 12,
+				"scale"     : 10,
+				"precision" : 2
+			}
+			property name=\"amount\";
+		}
+		"""
 	} )
 	// @formatter:on
 	@ParameterizedTest

@@ -60,6 +60,7 @@ public class ORMKeys {
 	public static final Key	selectKey				= Key.of( "selectKey" );
 	public static final Key	property				= Key.of( "property" );
 	public static final Key	notNull					= Key.of( "notNull" );
+	public static final Key	nullable				= Key.of( "nullable" );
 	public static final Key	immutable				= Key.of( "immutable" );
 	public static final Key	readOnly				= Key.of( "readOnly" );
 	public static final Key	where					= Key.of( "where" );
@@ -85,8 +86,10 @@ public class ORMKeys {
 	public static final Key	scale					= Key.of( "scale" );
 	public static final Key	unique					= Key.of( "unique" );
 	public static final Key	uniqueKey				= Key.of( "uniqueKey" );
-	public static final Key	update					= Key.of( "update" );
 	public static final Key	insert					= Key.of( "insert" );
+	public static final Key	update					= Key.of( "update" );
+	public static final Key	insertable				= Key.of( "insertable" );
+	public static final Key	updateable				= Key.of( "updateable" );
 	public static final Key	uniqueKeyName			= Key.of( "uniqueKeyName" );
 
 }
