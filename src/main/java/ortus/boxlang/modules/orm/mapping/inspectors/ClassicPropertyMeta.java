@@ -1,10 +1,13 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.Map;
+
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.util.JSONUtil;
 
 public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
@@ -24,30 +27,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( this.annotations.containsKey( ORMKeys.formula ) ) {
 			this.formula = this.annotations.getAsString( ORMKeys.formula );
 		}
-
-		this.types		= parseTypeAnnotations( this.annotations );
-		this.column		= parseColumnAnnotations( this.annotations );
-		this.generator	= parseGeneratorAnnotations( this.annotations );
 	}
 
-	private IStruct parseTypeAnnotations( IStruct annotations ) {
-		IStruct typeInfo = new Struct();
-		if ( annotations.containsKey( Key.type ) ) {
-			typeInfo.put( Key.type, annotations.getAsString( Key.type ) );
-		}
-		if ( annotations.containsKey( ORMKeys.fieldtype ) ) {
-			typeInfo.put( ORMKeys.fieldtype, annotations.getAsString( ORMKeys.fieldtype ) );
-		}
-		if ( annotations.containsKey( Key.sqltype ) ) {
-			typeInfo.put( Key.sqltype, annotations.getAsString( Key.sqltype ) );
-		}
-		if ( annotations.containsKey( ORMKeys.ORMType ) ) {
-			typeInfo.put( ORMKeys.ORMType, annotations.getAsString( ORMKeys.ORMType ) );
-		}
-		return typeInfo;
-	}
-
-	private IStruct parseColumnAnnotations( IStruct annotations ) {
+	protected IStruct parseColumnAnnotations( IStruct annotations ) {
 		IStruct columnInfo = new Struct();
 		columnInfo.put( "name", this.name );
 		if ( annotations.containsKey( Key.length ) ) {
@@ -77,7 +59,35 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		return columnInfo;
 	}
 
-	private IStruct parseGeneratorAnnotations( IStruct annotations ) {
-		return new Struct();
+	protected IStruct parseGeneratorAnnotations( IStruct annotations ) {
+		IStruct generatorInfo = new Struct();
+		if ( annotations.containsKey( ORMKeys.generator ) ) {
+			generatorInfo.put( Key._CLASS, annotations.getAsString( ORMKeys.generator ) );
+		}
+		if ( annotations.containsKey( ORMKeys.property ) ) {
+			generatorInfo.put( ORMKeys.property, annotations.getAsString( ORMKeys.property ) );
+		}
+		if ( annotations.containsKey( ORMKeys.generator ) ) {
+			generatorInfo.put( Key._CLASS, annotations.getAsString( ORMKeys.generator ) );
+		}
+		if ( annotations.containsKey( ORMKeys.selectKey ) ) {
+			generatorInfo.put( ORMKeys.selectKey, annotations.getAsString( ORMKeys.selectKey ) );
+		}
+		if ( annotations.containsKey( ORMKeys.generated ) ) {
+			generatorInfo.put( ORMKeys.generated, annotations.getAsString( ORMKeys.generated ) );
+		}
+		if ( annotations.containsKey( ORMKeys.sequence ) ) {
+			generatorInfo.put( ORMKeys.sequence, annotations.getAsString( ORMKeys.sequence ) );
+		}
+		if ( annotations.containsKey( Key.params ) ) {
+			Object	paramValue	= annotations.getAsString( Key.params );
+			IStruct	theParams	= Struct.fromMap( ( Map ) JSONUtil.fromJSON( paramValue ) );
+			if ( theParams == null ) {
+				// logger.warn( "Property '{}' has a 'params' annotation that could not be cast to a struct: {}", propName, paramValue );
+			} else {
+				generatorInfo.put( Key.params, theParams );
+			}
+		}
+		return generatorInfo;
 	}
 }

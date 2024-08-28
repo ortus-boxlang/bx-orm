@@ -71,7 +71,6 @@ public class ORMKeys {
 	public static final Key	batchsize				= Key.of( "batchsize" );
 	public static final Key	dynamicInsert			= Key.of( "dynamicInsert" );
 	public static final Key	dynamicUpdate			= Key.of( "dynamicUpdate" );
-	public static final Key	discriminator			= Key.of( "discriminator" );
 	public static final Key	discriminatorValue		= Key.of( "discriminatorValue" );
 	public static final Key	discriminatorColumn		= Key.of( "discriminatorColumn" );
 	public static final Key	discriminatorType		= Key.of( "discriminatorType" );
@@ -88,8 +87,13 @@ public class ORMKeys {
 	public static final Key	uniqueKey				= Key.of( "uniqueKey" );
 	public static final Key	insert					= Key.of( "insert" );
 	public static final Key	update					= Key.of( "update" );
-	public static final Key	insertable				= Key.of( "insertable" );
-	public static final Key	updateable				= Key.of( "updateable" );
 	public static final Key	uniqueKeyName			= Key.of( "uniqueKeyName" );
 
+	// Hibernate or JPA annotations
+	public static final Key	discriminator			= Key.of( "discriminator" );
+	public static final Key	generatedValue			= Key.of( "generatedValue" );
+	public static final Key	tableGenerator			= Key.of( "tableGenerator" );
+	public static final Key	strategy				= Key.of( "strategy" );
+	public static final Key	insertable				= Key.of( "insertable" );
+	public static final Key	updateable				= Key.of( "updateable" );
 }

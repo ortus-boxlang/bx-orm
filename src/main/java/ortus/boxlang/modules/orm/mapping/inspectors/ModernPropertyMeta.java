@@ -10,18 +10,39 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 
 	public ModernPropertyMeta( IStruct meta ) {
 		super( meta );
+	}
 
-		this.types		= Struct.EMPTY;
-		this.generator	= Struct.EMPTY;
-		if ( this.annotations.containsKey( Key.column ) ) {
-			this.column = this.annotations.getAsStruct( Key.column );
+	protected IStruct parseColumnAnnotations( IStruct annotations ) {
+		IStruct column;
+		if ( annotations.containsKey( Key.column ) ) {
+			column = annotations.getAsStruct( Key.column );
 		} else {
-			this.column = new Struct();
+			column = new Struct();
 		}
-		if ( this.annotations.containsKey( ORMKeys.notNull ) ) {
-			this.column.computeIfAbsent( ORMKeys.nullable,
-			    key -> Boolean.FALSE.equals( BooleanCaster.cast( this.annotations.get( ORMKeys.notNull ) ) ) );
+		if ( annotations.containsKey( ORMKeys.notNull ) ) {
+			column.computeIfAbsent( ORMKeys.nullable,
+			    key -> Boolean.FALSE.equals( BooleanCaster.cast( annotations.get( ORMKeys.notNull ) ) ) );
 		}
-		this.column.computeIfAbsent( Key._NAME, key -> this.name );
+		column.computeIfAbsent( Key._NAME, key -> this.name );
+		return column;
+	}
+
+	// @TODO: Implement this method.
+	protected IStruct parseGeneratorAnnotations( IStruct annotations ) {
+		IStruct generator = new Struct();
+		if ( annotations.containsKey( ORMKeys.generatedValue ) ) {
+			IStruct generatedValue = annotations.getAsStruct( ORMKeys.generatedValue );
+			generator.put( ORMKeys.generated, "true" );
+			if ( generatedValue.containsKey( ORMKeys.strategy ) ) {
+				generator.put( Key._CLASS, generatedValue.getAsString( ORMKeys.strategy ) );
+			}
+		}
+		if ( annotations.containsKey( ORMKeys.tableGenerator ) ) {
+			// IStruct tableGenerator = annotations.getAsStruct( ORMKeys.generatedValue );
+			// if ( tableGenerator.containsKey( ORMKeys.strategy ) ) {
+			// generator.put( ORMKeys.strategy, tableGenerator.getAsString( ORMKeys.strategy ) );
+			// }
+		}
+		return generator;
 	}
 }

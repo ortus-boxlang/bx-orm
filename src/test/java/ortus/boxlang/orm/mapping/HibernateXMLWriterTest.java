@@ -233,24 +233,44 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "integer" );
 	}
 
+	// @formatter:off
 	@DisplayName( "It can set an id generator" )
-	@Test
-	public void testIDGeneratorAnnotation() {
-		IStruct		meta		= getClassMetaFromCode(
-		    """
-		    	class persistent {
-		    		property name="the_id" fieldtype="id" generator="increment";
-		    		property name="the_name";
-		    	}
-		    """
-		);
+	@ValueSource( strings = {
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+	    """
+	    class persistent {
+	    	property
+	    		name="the_id"
+	    		fieldtype="id"
+	    		generator="increment";
+	    }
+	    """,
+		"""
+		@Entity
+		class {
+			@Id
+			@GeneratedValue{
+				"strategy" : "increment"
+			}
+			property name="the_id";
+		}
+		"""
+	} )
+	// @formatter:on
+	@ParameterizedTest
+	public void testIDGeneratorAnnotation( String sourceCode ) {
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
-		Node		node		= doc.getDocumentElement().getFirstChild().getFirstChild().getFirstChild();
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		assertThat( node.getAttributes().getNamedItem( "class" ).getTextContent() )
+		String		xml				= xmlToString( doc );
+
+		Node		classEl			= doc.getDocumentElement().getFirstChild();
+		Node		idNode			= classEl.getFirstChild();
+		Node		generatorNode	= idNode.getFirstChild();
+
+		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
 		    .isEqualTo( "increment" );
 	}
 

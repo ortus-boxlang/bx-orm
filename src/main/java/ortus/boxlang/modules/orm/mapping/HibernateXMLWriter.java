@@ -16,6 +16,7 @@ import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 public class HibernateXMLWriter implements IPersistenceWriter {
@@ -241,10 +242,10 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 */
 	public Element generateIdElement( IPropertyMeta prop ) {
 		Element theNode = this.document.createElement( "id" );
-		// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generator ) ) {
-		// theNode.appendChild( generateGeneratorElement( prop ) );
-		// // @TODO: Determine ID type from generator type IF a generator is specified.
-		// }
+		if ( !prop.getGenerator().isEmpty() ) {
+			theNode.appendChild( generateGeneratorElement( prop ) );
+			// @TODO: Determine ID type from generator type IF a generator is specified.
+		}
 
 		// compute defaults - move to ORMAnnotationInspector?
 		// prop.getAsStruct( Key.annotations ).computeIfAbsent( ORMKeys.ORMType, ( key ) -> "string" );
@@ -318,63 +319,56 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		}
 	}
 
-	// /**
-	// * Generate a &lt;generator/&gt; element for the given property metadata.
-	// * <p>
-	// * Uses these annotations:
-	// * <ul>
-	// * <li>generator</li>
-	// * <li>params</li>
-	// * <li>sequence</li>
-	// * <li>selectKey</li>
-	// * <li>generated</li>
-	// * </ul>
-	// *
-	// * @param prop Property metadata in struct form
-	// *
-	// * @return A &lt;generator /&gt; element ready to add to a Hibernate mapping document
-	// */
-	// public Element generateGeneratorElement( IStruct prop ) {
-	// String propName = prop.getAsString( Key._name );
+	/**
+	 * Generate a &lt;generator/&gt; element for the given property metadata.
+	 * <p>
+	 * Uses these annotations:
+	 * <ul>
+	 * <li>generator</li>
+	 * <li>params</li>
+	 * <li>sequence</li>
+	 * <li>selectKey</li>
+	 * <li>generated</li>
+	 * </ul>
+	 *
+	 * @param prop Property metadata in struct form
+	 *
+	 * @return A &lt;generator /&gt; element ready to add to a Hibernate mapping document
+	 */
+	public Element generateGeneratorElement( IPropertyMeta prop ) {
+		IStruct	generator		= prop.getGenerator();
+		String	generatorType	= generator.getAsString( Key._CLASS );
 
-	// Element theNode = this.document.createElement( "generator" );
-	// String generatorType = inspector.getPropertyAnnotation( prop, ORMKeys.generator );
-	// theNode.setAttribute( "class", generatorType );
-	// IStruct params = new Struct();
+		Element	theNode			= this.document.createElement( "generator" );
+		theNode.setAttribute( "class", generatorType );
+		IStruct params = new Struct();
 
-	// // generator=foreign
-	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.property ) ) {
-	// params.put( "property", inspector.getPropertyAnnotation( prop, ORMKeys.property ) );
-	// }
-	// // generator=select
-	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.selectKey ) ) {
-	// params.put( "key", inspector.getPropertyAnnotation( prop, ORMKeys.selectKey ) );
-	// }
-	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.generated ) ) {
-	// params.put( "generated", inspector.getPropertyAnnotation( prop, ORMKeys.generated ) );
-	// }
-	// // generator=sequence|sequence-identity
-	// if ( inspector.hasPropertyAnnotation( prop, ORMKeys.sequence ) ) {
-	// params.put( "sequence", inspector.getPropertyAnnotation( prop, ORMKeys.sequence ) );
-	// }
-	// if ( inspector.hasPropertyAnnotation( prop, Key.params ) ) {
-	// Object paramValue = prop.getAsStruct( Key.annotations ).getAsString( Key.params );
-	// IStruct additionalParams = Struct.fromMap( ( Map ) JSONUtil.fromJSON( paramValue ) );
-	// if ( params == null ) {
-	// logger.warn( "Property '{}' has a 'params' annotation that could not be cast to a struct: {}", propName, paramValue );
-	// return theNode;
-	// } else {
-	// params.putAll( additionalParams );
-	// }
-	// }
-	// params.forEach( ( key, value ) -> {
-	// Element paramEl = this.document.createElement( "param" );
-	// paramEl.setAttribute( "name", key.getName() );
-	// paramEl.setTextContent( value.toString() );
-	// theNode.appendChild( paramEl );
-	// } );
-	// return theNode;
-	// }
+		// generator=foreign
+		if ( generator.containsKey( ORMKeys.property ) ) {
+			params.put( "property", generator.getAsString( ORMKeys.property ) );
+		}
+		// generator=select
+		if ( generator.containsKey( ORMKeys.selectKey ) ) {
+			params.put( "key", generator.getAsString( ORMKeys.selectKey ) );
+		}
+		if ( generator.containsKey( ORMKeys.generated ) ) {
+			params.put( "generated", generator.getAsString( ORMKeys.generated ) );
+		}
+		// generator=sequence|sequence-identity
+		if ( generator.containsKey( ORMKeys.sequence ) ) {
+			params.put( "sequence", generator.getAsString( ORMKeys.sequence ) );
+		}
+		if ( generator.containsKey( Key.params ) ) {
+			params.putAll( generator.getAsStruct( Key.params ) );
+		}
+		params.forEach( ( key, value ) -> {
+			Element paramEl = this.document.createElement( "param" );
+			paramEl.setAttribute( "name", key.getName() );
+			paramEl.setTextContent( value.toString() );
+			theNode.appendChild( paramEl );
+		} );
+		return theNode;
+	}
 
 	/**
 	 * Generate the top-level &lt;class /&gt; element containing entity mapping metadata.

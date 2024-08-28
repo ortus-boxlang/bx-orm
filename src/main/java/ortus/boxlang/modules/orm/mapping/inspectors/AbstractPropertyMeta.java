@@ -1,9 +1,11 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 
-public class AbstractPropertyMeta implements IPropertyMeta {
+public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
 	protected IStruct	meta;
 	protected IStruct	annotations;
@@ -22,7 +24,31 @@ public class AbstractPropertyMeta implements IPropertyMeta {
 		this.meta			= meta;
 		this.annotations	= this.meta.getAsStruct( Key.annotations );
 		this.name			= this.meta.getAsString( Key._NAME );
-		// this.types.put( "type", this.meta.getAsString( Key.type ) );
+		this.column			= parseColumnAnnotations( this.annotations );
+		this.types			= parseTypeAnnotations( this.annotations );
+		this.generator		= parseGeneratorAnnotations( this.annotations );
+	}
+
+	protected abstract IStruct parseColumnAnnotations( IStruct annotations );
+
+	protected abstract IStruct parseGeneratorAnnotations( IStruct annotations );
+
+	// @TODO: Switch to abstract and override in the implementations.
+	private IStruct parseTypeAnnotations( IStruct annotations ) {
+		IStruct typeInfo = new Struct();
+		if ( annotations.containsKey( Key.type ) ) {
+			typeInfo.put( Key.type, annotations.getAsString( Key.type ) );
+		}
+		if ( annotations.containsKey( ORMKeys.fieldtype ) ) {
+			typeInfo.put( ORMKeys.fieldtype, annotations.getAsString( ORMKeys.fieldtype ) );
+		}
+		if ( annotations.containsKey( Key.sqltype ) ) {
+			typeInfo.put( Key.sqltype, annotations.getAsString( Key.sqltype ) );
+		}
+		if ( annotations.containsKey( ORMKeys.ORMType ) ) {
+			typeInfo.put( ORMKeys.ORMType, annotations.getAsString( ORMKeys.ORMType ) );
+		}
+		return typeInfo;
 	}
 
 	@Override
@@ -73,5 +99,4 @@ public class AbstractPropertyMeta implements IPropertyMeta {
 	public String getUnsavedValue() {
 		return this.unsavedValue;
 	}
-
 }
