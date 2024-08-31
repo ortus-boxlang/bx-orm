@@ -105,12 +105,11 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		} else {
 			theNode.appendChild( generateColumnElement( prop ) );
 		}
-		// @TODO: generated
 		if ( column.containsKey( ORMKeys.insertable ) ) {
-			theNode.setAttribute( "insert", column.getAsString( ORMKeys.insertable ) );
+			theNode.setAttribute( "insert", trueFalseFormat( column.getAsBoolean( ORMKeys.insertable ) ) );
 		}
 		if ( column.containsKey( ORMKeys.updateable ) ) {
-			theNode.setAttribute( "update", column.getAsString( ORMKeys.updateable ) );
+			theNode.setAttribute( "update", trueFalseFormat( column.getAsBoolean( ORMKeys.updateable ) ) );
 		}
 		if ( prop.isLazy() ) {
 			theNode.setAttribute( "lazy", "true" );
@@ -118,6 +117,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		if ( !prop.isOptimisticLock() ) {
 			theNode.setAttribute( "optimistic-lock", "false" );
 		}
+		// @TODO: generated
 
 		/**
 		 * TODO: Implement or test all the below:
@@ -188,7 +188,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		IStruct	types		= prop.getTypes();
 
 		columnNode.setAttribute( "name", prop.getName() );
-		if ( columnInfo.containsKey( ORMKeys.nullable ) && Boolean.TRUE.equals( columnInfo.getAsBoolean( ORMKeys.nullable ) ) ) {
+		if ( columnInfo.containsKey( ORMKeys.nullable ) && Boolean.FALSE.equals( columnInfo.getAsBoolean( ORMKeys.nullable ) ) ) {
 			columnNode.setAttribute( "not-null", "true" );
 		}
 		if ( columnInfo.containsKey( ORMKeys.unique ) && Boolean.TRUE.equals( columnInfo.getAsBoolean( ORMKeys.unique ) ) ) {
@@ -209,9 +209,9 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		// if ( prop.hasPropertyAnnotation( prop, ORMKeys.check ) ) {
 		// columnNode.setAttribute( "check", prop.getPropertyAnnotation( prop, ORMKeys.check ) );
 		// }
-		// if ( prop.hasPropertyAnnotation( prop, ORMKeys.dbDefault ) ) {
-		// columnNode.setAttribute( "default", prop.getPropertyAnnotation( prop, ORMKeys.dbDefault ) );
-		// }
+		if ( columnInfo.containsKey( Key._DEFAULT ) ) {
+			columnNode.setAttribute( "default", columnInfo.getAsString( Key._DEFAULT ) );
+		}
 		if ( types.containsKey( Key.sqltype ) ) {
 			columnNode.setAttribute( "sql-type", types.getAsString( Key.sqltype ) );
 		}
@@ -448,4 +448,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		return classElement;
 	}
 
+	private String trueFalseFormat( Boolean value ) {
+		return Boolean.TRUE.equals( value ) ? "true" : "false";
+	}
 }
