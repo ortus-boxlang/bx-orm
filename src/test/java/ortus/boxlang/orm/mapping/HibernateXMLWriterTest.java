@@ -320,7 +320,7 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It does not map properties annotated with @Persistent false" )
 	@ValueSource( strings = {
 	    "class persistent { property name=\"name\"; property name=\"notMapped\" persistent=\"false\"; }",
-	    "class { @Persistent property name=\"name\"; @Persistent false property name=\"notMapped\"; }"
+	    "class { @Column property name=\"name\"; @Transient property name=\"notMapped\"; }"
 	} )
 	@ParameterizedTest
 	public void testPersistentFalseAnnotation( String sourceCode ) {
@@ -338,8 +338,22 @@ public class HibernateXMLWriterTest {
 
 	@DisplayName( "It maps immutable properties" )
 	@ValueSource( strings = {
-	    "class persistent { property name=\"name\" insert=false update=false; }",
-	    "class { @insert false @update false property name=\"name\"; }"
+	    """
+	    class persistent {
+	    	property
+	    		name="name"
+	    		insert=false
+	    		update=false;
+	    }
+	    """,
+	    """
+	    @Entity
+	    class {
+	    	@Immutable
+	    	@Column
+	    	property name="name";
+	    }
+	    """,
 	} )
 	@ParameterizedTest
 	public void testImmutableProperties( String sourceCode ) {
@@ -425,7 +439,8 @@ public class HibernateXMLWriterTest {
 				"unique"     : true,
 				"nullable"   : false,
 				"insertable" : false,
-				"updateable" : false
+				"updateable" : false,
+				"default"    : "test"
 			}
 			property name="title";
 		}
@@ -434,24 +449,30 @@ public class HibernateXMLWriterTest {
 	// @formatter:on
 	@ParameterizedTest
 	public void testOtherColumnAttributes( String sourceCode ) {
-		// IStruct meta = getClassMetaFromCode( sourceCode );
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
-		// IEntityMeta entityMeta = AbstractEntityMeta.autoDiscoverMetaType( meta );
-		// Document doc = new HibernateXMLWriter( entityMeta ).generateXML();
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		// Node classEL = doc.getDocumentElement().getFirstChild();
-		// Node node = classEL.getFirstChild().getFirstChild();
+		Node		classEL			= doc.getDocumentElement().getFirstChild();
+		Node		propertyNode	= classEL.getFirstChild();
+		Node		columnNode		= propertyNode.getFirstChild();
 
-		// String xml = xmlToString( doc );
+		String		xml				= xmlToString( doc );
 
-		// assertThat( node.getAttributes().getNamedItem( "table" ).getTextContent() )
+		// assertThat( columnNode.getAttributes().getNamedItem( "table" ).getTextContent() )
 		// .isEqualTo( "foo" );
-		// assertThat( node.getAttributes().getNamedItem( "unique" ).getTextContent() )
-		// .isEqualTo( "true" );
-		// assertThat( node.getAttributes().getNamedItem( "not-null" ).getTextContent() )
-		// .isEqualTo( "true" );
-		// assertThat( node.getAttributes().getNamedItem( "default" ).getTextContent() )
-		// .isEqualTo( "test" );
+		assertThat( propertyNode.getAttributes().getNamedItem( "insert" ).getTextContent() )
+		    .isEqualTo( "false" );
+		assertThat( propertyNode.getAttributes().getNamedItem( "update" ).getTextContent() )
+		    .isEqualTo( "false" );
+
+		assertThat( columnNode.getAttributes().getNamedItem( "unique" ).getTextContent() )
+		    .isEqualTo( "true" );
+		assertThat( columnNode.getAttributes().getNamedItem( "not-null" ).getTextContent() )
+		    .isEqualTo( "true" );
+		assertThat( columnNode.getAttributes().getNamedItem( "default" ).getTextContent() )
+		    .isEqualTo( "test" );
 	}
 
 	/**

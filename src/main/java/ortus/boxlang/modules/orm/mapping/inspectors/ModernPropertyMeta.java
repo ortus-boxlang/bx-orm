@@ -14,10 +14,15 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 
 	protected IStruct parseColumnAnnotations( IStruct annotations ) {
 		IStruct column;
-		if ( annotations.containsKey( Key.column ) ) {
+		if ( annotations.containsKey( Key.column ) && annotations.get( Key.column ) instanceof IStruct ) {
 			column = annotations.getAsStruct( Key.column );
 		} else {
 			column = new Struct();
+		}
+		// @Immutable annotation shall not override the more specific @Column(insertable=true, updatable=true) annotation.
+		if ( annotations.containsKey( ORMKeys.immutable ) ) {
+			column.computeIfAbsent( ORMKeys.insertable, key -> Boolean.FALSE );
+			column.computeIfAbsent( ORMKeys.updateable, key -> Boolean.FALSE );
 		}
 		if ( annotations.containsKey( ORMKeys.notNull ) ) {
 			column.computeIfAbsent( ORMKeys.nullable,
@@ -32,7 +37,8 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 		IStruct generator = new Struct();
 		if ( annotations.containsKey( ORMKeys.generatedValue ) ) {
 			IStruct generatedValue = annotations.getAsStruct( ORMKeys.generatedValue );
-			generator.put( ORMKeys.generated, "true" );
+			// @TODO: Implement this.
+			// generator.put( ORMKeys.generated, "never|insert|always" );
 			if ( generatedValue.containsKey( ORMKeys.strategy ) ) {
 				generator.put( Key._CLASS, generatedValue.getAsString( ORMKeys.strategy ) );
 			}

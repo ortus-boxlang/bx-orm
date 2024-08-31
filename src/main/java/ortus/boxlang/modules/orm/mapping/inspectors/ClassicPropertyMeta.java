@@ -30,33 +30,36 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 	}
 
 	protected IStruct parseColumnAnnotations( IStruct annotations ) {
-		IStruct columnInfo = new Struct();
-		columnInfo.put( "name", this.name );
+		IStruct column = new Struct();
+		column.put( "name", this.name );
 		if ( annotations.containsKey( Key.length ) ) {
-			columnInfo.put( Key.length, annotations.getAsString( Key.length ) );
+			column.put( Key.length, annotations.getAsString( Key.length ) );
 		}
 		if ( annotations.containsKey( ORMKeys.precision ) ) {
-			columnInfo.put( ORMKeys.precision, annotations.getAsString( ORMKeys.precision ) );
+			column.put( ORMKeys.precision, annotations.getAsString( ORMKeys.precision ) );
 		}
 		if ( annotations.containsKey( ORMKeys.scale ) ) {
-			columnInfo.put( ORMKeys.scale, annotations.getAsString( ORMKeys.scale ) );
+			column.put( ORMKeys.scale, annotations.getAsString( ORMKeys.scale ) );
 		}
 		if ( annotations.containsKey( ORMKeys.unique ) ) {
-			columnInfo.put( ORMKeys.unique, BooleanCaster.cast( annotations.getAsString( ORMKeys.unique ) ) );
+			column.put( ORMKeys.unique, BooleanCaster.cast( annotations.get( ORMKeys.unique ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.notNull ) ) {
-			columnInfo.put( ORMKeys.nullable, BooleanCaster.cast( annotations.getAsString( ORMKeys.notNull ) ) );
+			column.put( ORMKeys.nullable, Boolean.FALSE.equals( BooleanCaster.cast( annotations.getOrDefault( ORMKeys.notNull, true ) ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.insert ) ) {
-			columnInfo.put( ORMKeys.insertable, BooleanCaster.cast( annotations.getAsString( ORMKeys.insert ) ) );
+			column.put( ORMKeys.insertable, BooleanCaster.cast( annotations.get( ORMKeys.insert ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.update ) ) {
-			columnInfo.put( ORMKeys.updateable, BooleanCaster.cast( annotations.getAsString( ORMKeys.update ) ) );
+			column.put( ORMKeys.updateable, BooleanCaster.cast( annotations.get( ORMKeys.update ) ) );
 		}
 		if ( annotations.containsKey( Key.table ) ) {
-			columnInfo.put( Key.table, annotations.getAsString( Key.table ) );
+			column.put( Key.table, annotations.getAsString( Key.table ) );
 		}
-		return columnInfo;
+		if ( annotations.containsKey( ORMKeys.dbDefault ) ) {
+			column.put( Key._DEFAULT, annotations.getAsString( ORMKeys.dbDefault ) );
+		}
+		return column;
 	}
 
 	protected IStruct parseGeneratorAnnotations( IStruct annotations ) {
