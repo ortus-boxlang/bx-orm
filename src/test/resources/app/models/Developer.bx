@@ -1,5 +1,7 @@
 @Entity
-@Table "developers"
+@Table {
+    "name" : "developers"
+}
 class accessors=true {
     @id
     @ORMType "integer"

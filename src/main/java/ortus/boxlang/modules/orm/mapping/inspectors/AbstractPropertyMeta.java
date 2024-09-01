@@ -45,9 +45,7 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		if ( annotations.containsKey( Key.sqltype ) ) {
 			typeInfo.put( Key.sqltype, annotations.getAsString( Key.sqltype ) );
 		}
-		if ( annotations.containsKey( ORMKeys.ORMType ) ) {
-			typeInfo.put( ORMKeys.ORMType, annotations.getAsString( ORMKeys.ORMType ) );
-		}
+		typeInfo.put( ORMKeys.ORMType, annotations.getOrDefault( ORMKeys.ORMType, "string" ) );
 		return typeInfo;
 	}
 

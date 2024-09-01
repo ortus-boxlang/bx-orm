@@ -13,8 +13,10 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 	public ClassicEntityMeta( IStruct entityMeta ) {
 		super( entityMeta );
 
-		this.annotations.computeIfAbsent( ORMKeys.entityName, key -> this.meta.getAsString( Key._name ) );
+		// @TODO: Implement extended/join/discriminator check
+		this.isSimpleEntity = true;
 
+		this.annotations.computeIfAbsent( ORMKeys.entityName, key -> this.meta.getAsString( Key._name ) );
 		this.entityName = this.annotations.getAsString( ORMKeys.entityName );
 
 		this.annotations.computeIfAbsent( ORMKeys.table, key -> this.getEntityName() );

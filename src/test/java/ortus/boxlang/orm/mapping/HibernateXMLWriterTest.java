@@ -234,6 +234,36 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
+	@DisplayName( "It defaults property types to 'string'" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+		    property name="the_name";
+	    }
+	    """,
+	    """
+	    @Entity
+	    class {
+	    	@Column
+			property name="the_name";
+	    }
+	    """
+	} )
+	// @formatter:on
+	public void testPropertyTypeAnnotation( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		Node		node		= doc.getDocumentElement().getFirstChild().getFirstChild();
+
+		assertThat( node.getAttributes().getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
+	}
+
+	// @formatter:off
 	@DisplayName( "It can set an id generator" )
 	@ValueSource( strings = {
 
@@ -295,26 +325,6 @@ public class HibernateXMLWriterTest {
 
 		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
 		    .isEqualTo( "the_name" );
-	}
-
-	@DisplayName( "It sets the type of the property via an annotation" )
-	@Test
-	public void testPropertyTypeAnnotation() {
-		IStruct		meta		= getClassMetaFromCode(
-		    """
-		    	class persistent {
-		    		property name="the_name";
-		    	}
-		    """
-		);
-
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
-
-		Node		node		= doc.getDocumentElement().getFirstChild().getFirstChild();
-
-		assertThat( node.getAttributes().getNamedItem( "type" ).getTextContent() )
-		    .isEqualTo( "string" );
 	}
 
 	@DisplayName( "It does not map properties annotated with @Persistent false" )
