@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -57,13 +56,12 @@ public class SessionFactoryBuilderTest {
 		assertEquals( sessionFactory.getSessionFactoryOptions().getSessionFactoryName(), appName.toString() );
 	}
 
-	@Disabled( "Unimplemented" )
 	@DisplayName( "It can set dialects with alias names" )
 	@Test
 	public void testDerbyShortNameDialect() {
 		IStruct			ormSettings		= Struct.of(
 		    ORMKeys.datasource, "TestDB1",
-		    ORMKeys.dialect, "DerbyTenSevenDialect"
+		    ORMKeys.dialect, "DerbyTenSeven"
 		);
 		SessionFactory	sessionFactory	= new SessionFactoryBuilder( startupContext, appName, ormSettings ).build();
 

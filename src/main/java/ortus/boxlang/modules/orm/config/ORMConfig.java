@@ -378,15 +378,10 @@ public class ORMConfig {
 		}
 
 		if ( this.dialect != null ) {
-			// @TODO: Until we implement a method to resolve dialect short names, like
-			// `MYSQL` to full
-			// class names, Hibernate will throw errors on startup as 90% of dialect names
-			// will not be found. Should we drop `dialect` support entirely, or should we
-			// add full support for a mostly unnecessary feature?
-			// See warning at
+			// @TODO: Once we migrate to Hibernate 6+, we should drop dialect configuration entirely.
 			// https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/cfg/JdbcSettings.html#DIALECT
 			// configuration.setProperty(AvailableSettings.DIALECT, dialect);
-			configuration.setProperty( AvailableSettings.DIALECT, dialect );
+			configuration.setProperty( AvailableSettings.DIALECT, toFullHibernateDialectName( dialect ) );
 		}
 
 		if ( this.schema != null ) {
@@ -420,8 +415,6 @@ public class ORMConfig {
 		// - eventHandling
 		// - eventHandler
 		// - flushAtRequestEnd
-		// - logSQL
-		// - secondaryCacheEnabled
 		// - ormConfig
 
 		// These properties are only used in the SessionFactoryBuilder, and do not need
@@ -499,6 +492,178 @@ public class ORMConfig {
 		 */
 		public static boolean contains( String alias ) {
 			return Arrays.stream( JCacheProvider.values() ).anyMatch( provider -> provider.name().equals( alias ) );
+		}
+	}
+
+	/**
+	 * Translate a short dialect name like 'MYSQL' to the full Hibernate dialect class name like 'org.hibernate.dialect.MySQLDialect'.
+	 * <p>
+	 * Note that this method should be removed once we migrate to Hibernate 6+.
+	 * 
+	 * @param dialectName Hibernate dialect name, either full like 'org.hibernate.dialect.MySQLDialect' or short like 'MYSQL'.
+	 * 
+	 * @return If the dialect passed is recognized as a dialect alias, the full Hibernate dialect class name is returned. Otherwise, the original dialect
+	 *         name is returned unmodified.
+	 */
+	private String toFullHibernateDialectName( String dialectName ) {
+		switch ( dialectName.replace( "DIALECT", "" ).trim().toUpperCase() ) {
+			case "CUBRID" :
+				return "org.hibernate.dialect.CUBRIDDialect";
+			case "CACHE71" :
+				return "org.hibernate.dialect.Cache71Dialect";
+			case "COCKROACHDB192" :
+				return "org.hibernate.dialect.CockroachDB192Dialect";
+			case "COCKROACHDB201" :
+				return "org.hibernate.dialect.CockroachDB201Dialect";
+			case "DB2390" :
+				return "org.hibernate.dialect.DB2390Dialect";
+			case "DB2390V8" :
+				return "org.hibernate.dialect.DB2390V8Dialect";
+			case "DB2400" :
+				return "org.hibernate.dialect.DB2400Dialect";
+			case "DB2400V7R3" :
+				return "org.hibernate.dialect.DB2400V7R3Dialect";
+			case "DB297" :
+				return "org.hibernate.dialect.DB297Dialect";
+			case "DB2" :
+				return "org.hibernate.dialect.DB2Dialect";
+			case "DATADIRECTORACLE9" :
+				return "org.hibernate.dialect.DataDirectOracle9Dialect";
+			case "DERBY" :
+				return "org.hibernate.dialect.DerbyDialect";
+			case "DERBYTENFIVE" :
+				return "org.hibernate.dialect.DerbyTenFiveDialect";
+			case "DERBYTENSEVEN" :
+				return "org.hibernate.dialect.DerbyTenSevenDialect";
+			case "DERBYTENSIX" :
+				return "org.hibernate.dialect.DerbyTenSixDialect";
+			case "FIREBIRD" :
+				return "org.hibernate.dialect.FirebirdDialect";
+			case "FRONTBASE" :
+				return "org.hibernate.dialect.FrontBaseDialect";
+			case "H2" :
+				return "org.hibernate.dialect.H2Dialect";
+			case "HANACLOUDCOLUMNSTORE" :
+				return "org.hibernate.dialect.HANACloudColumnStoreDialect";
+			case "HANACOLUMNSTORE" :
+				return "org.hibernate.dialect.HANAColumnStoreDialect";
+			case "HANAROWSTORE" :
+				return "org.hibernate.dialect.HANARowStoreDialect";
+			case "HSQL" :
+				return "org.hibernate.dialect.HSQLDialect";
+			case "INFORMIX10" :
+				return "org.hibernate.dialect.Informix10Dialect";
+			case "INFORMIX" :
+				return "org.hibernate.dialect.InformixDialect";
+			case "INGRES10" :
+				return "org.hibernate.dialect.Ingres10Dialect";
+			case "INGRES9" :
+				return "org.hibernate.dialect.Ingres9Dialect";
+			case "INGRES" :
+				return "org.hibernate.dialect.IngresDialect";
+			case "INTERBASE" :
+				return "org.hibernate.dialect.InterbaseDialect";
+			case "JDATASTORE" :
+				return "org.hibernate.dialect.JDataStoreDialect";
+			case "MARIADB102" :
+				return "org.hibernate.dialect.MariaDB102Dialect";
+			case "MARIADB103" :
+				return "org.hibernate.dialect.MariaDB103Dialect";
+			case "MARIADB10" :
+				return "org.hibernate.dialect.MariaDB10Dialect";
+			case "MARIADB53" :
+				return "org.hibernate.dialect.MariaDB53Dialect";
+			case "MARIADB" :
+				return "org.hibernate.dialect.MariaDBDialect";
+			case "MCKOI" :
+				return "org.hibernate.dialect.MckoiDialect";
+			case "MIMERSQL" :
+				return "org.hibernate.dialect.MimerSQLDialect";
+			case "MYSQL55" :
+				return "org.hibernate.dialect.MySQL55Dialect";
+			case "MYSQL57" :
+				return "org.hibernate.dialect.MySQL57Dialect";
+			case "MYSQL57INNODB" :
+				return "org.hibernate.dialect.MySQL57InnoDBDialect";
+			case "MYSQL5" :
+				return "org.hibernate.dialect.MySQL5Dialect";
+			case "MYSQL5INNODB" :
+				return "org.hibernate.dialect.MySQL5InnoDBDialect";
+			case "MYSQL8" :
+			case "MYSQL" :
+				return "org.hibernate.dialect.MySQL8Dialect";
+			case "MYSQLINNODB" :
+				return "org.hibernate.dialect.MySQLInnoDBDialect";
+			case "MYSQLMYISAM" :
+				return "org.hibernate.dialect.MySQLMyISAMDialect";
+			case "ORACLE10G" :
+				return "org.hibernate.dialect.Oracle10gDialect";
+			case "ORACLE12C" :
+				return "org.hibernate.dialect.Oracle12cDialect";
+			case "ORACLE8I" :
+				return "org.hibernate.dialect.Oracle8iDialect";
+			case "ORACLE9" :
+				return "org.hibernate.dialect.Oracle9Dialect";
+			case "ORACLE9I" :
+				return "org.hibernate.dialect.Oracle9iDialect";
+			case "ORACLE" :
+				return "org.hibernate.dialect.OracleDialect";
+			case "POINTBASE" :
+				return "org.hibernate.dialect.PointbaseDialect";
+			case "POSTGRESQL10" :
+				return "org.hibernate.dialect.PostgreSQL10Dialect";
+			case "POSTGRESQL81" :
+				return "org.hibernate.dialect.PostgreSQL81Dialect";
+			case "POSTGRESQL82" :
+				return "org.hibernate.dialect.PostgreSQL82Dialect";
+			case "POSTGRESQL91" :
+				return "org.hibernate.dialect.PostgreSQL91Dialect";
+			case "POSTGRESQL92" :
+				return "org.hibernate.dialect.PostgreSQL92Dialect";
+			case "POSTGRESQL93" :
+				return "org.hibernate.dialect.PostgreSQL93Dialect";
+			case "POSTGRESQL94" :
+				return "org.hibernate.dialect.PostgreSQL94Dialect";
+			case "POSTGRESQL95" :
+				return "org.hibernate.dialect.PostgreSQL95Dialect";
+			case "POSTGRESQL9" :
+				return "org.hibernate.dialect.PostgreSQL9Dialect";
+			case "POSTGRESQL" :
+				return "org.hibernate.dialect.PostgreSQLDialect";
+			case "POSTGRESPLUS" :
+				return "org.hibernate.dialect.PostgresPlusDialect";
+			case "PROGRESS" :
+				return "org.hibernate.dialect.ProgressDialect";
+			case "RDMSOS2200" :
+				return "org.hibernate.dialect.RDMSOS2200Dialect";
+			case "SAPDB" :
+				return "org.hibernate.dialect.SAPDBDialect";
+			case "SQLSERVER2005" :
+				return "org.hibernate.dialect.SQLServer2005Dialect";
+			case "SQLSERVER2008" :
+				return "org.hibernate.dialect.SQLServer2008Dialect";
+			case "SQLSERVER2012" :
+				return "org.hibernate.dialect.SQLServer2012Dialect";
+			case "SQLSERVER" :
+				return "org.hibernate.dialect.SQLServerDialect";
+			case "SYBASE11" :
+				return "org.hibernate.dialect.Sybase11Dialect";
+			case "SYBASEASE157" :
+				return "org.hibernate.dialect.SybaseASE157Dialect";
+			case "SYBASEASE15" :
+				return "org.hibernate.dialect.SybaseASE15Dialect";
+			case "SYBASEANYWHERE" :
+				return "org.hibernate.dialect.SybaseAnywhereDialect";
+			case "SYBASE" :
+				return "org.hibernate.dialect.SybaseDialect";
+			case "TERADATA14" :
+				return "org.hibernate.dialect.Teradata14Dialect";
+			case "TERADATA" :
+				return "org.hibernate.dialect.TeradataDialect";
+			case "TIMESTEN" :
+				return "org.hibernate.dialect.TimesTenDialect";
+			default :
+				return dialectName;
 		}
 	}
 }
