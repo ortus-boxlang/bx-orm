@@ -8,14 +8,18 @@ import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.property.access.spi.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.runtime.context.IBoxContext;
 
 public class BoxPropertyGetter implements Getter {
 
-	private Property		mappedProperty;
-	private PersistentClass	mappedEntity;
-	private IBoxContext		context;
+	private Property			mappedProperty;
+	private PersistentClass		mappedEntity;
+	private IBoxContext			context;
+
+	private static final Logger	log	= LoggerFactory.getLogger( BoxPropertyGetter.class );
 
 	public BoxPropertyGetter( IBoxContext context, Property mappedProperty, PersistentClass mappedEntity ) {
 		this.mappedProperty	= mappedProperty;
@@ -25,6 +29,7 @@ public class BoxPropertyGetter implements Getter {
 
 	@Override
 	public Object get( Object owner ) {
+		log.debug( "getting property {} on entity {}", mappedProperty.getName(), mappedEntity.getEntityName() );
 		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException( "Unimplemented method 'get'" );
 	}

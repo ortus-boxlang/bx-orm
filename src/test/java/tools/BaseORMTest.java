@@ -72,6 +72,15 @@ public class BaseORMTest {
 		datasource.shutdown();
 	}
 
+	/**
+	 * Static helper method for setting up the application context.
+	 * <p>
+	 * It's very important that we
+	 * <ol>
+	 * <li>use the application BX component to begin an application, and
+	 * <li>push a template to the template stack to localize entity filepath lookups.
+	 * </ol>
+	 */
 	public static void setupApplicationContext( RequestBoxContext startupContext ) {
 		// Start up an application with ORM settings
 		startupContext.getRuntime().executeSource(
