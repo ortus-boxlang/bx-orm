@@ -82,8 +82,8 @@ public class SessionFactoryBuilder {
 		this.appName			= appName;
 		this.connectionManager	= context.getConnectionManager();
 		this.ormConfig			= new ORMConfig( properties );
-		this.datasource			= getORMDataSource();
 		this.context			= context;
+		this.datasource			= getORMDataSource();
 		this.applicationContext	= ( ( IBoxContext ) context ).getParentOfType( ApplicationBoxContext.class );
 	}
 
@@ -112,12 +112,8 @@ public class SessionFactoryBuilder {
 			}
 			return connectionManager.getDatasourceOrThrow( Key.of( ormDatasource ) );
 		}
-		throw new BoxRuntimeException(
-		    "ORM configuration is missing 'datasource' key, or named datasource is not found. Default datasources will be supported in a future iteration." );
-		// @TODO: Implement this. the hard part is knowing the context.
-		// logger.warn( "ORM configuration is missing 'datasource' key; falling back to
-		// default datasource" );
-		// return currentContext.getConnectionManager().getDefaultDatasourceOrThrow();
+		logger.warn( "ORM configuration is missing 'datasource' key; falling back to default datasource" );
+		return context.getConnectionManager().getDefaultDatasourceOrThrow();
 	}
 
 	/**

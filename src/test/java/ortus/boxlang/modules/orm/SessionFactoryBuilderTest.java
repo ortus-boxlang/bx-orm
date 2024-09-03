@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -26,22 +25,15 @@ public class SessionFactoryBuilderTest {
 	static Key					appName	= Key.of( "BXORMTest" );
 	static Key					result	= Key.of( "result" );
 	static DataSource			datasource;
-	static RequestBoxContext	startupContext;
+	static RequestBoxContext	context;
 
 	@BeforeAll
 	public static void setUp() {
-		instance		= BoxRuntime.getInstance( true );
-		datasource		= JDBCTestUtils.constructTestDataSource( "TestDB1" );
+		instance	= BoxRuntime.getInstance( true );
+		datasource	= JDBCTestUtils.constructTestDataSource( "TestDB1" );
 
-		startupContext	= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		BaseORMTest.setupApplicationContext( startupContext );
-	}
-
-	@BeforeEach
-	public void setupEach() {
-		// startupContext = new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		// assertNotNull( startupContext.getParentOfType( ApplicationBoxContext.class ) );
-		// startupContext.injectParentContext( startupContext.getParentOfType( ApplicationBoxContext.class ) );
+		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
+		BaseORMTest.setupApplicationContext( context );
 	}
 
 	@DisplayName( "It can setup a session factory" )
@@ -50,7 +42,7 @@ public class SessionFactoryBuilderTest {
 		IStruct			ormSettings		= Struct.of(
 		    ORMKeys.datasource, "TestDB1"
 		);
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( startupContext, appName, ormSettings ).build();
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
 
 		assertNotNull( sessionFactory );
 		assertEquals( sessionFactory.getSessionFactoryOptions().getSessionFactoryName(), appName.toString() );
@@ -63,7 +55,51 @@ public class SessionFactoryBuilderTest {
 		    ORMKeys.datasource, "TestDB1",
 		    ORMKeys.dialect, "DerbyTenSeven"
 		);
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( startupContext, appName, ormSettings ).build();
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
+
+		assertNotNull( sessionFactory );
+		assertEquals( sessionFactory.getSessionFactoryOptions().getSessionFactoryName(), appName.toString() );
+	}
+
+	@DisplayName( "It can use the default application datasource" )
+	@Test
+	public void testApplicationDefaultDatasource() {
+		context.getRuntime().executeSource(
+		    """
+		        application
+		    		name="BXORMTest"
+		    		datasource={
+		    			driver = "derby",
+		    			database = "test",
+		    			connectionString = "jdbc:derby:memory:TestDB1;create=true"
+		    		};
+		    """, context );
+		IStruct			ormSettings		= Struct.of();
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
+
+		assertNotNull( sessionFactory );
+		assertEquals( sessionFactory.getSessionFactoryOptions().getSessionFactoryName(), appName.toString() );
+	}
+
+	@DisplayName( "It can use a named application datasource" )
+	@Test
+	public void testApplicationNamedDatasource() {
+		context.getRuntime().executeSource(
+		    """
+		        application
+		    		name="BXORMTest"
+		    		datasources={
+		    			"TestDB2" = {
+		    				driver = "derby",
+		    				database = "test",
+		    				connectionString = "jdbc:derby:memory:TestDB2;create=true"
+		    			}
+		    		};
+		    """, context );
+		IStruct			ormSettings		= Struct.of(
+		    ORMKeys.datasource, "TestDB2"
+		);
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
 
 		assertNotNull( sessionFactory );
 		assertEquals( sessionFactory.getSessionFactoryOptions().getSessionFactoryName(), appName.toString() );

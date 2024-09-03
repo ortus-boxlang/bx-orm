@@ -19,7 +19,6 @@ import ortus.boxlang.runtime.runnables.IBoxRunnable;
 import ortus.boxlang.runtime.runnables.RunnableLoader;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
-import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 public class ORMConfig {
@@ -213,10 +212,6 @@ public class ORMConfig {
 	private void process( IStruct properties ) {
 		if ( properties == null ) {
 			return;
-		}
-		if ( !properties.containsKey( ORMKeys.datasource ) || properties.get( ORMKeys.datasource ) == null ) {
-			throw new BoxRuntimeException(
-			    "ORM configuration is missing 'datasource' key. Default datasources will be supported in a future iteration." );
 		}
 
 		/**
