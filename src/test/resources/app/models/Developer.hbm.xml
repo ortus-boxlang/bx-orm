@@ -11,5 +11,11 @@
         <id name="id" type="integer">
             <column name="id"/>
         </id>
+        <property name="name" type="string">
+            <column name="name"/>
+        </property>
+        <property name="role" type="string">
+            <column name="role"/>
+        </property>
     </class>
 </hibernate-mapping>

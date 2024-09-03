@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
@@ -34,23 +35,24 @@ import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 public class BaseORMTest {
 
-	public static BoxRuntime	instance;
-	public RequestBoxContext	context;
-	public IScope				variables;
-	public static ORMService	ormService;
-	public static Key			appName	= Key.of( "BXORMTest" );
-	public static Key			result	= Key.of( "result" );
+	public static BoxRuntime		instance;
+	public static RequestBoxContext	startupContext;
+	public RequestBoxContext		context;
+	public IScope					variables;
+	public static ORMService		ormService;
+	public static Key				appName	= Key.of( "BXORMTest" );
+	public static Key				result	= Key.of( "result" );
 
-	static DataSource			datasource;
+	static DataSource				datasource;
 
-	static final Logger			log		= LoggerFactory.getLogger( BaseORMTest.class );
+	static final Logger				log		= LoggerFactory.getLogger( BaseORMTest.class );
 
 	@BeforeAll
 	public static void setUp() {
-		instance	= BoxRuntime.getInstance( true );
-		ormService	= ORMService.getInstance();
-		RequestBoxContext startupContext = new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		datasource = JDBCTestUtils.constructTestDataSource( "TestDB1" );
+		instance		= BoxRuntime.getInstance( true );
+		ormService		= ORMService.getInstance();
+		startupContext	= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
+		datasource		= JDBCTestUtils.constructTestDataSource( "TestDB1" );
 
 		BaseORMTest.setupApplicationContext( startupContext );
 
@@ -66,6 +68,7 @@ public class BaseORMTest {
 		    new SessionFactoryBuilder( startupContext, appName, ormSettings ).build() );
 	}
 
+	@AfterAll
 	public static void teardown() throws SQLException {
 		// BaseJDBCTest.teardown();
 		JDBCTestUtils.cleanupTables( datasource );
@@ -139,8 +142,8 @@ public class BaseORMTest {
 	@BeforeEach
 	public void setupEach() {
 		context = new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
-		context.injectParentContext( context.getParentOfType( ApplicationBoxContext.class ) );
+		assertNotNull( startupContext.getParentOfType( ApplicationBoxContext.class ) );
+		context.injectParentContext( startupContext.getParentOfType( ApplicationBoxContext.class ) );
 
 		variables = context.getScopeNearby( VariablesScope.name );
 		context.getConnectionManager().setDefaultDatasource( datasource );

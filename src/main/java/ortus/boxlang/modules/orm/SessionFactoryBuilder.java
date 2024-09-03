@@ -132,7 +132,7 @@ public class SessionFactoryBuilder {
 		properties.put( BOXLANG_APPLICATION_ENTITYMAPPING, new HashMap<String, String>() );
 		properties.put( BOXLANG_APPLICATION_CONTEXT, applicationContext );
 		properties.put( BOXLANG_CONTEXT, context );
-		properties.put( AvailableSettings.SESSION_FACTORY_NAME, getAppName().toString() );
+		// properties.put( AvailableSettings.SESSION_FACTORY_NAME, getAppName().toString() );
 
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.POJO, EntityTuplizer.class );

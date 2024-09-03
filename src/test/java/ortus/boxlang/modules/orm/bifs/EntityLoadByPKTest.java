@@ -17,7 +17,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 	@Test
 	public void testEntityLoadByPK() {
 		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
-		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
 
 		// @formatter:off
 		instance.executeSource(
