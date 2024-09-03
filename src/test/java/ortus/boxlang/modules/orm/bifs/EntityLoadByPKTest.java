@@ -3,7 +3,6 @@ package ortus.boxlang.modules.orm.bifs;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +30,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertEquals( "CEO", variables.get( result ) );
 	}
 
-	@Disabled( "Lacking proper support for key types; aka, we've hardcoded integer types for now." )
+	// @Disabled( "Lacking proper support for key types; aka, we've hardcoded integer types for now." )
 	@DisplayName( "It can load an entity by varchar key" )
 	@Test
 	public void testEntityLoadByVarcharKey() {

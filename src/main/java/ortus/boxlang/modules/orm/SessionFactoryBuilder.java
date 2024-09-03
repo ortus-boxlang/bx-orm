@@ -1,7 +1,6 @@
 package ortus.boxlang.modules.orm;
 
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
@@ -28,16 +27,15 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 public class SessionFactoryBuilder {
 
-	public static final String		BOXLANG_APPLICATION_ENTITYMAPPING	= "BOXLANG_APPLICATION_ENTITYMAPPING";
-	public static final String		BOXLANG_APPLICATION_CONTEXT			= "BOXLANG_APPLICATION_CONTEXT";
-	public static final String		BOXLANG_CONTEXT						= "BOXLANG_CONTEXT";
-	public static final String		BOXLANG_ENTITY_MAP					= "BOXLANG_ENTITY_MAP";
+	public static final String		BOXLANG_APPLICATION_CONTEXT	= "BOXLANG_APPLICATION_CONTEXT";
+	public static final String		BOXLANG_CONTEXT				= "BOXLANG_CONTEXT";
+	public static final String		BOXLANG_ENTITY_MAP			= "BOXLANG_ENTITY_MAP";
 
 	/**
 	 * The logger for this class. We may log warnings or errors if we encounter
 	 * unsupported ORM configuration.
 	 */
-	private static final Logger		logger								= LoggerFactory.getLogger( SessionFactoryBuilder.class );
+	private static final Logger		logger						= LoggerFactory.getLogger( SessionFactoryBuilder.class );
 
 	/**
 	 * The ORM datasource for this session factory.
@@ -129,7 +127,6 @@ public class SessionFactoryBuilder {
 		// connection provider instance) goes here
 		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasource ) );
 		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
-		properties.put( BOXLANG_APPLICATION_ENTITYMAPPING, new HashMap<String, String>() );
 		properties.put( BOXLANG_APPLICATION_CONTEXT, applicationContext );
 		properties.put( BOXLANG_CONTEXT, context );
 		// properties.put( AvailableSettings.SESSION_FACTORY_NAME, getAppName().toString() );

@@ -1,7 +1,7 @@
-class entityName="Auto" table="autos" persistent="true" {
+class entityName="Auto" table="`AUTOS`" persistent="true" {
 
     property 
-        name="id" 
+        name="vin" 
         type="string" 
         fieldtype="id" 
         ormtype="string" 
