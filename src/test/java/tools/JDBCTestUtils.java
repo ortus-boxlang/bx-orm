@@ -164,6 +164,7 @@ public class JDBCTestUtils {
 		    ) );
 		try {
 			datasource.execute( "CREATE TABLE developers ( id INTEGER, name VARCHAR(155), role VARCHAR(155) )" );
+			datasource.execute( "CREATE TABLE autos ( vin VARCHAR(17), make VARCHAR(155), model VARCHAR(155) )" );
 		} catch ( DatabaseException e ) {
 			// Ignore the exception if the table already exists
 		}
@@ -175,7 +176,7 @@ public class JDBCTestUtils {
 	 *
 	 * @param datasource
 	 */
-	public static void dropDevelopersTable( DataSource datasource ) {
+	public static void cleanupTables( DataSource datasource ) {
 		datasource.execute( "DROP TABLE developers" );
 	}
 
@@ -184,10 +185,12 @@ public class JDBCTestUtils {
 	 *
 	 * @param datasource
 	 */
-	public static void resetDevelopersTable( DataSource datasource ) {
+	public static void resetTables( DataSource datasource ) {
 		datasource.execute( "TRUNCATE TABLE developers" );
 		datasource.execute( "INSERT INTO developers ( id, name, role ) VALUES ( 77, 'Michael Born', 'Developer' )" );
 		datasource.execute( "INSERT INTO developers ( id, name, role ) VALUES ( 1, 'Luis Majano', 'CEO' )" );
 		datasource.execute( "INSERT INTO developers ( id, name, role ) VALUES ( 42, 'Eric Peterson', 'Developer' )" );
+
+		datasource.execute( "TRUNCATE TABLE autos;INSERT INTO autos (vin,make,model) VALUES('1HGCM82633A123456','Honda', 'Accord' );" );
 	}
 }

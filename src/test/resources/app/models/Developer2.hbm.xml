@@ -7,9 +7,12 @@
 ~ https://docs.jboss.org/hibernate/orm/5.0/manual/en-US/html/ch05.html
 --><!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
 <hibernate-mapping>
-    <class entity-name="Developer" table="developers">
-        <id name="id" type="integer">
-            <column name="id"/>
+    <class entity-name="Developer2">
+        <id name="theId" type="integer">
+            <column name="theId"/>
         </id>
+        <property name="name" type="string">
+            <column name="name"/>
+        </property>
     </class>
 </hibernate-mapping>

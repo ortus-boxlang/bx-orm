@@ -1,0 +1,20 @@
+class entityName="Auto" table="autos" persistent="true" {
+
+    property 
+        name="id" 
+        type="string" 
+        fieldtype="id" 
+        ormtype="string" 
+        generator="assigned";
+        
+    property 
+        name="make" 
+        type="string";
+    property 
+        name="model" 
+        type="string";
+
+    function onPreInsert(){
+        log.info( "Inserting new Auto: #getMake()# #getModel()#" );
+    }
+}
