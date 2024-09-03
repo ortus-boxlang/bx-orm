@@ -281,8 +281,9 @@ public class ORMConfig {
 
 		if ( properties.containsKey( ORMKeys.dialect ) && properties.get( ORMKeys.dialect ) != null
 		    && !properties.getAsString( ORMKeys.dialect ).isBlank() ) {
-			logger.warn(
-			    "Setting 'dialect' in Hibernate 6.0+ is unnecessary on all Hibernate-supported databases. Ignoring 'dialect' configuration for now." );
+			// @TODO: Enable this warning IF and WHEN we migrate to Hibernate 6+.
+			// logger.warn(
+			// "Setting 'dialect' in Hibernate 6.0+ is unnecessary on all Hibernate-supported databases. Ignoring 'dialect' configuration for now." );
 			dialect = properties.getAsString( ORMKeys.dialect );
 		}
 
@@ -357,6 +358,24 @@ public class ORMConfig {
 				configuration.setPhysicalNamingStrategy( loadedNamingStrategy );
 			}
 		}
+		if ( this.secondaryCacheEnabled ) {
+			configuration.setProperty( AvailableSettings.USE_SECOND_LEVEL_CACHE, "true" );
+			configuration.setProperty( AvailableSettings.USE_QUERY_CACHE, "true" );
+			configuration.setProperty( AvailableSettings.CACHE_REGION_FACTORY, "jcache" );
+			configuration.setProperty( "hibernate.javax.cache.provider", this.getJCacheProviderClassPath() );
+			if ( this.cacheConfig != null && !this.cacheConfig.isEmpty() ) {
+				configuration.setProperty( "hibernate.javax.cache.uri", this.cacheConfig );
+			}
+		}
+
+		if ( this.logSQL ) {
+			configuration.setProperty( AvailableSettings.SHOW_SQL, "true" );
+			configuration.setProperty( AvailableSettings.FORMAT_SQL, "true" );
+			configuration.setProperty( AvailableSettings.USE_SQL_COMMENTS, "true" );
+			configuration.setProperty( AvailableSettings.GENERATE_STATISTICS, "true" );
+			configuration.setProperty( AvailableSettings.LOG_SESSION_METRICS, "true" );
+			configuration.setProperty( AvailableSettings.LOG_JDBC_WARNINGS, "true" );
+		}
 
 		if ( this.dialect != null ) {
 			// @TODO: Until we implement a method to resolve dialect short names, like
@@ -367,6 +386,7 @@ public class ORMConfig {
 			// See warning at
 			// https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/cfg/JdbcSettings.html#DIALECT
 			// configuration.setProperty(AvailableSettings.DIALECT, dialect);
+			configuration.setProperty( AvailableSettings.DIALECT, dialect );
 		}
 
 		if ( this.schema != null ) {

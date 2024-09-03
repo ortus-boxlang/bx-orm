@@ -136,30 +136,6 @@ public class SessionFactoryBuilder {
 		properties.put( BOXLANG_APPLICATION_ENTITYMAPPING, new HashMap<String, String>() );
 		properties.put( BOXLANG_APPLICATION_CONTEXT, applicationContext );
 		properties.put( BOXLANG_CONTEXT, context );
-
-		if ( ormConfig.secondaryCacheEnabled ) {
-			properties.put( AvailableSettings.USE_SECOND_LEVEL_CACHE, true );
-			properties.put( AvailableSettings.USE_QUERY_CACHE, true );
-			properties.put( AvailableSettings.CACHE_REGION_FACTORY, "jcache" );
-			properties.put( "hibernate.javax.cache.provider", ormConfig.getJCacheProviderClassPath() );
-			if ( ormConfig.cacheConfig != null && !ormConfig.cacheConfig.isEmpty() ) {
-				properties.put( "hibernate.javax.cache.uri", ormConfig.cacheConfig );
-			}
-		}
-
-		if ( ormConfig.logSQL ) {
-			properties.put( AvailableSettings.SHOW_SQL, true );
-			properties.put( AvailableSettings.FORMAT_SQL, true );
-			properties.put( AvailableSettings.USE_SQL_COMMENTS, true );
-			properties.put( AvailableSettings.GENERATE_STATISTICS, true );
-			properties.put( AvailableSettings.LOG_SESSION_METRICS, true );
-			properties.put( AvailableSettings.LOG_JDBC_WARNINGS, true );
-		}
-
-		if ( ormConfig.dialect != null ) {
-			properties.put( AvailableSettings.DIALECT, ormConfig.dialect );
-		}
-
 		properties.put( AvailableSettings.SESSION_FACTORY_NAME, getAppName().toString() );
 
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
