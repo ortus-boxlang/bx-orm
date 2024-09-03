@@ -17,9 +17,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
 		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
 
-		// Session session = ORMEngine.getInstance().getSessionFactoryForName( Key.of( "MyAppName" ) ).openSession();
-		// Transaction transaction = session.beginTransaction();
-
 		// @formatter:off
 		instance.executeSource(
 			"""
@@ -28,10 +25,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 			""",
 			context
 		);
-// @formatter:on
-
-		// transaction.commit();
-		// session.close();
+		// @formatter:on
 		assertEquals( "CEO", variables.get( result ) );
 	}
 

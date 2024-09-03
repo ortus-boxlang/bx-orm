@@ -242,10 +242,6 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 */
 	public Element generateIdElement( IPropertyMeta prop ) {
 		Element theNode = this.document.createElement( "id" );
-		if ( !prop.getGenerator().isEmpty() ) {
-			theNode.appendChild( generateGeneratorElement( prop ) );
-			// @TODO: Determine ID type from generator type IF a generator is specified.
-		}
 
 		// compute defaults - move to ORMAnnotationInspector?
 		// prop.getAsStruct( Key.annotations ).computeIfAbsent( ORMKeys.ORMType, ( key ) -> "string" );
@@ -261,6 +257,11 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		}
 
 		theNode.appendChild( generateColumnElement( prop ) );
+
+		if ( !prop.getGenerator().isEmpty() ) {
+			theNode.appendChild( generateGeneratorElement( prop ) );
+			// @TODO: Determine ID type from generator type IF a generator is specified.
+		}
 
 		return theNode;
 	}
