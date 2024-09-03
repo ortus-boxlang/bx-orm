@@ -21,6 +21,16 @@ public class ORMConfigTest {
 	}
 
 	@Test
+	public void testDialectNormalization() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB1",
+		    ORMKeys.dialect, "DerbyTenSevenDialect"
+		) ).toHibernateConfig();
+
+		assertEquals( "org.hibernate.dialect.DerbyTenSevenDialect", config.getProperty( AvailableSettings.DIALECT ) );
+	}
+
+	@Test
 	public void testGenericSettings() {
 		Configuration config = new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB1",

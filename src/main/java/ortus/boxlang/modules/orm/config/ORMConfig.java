@@ -501,7 +501,7 @@ public class ORMConfig {
 	 *         name is returned unmodified.
 	 */
 	private String toFullHibernateDialectName( String dialectName ) {
-		switch ( dialectName.replace( "DIALECT", "" ).trim().toUpperCase() ) {
+		switch ( dialectName.trim().toUpperCase().replace( "DIALECT", "" ) ) {
 			case "CUBRID" :
 				return "org.hibernate.dialect.CUBRIDDialect";
 			case "CACHE71" :
