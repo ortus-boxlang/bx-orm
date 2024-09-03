@@ -147,6 +147,21 @@ public class SessionFactoryBuilder {
 			}
 		}
 
+		if ( ormConfig.logSQL ) {
+			properties.put( AvailableSettings.SHOW_SQL, true );
+			properties.put( AvailableSettings.FORMAT_SQL, true );
+			properties.put( AvailableSettings.USE_SQL_COMMENTS, true );
+			properties.put( AvailableSettings.GENERATE_STATISTICS, true );
+			properties.put( AvailableSettings.LOG_SESSION_METRICS, true );
+			properties.put( AvailableSettings.LOG_JDBC_WARNINGS, true );
+		}
+
+		if ( ormConfig.dialect != null ) {
+			properties.put( AvailableSettings.DIALECT, ormConfig.dialect );
+		}
+
+		properties.put( AvailableSettings.SESSION_FACTORY_NAME, getAppName().toString() );
+
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.POJO, EntityTuplizer.class );
 
@@ -161,7 +176,6 @@ public class SessionFactoryBuilder {
 		    .map( EntityRecord::mappingFile )
 		    .map( Path::toString )
 		    .forEach( ( path ) -> {
-			    logger.error( "Adding entity mapping file: {}", path );
 			    configuration.addFile( path );
 		    } );
 

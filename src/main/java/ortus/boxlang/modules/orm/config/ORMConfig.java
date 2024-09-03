@@ -259,6 +259,8 @@ public class ORMConfig {
 			// CFML-compatible `cfcLocation` configuration support
 			if ( properties.containsKey( ORMKeys.cfclocation ) ) {
 				setEntityPaths( properties.get( ORMKeys.cfclocation ) );
+			} else {
+				setEntityPaths( null );
 			}
 		}
 
@@ -320,7 +322,7 @@ public class ORMConfig {
 	 */
 	private void setEntityPaths( Object entityPaths ) {
 		if ( entityPaths == null ) {
-			return;
+			this.entityPaths = new String[] {};
 		}
 		if ( entityPaths instanceof String entityPathString && !entityPathString.isBlank() ) {
 			this.entityPaths = new String[] { entityPathString };
