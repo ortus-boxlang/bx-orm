@@ -106,10 +106,21 @@ public class ORMService implements IService {
 	 *
 	 * @return The Hibernate session.
 	 */
-	public Session getSessionForContext( IBoxContext context ) {
-		Key				applicationName	= context.getParentOfType( ortus.boxlang.runtime.context.ApplicationBoxContext.class )
+	public SessionFactory getSessionFactoryForContext( IBoxContext context ) {
+		Key applicationName = context.getParentOfType( ortus.boxlang.runtime.context.ApplicationBoxContext.class )
 		    .getApplication().getName();
-		SessionFactory	sessionFactory	= getSessionFactoryForName( applicationName );
+		return getSessionFactoryForName( applicationName );
+	}
+
+	/**
+	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 *
+	 * @param context The context for which to get a session.
+	 *
+	 * @return The Hibernate session.
+	 */
+	public Session getSessionForContext( IBoxContext context ) {
+		SessionFactory	sessionFactory	= getSessionFactoryForContext( context );
 
 		// Method One: Using Hibernate's session context tracker
 		// return sessionFactory.getCurrentSession();

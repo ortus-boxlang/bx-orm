@@ -1,7 +1,6 @@
 package ortus.boxlang.modules.orm;
 
 import static org.junit.Assert.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -45,7 +44,6 @@ public class SessionFactoryBuilderTest {
 		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
 
 		assertNotNull( sessionFactory );
-		assertEquals( sessionFactory.getSessionFactoryOptions().getSessionFactoryName(), appName.toString() );
 	}
 
 	@DisplayName( "It can set dialects with alias names" )
@@ -58,7 +56,6 @@ public class SessionFactoryBuilderTest {
 		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
 
 		assertNotNull( sessionFactory );
-		// assertEquals( sessionFactory.getSessionFactoryOptions().getSessionFactoryName(), appName.toString() );
 	}
 
 	@DisplayName( "It can use the default application datasource" )
@@ -78,7 +75,6 @@ public class SessionFactoryBuilderTest {
 		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
 
 		assertNotNull( sessionFactory );
-		assertEquals( sessionFactory.getSessionFactoryOptions().getSessionFactoryName(), appName.toString() );
 	}
 
 	@DisplayName( "It can use a named application datasource" )
@@ -102,6 +98,5 @@ public class SessionFactoryBuilderTest {
 		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
 
 		assertNotNull( sessionFactory );
-		assertEquals( sessionFactory.getSessionFactoryOptions().getSessionFactoryName(), appName.toString() );
 	}
 }

@@ -1,54 +1,31 @@
 package ortus.boxlang.modules.orm.bifs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.nio.file.Path;
-
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
+import org.hibernate.Session;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
-import ortus.boxlang.runtime.scopes.IScope;
-import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.scopes.VariablesScope;
+import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
-public class ORMGetSessionTest {
+public class ORMGetSessionTest extends BaseORMTest {
 
-	static BoxRuntime	instance;
-	IBoxContext			context;
-	IScope				variables;
-	static Key			result	= new Key( "result" );
-
-	@BeforeAll
-	public static void setUp() {
-		instance = BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
-	}
-
-	@BeforeEach
-	public void setupEach() {
-		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		variables	= context.getScopeNearby( VariablesScope.name );
-	}
-
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can get the current ORM session" )
 	@Test
-	public void testExampleBIF() {
-		instance.executeSource( "result = ORMFlush()", context );
-		assertEquals( "Hello from an ORMFlush!", variables.get( result ) );
-	}
+	public void testORMGetSession() {
+		Session session = ormService.getSessionForContext( context );
+		assertNotNull( session );
 
-	@DisplayName( "It can test the ExampleBIF" )
-	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+		// @formatter:off
+		instance.executeSource(
+			"""
+				result = ormGetSession();
+			""",
+			context
+		);
+		// @formatter:on
+		assertNotNull( variables.get( result ) );
+		assertEquals( session, variables.get( result ) );
 	}
-
 }
