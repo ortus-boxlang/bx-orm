@@ -26,12 +26,26 @@ public class EntityLoadByPK extends BIF {
 		super();
 		declaredArguments = new Argument[] {
 		    new Argument( true, "String", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
-		    new Argument( true, "String", Key.id, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) )
+		    new Argument( true, "String", Key.id, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		    new Argument( true, "String", ORMKeys.unique, Set.of( Validator.NOT_IMPLEMENTED ) )
 		};
 	}
 
 	/**
-	 * ExampleBIF
+	 * Load an array of entities by the primary key.
+	 * <p>
+	 * <code>
+	 * var myAuto = entityLoadByPK( "Automobile", "1HGCM82633A123456" );
+	 * </code>
+	 * <p>
+	 * In Lucee, by default, an array of entities is returned and you must pass a third `unique=true` argument to return only a single entity. In BoxLang,
+	 * only a single entity is returned - matching the Adobe ColdFusion behavior - and no `unique` attribute
+	 * is supported. To return an array of entities, use the `entityLoad` BIF.
+	 * <p>
+	 * Composite keys are also supported:
+	 * <code>
+	 * entityLoadByPK( "VehicleType", { make : "Ford", model: "Fusion" } );
+	 * </code>
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
@@ -43,8 +57,10 @@ public class EntityLoadByPK extends BIF {
 
 		String	entityName	= arguments.getAsString( ORMKeys.entity );
 		Object	keyValue	= arguments.get( Key.id );
-		// return session.get( entityName, ( java.io.Serializable ) keyValue );
 		String	keyType		= getKeyJavaType( session, entityName ).getSimpleName();
+
+		// @TODO: Support composite keys.
+
 		return session.get( entityName,
 		    ( java.io.Serializable ) GenericCaster.cast( context, keyValue, keyType ) );
 	}

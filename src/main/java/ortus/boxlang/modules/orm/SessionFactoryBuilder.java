@@ -111,7 +111,7 @@ public class SessionFactoryBuilder {
 			return connectionManager.getDatasourceOrThrow( Key.of( ormDatasource ) );
 		}
 		logger.warn( "ORM configuration is missing 'datasource' key; falling back to default datasource" );
-		return context.getConnectionManager().getDefaultDatasourceOrThrow();
+		return connectionManager.getDefaultDatasourceOrThrow();
 	}
 
 	/**

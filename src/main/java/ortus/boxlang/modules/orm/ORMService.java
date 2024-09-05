@@ -89,9 +89,9 @@ public class ORMService implements IService {
 	}
 
 	/**
-	 * Get a Hibernate session factory by name.
+	 * Get a Hibernate session factory by application name.
 	 *
-	 * @param name The name of the session factory.
+	 * @param name The name of the application for which to get the session factory.
 	 *
 	 * @return The Hibernate session factory.
 	 */
@@ -120,17 +120,16 @@ public class ORMService implements IService {
 	 * @return The Hibernate session.
 	 */
 	public Session getSessionForContext( IBoxContext context ) {
-		SessionFactory	sessionFactory	= getSessionFactoryForContext( context );
+		// @TODO: Add Datasource argument to this method:
+		// connectionManager.getDatasourceOrThrow( datasource );
 
-		// Method One: Using Hibernate's session context tracker
-		// return sessionFactory.getCurrentSession();
-
-		// Method Two: using Boxlang context attachments:
 		// Get the nearest JDBC capable context. This can be either a thread or a request.
-		IBoxContext		jdbcContext		= ( IBoxContext ) context.getParentOfType( IJDBCCapableContext.class );
+		IBoxContext jdbcContext = ( IBoxContext ) context.getParentOfType( IJDBCCapableContext.class );
 		if ( jdbcContext.hasAttachment( ORMKeys.ORMSession ) ) {
 			return jdbcContext.getAttachment( ORMKeys.ORMSession );
 		}
+
+		SessionFactory sessionFactory = getSessionFactoryForContext( context );
 		jdbcContext.putAttachment( ORMKeys.ORMSession, sessionFactory.openSession() );
 		return jdbcContext.getAttachment( ORMKeys.ORMSession );
 	}

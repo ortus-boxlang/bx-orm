@@ -3,6 +3,7 @@ package ortus.boxlang.modules.orm.bifs;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -41,6 +42,24 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 				result = entityLoadByPK( "Auto", "1HGCM82633A123456" ).getMake();
+			""",
+			context
+		);
+		// @formatter:on
+		assertEquals( "Honda", variables.get( result ) );
+	}
+
+	@Disabled( "Unimplemented." )
+	@DisplayName( "It can load an entity by composite key" )
+	@Test
+	public void testEntityLoadByCompositeKey() {
+		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
+		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
+
+		// @formatter:off
+		instance.executeSource(
+			"""
+				result = entityLoadByPK( "VehicleType", { make: "Ford", model : "Fusion" } ).getMake();
 			""",
 			context
 		);
