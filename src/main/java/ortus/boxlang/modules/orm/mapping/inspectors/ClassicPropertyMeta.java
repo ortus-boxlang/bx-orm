@@ -63,24 +63,24 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 	}
 
 	protected IStruct parseGeneratorAnnotations( IStruct annotations ) {
-		IStruct generatorInfo = new Struct();
+		IStruct generator = new Struct();
 		if ( annotations.containsKey( ORMKeys.generator ) ) {
-			generatorInfo.put( Key._CLASS, annotations.getAsString( ORMKeys.generator ) );
+			generator.put( Key._CLASS, annotations.getAsString( ORMKeys.generator ) );
 		}
 		if ( annotations.containsKey( ORMKeys.property ) ) {
-			generatorInfo.put( ORMKeys.property, annotations.getAsString( ORMKeys.property ) );
+			generator.put( ORMKeys.property, annotations.getAsString( ORMKeys.property ) );
 		}
 		if ( annotations.containsKey( ORMKeys.generator ) ) {
-			generatorInfo.put( Key._CLASS, annotations.getAsString( ORMKeys.generator ) );
+			generator.put( Key._CLASS, annotations.getAsString( ORMKeys.generator ) );
 		}
 		if ( annotations.containsKey( ORMKeys.selectKey ) ) {
-			generatorInfo.put( ORMKeys.selectKey, annotations.getAsString( ORMKeys.selectKey ) );
+			generator.put( ORMKeys.selectKey, annotations.getAsString( ORMKeys.selectKey ) );
 		}
 		if ( annotations.containsKey( ORMKeys.generated ) ) {
-			generatorInfo.put( ORMKeys.generated, annotations.getAsString( ORMKeys.generated ) );
+			generator.put( ORMKeys.generated, annotations.getAsString( ORMKeys.generated ) );
 		}
 		if ( annotations.containsKey( ORMKeys.sequence ) ) {
-			generatorInfo.put( ORMKeys.sequence, annotations.getAsString( ORMKeys.sequence ) );
+			generator.put( ORMKeys.sequence, annotations.getAsString( ORMKeys.sequence ) );
 		}
 		if ( annotations.containsKey( Key.params ) ) {
 			Object	paramValue	= annotations.getAsString( Key.params );
@@ -88,9 +88,10 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			if ( theParams == null ) {
 				// logger.warn( "Property '{}' has a 'params' annotation that could not be cast to a struct: {}", propName, paramValue );
 			} else {
-				generatorInfo.put( Key.params, theParams );
+				generator.put( Key.params, theParams );
 			}
 		}
-		return generatorInfo;
+		generator.putIfAbsent( Key.params, new Struct() );
+		return generator;
 	}
 }

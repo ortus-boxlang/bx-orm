@@ -37,18 +37,13 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 		IStruct generator = new Struct();
 		if ( annotations.containsKey( ORMKeys.generatedValue ) ) {
 			IStruct generatedValue = annotations.getAsStruct( ORMKeys.generatedValue );
-			// @TODO: Implement this.
-			// generator.put( ORMKeys.generated, "never|insert|always" );
+			generator.putAll( generatedValue );
 			if ( generatedValue.containsKey( ORMKeys.strategy ) ) {
 				generator.put( Key._CLASS, generatedValue.getAsString( ORMKeys.strategy ) );
 			}
 		}
-		if ( annotations.containsKey( ORMKeys.tableGenerator ) ) {
-			// IStruct tableGenerator = annotations.getAsStruct( ORMKeys.generatedValue );
-			// if ( tableGenerator.containsKey( ORMKeys.strategy ) ) {
-			// generator.put( ORMKeys.strategy, tableGenerator.getAsString( ORMKeys.strategy ) );
-			// }
-		}
+		// @TODO: Implement 'tableGenerator' and 'sequenceGenerator' annotations.
+		generator.putIfAbsent( Key.params, new Struct() );
 		return generator;
 	}
 }

@@ -22,6 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
 import ortus.boxlang.compiler.parser.BoxScriptParser;
@@ -301,6 +302,68 @@ public class HibernateXMLWriterTest {
 
 		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
 		    .isEqualTo( "increment" );
+	}
+
+	// @formatter:off
+	@DisplayName( "It can set a select generator" )
+	@ValueSource( strings = {
+
+	    """
+	    class persistent {
+	    	property
+	    		name="the_id"
+	    		fieldtype="id"
+	    		generator="select"
+				generated="insert"
+				selectKey="foo";
+	    }
+	    """,
+		"""
+		@Entity
+		class {
+			@Id
+			@GeneratedValue{
+				"strategy"  : "select",
+				"selectKey" : "foo",
+				"generated" : "insert"
+			}
+			property name="the_id";
+		}
+		"""
+	} )
+	// @formatter:on
+	@ParameterizedTest
+	public void testSelectGenerator( String sourceCode ) {
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		String		xml				= xmlToString( doc );
+
+		Node		classEl			= doc.getDocumentElement().getFirstChild();
+		Node		idNode			= classEl.getFirstChild();
+		Node		generatorNode	= idNode.getLastChild();
+
+		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
+		    .isEqualTo( "select" );
+
+		NodeList	paramNodes	= generatorNode.getChildNodes();
+		Node		paramNode	= null;
+
+		for ( int i = 0; i < paramNodes.getLength(); i++ ) {
+			Node node = paramNodes.item( i );
+			if ( node.getNodeType() == Node.ELEMENT_NODE ) {
+				Node nameAttr = node.getAttributes().getNamedItem( "name" );
+				if ( nameAttr != null && "key".equals( nameAttr.getTextContent() ) ) {
+					paramNode = node;
+					break;
+				}
+			}
+		}
+
+		assertThat( paramNode ).isNotNull();
+		assertThat( paramNode.getTextContent() ).isEqualTo( "foo" );
 	}
 
 	/**********************
