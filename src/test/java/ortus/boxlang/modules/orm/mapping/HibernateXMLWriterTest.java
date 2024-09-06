@@ -1,6 +1,7 @@
 package ortus.boxlang.modules.orm.mapping;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -463,7 +464,7 @@ public class HibernateXMLWriterTest {
 				"scale"     : 10,
 				"precision" : 2
 			}
-			property name=\"amount\";
+			property name="amount";
 		}
 		"""
 	} )
@@ -530,8 +531,6 @@ public class HibernateXMLWriterTest {
 		Node		propertyNode	= classEL.getFirstChild();
 		Node		columnNode		= propertyNode.getFirstChild();
 
-		String		xml				= xmlToString( doc );
-
 		// assertThat( columnNode.getAttributes().getNamedItem( "table" ).getTextContent() )
 		// .isEqualTo( "foo" );
 		assertThat( propertyNode.getAttributes().getNamedItem( "insert" ).getTextContent() )
@@ -545,6 +544,55 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "true" );
 		assertThat( columnNode.getAttributes().getNamedItem( "default" ).getTextContent() )
 		    .isEqualTo( "test" );
+	}
+
+	// @formatter:off
+	@DisplayName( "It maps version properties" )
+	@ValueSource( strings = {
+	    """
+		class persistent {
+			property 
+				fieldtype="version"
+				generated="never"
+				column="itemVersion"
+				ormType="integer"
+				insert="false"
+				name="version";
+		}
+		""",
+	    """
+		@Entity
+		class {
+			@Version
+			@Column{
+				"name" : "itemVersion",
+				"insertable" : false
+			}
+			@GeneratedValue {
+				"generated": "never"
+			}
+			property name="version" ormType="integer";
+		}
+		"""
+	} )
+	// @formatter:on
+	@ParameterizedTest
+	public void testVersionProperty( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		Node		classEL		= doc.getDocumentElement().getFirstChild();
+		Node		versionNode	= classEL.getFirstChild();
+		String		xml			= xmlToString( doc );
+
+		assertEquals( "version", versionNode.getNodeName() );
+		assertEquals( "version", versionNode.getAttributes().getNamedItem( "name" ).getTextContent() );
+		assertEquals( "itemVersion", versionNode.getAttributes().getNamedItem( "column" ).getTextContent() );
+		assertEquals( "false", versionNode.getAttributes().getNamedItem( "insert" ).getTextContent() );
+		// @TODO: Decide on a clean syntax for this.
+		// assertEquals( "never", versionNode.getAttributes().getNamedItem( "generated" ).getTextContent() );
 	}
 
 	/**

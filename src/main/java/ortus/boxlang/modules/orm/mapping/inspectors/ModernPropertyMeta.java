@@ -26,9 +26,13 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 		}
 		if ( annotations.containsKey( ORMKeys.notNull ) ) {
 			column.computeIfAbsent( ORMKeys.nullable,
-			    key -> Boolean.FALSE.equals( BooleanCaster.cast( annotations.get( ORMKeys.notNull ) ) ) );
+			    key -> BooleanCaster.cast( annotations.get( ORMKeys.notNull ) ) );
 		}
-		column.computeIfAbsent( Key._NAME, key -> this.name );
+		// important to note that column.name defines the column name, whereas property.getName() defines the property name.
+		// column.computeIfAbsent( Key._NAME, key -> this.name );
+		// type coercion
+		column.computeIfPresent( ORMKeys.insertable, ( key, object ) -> BooleanCaster.cast( column.get( ORMKeys.insertable ) ) );
+		column.computeIfPresent( ORMKeys.updateable, ( key, object ) -> BooleanCaster.cast( column.get( ORMKeys.updateable ) ) );
 		return column;
 	}
 
@@ -41,9 +45,9 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 			if ( generatedValue.containsKey( ORMKeys.strategy ) ) {
 				generator.put( Key._CLASS, generatedValue.getAsString( ORMKeys.strategy ) );
 			}
+			// @TODO: Implement 'tableGenerator' and 'sequenceGenerator' annotations.
+			generator.putIfAbsent( Key.params, new Struct() );
 		}
-		// @TODO: Implement 'tableGenerator' and 'sequenceGenerator' annotations.
-		generator.putIfAbsent( Key.params, new Struct() );
 		return generator;
 	}
 }

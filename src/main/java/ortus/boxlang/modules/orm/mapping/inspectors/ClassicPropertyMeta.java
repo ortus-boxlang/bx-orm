@@ -31,7 +31,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
 	protected IStruct parseColumnAnnotations( IStruct annotations ) {
 		IStruct column = new Struct();
-		column.put( "name", this.name );
+		if ( annotations.containsKey( Key.column ) ) {
+			column.put( Key._name, annotations.getAsString( Key.column ) );
+		}
 		if ( annotations.containsKey( Key.length ) ) {
 			column.put( Key.length, annotations.getAsString( Key.length ) );
 		}
@@ -59,6 +61,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.dbDefault ) ) {
 			column.put( Key._DEFAULT, annotations.getAsString( ORMKeys.dbDefault ) );
 		}
+		column.putIfAbsent( "name", this.name );
 		return column;
 	}
 
@@ -91,7 +94,6 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				generator.put( Key.params, theParams );
 			}
 		}
-		generator.putIfAbsent( Key.params, new Struct() );
 		return generator;
 	}
 }

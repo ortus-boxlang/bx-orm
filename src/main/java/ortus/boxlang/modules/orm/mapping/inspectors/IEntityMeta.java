@@ -68,7 +68,21 @@ public interface IEntityMeta {
 	/**
 	 * Property methods
 	 */
+
+	/**
+	 * Retrieve a list of all key properties.
+	 */
 	public List<IPropertyMeta> getIdProperties();
 
+	/**
+	 * Retrieve the version property, if it exists.
+	 */
+	public IPropertyMeta getVersionProperty();
+
+	/**
+	 * Retrieve a list of all "normal" properties.
+	 * <p>
+	 * Excludes fieldtype=ID, fieldtype=version, fieldtype=timestamp, relationship fieldtypes, etc.
+	 */
 	public List<IPropertyMeta> getProperties();
 }

@@ -88,6 +88,7 @@ public class ORMKeys {
 	public static final Key	insert					= Key.of( "insert" );
 	public static final Key	update					= Key.of( "update" );
 	public static final Key	uniqueKeyName			= Key.of( "uniqueKeyName" );
+	public static final Key	timestamp				= Key.of( "timestamp" );
 
 	// Hibernate or JPA annotations
 	public static final Key	discriminator			= Key.of( "discriminator" );

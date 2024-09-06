@@ -39,27 +39,43 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 			this.discriminator.computeIfAbsent( Key.value, key -> this.annotations.getAsString( ORMKeys.discriminatorValue ) );
 		}
 
-		this.properties		= entityMeta.getAsArray( Key.properties ).stream()
+		this.allPersistentProperties	= entityMeta.getAsArray( Key.properties ).stream()
 		    .map( IStruct.class::cast )
 		    .filter( ( IStruct prop ) -> {
-								    var annotations = prop.getAsStruct( Key.annotations );
-								    return !annotations.containsKey( ORMKeys.persistent ) || BooleanCaster.cast( annotations.get( ORMKeys.persistent ), false );
-							    } )
+											    var annotations = prop.getAsStruct( Key.annotations );
+											    return !annotations.containsKey( ORMKeys.persistent )
+											        || BooleanCaster.cast( annotations.get( ORMKeys.persistent ), false );
+										    } )
+		    .collect( Collectors.toList() );
+
+		this.properties					= this.allPersistentProperties.stream()
 		    .filter( ( IStruct prop ) -> {
-			    var annotations = prop.getAsStruct( Key.annotations );
-			    return !annotations.containsKey( ORMKeys.fieldtype ) || annotations.getAsString( ORMKeys.fieldtype ).equals( "column" );
-		    } )
+											    var annotations = prop.getAsStruct( Key.annotations );
+											    return !annotations.containsKey( ORMKeys.fieldtype )
+											        || annotations.getAsString( ORMKeys.fieldtype ).equals( "column" );
+										    } )
 		    .map( ClassicPropertyMeta::new )
 		    .collect( Collectors.toList() );
 
-		this.idProperties	= entityMeta.getAsArray( Key.properties ).stream()
-		    .map( IStruct.class::cast )
+		this.idProperties				= this.allPersistentProperties.stream()
 		    .filter( ( IStruct prop ) -> {
-								    var annotations = prop.getAsStruct( Key.annotations );
-								    return annotations.containsKey( ORMKeys.fieldtype ) && annotations.getAsString( ORMKeys.fieldtype ).equals( "id" );
-							    } )
+											    var annotations = prop.getAsStruct( Key.annotations );
+											    return annotations.containsKey( ORMKeys.fieldtype )
+											        && annotations.getAsString( ORMKeys.fieldtype ).equals( "id" );
+										    } )
 		    .map( ClassicPropertyMeta::new )
 		    .collect( Collectors.toList() );
+
+		this.versionProperty			= this.allPersistentProperties.stream()
+		    .filter( ( IStruct prop ) -> {
+											    var annotations = prop.getAsStruct( Key.annotations );
+											    return annotations.containsKey( ORMKeys.fieldtype )
+											        && ( annotations.getAsString( ORMKeys.fieldtype ).equals( "version" )
+											            || annotations.containsKey( ORMKeys.timestamp ) );
+										    } )
+		    .map( ClassicPropertyMeta::new )
+		    .findFirst()
+		    .orElse( null );
 
 	}
 }

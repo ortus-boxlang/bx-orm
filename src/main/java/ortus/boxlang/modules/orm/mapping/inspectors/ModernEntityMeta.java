@@ -76,19 +76,33 @@ public class ModernEntityMeta extends AbstractEntityMeta {
 			}
 		}
 
-		this.properties		= entityMeta.getAsArray( Key.properties ).stream()
+		this.allPersistentProperties	= entityMeta.getAsArray( Key.properties ).stream()
 		    .map( IStruct.class::cast )
 		    // Filter out transient properties, aka @Transient
 		    .filter( ( prop ) -> !prop.getAsStruct( Key.annotations ).containsKey( ORMKeys._transient ) )
-		    .filter( ( prop ) -> prop.getAsStruct( Key.annotations ).containsKey( Key.column ) )
+		    .collect( Collectors.toList() );
+
+		this.properties					= allPersistentProperties.stream()
+		    .filter( ( prop ) -> {
+											    var annotations = prop.getAsStruct( Key.annotations );
+											    return annotations.containsKey( Key.column )
+											        && !annotations.containsKey( Key.version )
+											        && !annotations.containsKey( Key.id );
+										    } )
 		    .map( ModernPropertyMeta::new )
 		    .collect( Collectors.toList() );
 
-		this.idProperties	= entityMeta.getAsArray( Key.properties ).stream()
-		    .map( IStruct.class::cast )
-		    .filter( ( prop ) -> !prop.getAsStruct( Key.annotations ).containsKey( ORMKeys._transient ) )
+		this.idProperties				= allPersistentProperties.stream()
 		    .filter( ( prop ) -> prop.getAsStruct( Key.annotations ).containsKey( Key.id ) )
 		    .map( ModernPropertyMeta::new )
 		    .collect( Collectors.toList() );
+
+		this.versionProperty			= allPersistentProperties.stream()
+		    .filter(
+		        ( prop ) -> prop.getAsStruct( Key.annotations ).containsKey( Key.version )
+		            || prop.getAsStruct( Key.annotations ).containsKey( ORMKeys.timestamp ) )
+		    .map( ModernPropertyMeta::new )
+		    .findFirst()
+		    .orElse( null );
 	}
 }

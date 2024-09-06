@@ -13,9 +13,13 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	protected IStruct				meta;
 	protected IStruct				annotations;
 
+	protected List<IStruct>			allPersistentProperties;
+
 	protected List<IPropertyMeta>	idProperties;
 
 	protected List<IPropertyMeta>	properties;
+
+	protected IPropertyMeta			versionProperty;
 
 	protected String				entityName;
 
@@ -170,5 +174,9 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 	public List<IPropertyMeta> getProperties() {
 		return this.properties;
+	}
+
+	public IPropertyMeta getVersionProperty() {
+		return this.versionProperty;
 	}
 }

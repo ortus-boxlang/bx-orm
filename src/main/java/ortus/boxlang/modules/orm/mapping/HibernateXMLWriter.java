@@ -1,5 +1,7 @@
 package ortus.boxlang.modules.orm.mapping;
 
+import java.util.List;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -93,10 +95,10 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * @return A &lt;property /&gt; element ready to add to a Hibernate mapping document
 	 */
 	public Element generatePropertyElement( IPropertyMeta prop ) {
-		IStruct	column	= prop.getColumn();
-		IStruct	types	= prop.getTypes();
+		IStruct	columnInfo	= prop.getColumn();
+		IStruct	types		= prop.getTypes();
 
-		Element	theNode	= this.document.createElement( "property" );
+		Element	theNode		= this.document.createElement( "property" );
 		theNode.setAttribute( "name", prop.getName() );
 		theNode.setAttribute( "type", types.getAsString( ORMKeys.ORMType ) );
 
@@ -105,11 +107,11 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		} else {
 			theNode.appendChild( generateColumnElement( prop ) );
 		}
-		if ( column.containsKey( ORMKeys.insertable ) ) {
-			theNode.setAttribute( "insert", trueFalseFormat( column.getAsBoolean( ORMKeys.insertable ) ) );
+		if ( columnInfo.containsKey( ORMKeys.insertable ) ) {
+			theNode.setAttribute( "insert", trueFalseFormat( columnInfo.getAsBoolean( ORMKeys.insertable ) ) );
 		}
-		if ( column.containsKey( ORMKeys.updateable ) ) {
-			theNode.setAttribute( "update", trueFalseFormat( column.getAsBoolean( ORMKeys.updateable ) ) );
+		if ( columnInfo.containsKey( ORMKeys.updateable ) ) {
+			theNode.setAttribute( "update", trueFalseFormat( columnInfo.getAsBoolean( ORMKeys.updateable ) ) );
 		}
 		if ( prop.isLazy() ) {
 			theNode.setAttribute( "lazy", "true" );
@@ -117,56 +119,6 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		if ( !prop.isOptimisticLock() ) {
 			theNode.setAttribute( "optimistic-lock", "false" );
 		}
-		// @TODO: generated
-
-		/**
-		 * TODO: Implement or test all the below:
-		 * table
-		 * catalog ** ACF only?
-		 * schema ** ACF only?
-		 * column
-		 * formula
-		 * persistent / transient
-		 * where
-		 * dbdefault
-		 * sqltype
-		 * cfc
-		 * mappedBy
-		 * optimisticlock
-		 * insert
-		 * update
-		 * unique
-		 * notnull
-		 * uniqueKey
-		 * constrained
-		 * cascade
-		 * fetch
-		 * lazy
-		 * orderby
-		 * missingRowIgnored
-		 * linktable
-		 * linkcatalog
-		 * linkschema
-		 * joinColumn
-		 * inverse
-		 * inversejoincolumn
-		 * structkeycolumn
-		 * structkeytype
-		 * structkeydatatype ?? ACF only?
-		 * elementcolumn
-		 * elementtype
-		 * index
-		 * ormType
-		 * fieldtype
-		 * unSavedValue - deprecated
-		 *
-		 * ## Generator annotations
-		 * generated
-		 * generator
-		 * params
-		 * sequence
-		 * selectKey
-		 */
 
 		return theNode;
 	}
@@ -183,25 +135,25 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * @return A &lt;column /&gt; element ready to add to a Hibernate mapping document
 	 */
 	public Element generateColumnElement( IPropertyMeta prop ) {
-		Element	columnNode	= this.document.createElement( "column" );
+		Element	theNode		= this.document.createElement( "column" );
 		IStruct	columnInfo	= prop.getColumn();
 		IStruct	types		= prop.getTypes();
 
-		columnNode.setAttribute( "name", prop.getName() );
+		theNode.setAttribute( "name", prop.getName() );
 		if ( columnInfo.containsKey( ORMKeys.nullable ) && Boolean.FALSE.equals( columnInfo.getAsBoolean( ORMKeys.nullable ) ) ) {
-			columnNode.setAttribute( "not-null", "true" );
+			theNode.setAttribute( "not-null", "true" );
 		}
 		if ( columnInfo.containsKey( ORMKeys.unique ) && Boolean.TRUE.equals( columnInfo.getAsBoolean( ORMKeys.unique ) ) ) {
-			columnNode.setAttribute( "unique", "true" );
+			theNode.setAttribute( "unique", "true" );
 		}
 		if ( columnInfo.containsKey( ORMKeys.length ) ) {
-			columnNode.setAttribute( "length", columnInfo.getAsString( ORMKeys.length ) );
+			theNode.setAttribute( "length", columnInfo.getAsString( ORMKeys.length ) );
 		}
 		if ( columnInfo.containsKey( ORMKeys.precision ) ) {
-			columnNode.setAttribute( "precision", columnInfo.getAsString( ORMKeys.precision ) );
+			theNode.setAttribute( "precision", columnInfo.getAsString( ORMKeys.precision ) );
 		}
 		if ( columnInfo.containsKey( ORMKeys.scale ) ) {
-			columnNode.setAttribute( "scale", columnInfo.getAsString( ORMKeys.scale ) );
+			theNode.setAttribute( "scale", columnInfo.getAsString( ORMKeys.scale ) );
 		}
 		// if ( prop.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
 		// columnNode.setAttribute( "unsaved-value", prop.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
@@ -210,16 +162,16 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		// columnNode.setAttribute( "check", prop.getPropertyAnnotation( prop, ORMKeys.check ) );
 		// }
 		if ( columnInfo.containsKey( Key._DEFAULT ) ) {
-			columnNode.setAttribute( "default", columnInfo.getAsString( Key._DEFAULT ) );
+			theNode.setAttribute( "default", columnInfo.getAsString( Key._DEFAULT ) );
 		}
 		if ( types.containsKey( Key.sqltype ) ) {
-			columnNode.setAttribute( "sql-type", types.getAsString( Key.sqltype ) );
+			theNode.setAttribute( "sql-type", types.getAsString( Key.sqltype ) );
 		}
 		// String uniqueKey = prop.getPropertyUniqueKey( prop );
 		// if ( uniqueKey != null ) {
 		// columnNode.setAttribute( "unique-key", uniqueKey );
 		// }
-		return columnNode;
+		return theNode;
 	}
 
 	/**
@@ -341,6 +293,9 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		String	generatorType	= generator.getAsString( Key._CLASS );
 
 		Element	theNode			= this.document.createElement( "generator" );
+		if ( !List.of( "assigned", "increment" ).contains( generatorType ) ) {
+			logger.warn( "Untested generator type: {}. Please forward to your local Ortus agency.", generatorType );
+		}
 		theNode.setAttribute( "class", generatorType );
 		IStruct params = new Struct();
 
@@ -432,6 +387,12 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 			classElement.appendChild( generateIdElement( propertyMeta ) );
 		} );
 
+		// Both fieldtype=version and fieldtype=timestamp translate to a single <version> xml node.
+		IPropertyMeta versionProperty = entity.getVersionProperty();
+		if ( versionProperty != null ) {
+			classElement.appendChild( generateVersionElement( versionProperty ) );
+		}
+
 		// generate properties, aka <property> elements
 		entity.getProperties().stream().forEach( ( propertyMeta ) -> {
 			classElement.appendChild( generatePropertyElement( propertyMeta ) );
@@ -444,9 +405,41 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		// @TODO: generate <version>
 		// @TODO: generate <many-to-one>
 		// @TODO: generate <one-to-one>
-		// @TODO: generate <version>
+		// @TODO: generate/handle optimistic lock
 
 		return classElement;
+	}
+
+	/**
+	 * Generate a &lt;version/&gt; element for the given column metadata.
+	 * <p>
+	 * A version element defines an entity version value.
+	 *
+	 * @param prop Column metadata
+	 *
+	 * @return A &lt;version/&gt; element ready to add to a Hibernate mapping document
+	 */
+	public Element generateVersionElement( IPropertyMeta prop ) {
+		Element	theNode		= this.document.createElement( "version" );
+		IStruct	columnInfo	= prop.getColumn();
+		IStruct	types		= prop.getTypes();
+
+		// PROPERTY name
+		theNode.setAttribute( "name", prop.getName() );
+		// COLUMN name
+		if ( columnInfo.containsKey( Key._NAME ) ) {
+			theNode.setAttribute( "column", columnInfo.getAsString( Key._NAME ) );
+		}
+		if ( types.containsKey( ORMKeys.ORMType ) ) {
+			theNode.setAttribute( "type", types.getAsString( ORMKeys.ORMType ) );
+		}
+		if ( prop.getUnsavedValue() != null ) {
+			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );
+		}
+		if ( columnInfo.containsKey( ORMKeys.insertable ) ) {
+			theNode.setAttribute( "insert", trueFalseFormat( columnInfo.getAsBoolean( ORMKeys.insertable ) ) );
+		}
+		return theNode;
 	}
 
 	private String trueFalseFormat( Boolean value ) {
