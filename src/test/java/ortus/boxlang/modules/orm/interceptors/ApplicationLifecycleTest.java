@@ -68,7 +68,7 @@ public class ApplicationLifecycleTest {
 		                "driver", "derby",
 		                "properties", Struct.of(
 		                    "connectionString", "jdbc:derby:memory:TestDB;create=true" ) ) ),
-		        "name", "MyAppName" ) );
+		        "name", "ApplicationLifecycleTest" ) );
 		// Announce the event the interceptor listens to
 		interceptorService.announce(
 		    Key.of( "afterApplicationListenerLoad" ),

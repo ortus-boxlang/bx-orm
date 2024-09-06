@@ -27,7 +27,7 @@ public class EntityLoadByPK extends BIF {
 		declaredArguments = new Argument[] {
 		    new Argument( true, "String", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
 		    new Argument( true, "String", Key.id, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
-		    new Argument( true, "String", ORMKeys.unique, Set.of( Validator.NOT_IMPLEMENTED ) )
+		    new Argument( false, "String", ORMKeys.unique, Set.of( Validator.NOT_IMPLEMENTED ) )
 		};
 	}
 

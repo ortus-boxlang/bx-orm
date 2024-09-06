@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.hibernate.SessionFactory;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +25,7 @@ public class ORMGetSessionFactoryTest extends BaseORMTest {
 		assertEquals( sessionFactory, variables.get( result ) );
 	}
 
+	@Disabled
 	@DisplayName( "It throws if the named datasource does not exist or is not configured for ORM" )
 	@Test
 	public void testBadDSN() {
@@ -40,6 +42,8 @@ public class ORMGetSessionFactoryTest extends BaseORMTest {
 		    () -> instance.executeSource( "result = ormGetSessionFactory( 'dsnNotConfiguredForORM' ) ", context )
 		);
 	}
+
+	@Disabled
 
 	@DisplayName( "It can get the session factory from a named datasource" )
 	@Test

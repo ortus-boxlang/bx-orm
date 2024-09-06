@@ -22,7 +22,7 @@ public class ORMGetSessionFactory extends BIF {
 	public ORMGetSessionFactory() {
 		super();
 		declaredArguments = new Argument[] {
-		    new Argument( true, "String", ORMKeys.datasource, Set.of( Validator.NON_EMPTY ) )
+		    new Argument( false, "String", ORMKeys.datasource, Set.of( Validator.NON_EMPTY ) )
 		};
 	}
 

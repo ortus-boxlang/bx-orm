@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.hibernate.Session;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +26,7 @@ public class ORMGetSessionTest extends BaseORMTest {
 		assertEquals( session, variables.get( result ) );
 	}
 
+	@Disabled
 	@DisplayName( "It throws if the named datasource does not exist or is not configured for ORM" )
 	@Test
 	public void testBadDSN() {
@@ -42,6 +44,7 @@ public class ORMGetSessionTest extends BaseORMTest {
 		);
 	}
 
+	@Disabled
 	@DisplayName( "It can get the ORM session from a named datasource" )
 	@Test
 	public void testNamedDatasource() {

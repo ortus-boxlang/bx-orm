@@ -297,7 +297,7 @@ public class HibernateXMLWriterTest {
 
 		Node		classEl			= doc.getDocumentElement().getFirstChild();
 		Node		idNode			= classEl.getFirstChild();
-		Node		generatorNode	= idNode.getFirstChild();
+		Node		generatorNode	= idNode.getLastChild();
 
 		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
 		    .isEqualTo( "increment" );
