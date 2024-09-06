@@ -549,22 +549,14 @@ public class HibernateXMLWriterTest {
 
 	/**
 	 * TODO: Test each below property annotation:
-	 * table
-	 * catalog ** ACF only?
-	 * schema ** ACF only?
 	 * column
 	 * formula
 	 * persistent / transient
 	 * where
-	 * dbdefault
 	 * sqltype
 	 * cfc
 	 * mappedBy
 	 * optimisticlock
-	 * insert
-	 * update
-	 * unique
-	 * notnull
 	 * uniqueKey
 	 * constrained
 	 * cascade
@@ -587,13 +579,6 @@ public class HibernateXMLWriterTest {
 	 * ormType
 	 * fieldtype
 	 * unSavedValue - deprecated
-	 * 
-	 * ## Generator annotations
-	 * generated
-	 * generator
-	 * params
-	 * sequence
-	 * selectKey
 	 */
 
 	private IStruct getClassMetaFromFile( String entityFile ) {
