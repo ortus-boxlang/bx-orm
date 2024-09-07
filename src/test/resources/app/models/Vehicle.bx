@@ -1,4 +1,4 @@
-class entityName="Auto" table="`AUTOS`" persistent="true" {
+class entityName="Vehicle" table="vehicles" persistent="true" {
 
     property 
         name="vin" 
@@ -15,6 +15,6 @@ class entityName="Auto" table="`AUTOS`" persistent="true" {
         type="string";
 
     function onPreInsert(){
-        log.info( "Inserting new Auto: #getMake()# #getModel()#" );
+        log.info( "Inserting new Vehicle: #getMake()# #getModel()#" );
     }
 }

@@ -559,22 +559,19 @@ public class HibernateXMLWriterTest {
 				insert="false"
 				name="version";
 		}
-		""",
-	    """
-		@Entity
-		class {
-			@Version
-			@Column{
-				"name" : "itemVersion",
-				"insertable" : false
-			}
-			// @TODO: Decide on a clean syntax for using generated=always|never|insert. I dislike spreading version info across three new annotation groups.
-			@GeneratedValue {
-				"generated": "never"
-			}
-			property name="version" ormType="integer";
-		}
 		"""
+		// 	@TODO: simplified modern syntax
+	    // ,"""
+		// @Entity
+		// class {
+		// 	@Version{
+		// 		"column" : "itemVersion",
+		// 		"insertable" : false
+		// 		"generated": "never"
+		// 	}
+		// 	property name="version" ormType="integer";
+		// }
+		// """
 	} )
 	// @formatter:on
 	@ParameterizedTest
@@ -586,7 +583,6 @@ public class HibernateXMLWriterTest {
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 		Node		versionNode	= classEL.getFirstChild();
-		String		xml			= xmlToString( doc );
 
 		assertEquals( "version", versionNode.getNodeName() );
 		assertEquals( "version", versionNode.getAttributes().getNamedItem( "name" ).getTextContent() );

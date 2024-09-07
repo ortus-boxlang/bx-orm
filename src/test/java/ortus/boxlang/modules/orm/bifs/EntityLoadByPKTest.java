@@ -41,7 +41,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				result = entityLoadByPK( "Auto", "1HGCM82633A123456" ).getMake();
+				result = entityLoadByPK( "Vehicle", "1HGCM82633A123456" ).getMake();
 			""",
 			context
 		);

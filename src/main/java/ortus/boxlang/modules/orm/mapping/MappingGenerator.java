@@ -129,9 +129,10 @@ public class MappingGenerator {
 					        }
 				        } )
 				        .forEach( ( IStruct meta ) -> {
-					        entityMap.put( meta.getAsString( Key._name ),
+					        String entityName = readEntityName( meta );
+					        entityMap.put( entityName,
 					            new EntityRecord(
-					                meta.getAsString( Key._name ),
+					                entityName,
 					                new BetterFQN( entityLookupPath.getParent(), Path.of( meta.getAsString( Key.path ) ) ).toString(),
 					                writeXMLFile( meta )
 					            )
@@ -144,6 +145,21 @@ public class MappingGenerator {
 		    } );
 
 		return this;
+	}
+
+	private String readEntityName( IStruct meta ) {
+		String	entityName	= null;
+		var		annotations	= meta.getAsStruct( Key.annotations );
+		if ( annotations.containsKey( ORMKeys.entityName ) ) {
+			entityName = annotations.getAsString( ORMKeys.entityName );
+		}
+		if ( annotations.containsKey( ORMKeys.entity ) ) {
+			entityName = annotations.getAsString( ORMKeys.entity );
+		}
+		if ( entityName == null || entityName.isBlank() ) {
+			entityName = meta.getAsString( Key._name );
+		}
+		return entityName;
 	}
 
 	private IStruct getClassMeta( File entityFile ) {
