@@ -34,32 +34,56 @@ this.ormSettings = {
 
 > *For the purposes of this section, "persistent" here means that it is manageable by Hibernate ORM and worthy of populating FROM as well as persistent TO a database record upon saving the entity.*
 
-By default, all boxlang class files located in your entity path directory(ies) are considered persistent. To expressly mark a class file as not an ORM entity, use the `persistent` annotation:
+All boxlang class files located in your entity path directory(ies) are considered non-persistent by default. To mark an entity as persistent, use the `@Entity` annotation.
 
 ```js
-@Persistent false
+@Entity
 class {
 ...
 }
-// OR
+```
+
+For drop-in compatibility with CFML engines, we also support the historical `persistent` annotation:
+```js
 class persistent="false" {
 ...
 }
 ```
 
-In the same vein, properties within an entity class file are considered persistent unless annotated otherwise:
+But once a class is marked as persistent using `@Entity` or `persistent=true`, properties within that entity class file are considered persistent unless annotated otherwise:
 
 ```js
+@Entity
+class {
+	// this property is persistent by default:
+	property name="name", type="string";
+}
+```
+
+Use the `Transient` annotation to mark a specific property as NOT persistable:
+
+```js
+@Entity
 class {
 	// this property is persistent by default:
 	property name="name", type="string";
 
 	// this property is NOT persistent
-	@Persistent false
+	@Transient
+	property name="foo", type="string";
+}
+```
+
+Once again, we support the historical `persistent="false"` syntax for CFML compatibility:
+
+```js
+@Entity
+class {
+	// this property is persistent by default:
 	property name="name", type="string";
-	
-	// or
-	property name="name", type="string", persistent="false";
+
+	// this property is NOT persistent
+	property name="foo", type="string" persistent="false";
 }
 ```
 
@@ -69,18 +93,52 @@ There are a large number of annotations supported by bx-orm which allow great fl
 
 ## Entity Annotations
 
+### @Entity
+
+Specifies that the class is an ORM entity.
+
+```js
+@Entity
+class {
+	// entity properties and methods
+}
+```
+
+### Persistent (Legacy)
+
+Specifies that the class is an ORM entity.
+
+```js
+class persistent="true" {
+	// entity properties and methods
+}
+```
+
+> *Legacy - prefer `@Entity` or `@Transient` syntax.*
+
+### @Transient - Coming Soon
+
+Specifies that the class is NOT a persistent entity. This is the default for boxlang and CFML ORM applications, but sometimes spelling it out is the right way to go. 😉
+
+```js
+@Transient
+class myRegularBoxlangClass {
+	// ...
+}
+```
+
 ### @Discriminator
 
-Specifies discriminator data for the entity hierarchy. Supported keys are `name`, `type`, `value`, `force`, `insert`, `formula`. [See Hibernate 5 Discriminator docs](https://docs.jboss.org/hibernate/orm/5.0/manual/en-US/html/ch05.html#mapping-declaration-discriminator), but be aware we've simplified the syntax (key names) for BL.
+Specifies discriminator data for the entity hierarchy. Supported keys are `name`, `type`, `value`, `force`, `insert`, `formula`. [See Hibernate 5 Discriminator docs](https://docs.jboss.org/hibernate/orm/5.0/manual/en-US/html/ch05.html#mapping-declaration-discriminator), but be aware we've simplified the key names for BL.
 
 ```js
 @Discriminator {
-	"name": "discriminatorName",
+	"name": "myDiscriminatorColumn",
+	"value": "myDiscriminatorValue",
+	"formula": "discriminatorFormula"
 	"type": "string",
-	"value": "discriminatorValue",
 	"force": true,
 	"insert": true,
-	"formula": "discriminatorFormula"
 }
 ```
 
@@ -89,43 +147,24 @@ Specifies discriminator data for the entity hierarchy. Supported keys are `name`
 Specifies the value of the discriminator column for an entity. 
 
 ```js
-@DiscriminatorValue("discriminatorValue")
-```
-
-> *Legacy - prefer `@Discriminator { "value" : "foo" }` syntax.*
-
-### @DiscriminatorColumn
-
-Specifies the discriminator column for the entity hierarchy.
-
-
-```js
-@DiscriminatorColumn("discriminatorColumnName")
-```
-
-> *Legacy - prefer `@Discriminator { "name" : "foobar" }` syntax.*
-
-### @Entity
-
-Specifies that the class is an entity. Since CFML and BoxLang both use entity paths to treat classes within a directory as persistent by default, this is mostly a no-op... but is still good practice for "documentation as code" purposes.
-
-```js
-@Entity
-class MyEntity {
+class discriminatorValue="foo" {
 	// entity properties and methods
 }
 ```
 
-### @Transient - Coming Soon
+> *Legacy - prefer `@Discriminator { "value" : "foo" }` syntax.*
 
-Specifies that the class is NOT a persistent entity. Override the persistent-by-default nature of boxlang-orm.
+### DiscriminatorColumn
+
+Specifies the discriminator column for the entity hierarchy.
 
 ```js
-@Transient
-class myRegularBoxlangClass {
-	// ...
+class discriminatorColumn="foobar" {
+	// entity properties and methods
 }
 ```
+
+> *Legacy - prefer `@Discriminator { "name" : "foobar" }` syntax.*
 
 > *Not yet supported, please check back for updates.*
 
@@ -140,7 +179,7 @@ class MyEntity {
 }
 ```
 
-### @Readonly or @Immutable
+### @Immutable
 
 Specifies that the entity or mapped superclass is immutable.
 
@@ -149,11 +188,19 @@ Specifies that the entity or mapped superclass is immutable.
 class MyEntity {
 	// entity properties and methods
 }
-// OR
+```
+
+### @Readonly (Legacy)
+
+Specifies that the entity or mapped superclass is readonly, aka "immutable".
+
+```js
 class readonly="true" MyEntity {
 	// entity properties and methods
 }
 ```
+
+> *Legacy - prefer `@Immutable`*
 
 ## Property Annotations
 
@@ -297,6 +344,63 @@ property name="name";
 // OR
 property name="name" update="false";
 ```
+
+## FieldType (Legacy)
+
+Specify a specific type of ORM property:
+
+* `column` - The default. This property is a "simple" database column-backed ORM property.
+* `id` - Designate this property as the primary key.
+* `version` - Designate this property as a entity versioning strategy. Can only be used once per entity.
+* `timestamp` - Same as `version`, but for datetime fields.
+* `one-to-one` - This property represents a one-to-one relationship with another entity type
+* `one-to-many` - This property represents a one-to-many relationship with another entity type
+* `many-to-many` - This property represents a many-to-many relationship with another entity type
+* `many-to-one` - This property represents a many-to-one relationship with another entity type
+* `collection` - 
+
+```js
+property
+	name="invoices"
+	fieldtype="one-to-many"
+	cfc="models.orm.Invoice"
+	fkcolumn="invoiceID";
+```
+
+> *Legacy - prefer `@MyFieldType`, for example `@Version` or `@ManyToMany`*
+
+## @Column
+
+Designate this property as a simple column property.
+
+```js
+@Column
+property name="title";
+```
+
+Replaces the traditional `fieldtype="column"` syntax.
+
+## @Id
+
+Designate this property as the primary key.
+
+```js
+@Id
+property name="id";
+```
+
+Replaces the traditional `fieldtype="id"` syntax.
+
+## @Version
+
+Designate this property as a versioning value to use when versioning the entity. Can only be used on a single property per entity.
+
+```js
+@Version
+property name="version";
+```
+
+Replaces the traditional `fieldtype="version"` syntax.
 
 ## Development
 

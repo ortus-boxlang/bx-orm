@@ -568,6 +568,7 @@ public class HibernateXMLWriterTest {
 				"name" : "itemVersion",
 				"insertable" : false
 			}
+			// @TODO: Decide on a clean syntax for using generated=always|never|insert. I dislike spreading version info across three new annotation groups.
 			@GeneratedValue {
 				"generated": "never"
 			}
@@ -591,7 +592,6 @@ public class HibernateXMLWriterTest {
 		assertEquals( "version", versionNode.getAttributes().getNamedItem( "name" ).getTextContent() );
 		assertEquals( "itemVersion", versionNode.getAttributes().getNamedItem( "column" ).getTextContent() );
 		assertEquals( "false", versionNode.getAttributes().getNamedItem( "insert" ).getTextContent() );
-		// @TODO: Decide on a clean syntax for this.
 		// assertEquals( "never", versionNode.getAttributes().getNamedItem( "generated" ).getTextContent() );
 	}
 
