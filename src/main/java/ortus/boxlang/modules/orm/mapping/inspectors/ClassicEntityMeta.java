@@ -54,7 +54,7 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 											    return !annotations.containsKey( ORMKeys.fieldtype )
 											        || annotations.getAsString( ORMKeys.fieldtype ).equals( "column" );
 										    } )
-		    .map( ClassicPropertyMeta::new )
+		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
 		    .collect( Collectors.toList() );
 
 		this.idProperties				= this.allPersistentProperties.stream()
@@ -63,7 +63,7 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 											    return annotations.containsKey( ORMKeys.fieldtype )
 											        && annotations.getAsString( ORMKeys.fieldtype ).equals( "id" );
 										    } )
-		    .map( ClassicPropertyMeta::new )
+		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
 		    .collect( Collectors.toList() );
 
 		this.versionProperty			= this.allPersistentProperties.stream()
@@ -73,9 +73,17 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 											        && ( annotations.getAsString( ORMKeys.fieldtype ).equals( "version" )
 											            || annotations.containsKey( ORMKeys.timestamp ) );
 										    } )
-		    .map( ClassicPropertyMeta::new )
+		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
 		    .findFirst()
 		    .orElse( null );
 
+		this.associations				= this.allPersistentProperties.stream()
+		    .filter( ( IStruct prop ) -> {
+											    var annotations = prop.getAsStruct( Key.annotations );
+											    return annotations.containsKey( ORMKeys.fieldtype )
+											        && annotations.getAsString( ORMKeys.fieldtype ).equals( "one-to-one" );
+										    } )
+		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
+		    .collect( Collectors.toList() );
 	}
 }

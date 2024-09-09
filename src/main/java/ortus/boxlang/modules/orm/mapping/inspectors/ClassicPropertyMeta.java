@@ -7,16 +7,17 @@ import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.types.util.JSONUtil;
 
 public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
-	public ClassicPropertyMeta( IStruct meta ) {
-		super( meta );
+	public ClassicPropertyMeta( String entityName, IStruct meta ) {
+		super( entityName, meta );
 
 		// General property annotations
 		if ( this.annotations.containsKey( ORMKeys.lazy ) ) {
-			this.isLazy = BooleanCaster.cast( this.annotations.get( ORMKeys.lazy ) );
+			this.lazy = this.annotations.getAsString( ORMKeys.lazy );
 		}
 		if ( this.annotations.containsKey( ORMKeys.readOnly ) ) {
 			this.isImmutable = BooleanCaster.cast( this.annotations.get( ORMKeys.readOnly ) );
@@ -27,6 +28,84 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( this.annotations.containsKey( ORMKeys.formula ) ) {
 			this.formula = this.annotations.getAsString( ORMKeys.formula );
 		}
+	}
+
+	protected IStruct parseAssociation( IStruct annotations ) {
+		if ( !annotations.containsKey( ORMKeys.fieldtype ) ) {
+			return Struct.EMPTY;
+		}
+
+		var association = new Struct();
+		association.put( Key._NAME, this.name );
+
+		String associationType = annotations.getAsString( ORMKeys.fieldtype );
+		if ( annotations.containsKey( ORMKeys.linkTable ) && !annotations.containsKey( ORMKeys.fkcolumn ) ) {
+			// @TODO: Implement compatibility shim in bx-compat or bx-orm-compat
+			throw new BoxRuntimeException( String.format( "Missing 'fkcolumn' annotation for property [{}] on entity [{}]", this.name, this.entityName ) );
+		}
+		if ( annotations.containsKey( ORMKeys.fkcolumn ) || annotations.containsKey( ORMKeys.linkTable ) ) {
+			associationType = "many-to-one";
+			association.put( ORMKeys.unique, true );
+			association.put( Key.column, annotations.getAsString( ORMKeys.fkcolumn ) );
+		}
+		association.put( Key.type, associationType );
+		if ( annotations.containsKey( ORMKeys.lazy ) ) {
+			association.compute( ORMKeys.lazy, ( key, object ) -> {
+				// TODO: figure out what "extra" maps to in Hibernate 5.
+				// helpx.adobe.com/coldfusion/developing-applications/coldfusion-orm/performance-optimization/lazy-loading.html
+				String lazy = annotations.getAsString( ORMKeys.lazy ).trim().toLowerCase();
+				if ( "true".equals( lazy ) ) {
+					lazy = "proxy";
+				}
+				return lazy;
+			} );
+		}
+		if ( annotations.containsKey( ORMKeys.cfc ) ) {
+			annotations.put( Key._CLASS, annotations.getAsString( ORMKeys.cfc ) );
+		}
+		if ( annotations.containsKey( Key._CLASS ) ) {
+			association.put( Key._CLASS, annotations.getAsString( Key._CLASS ) );
+		}
+		if ( annotations.containsKey( ORMKeys.fetch ) ) {
+			association.put( ORMKeys.fetch, annotations.getAsString( ORMKeys.fetch ) );
+		}
+		if ( annotations.containsKey( ORMKeys.formula ) ) {
+			association.put( ORMKeys.formula, annotations.getAsString( ORMKeys.formula ) );
+		}
+		if ( annotations.containsKey( ORMKeys.constrained ) ) {
+			association.put( ORMKeys.constrained, BooleanCaster.cast( annotations.getAsString( ORMKeys.constrained ) ) );
+		}
+		if ( annotations.containsKey( ORMKeys.mappedBy ) ) {
+			association.put( ORMKeys.mappedBy, annotations.getAsString( ORMKeys.mappedBy ) );
+		}
+		if ( annotations.containsKey( ORMKeys.embedXML ) ) {
+			association.put( ORMKeys.embedXML, annotations.getAsString( ORMKeys.embedXML ) );
+		}
+		if ( annotations.containsKey( ORMKeys.access ) ) {
+			association.put( ORMKeys.access, annotations.getAsString( ORMKeys.access ) );
+		}
+		if ( annotations.containsKey( ORMKeys.missingRowIgnored ) ) {
+			association.compute( ORMKeys.missingRowIgnored,
+			    ( key, object ) -> BooleanCaster.cast( annotations.get( ORMKeys.missingRowIgnored ) ) ? "ignore" : "exception" );
+		}
+		if ( annotations.containsKey( ORMKeys.cascade ) ) {
+			/*
+			 * @TODO: Map to JPA cascade types: ALL, PERSIST, MERGE, REMOVE, REFRESH, DETACH
+			 * https://jakarta.ee/specifications/persistence/3.0/jakarta-persistence-spec-3.0#a15100
+			 * 
+			 * The possible values are:
+			 * persist, merge, delete, save-update, evict, replicate, lock, refresh, all, none
+			 */
+			association.put( ORMKeys.cascade, annotations.getAsString( ORMKeys.cascade ) );
+		}
+		// Alias 'foreignKeyName' to 'foreignKey'
+		if ( annotations.containsKey( ORMKeys.foreignKeyName ) ) {
+			annotations.put( ORMKeys.foreignKey, annotations.getAsString( ORMKeys.foreignKeyName ) );
+		}
+		if ( annotations.containsKey( ORMKeys.foreignKey ) ) {
+			association.put( ORMKeys.foreignKey, annotations.getAsString( ORMKeys.foreignKey ) );
+		}
+		return association;
 	}
 
 	protected IStruct parseColumnAnnotations( IStruct annotations ) {

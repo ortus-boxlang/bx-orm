@@ -1,5 +1,6 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -18,6 +19,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	protected List<IPropertyMeta>	idProperties;
 
 	protected List<IPropertyMeta>	properties;
+
+	protected List<IPropertyMeta>	associations;
 
 	protected IPropertyMeta			versionProperty;
 
@@ -71,6 +74,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 		this.isSelectBeforeUpdate	= this.annotations.containsKey( ORMKeys.selectBeforeUpdate )
 		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.selectBeforeUpdate, false ) );
+
+		this.associations			= new ArrayList<>();
 	}
 
 	/**
@@ -178,5 +183,9 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 	public IPropertyMeta getVersionProperty() {
 		return this.versionProperty;
+	}
+
+	public List<IPropertyMeta> getAssociations() {
+		return this.associations;
 	}
 }

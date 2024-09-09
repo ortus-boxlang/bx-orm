@@ -89,20 +89,25 @@ public class ModernEntityMeta extends AbstractEntityMeta {
 											        && !annotations.containsKey( Key.version )
 											        && !annotations.containsKey( Key.id );
 										    } )
-		    .map( ModernPropertyMeta::new )
+		    .map( prop -> new ModernPropertyMeta( this.getEntityName(), prop ) )
 		    .collect( Collectors.toList() );
 
 		this.idProperties				= allPersistentProperties.stream()
 		    .filter( ( prop ) -> prop.getAsStruct( Key.annotations ).containsKey( Key.id ) )
-		    .map( ModernPropertyMeta::new )
+		    .map( prop -> new ModernPropertyMeta( this.getEntityName(), prop ) )
 		    .collect( Collectors.toList() );
 
 		this.versionProperty			= allPersistentProperties.stream()
 		    .filter(
 		        ( prop ) -> prop.getAsStruct( Key.annotations ).containsKey( Key.version )
 		            || prop.getAsStruct( Key.annotations ).containsKey( ORMKeys.timestamp ) )
-		    .map( ModernPropertyMeta::new )
+		    .map( prop -> new ModernPropertyMeta( this.getEntityName(), prop ) )
 		    .findFirst()
 		    .orElse( null );
+
+		this.associations				= this.allPersistentProperties.stream()
+		    .filter( ( IStruct prop ) -> prop.getAsStruct( Key.annotations ).containsKey( ORMKeys.OneToOne ) )
+		    .map( prop -> new ModernPropertyMeta( this.getEntityName(), prop ) )
+		    .collect( Collectors.toList() );
 	}
 }

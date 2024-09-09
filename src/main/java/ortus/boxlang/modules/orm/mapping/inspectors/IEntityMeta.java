@@ -85,4 +85,17 @@ public interface IEntityMeta {
 	 * Excludes fieldtype=ID, fieldtype=version, fieldtype=timestamp, relationship fieldtypes, etc.
 	 */
 	public List<IPropertyMeta> getProperties();
+
+	/**
+	 * Retrieve a list of all association properties.
+	 * <p>
+	 * Retrieves a list of association properties of one of these types:
+	 * <ul>
+	 * <li>one-to-one</li>
+	 * <li>one-to-many</li>
+	 * <li>many-to-one</li>
+	 * <li>many-to-many</li>
+	 * </ul>
+	 */
+	public List<IPropertyMeta> getAssociations();
 }

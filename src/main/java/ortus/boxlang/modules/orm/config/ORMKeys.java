@@ -90,6 +90,31 @@ public class ORMKeys {
 	public static final Key	uniqueKeyName			= Key.of( "uniqueKeyName" );
 	public static final Key	timestamp				= Key.of( "timestamp" );
 
+	// association keys
+
+	public static final Key	OneToOne				= Key.of( "OneToOne" );
+	public static final Key	OneToMany				= Key.of( "OneToMany" );
+	public static final Key	ManyToOne				= Key.of( "ManyToOne" );
+	public static final Key	ManyToMany				= Key.of( "ManyToMany" );
+	public static final Key	fetch					= Key.of( "fetch" );
+	public static final Key	constrained				= Key.of( "constrained" );
+	public static final Key	cascade					= Key.of( "cascade" );
+	public static final Key	mappedBy				= Key.of( "mappedBy" );
+	public static final Key	missingRowIgnored		= Key.of( "missingRowIgnored" );
+	public static final Key	fkcolumn				= Key.of( "fkcolumn" );
+	public static final Key	linkTable				= Key.of( "linkTable" );
+	public static final Key	foreignKey				= Key.of( "foreignKey" );
+	public static final Key	foreignKeyName			= Key.of( "foreignKeyName" );
+	public static final Key	embedXML				= Key.of( "embedXML" );
+	public static final Key	access					= Key.of( "access" );
+	// public static final Key cascade = Key.of( "cascade" );
+	// public static final Key cascade = Key.of( "cascade" );
+	// public static final Key cascade = Key.of( "cascade" );
+	/**
+	 * OLD setting name. Deprecated. Use {@link Key._CLASS} instead.
+	 */
+	public static final Key	cfc						= Key.of( "cfc" );
+
 	// Hibernate or JPA annotations
 	public static final Key	discriminator			= Key.of( "discriminator" );
 	public static final Key	generatedValue			= Key.of( "generatedValue" );

@@ -69,19 +69,10 @@ public class MappingGenerator {
 	 */
 	private ORMConfig					config;
 
-	/**
-	 * IBoxContext - we shouldn't need this, but it's here for now.
-	 * <p>
-	 * 
-	 * @TODO: Drop once development stabilizes.
-	 */
-	private IBoxContext					context;
-
 	private static final Logger			logger	= LoggerFactory.getLogger( MappingGenerator.class );
 
 	public MappingGenerator( IBoxContext context, ORMConfig config ) {
 		this.entityMap					= new java.util.HashMap<>();
-		this.context					= context;
 		this.config						= config;
 		this.saveDirectory				= Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", String.valueOf( config.hashCode() ) ).toString();
 		this.saveMappingAlongsideEntity	= config.saveMapping;

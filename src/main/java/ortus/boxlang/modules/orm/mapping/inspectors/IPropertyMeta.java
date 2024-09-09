@@ -20,7 +20,7 @@ public interface IPropertyMeta {
 
 	public boolean isOptimisticLock();
 
-	public boolean isLazy();
+	public String getLazy();
 
 	public String getFormula();
 
@@ -36,7 +36,7 @@ public interface IPropertyMeta {
 	public IStruct getAnnotations();
 
 	/**
-	 * Get all property type keys.
+	 * Get all property type metadata.
 	 * <p>
 	 * A full list of keys is shown below. Any or all of these keys may be absent.
 	 * <ul>
@@ -49,7 +49,7 @@ public interface IPropertyMeta {
 	public IStruct getTypes();
 
 	/**
-	 * Get all generator info keys.
+	 * Get all generator info metadata.
 	 * <p>
 	 * A full list of keys is shown below. Any or all of these keys may be absent.
 	 * <ul>
@@ -63,7 +63,7 @@ public interface IPropertyMeta {
 	public IStruct getGenerator();
 
 	/**
-	 * Get all column info keys.
+	 * Get all column info metadata.
 	 * <p>
 	 * A full list of keys is shown below. Any of these keys may be absent from the struct EXCEPT `name`.
 	 * <ul>
@@ -76,6 +76,7 @@ public interface IPropertyMeta {
 	 * <li>insertable=boolean</li>
 	 * <li>updatable=boolean</li>
 	 * <li>table=string</li>
+	 * <li>default=string</li>
 	 * </ul>
 	 * 
 	 * @see https://jakarta.ee/specifications/persistence/3.0/jakarta-persistence-spec-3.0#a14330
@@ -83,5 +84,24 @@ public interface IPropertyMeta {
 	 * @return Struct with column info keys.
 	 */
 	public IStruct getColumn();
+
+	/**
+	 * Get all association metadata.
+	 * <p>
+	 * <ul>
+	 * <li>type=string - one-to-one|one-to-many|many-to-one|many-to-many</li>
+	 * <li>name=string</li>
+	 * <li>targetEntity=string</li>
+	 * <li>fetch=string - join|select</li>
+	 * <li>cascade=string</li>
+	 * <li>constrained=boolean</li>
+	 * <li>mappedBy=string</li>
+	 * <li>lazy=string - proxy|no-proxy|false</li>
+	 * <li>etc, etc.</li>
+	 * </ul>
+	 * 
+	 * @return Struct with association metadata.
+	 */
+	public IStruct getAssociation();
 
 }

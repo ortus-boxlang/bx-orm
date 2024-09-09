@@ -8,8 +8,13 @@ import ortus.boxlang.runtime.types.Struct;
 
 public class ModernPropertyMeta extends AbstractPropertyMeta {
 
-	public ModernPropertyMeta( IStruct meta ) {
-		super( meta );
+	public ModernPropertyMeta( String entityName, IStruct meta ) {
+		super( entityName, meta );
+	}
+
+	// @TODO: Design/choose a modern syntax, then implement!
+	protected IStruct parseAssociation( IStruct annotations ) {
+		return Struct.EMPTY;
 	}
 
 	protected IStruct parseColumnAnnotations( IStruct annotations ) {

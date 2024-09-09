@@ -50,46 +50,6 @@ public class BetterFQN {
 	}
 
 	/**
-	 * Transforms the path into the package name
-	 *
-	 * @param packg String to grab the package name for.
-	 *
-	 * @return returns the class name according the name conventions Test.ext -
-	 *         Test$ext
-	 */
-	private String[] parseParts( String packg ) {
-		// Replace .. with .
-		packg = packg.replaceAll( "\\.\\.", "." );
-		// trim trailing period
-		if ( packg.endsWith( "." ) ) {
-			packg = packg.substring( 0, packg.length() - 1 );
-		}
-		// trim leading period
-		if ( packg.startsWith( "." ) ) {
-			packg = packg.substring( 1 );
-		}
-		// Remove any non alpha-numeric chars.
-		packg = packg.replaceAll( "[^a-zA-Z0-9\\.]", "" );
-
-		if ( packg.isEmpty() ) {
-			return new String[] {};
-		}
-		// parse fqn into list, loop over list and remove any empty strings and turn back into fqn
-		return Arrays.stream( packg.split( "\\." ) )
-		    .map( s -> s.toLowerCase() )
-		    // if starts with number, prefix with _
-		    .map( s -> s.matches( "^\\d.*" ) ? "_" + s : s )
-		    .map( s -> {
-			    if ( RESERVED_WORDS.contains( s ) ) {
-				    return "_" + s;
-			    }
-			    return s;
-		    } )
-		    .toArray( String[]::new );
-
-	}
-
-	/**
 	 * Parse the package from a file path.
 	 * 
 	 * @param file The file to parse the package from.
@@ -119,7 +79,7 @@ public class BetterFQN {
 
 	}
 
-	public ArrayList getParts() {
+	public ArrayList<String> getParts() {
 		return fqnParts;
 	}
 

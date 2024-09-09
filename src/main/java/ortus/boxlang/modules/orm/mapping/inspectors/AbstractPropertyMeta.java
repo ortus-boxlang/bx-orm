@@ -10,30 +10,38 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	protected IStruct	meta;
 	protected IStruct	annotations;
 
+	/**
+	 * Parent entity name, for logging purposes
+	 */
+	protected String	entityName;
 	protected String	name;
 	protected boolean	isImmutable			= false;
 	protected boolean	isOptimisticLock	= true;
-	protected boolean	isLazy				= false;
+	protected String	lazy;
 	protected String	formula;
 	protected IStruct	types;
 	protected IStruct	generator;
 	protected IStruct	column;
+	protected IStruct	association;
 	protected String	unsavedValue;
 
-	public AbstractPropertyMeta( IStruct meta ) {
+	public AbstractPropertyMeta( String entityName, IStruct meta ) {
+		this.entityName		= entityName;
 		this.meta			= meta;
 		this.annotations	= this.meta.getAsStruct( Key.annotations );
 		this.name			= this.meta.getAsString( Key._NAME );
 		this.column			= parseColumnAnnotations( this.annotations );
 		this.types			= parseTypeAnnotations( this.annotations );
 		this.generator		= parseGeneratorAnnotations( this.annotations );
+		this.association	= parseAssociation( this.annotations );
 	}
 
 	protected abstract IStruct parseColumnAnnotations( IStruct annotations );
 
 	protected abstract IStruct parseGeneratorAnnotations( IStruct annotations );
 
-	// @TODO: Switch to abstract and override in the implementations.
+	protected abstract IStruct parseAssociation( IStruct annotations );
+
 	private IStruct parseTypeAnnotations( IStruct annotations ) {
 		IStruct typeInfo = new Struct();
 		if ( annotations.containsKey( Key.type ) ) {
@@ -49,52 +57,47 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		return typeInfo;
 	}
 
-	@Override
 	public IStruct getAnnotations() {
 		return this.annotations;
 	}
 
-	@Override
 	public boolean isImmutable() {
 		return this.isImmutable;
 	}
 
-	@Override
 	public boolean isOptimisticLock() {
 		return this.isOptimisticLock;
 	}
 
-	@Override
-	public boolean isLazy() {
-		return this.isLazy;
+	public String getLazy() {
+		return this.lazy;
 	}
 
-	@Override
 	public String getName() {
 		return this.name;
 	}
 
-	@Override
 	public String getFormula() {
 		return this.formula;
 	}
 
-	@Override
+	public String getUnsavedValue() {
+		return this.unsavedValue;
+	}
+
 	public IStruct getTypes() {
 		return this.types;
 	}
 
-	@Override
 	public IStruct getColumn() {
 		return this.column;
 	}
 
-	@Override
 	public IStruct getGenerator() {
 		return this.generator;
 	}
 
-	public String getUnsavedValue() {
-		return this.unsavedValue;
+	public IStruct getAssociation() {
+		return this.association;
 	}
 }

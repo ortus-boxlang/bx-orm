@@ -2,6 +2,7 @@ package ortus.boxlang.modules.orm.mapping;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,11 +18,13 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.w3c.dom.Document;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -192,7 +195,6 @@ public class HibernateXMLWriterTest {
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
-		String		xml			= xmlToString( doc );
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		Node		node		= classEl.getFirstChild();
@@ -225,7 +227,6 @@ public class HibernateXMLWriterTest {
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
-		String		xml			= xmlToString( doc );
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		Node		node		= classEl.getFirstChild();
@@ -295,8 +296,6 @@ public class HibernateXMLWriterTest {
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		String		xml				= xmlToString( doc );
-
 		Node		classEl			= doc.getDocumentElement().getFirstChild();
 		Node		idNode			= classEl.getFirstChild();
 		Node		generatorNode	= idNode.getLastChild();
@@ -340,8 +339,6 @@ public class HibernateXMLWriterTest {
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		String		xml				= xmlToString( doc );
-
 		Node		classEl			= doc.getDocumentElement().getFirstChild();
 		Node		idNode			= classEl.getFirstChild();
 		Node		generatorNode	= idNode.getLastChild();
@@ -363,7 +360,7 @@ public class HibernateXMLWriterTest {
 			}
 		}
 
-		assertThat( paramNode ).isNotNull();
+		assertNotNull( paramNode );
 		assertThat( paramNode.getTextContent() ).isEqualTo( "foo" );
 	}
 
@@ -522,28 +519,30 @@ public class HibernateXMLWriterTest {
 	// @formatter:on
 	@ParameterizedTest
 	public void testOtherColumnAttributes( String sourceCode ) {
-		IStruct		meta			= getClassMetaFromCode( sourceCode );
+		IStruct			meta				= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
+		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document		doc					= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node		classEL			= doc.getDocumentElement().getFirstChild();
-		Node		propertyNode	= classEL.getFirstChild();
-		Node		columnNode		= propertyNode.getFirstChild();
+		Node			classEL				= doc.getDocumentElement().getFirstChild();
+		Node			propertyNode		= classEL.getFirstChild();
+		Node			columnNode			= propertyNode.getFirstChild();
+		NamedNodeMap	propertyAttributes	= propertyNode.getAttributes();
+		NamedNodeMap	columnAttributes	= columnNode.getAttributes();
 
-		// assertThat( columnNode.getAttributes().getNamedItem( "table" ).getTextContent() )
-		// .isEqualTo( "foo" );
-		assertThat( propertyNode.getAttributes().getNamedItem( "insert" ).getTextContent() )
+		assertThat( propertyAttributes.getNamedItem( "insert" ).getTextContent() )
 		    .isEqualTo( "false" );
-		assertThat( propertyNode.getAttributes().getNamedItem( "update" ).getTextContent() )
+		assertThat( propertyAttributes.getNamedItem( "update" ).getTextContent() )
 		    .isEqualTo( "false" );
 
-		assertThat( columnNode.getAttributes().getNamedItem( "unique" ).getTextContent() )
+		assertThat( columnAttributes.getNamedItem( "unique" ).getTextContent() )
 		    .isEqualTo( "true" );
-		assertThat( columnNode.getAttributes().getNamedItem( "not-null" ).getTextContent() )
+		assertThat( columnAttributes.getNamedItem( "not-null" ).getTextContent() )
 		    .isEqualTo( "true" );
-		assertThat( columnNode.getAttributes().getNamedItem( "default" ).getTextContent() )
+		assertThat( columnAttributes.getNamedItem( "default" ).getTextContent() )
 		    .isEqualTo( "test" );
+		// assertThat( columnAttributes.getNamedItem( "table" ).getTextContent() )
+		// .isEqualTo( "foo" );
 	}
 
 	// @formatter:off
@@ -591,6 +590,166 @@ public class HibernateXMLWriterTest {
 		// assertEquals( "never", versionNode.getAttributes().getNamedItem( "generated" ).getTextContent() );
 	}
 
+	@DisplayName( "It maps one-to-one relationships" )
+	@Test
+	public void testOneToOne() {
+		// @formatter:off
+		IStruct		meta		= getClassMetaFromCode( """
+		class persistent {
+			property
+				name="owner"
+				cfc="Person"
+				mappedBy="id"
+				fieldtype="one-to-one"
+				foreignKey="fooID"
+				cascade="all-delete-orphan"
+				embedXML="true"
+				constrained="true"
+				fetch="join"
+				lazy="extra";
+		}
+		""" );
+		// @formatter:on
+
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		String		xml				= xmlToString( doc );
+
+		Node		classEL			= doc.getDocumentElement().getFirstChild();
+		Node		oneToOneNode	= classEL.getFirstChild();
+		assertEquals( "one-to-one", oneToOneNode.getNodeName() );
+
+		NamedNodeMap attrs = oneToOneNode.getAttributes();
+
+		assertEquals( "true", attrs.getNamedItem( "embed-xml" ).getTextContent() );
+		assertEquals( "all-delete-orphan", attrs.getNamedItem( "cascade" ).getTextContent() );
+		assertEquals( "join", attrs.getNamedItem( "fetch" ).getTextContent() );
+		assertEquals( "extra", attrs.getNamedItem( "lazy" ).getTextContent() );
+		assertEquals( "id", attrs.getNamedItem( "property-ref" ).getTextContent() );
+		assertEquals( "fooID", attrs.getNamedItem( "foreign-key" ).getTextContent() );
+		assertEquals( "true", attrs.getNamedItem( "constrained" ).getTextContent() );
+	}
+
+	@DisplayName( "It maps one-to-one relationships as many-to-one if fkcolumn is defined" )
+	@Test
+	public void testOneToOneAsManyToOne() {
+		// @formatter:off
+		IStruct		meta		= getClassMetaFromCode( """
+		class persistent {
+			property
+				name="owner"
+				cfc="Person"
+				fieldtype="one-to-one"
+				fkcolumn="FK_owner"
+				foreignKey="fooID"
+				cascade="all"
+				constrained="true";
+		}
+		""" );
+		// @formatter:on
+
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		String		xml				= xmlToString( doc );
+
+		Node		classEL			= doc.getDocumentElement().getFirstChild();
+		Node		oneToOneNode	= classEL.getFirstChild();
+		assertEquals( "many-to-one", oneToOneNode.getNodeName() );
+
+		NamedNodeMap attrs = oneToOneNode.getAttributes();
+
+		assertEquals( "true", attrs.getNamedItem( "unique" ).getTextContent() );
+		assertEquals( "all", attrs.getNamedItem( "cascade" ).getTextContent() );
+		assertEquals( "fooID", attrs.getNamedItem( "foreign-key" ).getTextContent() );
+		assertEquals( "true", attrs.getNamedItem( "constrained" ).getTextContent() );
+
+		// <one-to-one><column name="fooID" /></one-to-one>
+		Node columnNode = oneToOneNode.getFirstChild();
+		assertEquals( "column", columnNode.getNodeName() );
+		assertEquals( "FK_owner", columnNode.getAttributes().getNamedItem( "name" ).getTextContent() );
+	}
+
+	@Disabled( "Unimplemented" )
+	@DisplayName( "It maps relationships with link tables" )
+	@Test
+	public void testManyToManyLinkTable() {
+		// @formatter:off
+		IStruct		meta		= getClassMetaFromCode( """
+		class persistent {
+			property
+				name="owners"
+				cfc="Person"
+				fieldtype="many-to-many"
+				linkTable="owners"
+				linkCatalog="myDB"
+				linkSchema="dbo"
+				fkcolumn="FK_owner"
+				orderBy="name";
+		}
+		""" );
+		// @formatter:on
+
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		String		xml				= xmlToString( doc );
+
+		Node		classEL			= doc.getDocumentElement().getFirstChild();
+		Node		oneToOneNode	= classEL.getFirstChild();
+		assertEquals( "many-to-many", oneToOneNode.getNodeName() );
+
+		NamedNodeMap attrs = oneToOneNode.getAttributes();
+	}
+
+	@Disabled( "Unimplemented" )
+	@DisplayName( "It can handle string-delimted column names for a composite key" )
+	@Test
+	public void testMultipleFKColumns() {
+		// @formatter:off
+		IStruct		meta		= getClassMetaFromCode( """
+		class persistent {
+			property
+				name="owners"
+				cfc="Person"
+				fieldtype="one-to-many"
+				linkTable="owners"
+				fkcolumn="name,dob,phone";
+		}
+		""" );
+		// @formatter:on
+
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		String		xml				= xmlToString( doc );
+
+		Node		classEL			= doc.getDocumentElement().getFirstChild();
+		Node		oneToOneNode	= classEL.getFirstChild();
+		assertEquals( "many-to-one", oneToOneNode.getNodeName() );
+
+		NamedNodeMap attrs = oneToOneNode.getAttributes();
+	}
+
+	@Disabled( "Unimplemented" )
+	@DisplayName( "It maps singular names" )
+	@Test
+	public void testSingular() {
+	}
+
+	@Disabled( "Unimplemented" )
+	@DisplayName( "It can map an array/bag collection" )
+	@Test
+	public void testArrayCollection() {
+	}
+
+	@Disabled( "Unimplemented" )
+	@DisplayName( "It can map a struct/map collection" )
+	@Test
+	public void testStructCollection() {
+	}
+
 	/**
 	 * TODO: Test each below property annotation:
 	 * column
@@ -620,8 +779,6 @@ public class HibernateXMLWriterTest {
 	 * elementcolumn
 	 * elementtype
 	 * index
-	 * ormType
-	 * fieldtype
 	 * unSavedValue - deprecated
 	 */
 
