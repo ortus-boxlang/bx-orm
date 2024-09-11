@@ -29,7 +29,7 @@ public class SessionFactoryBuilderTest {
 	@BeforeAll
 	public static void setUp() {
 		instance	= BoxRuntime.getInstance( true );
-		datasource	= JDBCTestUtils.constructTestDataSource( "TestDB1" );
+		datasource	= JDBCTestUtils.constructTestDataSource( "TestDB" );
 
 		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
 		BaseORMTest.setupApplicationContext( context );
@@ -39,7 +39,7 @@ public class SessionFactoryBuilderTest {
 	@Test
 	public void testSimpleCase() {
 		IStruct			ormSettings		= Struct.of(
-		    ORMKeys.datasource, "TestDB1"
+		    ORMKeys.datasource, "TestDB"
 		);
 		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
 
@@ -50,7 +50,7 @@ public class SessionFactoryBuilderTest {
 	@Test
 	public void testDerbyShortNameDialect() {
 		IStruct			ormSettings		= Struct.of(
-		    ORMKeys.datasource, "TestDB1",
+		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.dialect, "DerbyTenSeven"
 		);
 		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
@@ -68,7 +68,7 @@ public class SessionFactoryBuilderTest {
 		    		datasource={
 		    			driver = "derby",
 		    			database = "test",
-		    			connectionString = "jdbc:derby:memory:TestDB1;create=true"
+		    			connectionString = "jdbc:derby:memory:TestDB;create=true"
 		    		};
 		    """, context );
 		IStruct			ormSettings		= Struct.of();

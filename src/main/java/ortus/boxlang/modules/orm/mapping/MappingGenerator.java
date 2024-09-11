@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +32,7 @@ import ortus.boxlang.modules.orm.mapping.inspectors.ModernEntityMeta;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.types.exceptions.ParseException;
 import ortus.boxlang.runtime.util.FileSystemUtil;
@@ -69,7 +71,10 @@ public class MappingGenerator {
 	 */
 	private ORMConfig					config;
 
-	private static final Logger			logger	= LoggerFactory.getLogger( MappingGenerator.class );
+	private Key							fullPath	= Key.of( "_FULLPATH" );
+	private Key							location	= Key.of( "location" );
+
+	private static final Logger			logger		= LoggerFactory.getLogger( MappingGenerator.class );
 
 	public MappingGenerator( IBoxContext context, ORMConfig config ) {
 		this.entityMap					= new java.util.HashMap<>();
@@ -89,50 +94,65 @@ public class MappingGenerator {
 	}
 
 	public MappingGenerator generateMappings() {
-		this.entityPaths.stream()
-		    .filter( Files::isDirectory )
-		    // TODO: resolve, in case it's a mapping
-		    // TODO: ensure directory exists - if not, EITHER warn or throw exception
-		    .forEach( ( entityLookupPath ) -> {
-			    logger.warn( "Checking path for entities: [{}]", entityLookupPath );
+		final int			MAX_SYNCHRONOUS_ENTITIES	= 20;
+		ArrayList<IStruct>	entities					= this.entityPaths.stream()
+		    // @TODO: Resolve mappings for each entity path
+		    .flatMap( path -> {
 			    try {
-				    // @TODO: Switch to .reduce() to build a list of .bx/.cfc files so we can process metadata in parallel
-				    Files
-				        .walk( entityLookupPath )
-				        // TODO: Once this is all working, switch to parallel streams IF > 20ish entities
+				    // TODO: Return path.parent() alongside each discovered entity file so we know the entity location / mapping and can get a correct FQN.
+				    return Files.walk( path )
+				        // only files
 				        .filter( Files::isRegularFile )
+				        // Only .bx or .cfc class files
 				        .filter( ( file ) -> StringUtils.endsWithAny( file.toString(), ".bx", ".cfc" ) )
-				        .map( ( clazzPath ) -> {
-					        logger.warn( "Discovered BoxLang class at path {}; loading entity metadata", clazzPath );
-					        return getClassMeta( new File( clazzPath.toString() ) );
-				        } )
-				        .filter( ( IStruct meta ) -> {
-					        IStruct annotations = meta.getAsStruct( Key.annotations );
-					        if ( annotations.containsKey( ORMKeys.persistent ) || annotations.containsKey( ORMKeys.entity ) ) {
-						        logger.debug(
-						            "Class is 'persistent'; generating XML: [{}] ",
-						            meta.getAsString( Key.path ) );
-						        return true;
-					        } else {
-						        logger.debug( "Class is unmarked or marked as as non-persistent; skipping: [{}]",
-						            meta.getAsString( Key.path ) );
-						        return false;
-					        }
-				        } )
-				        .forEach( ( IStruct meta ) -> {
-					        String entityName = readEntityName( meta );
-					        entityMap.put( entityName,
-					            new EntityRecord(
-					                entityName,
-					                new BetterFQN( entityLookupPath.getParent(), Path.of( meta.getAsString( Key.path ) ) ).toString(),
-					                writeXMLFile( meta )
-					            )
-					        );
-				        } );
+				        // map to a BetterFQN instance containing the location and file name. Allows us to generate a proper FQN for the entity.
+				        .map( file -> Struct.of( this.location, path.toString(), Key.file, file.toString() ) );
 			    } catch ( IOException e ) {
 				    // @TODO: Check `skipCFCWithError` setting before throwing exception; allow 'true' behavior to not halt the file walking.
 				    e.printStackTrace();
 			    }
+			    return null;
+		    } )
+		    // collect to ArrayList so we can parallelize the metadata load+introspection
+		    .collect( java.util.stream.Collectors.toCollection( ArrayList::new ) );
+		// TODO: Once this is all working, switch to parallel streams IF > 20ish entities
+		if ( entities.size() > MAX_SYNCHRONOUS_ENTITIES ) {
+			logger.debug( "Detected more than {} entities; parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
+			// entities.parallelStream()...
+		}
+		entities.stream()
+		    .map( ( possibleEntity ) -> {
+			    logger.warn( "Discovered BoxLang class at path {}; loading entity metadata", possibleEntity.getAsString( Key.file ) );
+			    possibleEntity.put( Key.metadata, getClassMeta( Path.of( possibleEntity.getAsString( Key.file ) ) ) );
+			    return possibleEntity;
+		    } )
+		    .filter( ( IStruct possibleEntity ) -> {
+			    IStruct meta	= possibleEntity.getAsStruct( Key.metadata );
+			    IStruct annotations = meta.getAsStruct( Key.annotations );
+			    if ( annotations.containsKey( ORMKeys.persistent ) || annotations.containsKey( ORMKeys.entity ) ) {
+				    logger.debug(
+				        "Class is 'persistent'; generating XML: [{}] ",
+				        meta.getAsString( Key.path ) );
+				    return true;
+			    } else {
+				    logger.debug( "Class is unmarked or marked as as non-persistent; skipping: [{}]",
+				        meta.getAsString( Key.path ) );
+				    return false;
+			    }
+		    } )
+		    .forEach( ( IStruct theEntity ) -> {
+			    IStruct meta	= theEntity.getAsStruct( Key.metadata );
+			    String entityName = readEntityName( meta );
+			    String fqn		= new BetterFQN( Path.of( theEntity.getAsString( this.location ) ).getParent(), Path.of( meta.getAsString( Key.path ) ) )
+			        .toString();
+			    // TODO: Switch to .collect( Collectors.toMap(...) );
+			    entityMap.put( entityName,
+			        new EntityRecord(
+			            entityName,
+			            fqn,
+			            writeXMLFile( meta )
+			        )
+			    );
 		    } );
 
 		return this;
@@ -153,8 +173,8 @@ public class MappingGenerator {
 		return entityName;
 	}
 
-	private IStruct getClassMeta( File entityFile ) {
-		ParsingResult result = new Parser().parse( entityFile );
+	private IStruct getClassMeta( Path clazzPath ) {
+		ParsingResult result = new Parser().parse( new File( clazzPath.toString() ) );
 		if ( !result.isCorrect() ) {
 			throw new ParseException( result.getIssues(), "" );
 		}

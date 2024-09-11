@@ -13,7 +13,7 @@ public class ORMConfigTest {
 	@Test
 	public void testDialectTranslation() {
 		Configuration config = new ORMConfig( Struct.of(
-		    ORMKeys.datasource, "TestDB1",
+		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.dialect, "DerbyTenSeven"
 		) ).toHibernateConfig();
 
@@ -23,7 +23,7 @@ public class ORMConfigTest {
 	@Test
 	public void testDialectNormalization() {
 		Configuration config = new ORMConfig( Struct.of(
-		    ORMKeys.datasource, "TestDB1",
+		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.dialect, "DerbyTenSevenDialect"
 		) ).toHibernateConfig();
 
@@ -33,7 +33,7 @@ public class ORMConfigTest {
 	@Test
 	public void testGenericSettings() {
 		Configuration config = new ORMConfig( Struct.of(
-		    ORMKeys.datasource, "TestDB1",
+		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.catalog, "foobar",
 		    ORMKeys.schema, "dbo"
 		) ).toHibernateConfig();

@@ -62,6 +62,12 @@ public class SessionFactoryBuilder {
 	private IJDBCCapableContext		context;
 	private ApplicationBoxContext	applicationContext;
 
+	/**
+	 * Lookup the BoxLang class for a given entity name.
+	 * 
+	 * @param sessionFactory The Hibernate session factory
+	 * @param entityName     The entity name to look up
+	 */
 	public static String lookupBoxLangClass( SessionFactory sessionFactory, String entityName ) {
 		Map<String, EntityRecord> entityMap = ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
 

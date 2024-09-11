@@ -52,13 +52,13 @@ public class BaseORMTest {
 		instance		= BoxRuntime.getInstance( true );
 		ormService		= ORMService.getInstance();
 		startupContext	= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		datasource		= JDBCTestUtils.constructTestDataSource( "TestDB1" );
+		datasource		= JDBCTestUtils.constructTestDataSource( "TestDB" );
 
 		BaseORMTest.setupApplicationContext( startupContext );
 
 		// and start up the ORM service
 		IStruct ormSettings = Struct.of(
-		    "datasource", "TestDB1",
+		    "datasource", "TestDB",
 		    "entityPaths", Array.of( "models" ),
 		    "saveMapping", "true",
 		    "logSQL", "true",
@@ -91,10 +91,10 @@ public class BaseORMTest {
 		        application
 		    		name="BXORMTest"
 		    		datasources={
-		    			"TestDB1" = {
+		    			"TestDB" = {
 		    				driver = "derby",
 		    				database = "test",
-		    				connectionString = "jdbc:derby:memory:TestDB1;create=true"
+		    				connectionString = "jdbc:derby:memory:TestDB;create=true"
 		    			}
 		    		}
 		    		ormEnabled = "true";
@@ -125,7 +125,7 @@ public class BaseORMTest {
 
 			    @Override
 			    public ResolvedFilePath getRunnablePath() {
-				    return ResolvedFilePath.of( Path.of( "/home/michael/repos/boxlang/modules/bx-orm/src/test/resources/app/Application.bx" ) );
+				    return ResolvedFilePath.of( Path.of( "src/test/resources/app/Application.bx" ).toAbsolutePath() );
 			    }
 
 			    public BoxSourceType getSourceType() {

@@ -30,14 +30,6 @@ public class BetterFQN {
 		this.fqnParts.add( parsePackageFromFile( root.relativize( file ) ) );
 		this.fqnParts.add( getClassName( file ) );
 	}
-	// public BetterFQN( Path prefix, Path file ) {
-	// this.fqnParts = new ArrayList<>();
-	// String prefixParts = parsePackageFromFile( prefix );
-	// String fileParts = parsePackageFromFile( file );
-	// this.fqnParts.add( prefixParts );
-	// this.fqnParts.add( fileParts.replace( prefixParts, "" ) );
-	// this.fqnParts.add( getClassName( file ) );
-	// }
 
 	private String getClassName( Path file ) {
 		String name = file.toFile().getName();
