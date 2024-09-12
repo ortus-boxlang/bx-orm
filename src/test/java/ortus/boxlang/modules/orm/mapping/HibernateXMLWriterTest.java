@@ -680,9 +680,11 @@ public class HibernateXMLWriterTest {
 		class persistent {
 			property
 				name="owners"
+				type="array"
 				cfc="Person"
+				cascade="all"
 				fieldtype="many-to-many"
-				linkTable="owners"
+				linkTable="tblOwners"
 				linkCatalog="myDB"
 				linkSchema="dbo"
 				fkcolumn="FK_owner"
@@ -691,20 +693,39 @@ public class HibernateXMLWriterTest {
 		""" );
 		// @formatter:on
 
-		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		String		xml				= xmlToString( doc );
+		String		xml			= xmlToString( doc );
 
-		Node		classEL			= doc.getDocumentElement().getFirstChild();
-		Node		oneToOneNode	= classEL.getFirstChild();
-		assertEquals( "many-to-many", oneToOneNode.getNodeName() );
+		Node		classEL		= doc.getDocumentElement().getFirstChild();
 
-		NamedNodeMap attrs = oneToOneNode.getAttributes();
+		Node		bagNode		= classEL.getFirstChild();
+		assertNotNull( bagNode );
+		assertEquals( "bag", bagNode.getNodeName() );
+
+		NamedNodeMap bagAttrs = bagNode.getAttributes();
+		assertEquals( "owners", bagAttrs.getNamedItem( "name" ).getTextContent() );
+		assertEquals( "tblOwners", bagAttrs.getNamedItem( "table" ).getTextContent() );
+		assertEquals( "all", bagAttrs.getNamedItem( "cascade" ).getTextContent() );
+
+		Node keyNode = classEL.getFirstChild();
+		assertNotNull( keyNode );
+		assertEquals( "key", keyNode.getNodeName() );
+
+		NamedNodeMap keyAttrs = keyNode.getAttributes();
+		assertEquals( "FK_owner", keyAttrs.getNamedItem( "column" ).getTextContent() );
+
+		Node oneToManyNode = classEL.getLastChild();
+		assertNotNull( oneToManyNode );
+		assertEquals( "many-to-many", oneToManyNode.getNodeName() );
+
+		NamedNodeMap manyToManyAttrs = oneToManyNode.getAttributes();
+		assertEquals( "Person", manyToManyAttrs.getNamedItem( "class" ).getTextContent() );
 	}
 
 	@Disabled( "Unimplemented" )
-	@DisplayName( "It can handle string-delimted column names for a composite key" )
+	@DisplayName( "It can handle string-delimited column names for a composite key" )
 	@Test
 	public void testMultipleFKColumns() {
 		// @formatter:off
@@ -720,16 +741,10 @@ public class HibernateXMLWriterTest {
 		""" );
 		// @formatter:on
 
-		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+		// TODO:...
 
-		String		xml				= xmlToString( doc );
-
-		Node		classEL			= doc.getDocumentElement().getFirstChild();
-		Node		oneToOneNode	= classEL.getFirstChild();
-		assertEquals( "many-to-one", oneToOneNode.getNodeName() );
-
-		NamedNodeMap attrs = oneToOneNode.getAttributes();
 	}
 
 	@Disabled( "Unimplemented" )
@@ -754,7 +769,6 @@ public class HibernateXMLWriterTest {
 	 * TODO: Test each below property annotation:
 	 * column
 	 * formula
-	 * persistent / transient
 	 * where
 	 * sqltype
 	 * cfc

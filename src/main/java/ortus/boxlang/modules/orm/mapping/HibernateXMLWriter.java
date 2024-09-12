@@ -123,17 +123,58 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		return theNode;
 	}
 
+	public Element generateToManyAssociation( IPropertyMeta prop ) {
+		IStruct	association	= prop.getAssociation();
+		IStruct	columnInfo	= prop.getColumn();
+		String	type		= association.getAsString( ORMKeys.collectionType );
+		Element	theNode		= this.document.createElement( type );
+
+		theNode.setAttribute( "name", prop.getName() );
+		if ( columnInfo.containsKey( ORMKeys.table ) ) {
+			theNode.setAttribute( "table", columnInfo.getAsString( Key.table ) );
+		}
+		if ( columnInfo.containsKey( ORMKeys.schema ) ) {
+			theNode.setAttribute( "schema", columnInfo.getAsString( ORMKeys.schema ) );
+		}
+		if ( association.containsKey( ORMKeys.lazy ) ) {
+			theNode.setAttribute( "lazy", association.getAsString( ORMKeys.lazy ) );
+		}
+		if ( association.containsKey( ORMKeys.inverse ) ) {
+			theNode.setAttribute( "inverse", trueFalseFormat( association.getAsBoolean( ORMKeys.inverse ) ) );
+		}
+		if ( association.containsKey( ORMKeys.cascade ) ) {
+			theNode.setAttribute( "cascade", association.getAsString( ORMKeys.cascade ) );
+		}
+		if ( association.containsKey( ORMKeys.orderBy ) ) {
+			theNode.setAttribute( "order-by", association.getAsString( ORMKeys.orderBy ) );
+		}
+		if ( association.containsKey( ORMKeys.where ) ) {
+			theNode.setAttribute( "where", association.getAsString( ORMKeys.where ) );
+		}
+		if ( association.containsKey( ORMKeys.fetch ) ) {
+			theNode.setAttribute( "fetch", association.getAsString( ORMKeys.fetch ) );
+		}
+		if ( association.containsKey( ORMKeys.optimisticLock ) ) {
+			theNode.setAttribute( "optimistic-lock", association.getAsString( ORMKeys.optimisticLock ) );
+		}
+		if ( association.containsKey( ORMKeys.immutable ) ) {
+			theNode.setAttribute( "mutable", trueFalseFormat( !association.getAsBoolean( ORMKeys.immutable ) ) );
+		}
+		if ( association.containsKey( ORMKeys.embedXML ) ) {
+			theNode.setAttribute( "embedXML", association.getAsString( ORMKeys.embedXML ) );
+		}
+		// TODO: Inside the <bag> or <map> element, add a <key>, <x-to-many>, and potentially other elements
+		return theNode;
+	}
+
 	/**
-	 * Generate a &lt;one-to-one/&gt;,&lt;one-to-many/&gt;, or other type of association element for the given property metadata.
-	 * <p>
-	 * Uses these annotations:
-	 * 
+	 * Generate a &lt;one-to-one/&gt; or &lt;many-to-one/&gt; association element for the given property metadata.
 	 *
 	 * @param prop Property metadata in struct form
 	 *
-	 * @return A &lt;one-to-one/&gt;,&lt;one-to-many/&gt;, element ready to add to a Hibernate mapping document
+	 * @return A &lt;one-to-one/&gt; or &lt;many-to-one/&gt;, element ready to add to a Hibernate mapping document
 	 */
-	public Element generateAssociation( IPropertyMeta prop ) {
+	public Element generateToOneAssociation( IPropertyMeta prop ) {
 		IStruct	association	= prop.getAssociation();
 		String	type		= association.getAsString( Key.type );
 		Element	theNode		= this.document.createElement( type );
@@ -183,8 +224,6 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 					theNode.setAttribute( "not-found", association.getAsString( ORMKeys.missingRowIgnored ) );
 				}
 				// @TODO: unique-key
-				break;
-			case "many-to-many" :
 				break;
 		}
 		return theNode;
@@ -469,7 +508,17 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 
 		// generate associations, aka <one-to-one>, <one-to-many>, etc.
 		entity.getAssociations().stream().forEach( ( propertyMeta ) -> {
-			classElement.appendChild( generateAssociation( propertyMeta ) );
+			switch ( propertyMeta.getAssociation().getAsString( Key.type ) ) {
+				case "one-to-one" :
+				case "many-to-one" :
+					classElement.appendChild( generateToOneAssociation( propertyMeta ) );
+					break;
+				case "one-to-many" :
+				case "many-to-many" :
+					classElement.appendChild( generateToManyAssociation( propertyMeta ) );
+					break;
+			}
+
 		} );
 
 		// @TODO: generate <subclass> elements

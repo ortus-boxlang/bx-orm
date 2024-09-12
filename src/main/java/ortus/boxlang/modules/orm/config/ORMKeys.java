@@ -108,9 +108,10 @@ public class ORMKeys {
 	public static final Key	foreignKeyName			= Key.of( "foreignKeyName" );
 	public static final Key	embedXML				= Key.of( "embedXML" );
 	public static final Key	access					= Key.of( "access" );
-	// public static final Key cascade = Key.of( "cascade" );
-	// public static final Key cascade = Key.of( "cascade" );
-	// public static final Key cascade = Key.of( "cascade" );
+	public static final Key	orderBy					= Key.of( "orderBy" );
+	public static final Key	inverse					= Key.of( "inverse" );
+	public static final Key	inverseJoinColumn		= Key.of( "inverseJoinColumn" );
+
 	/**
 	 * OLD setting name. Deprecated. Use {@link Key._CLASS} instead.
 	 */

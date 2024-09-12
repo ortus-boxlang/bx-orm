@@ -43,12 +43,24 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			// @TODO: Implement compatibility shim in bx-compat or bx-orm-compat
 			throw new BoxRuntimeException( String.format( "Missing 'fkcolumn' annotation for property [{}] on entity [{}]", this.name, this.entityName ) );
 		}
-		if ( annotations.containsKey( ORMKeys.fkcolumn ) || annotations.containsKey( ORMKeys.linkTable ) ) {
+		if ( associationType.equalsIgnoreCase( "one-to-one" )
+		    && ( annotations.containsKey( ORMKeys.fkcolumn ) || annotations.containsKey( ORMKeys.linkTable ) ) ) {
 			associationType = "many-to-one";
 			association.put( ORMKeys.unique, true );
 			association.put( Key.column, annotations.getAsString( ORMKeys.fkcolumn ) );
 		}
 		association.put( Key.type, associationType );
+		if ( associationType.endsWith( "-to-many" ) ) {
+			// IS A COLLECTION
+			association.compute( ORMKeys.collectionType, ( key, object ) -> {
+				String propertyType = annotations.getAsString( Key.type );
+				if ( propertyType == null || propertyType.isBlank() || propertyType.trim().toLowerCase().equals( "any" ) ) {
+					propertyType = "array";
+				}
+				return propertyType;
+			} );
+			association.put( Key.type, "collection" );
+		}
 		if ( annotations.containsKey( ORMKeys.lazy ) ) {
 			association.compute( ORMKeys.lazy, ( key, object ) -> {
 				// TODO: figure out what "extra" maps to in Hibernate 5.
@@ -105,6 +117,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.foreignKey ) ) {
 			association.put( ORMKeys.foreignKey, annotations.getAsString( ORMKeys.foreignKey ) );
 		}
+		if ( annotations.containsKey( ORMKeys.inverse ) ) {
+			association.put( ORMKeys.inverse, BooleanCaster.cast( annotations.get( ORMKeys.inverse ) ) );
+		}
 		return association;
 	}
 
@@ -136,6 +151,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		}
 		if ( annotations.containsKey( Key.table ) ) {
 			column.put( Key.table, annotations.getAsString( Key.table ) );
+		}
+		if ( annotations.containsKey( ORMKeys.schema ) ) {
+			column.put( ORMKeys.schema, annotations.getAsString( ORMKeys.schema ) );
 		}
 		if ( annotations.containsKey( ORMKeys.dbDefault ) ) {
 			column.put( Key._DEFAULT, annotations.getAsString( ORMKeys.dbDefault ) );

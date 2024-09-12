@@ -108,8 +108,12 @@ public class MappingGenerator {
 				        // map to a BetterFQN instance containing the location and file name. Allows us to generate a proper FQN for the entity.
 				        .map( file -> Struct.of( this.location, path.toString(), Key.file, file.toString() ) );
 			    } catch ( IOException e ) {
-				    // @TODO: Check `skipCFCWithError` setting before throwing exception; allow 'true' behavior to not halt the file walking.
-				    e.printStackTrace();
+				    if ( config.ignoreParseErrors ) {
+					    e.printStackTrace();
+					    logger.error( "Failed to walk path: [{}]", path, e );
+				    } else {
+					    throw new BoxRuntimeException( String.format( "Failed to walk path: [%s]", path ), e );
+				    }
 			    }
 			    return null;
 		    } )
@@ -216,7 +220,7 @@ public class MappingGenerator {
 
 		} catch ( IOException e ) {
 			String message = String.format( "Failed to save XML mapping for class: [%s]", name );
-			if ( config.skipCFCWithError ) {
+			if ( config.ignoreParseErrors ) {
 				logger.error( message );
 				return null;
 			}
@@ -233,7 +237,7 @@ public class MappingGenerator {
 	 * 
 	 * @param meta The entity metadata.
 	 * 
-	 * @return The full XML mapping for the entity as a string. If an exception was encountered and {@link ORMConfig#skipCFCWithError} is true, an empty
+	 * @return The full XML mapping for the entity as a string. If an exception was encountered and {@link ORMConfig#ignoreParseErrors} is true, an empty
 	 *         string will be returned.
 	 */
 	private String generateXML( IStruct meta ) {
@@ -268,7 +272,7 @@ public class MappingGenerator {
 		} catch ( TransformerException e ) {
 			String entityName = meta.getAsString( Key._name );
 			logger.warn( "Failed to transform XML to string for entity [{}]", entityName, e );
-			if ( !config.skipCFCWithError ) {
+			if ( !config.ignoreParseErrors ) {
 				throw new BoxRuntimeException( String.format( "Failed to transform XML to string for entity [%s]", entityName ), e );
 			}
 		}

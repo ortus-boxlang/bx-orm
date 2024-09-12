@@ -1,5 +1,6 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -77,12 +78,13 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		    .findFirst()
 		    .orElse( null );
 
-		this.associations				= this.allPersistentProperties.stream()
+		List<String> associationTypes = List.of( "one-to-one", "one-to-many", "many-to-one", "many-to-many" );
+		this.associations = this.allPersistentProperties.stream()
 		    .filter( ( IStruct prop ) -> {
-											    var annotations = prop.getAsStruct( Key.annotations );
-											    return annotations.containsKey( ORMKeys.fieldtype )
-											        && annotations.getAsString( ORMKeys.fieldtype ).equals( "one-to-one" );
-										    } )
+			    var annotations = prop.getAsStruct( Key.annotations );
+			    return annotations.containsKey( ORMKeys.fieldtype )
+			        && associationTypes.contains( annotations.getAsString( ORMKeys.fieldtype ) );
+		    } )
 		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
 		    .collect( Collectors.toList() );
 	}
