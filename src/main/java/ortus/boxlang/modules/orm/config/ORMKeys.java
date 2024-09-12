@@ -33,8 +33,9 @@ public class ORMKeys {
 	public static final Key	sqlScript				= Key.of( "sqlScript" );
 	public static final Key	table					= Key.of( "table" );
 	public static final Key	useDBForMapping			= Key.of( "useDBForMapping" );
+	public static final Key	ignoreParseErrors		= Key.of( "ignoreParseErrors" );
 	/**
-	 * OLD setting name. Deprecated. Use {@link ???} instead.
+	 * OLD setting name. Deprecated. Use {@link ignoreParseErrors} instead.
 	 */
 	public static final Key	skipCFCWithError		= Key.of( "skipCFCWithError" );
 	/**
@@ -91,7 +92,7 @@ public class ORMKeys {
 	public static final Key	timestamp				= Key.of( "timestamp" );
 
 	// association keys
-
+	public static final Key	collectionType			= Key.of( "collectionType" );
 	public static final Key	OneToOne				= Key.of( "OneToOne" );
 	public static final Key	OneToMany				= Key.of( "OneToMany" );
 	public static final Key	ManyToOne				= Key.of( "ManyToOne" );

@@ -27,14 +27,14 @@ public class ORMConfig {
 	 * The logger for this class. We may log warnings or errors if we encounter
 	 * unsupported ORM configuration.
 	 */
-	private static final Logger	logger		= LoggerFactory.getLogger( ORMConfig.class );
+	private static final Logger	logger					= LoggerFactory.getLogger( ORMConfig.class );
 
 	/**
 	 * Specifies whether ColdFusion should automatically generate entity mappings
 	 * for the persistent CFCs. If autogenmap=false, the mapping should be
 	 * provided in the form of <code>orm.xml</code> files.
 	 */
-	public boolean				autoGenMap	= true;
+	public boolean				autoGenMap				= true;
 
 	/**
 	 * Allows the engine to manage the Hibernate session. It is recommended not to
@@ -43,7 +43,7 @@ public class ORMConfig {
 	 * Use transaction blocks in order to demarcate your regions that should start,
 	 * flush and end a transaction.
 	 */
-	public boolean				autoManageSession;
+	public boolean				autoManageSession		= false;
 
 	/**
 	 * Specify a string path to the secondary cache configuration file. This configuration file must be formatted to the specification of the jCache
@@ -124,12 +124,12 @@ public class ORMConfig {
 	 * request. In our opinion this SHOULD never be true. Database persistence
 	 * should be done via transaction tags and good transaction demarcation.
 	 */
-	public boolean				flushAtRequestEnd;
+	public boolean				flushAtRequestEnd		= false;
 
 	/**
 	 * Specifies if the SQL queries should be logged to the console.
 	 */
-	public boolean				logSQL;
+	public boolean				logSQL					= false;
 
 	/**
 	 * Defines the naming convention to use on table and column names.
@@ -155,7 +155,7 @@ public class ORMConfig {
 	 * relationships.
 	 *
 	 */
-	public boolean				saveMapping;
+	public boolean				saveMapping				= false;
 
 	/**
 	 * The default database schema to use for database connections. This can be
@@ -172,16 +172,16 @@ public class ORMConfig {
 	/**
 	 * Enable or disable the secondary cache.
 	 */
-	public boolean				secondaryCacheEnabled;
+	public boolean				secondaryCacheEnabled	= false;
 
 	/**
 	 * If true, then the ORM startup will ignore CFCs that have compile time errors
 	 * in them.
 	 * If `false`, exceptions will be thrown during the ORM startup for any class that could not be converted to a mapping.
-	 * 
-	 * @TODO: Rename to `strictParsing` or similar.
+	 * <p>
+	 * Aliased as `skipCFCWithError` for Adobe and Lucee CFML compatibility.
 	 */
-	public boolean				skipCFCWithError;
+	public boolean				ignoreParseErrors		= false;
 
 	/**
 	 * Path to a SQL script file that will be executed after the ORM is initialized.
@@ -196,18 +196,53 @@ public class ORMConfig {
 	 * The database is inspected to get the column data type, primary key and
 	 * foreign key information.
 	 */
-	public boolean				useDBForMapping;
+	public boolean				useDBForMapping			= false;
 
 	/**
 	 * Constructor
 	 */
 	public ORMConfig( IStruct properties ) {
+		implementBackwardsCompatibility( properties );
 		process( properties );
+	}
+
+	/**
+	 * Implement backwards compatible with renamed configuration property names by aliasing them in this method.
+	 * <p>
+	 * Implements backwards-compatibility for the following properties:
+	 * <ul>
+	 * <li><code>skipCFCWithError</code> -> <code>ignoreParseErrors</code></li>
+	 * <li><code>cfclocation</code> -> <code>entityPaths</code></li>
+	 * </ul>
+	 * 
+	 * @param properties Struct of ORM configuration properties.
+	 */
+	public void implementBackwardsCompatibility( IStruct properties ) {
+
+		// backwards compatibility for `skipCFCWithError`
+		// TODO: Handle 'skipCFCWithError' true-by-default setting for backwards compatibility?
+		if ( properties.containsKey( ORMKeys.skipCFCWithError ) && properties.get( ORMKeys.skipCFCWithError ) != null ) {
+			properties.computeIfAbsent(
+			    ORMKeys.ignoreParseErrors,
+			    key -> BooleanCaster.cast( properties.get( ORMKeys.skipCFCWithError ) )
+			);
+		}
+		// backwards compatibility for `cfclocation`
+		if ( properties.containsKey( ORMKeys.cfclocation ) ) {
+			properties.computeIfAbsent(
+			    ORMKeys.entityPaths,
+			    key -> properties.get( ORMKeys.cfclocation )
+			);
+		}
+		// TODO: Handle 'autoManageSession' true-by-default setting for backwards compatibility?
+		// TODO: Handle 'flushAtRequestEnd' true-by-default setting for backwards compatibility?
 	}
 
 	/**
 	 * Process the ORM configuration properties and set the private config fields
 	 * accordingly.
+	 * 
+	 * @param properties Struct of ORM configuration properties.
 	 */
 	private void process( IStruct properties ) {
 		if ( properties == null ) {
@@ -233,9 +268,14 @@ public class ORMConfig {
 		if ( properties.containsKey( ORMKeys.flushAtRequestEnd ) && properties.get( ORMKeys.flushAtRequestEnd ) != null ) {
 			flushAtRequestEnd = BooleanCaster.cast( properties.get( ORMKeys.flushAtRequestEnd ) );
 		}
-
 		if ( properties.containsKey( ORMKeys.logSQL ) && properties.get( ORMKeys.logSQL ) != null ) {
 			logSQL = BooleanCaster.cast( properties.get( ORMKeys.logSQL ) );
+		}
+		if ( properties.containsKey( ORMKeys.secondaryCacheEnabled ) && properties.get( ORMKeys.secondaryCacheEnabled ) != null ) {
+			secondaryCacheEnabled = BooleanCaster.cast( properties.get( ORMKeys.secondaryCacheEnabled ) );
+		}
+		if ( properties.containsKey( ORMKeys.ignoreParseErrors ) && properties.get( ORMKeys.ignoreParseErrors ) != null ) {
+			ignoreParseErrors = BooleanCaster.cast( properties.get( ORMKeys.ignoreParseErrors ) );
 		}
 
 		// String properties: Check key existence, check for null, and check for empty
@@ -251,12 +291,7 @@ public class ORMConfig {
 		if ( properties.containsKey( ORMKeys.entityPaths ) && properties.get( ORMKeys.entityPaths ) != null ) {
 			setEntityPaths( properties.get( ORMKeys.entityPaths ) );
 		} else {
-			// CFML-compatible `cfcLocation` configuration support
-			if ( properties.containsKey( ORMKeys.cfclocation ) ) {
-				setEntityPaths( properties.get( ORMKeys.cfclocation ) );
-			} else {
-				setEntityPaths( null );
-			}
+			setEntityPaths( null );
 		}
 
 		if ( properties.containsKey( ORMKeys.datasource ) && properties.get( ORMKeys.datasource ) != null ) {

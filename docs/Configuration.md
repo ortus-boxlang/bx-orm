@@ -38,6 +38,14 @@ this.ormSettings = {
 };
 ```
 
+## Breaking Changes
+
+The following setting defaults are changed in BoxLang from the traditional CFML defaults:
+
+* `flushAtRequestEnd` - Defaults to `true` in ACF and Lucee, defaults to `false` in BoxLang
+* `autoManageSession` - Defaults to `true` in ACF and Lucee, defaults to `false` in BoxLang
+* `skipCFCWithError` - Defaults to `true` in ACF and Lucee. In BoxLang, this is implemented as `ignoreParseErrors`, which defaults to `false`.
+
 ## Compatibility
 
 The following ORM settings have been renamed:
