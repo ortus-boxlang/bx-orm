@@ -38,16 +38,11 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: "zulu"
+          distribution: "temurin"
           java-version: 21
 
       - name: Format Java Source
         run: ./gradlew spotlessApply --stacktrace
-
-      - name: Format BoxLang Source
-        uses: Ortus-Solutions/commandbox-action@v1.0.2
-        with:
-          cmd: run-script format
 
       - name: Commit Format Changes
         uses: stefanzweifel/git-auto-commit-action@v5
