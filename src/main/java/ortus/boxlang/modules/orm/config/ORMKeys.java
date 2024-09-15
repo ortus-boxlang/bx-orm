@@ -104,6 +104,8 @@ public class ORMKeys {
 	public static final Key	missingRowIgnored		= Key.of( "missingRowIgnored" );
 	public static final Key	fkcolumn				= Key.of( "fkcolumn" );
 	public static final Key	linkTable				= Key.of( "linkTable" );
+	public static final Key	linkSchema				= Key.of( "linkSchema" );
+	public static final Key	linkCatalog				= Key.of( "linkCatalog" );
 	public static final Key	foreignKey				= Key.of( "foreignKey" );
 	public static final Key	foreignKeyName			= Key.of( "foreignKeyName" );
 	public static final Key	embedXML				= Key.of( "embedXML" );
@@ -111,6 +113,12 @@ public class ORMKeys {
 	public static final Key	orderBy					= Key.of( "orderBy" );
 	public static final Key	inverse					= Key.of( "inverse" );
 	public static final Key	inverseJoinColumn		= Key.of( "inverseJoinColumn" );
+	public static final Key	structKeyColumn			= Key.of( "structKeyColumn" );
+	public static final Key	structKeyType			= Key.of( "structKeyType" );
+	public static final Key	structKeyFormula		= Key.of( "structKeyFormula" );
+	public static final Key	elementColumn			= Key.of( "elementColumn" );
+	public static final Key	elementType				= Key.of( "elementType" );
+	public static final Key	elementFormula			= Key.of( "elementFormula" );
 
 	/**
 	 * OLD setting name. Deprecated. Use {@link Key._CLASS} instead.

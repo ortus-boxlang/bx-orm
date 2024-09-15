@@ -65,7 +65,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 			), rootDocument.getDocumentElement() );
 			return rootDocument;
 		} catch ( ParserConfigurationException e ) {
-			// @TODO: Check ORMConfig.skipCFCWithError and throw if false.
+			// @TODO: Check ORMConfig.ignoreParseErrors and throw if false.
 			e.printStackTrace();
 			logger.error( "Error creating Hibernate XML document: {}", e.getMessage(), e );
 			throw new BoxRuntimeException( "Error creating Hibernate XML document: " + e.getMessage(), e );
@@ -123,11 +123,83 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		return theNode;
 	}
 
+	/**
+	 * Create a *-to-many association in these steps:
+	 * 1. Create a collection element (bag, set, list, map, array, primitive-array)
+	 * 2. Add attributes to the collection element
+	 * 3. Add a key element
+	 * 4. Add a one-to-many or many-to-many element
+	 * 
+	 * @param prop Property meta, containing association and column metadata
+	 * 
+	 * @return
+	 */
 	public Element generateToManyAssociation( IPropertyMeta prop ) {
-		IStruct	association	= prop.getAssociation();
-		IStruct	columnInfo	= prop.getColumn();
-		String	type		= association.getAsString( ORMKeys.collectionType );
-		Element	theNode		= this.document.createElement( type );
+		IStruct	association		= prop.getAssociation();
+		IStruct	columnInfo		= prop.getColumn();
+		Element	collectionNode	= generateCollectionElement( prop, association, columnInfo );
+		if ( association.containsKey( ORMKeys.table ) ) {
+			collectionNode.setAttribute( "table", association.getAsString( ORMKeys.table ) );
+		}
+		if ( association.containsKey( ORMKeys.schema ) ) {
+			collectionNode.setAttribute( "schema", association.getAsString( ORMKeys.schema ) );
+		}
+		if ( association.containsKey( ORMKeys.catalog ) ) {
+			collectionNode.setAttribute( "catalog", association.getAsString( ORMKeys.catalog ) );
+		}
+		Element toManyNode = this.document.createElement( association.getAsString( Key.type ) );
+		// now here, we create the <one-to-many> or <many-to-many> element
+		if ( association.containsKey( Key.column ) ) {
+			// @TODO: Loop over all column values and create multiple <column> elements.
+			toManyNode.setAttribute( "column", association.getAsString( Key.column ) );
+		}
+		collectionNode.appendChild( toManyNode );
+		return collectionNode;
+	}
+
+	/**
+	 * Create a bag or map collection element for the given property metadata.
+	 * <p>
+	 * May also create &lt;map-key&gt; &lt;element&gt; xml nodes.
+	 * 
+	 * @param prop        Property meta, containing association and column metadata
+	 * @param association Association-specific metadata
+	 * @param columnInfo  Column-specific metadata
+	 * 
+	 * @return The collection node of either bag or map type.
+	 */
+	private Element generateCollectionElement( IPropertyMeta prop, IStruct association, IStruct columnInfo ) {
+		String	type	= association.getAsString( ORMKeys.collectionType );
+		// Cite: https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#d0e10663
+		Element	theNode	= this.document.createElement( type );
+
+		if ( type == "map" ) {
+			if ( association.containsKey( ORMKeys.structKeyColumn ) ) {
+				Element mapKeyNode = this.document.createElement( "map-key" );
+				theNode.appendChild( mapKeyNode );
+				// Note that Lucee doesn't support comma-delimited values in structKeyColumn
+				mapKeyNode.setAttribute( "column", association.getAsString( ORMKeys.structKeyColumn ) );
+				if ( association.containsKey( ORMKeys.structKeyType ) ) {
+					mapKeyNode.setAttribute( "type", association.getAsString( ORMKeys.structKeyType ) );
+				}
+				// NEW in BoxLang.
+				if ( association.containsKey( ORMKeys.structKeyFormula ) ) {
+					mapKeyNode.setAttribute( "formula", association.getAsString( ORMKeys.structKeyFormula ) );
+				}
+			}
+		}
+		if ( association.containsKey( ORMKeys.elementColumn ) ) {
+			Element elementNode = this.document.createElement( "element" );
+			theNode.appendChild( elementNode );
+			// Note that Lucee doesn't support comma-delimited values in elementColumn
+			elementNode.setAttribute( "column", association.getAsString( ORMKeys.elementColumn ) );
+			if ( association.containsKey( ORMKeys.elementType ) ) {
+				elementNode.setAttribute( "type", association.getAsString( ORMKeys.elementType ) );
+			}
+			if ( association.containsKey( ORMKeys.elementFormula ) ) {
+				elementNode.setAttribute( "formula", association.getAsString( ORMKeys.elementFormula ) );
+			}
+		}
 
 		theNode.setAttribute( "name", prop.getName() );
 		if ( columnInfo.containsKey( ORMKeys.table ) ) {
@@ -163,7 +235,18 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		if ( association.containsKey( ORMKeys.embedXML ) ) {
 			theNode.setAttribute( "embedXML", association.getAsString( ORMKeys.embedXML ) );
 		}
-		// TODO: Inside the <bag> or <map> element, add a <key>, <x-to-many>, and potentially other elements
+
+		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys
+		String columnName = ( String ) association.getOrDefault( ORMKeys.fkcolumn, "" );
+		if ( columnName.isBlank() ) {
+			columnName = ( String ) columnInfo.getOrDefault( Key._name, "" );
+		}
+		if ( !columnName.isBlank() ) {
+			Element columnNode = this.document.createElement( "key" );
+			// @TODO: Loop over all column values and create multiple <column> elements.
+			columnNode.setAttribute( "column", columnInfo.getAsString( Key.column ) );
+			theNode.appendChild( columnNode );
+		}
 		return theNode;
 	}
 
@@ -207,6 +290,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 			theNode.setAttribute( "foreign-key", association.getAsString( ORMKeys.foreignKey ) );
 		}
 		if ( association.containsKey( Key.column ) ) {
+			// @TODO: Loop over all column values and create multiple <column> elements.
 			Element columnNode = this.document.createElement( "column" );
 			columnNode.setAttribute( "name", association.getAsString( Key.column ) );
 			theNode.appendChild( columnNode );
@@ -508,7 +592,8 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 
 		// generate associations, aka <one-to-one>, <one-to-many>, etc.
 		entity.getAssociations().stream().forEach( ( propertyMeta ) -> {
-			switch ( propertyMeta.getAssociation().getAsString( Key.type ) ) {
+			String associationType = propertyMeta.getAssociation().getAsString( Key.type );
+			switch ( associationType ) {
 				case "one-to-one" :
 				case "many-to-one" :
 					classElement.appendChild( generateToOneAssociation( propertyMeta ) );
@@ -517,6 +602,11 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 				case "many-to-many" :
 					classElement.appendChild( generateToManyAssociation( propertyMeta ) );
 					break;
+				default :
+					logger.warn( "Unknown association type: {}. Please forward to your local Ortus agency.",
+					    associationType );
+					// @TODO: Check ORMConfig.ignoreParseErrors and throw if false.
+					throw new BoxRuntimeException( "Unknown association type: %s".formatted( associationType ) );
 			}
 
 		} );

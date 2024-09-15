@@ -47,7 +47,12 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		    && ( annotations.containsKey( ORMKeys.fkcolumn ) || annotations.containsKey( ORMKeys.linkTable ) ) ) {
 			associationType = "many-to-one";
 			association.put( ORMKeys.unique, true );
-			association.put( Key.column, annotations.getAsString( ORMKeys.fkcolumn ) );
+			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.fkcolumn ) ) );
+		}
+		if ( associationType.equalsIgnoreCase( "one-to-many" ) && annotations.containsKey( ORMKeys.linkTable ) ) {
+			associationType = "many-to-many";
+			association.put( ORMKeys.unique, true );
+			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.inverseJoinColumn ) ) );
 		}
 		association.put( Key.type, associationType );
 		if ( associationType.endsWith( "-to-many" ) ) {
@@ -57,9 +62,20 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				if ( propertyType == null || propertyType.isBlank() || propertyType.trim().toLowerCase().equals( "any" ) ) {
 					propertyType = "array";
 				}
-				return propertyType;
+				return propertyType.equalsIgnoreCase( "array" ) ? "bag" : "map";
 			} );
-			association.put( Key.type, "collection" );
+			if ( association.get( ORMKeys.collectionType ).equals( "map" ) ) {
+				if ( annotations.containsKey( ORMKeys.structKeyColumn ) ) {
+					association.put( ORMKeys.structKeyColumn, translateColumnName( annotations.getAsString( ORMKeys.structKeyColumn ) ) );
+				}
+				if ( annotations.containsKey( ORMKeys.structKeyType ) ) {
+					association.put( ORMKeys.structKeyType, annotations.getAsString( ORMKeys.structKeyType ) );
+				}
+				// NEW in BoxLang.
+				if ( annotations.containsKey( ORMKeys.structKeyFormula ) ) {
+					association.put( ORMKeys.structKeyFormula, annotations.getAsString( ORMKeys.structKeyFormula ) );
+				}
+			}
 		}
 		if ( annotations.containsKey( ORMKeys.lazy ) ) {
 			association.compute( ORMKeys.lazy, ( key, object ) -> {
@@ -120,13 +136,28 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.inverse ) ) {
 			association.put( ORMKeys.inverse, BooleanCaster.cast( annotations.get( ORMKeys.inverse ) ) );
 		}
+		if ( annotations.containsKey( ORMKeys.inverseJoinColumn ) ) {
+			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.inverseJoinColumn ) ) );
+		}
+		if ( annotations.containsKey( ORMKeys.fkcolumn ) ) {
+			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.fkcolumn ) ) );
+		}
+		if ( annotations.containsKey( ORMKeys.linkTable ) ) {
+			association.putIfAbsent( Key.table, translateTableName( annotations.getAsString( ORMKeys.linkTable ) ) );
+			// if there's a linkTable, we need to set the schema and catalog
+			association.put( ORMKeys.schema, annotations.getAsString( ORMKeys.linkSchema ) );
+			association.put( ORMKeys.catalog, annotations.getAsString( ORMKeys.linkCatalog ) );
+		}
+		association.putIfAbsent( Key.table, translateTableName( annotations.getAsString( Key.table ) ) );
+		association.putIfAbsent( ORMKeys.schema, annotations.getAsString( ORMKeys.schema ) );
+		association.putIfAbsent( ORMKeys.catalog, annotations.getAsString( ORMKeys.catalog ) );
 		return association;
 	}
 
 	protected IStruct parseColumnAnnotations( IStruct annotations ) {
 		IStruct column = new Struct();
 		if ( annotations.containsKey( Key.column ) ) {
-			column.put( Key._name, annotations.getAsString( Key.column ) );
+			column.put( Key._name, translateColumnName( annotations.getAsString( Key.column ) ) );
 		}
 		if ( annotations.containsKey( Key.length ) ) {
 			column.put( Key.length, annotations.getAsString( Key.length ) );
@@ -150,7 +181,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			column.put( ORMKeys.updateable, BooleanCaster.cast( annotations.get( ORMKeys.update ) ) );
 		}
 		if ( annotations.containsKey( Key.table ) ) {
-			column.put( Key.table, annotations.getAsString( Key.table ) );
+			column.put( Key.table, translateTableName( annotations.getAsString( Key.table ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.schema ) ) {
 			column.put( ORMKeys.schema, annotations.getAsString( ORMKeys.schema ) );
@@ -158,7 +189,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.dbDefault ) ) {
 			column.put( Key._DEFAULT, annotations.getAsString( ORMKeys.dbDefault ) );
 		}
-		column.putIfAbsent( "name", this.name );
+		column.putIfAbsent( "name", translateColumnName( this.name ) );
 		return column;
 	}
 
