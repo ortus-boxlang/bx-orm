@@ -36,12 +36,70 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.association	= parseAssociation( this.annotations );
 	}
 
+	/**
+	 * Parse the column annotations. If property is not a basic column, returns an empty struct.
+	 * 
+	 * @param annotations All property metadata annotations.
+	 * 
+	 * @return Struct containing column meta:
+	 *         <code>
+	 * {
+	 * 	name: "email",
+	 * 	unique: true,
+	 * 	nullable: false,
+	 * 	length: 255,
+	 * 	precision: 0,
+	 * 	scale: 0,
+	 * 	insertable: true,
+	 * 	updatable: true,
+	 * 	...
+	 * }
+	 * </code>
+	 */
 	protected abstract IStruct parseColumnAnnotations( IStruct annotations );
 
+	/**
+	 * Parse the generator annotations. If property is not generated, returns an empty struct.
+	 * 
+	 * @param annotations All property metadata annotations.
+	 * 
+	 * @return Struct containing generator meta:
+	 *         <code>
+	 * {
+	 * 	class: "increment",
+	 * 	selectKey: "foo",
+	 * 	generated: "insert",
+	 * 	sequence: "bar",
+	 * 	params : { ... }
+	 * }
+	 * </code>
+	 */
 	protected abstract IStruct parseGeneratorAnnotations( IStruct annotations );
 
+	/**
+	 * Parse the association annotations. If property is not an association, (one-to-one, one-to-many, many-to-one, many-to-many) an empty struct is
+	 * returned.
+	 * 
+	 * @param annotations All property metadata annotations.
+	 * 
+	 * @return Struct containing parsed and normalized association meta:
+	 *         <code>
+	 * {
+	 * 	type: "one-to-one",
+	 * 	unique: true,
+	 * 	lazy: "proxy",
+	 * 	fetch: "join",
+	 * ...
+	 * }
+	 * </code>
+	 */
 	protected abstract IStruct parseAssociation( IStruct annotations );
 
+	/**
+	 * @deprecated Please refactor to flat type methods instead: `getSqlType()`, `getOrmType()`, `getFieldType()`, `getOrmType()`.
+	 * 
+	 * @return
+	 */
 	private IStruct parseTypeAnnotations( IStruct annotations ) {
 		IStruct typeInfo = new Struct();
 		if ( annotations.containsKey( Key.type ) ) {

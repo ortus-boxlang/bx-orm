@@ -29,7 +29,23 @@ public class BoxClassInstantiator implements Instantiator {
 		IBoxContext	context		= SessionFactoryBuilder
 		    .getApplicationContext( entityMetamodel.getSessionFactory() );
 
-		return classLocator.load( context, bxClassFQN, "bx" ).invokeConstructor( context ).unWrapBoxLangClass();
+		Object		theEntity	= classLocator.load( context, bxClassFQN, "bx" )
+		    .invokeConstructor( context )
+		    .unWrapBoxLangClass();
+
+		// @TODO: Get this working!
+		// Arrays.stream( this.entityMetamodel.getPropertyTypes() )
+		// .filter( propertyType -> propertyType.isAssociationType() )
+		// .forEach( propertyType -> {
+		// String associationName = this.entityMetamodel.getPropertyNames()[propertyType.getPropertyIndex()];
+		// // add has
+		// theEntity.getThisScope().put( Key.of( "has" + associationName, hasUDF )
+		// // add add (for to-many associations)
+		// theEntity.getThisScope().put( Key.of( "add" + associationName, addUDF )
+		// // add remove (for to-many associations)
+		// theEntity.getThisScope().put( Key.of( "remove" + associationName, removeUDF ) );
+
+		return theEntity;
 	}
 
 	@Override

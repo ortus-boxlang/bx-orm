@@ -201,9 +201,6 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.property ) ) {
 			generator.put( ORMKeys.property, annotations.getAsString( ORMKeys.property ) );
 		}
-		if ( annotations.containsKey( ORMKeys.generator ) ) {
-			generator.put( Key._CLASS, annotations.getAsString( ORMKeys.generator ) );
-		}
 		if ( annotations.containsKey( ORMKeys.selectKey ) ) {
 			generator.put( ORMKeys.selectKey, annotations.getAsString( ORMKeys.selectKey ) );
 		}
