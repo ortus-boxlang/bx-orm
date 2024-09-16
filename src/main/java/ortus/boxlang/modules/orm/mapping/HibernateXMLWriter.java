@@ -149,9 +149,9 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		}
 		Element toManyNode = this.document.createElement( association.getAsString( Key.type ) );
 		// now here, we create the <one-to-many> or <many-to-many> element
-		if ( association.containsKey( Key.column ) ) {
+		if ( association.containsKey( ORMKeys.inverseJoinColumn ) ) {
 			// @TODO: Loop over all column values and create multiple <column> elements.
-			toManyNode.setAttribute( "column", association.getAsString( Key.column ) );
+			toManyNode.setAttribute( "column", association.getAsString( ORMKeys.inverseJoinColumn ) );
 		}
 		collectionNode.appendChild( toManyNode );
 		return collectionNode;
@@ -237,15 +237,15 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		}
 
 		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys
-		String columnName = ( String ) association.getOrDefault( ORMKeys.fkcolumn, "" );
-		if ( columnName.isBlank() ) {
-			columnName = ( String ) columnInfo.getOrDefault( Key._name, "" );
-		}
-		if ( !columnName.isBlank() ) {
-			Element columnNode = this.document.createElement( "key" );
+		if ( association.containsKey( ORMKeys.fkcolumn ) ) {
+			Element keyNode = this.document.createElement( "key" );
 			// @TODO: Loop over all column values and create multiple <column> elements.
-			columnNode.setAttribute( "column", columnInfo.getAsString( Key.column ) );
-			theNode.appendChild( columnNode );
+			keyNode.setAttribute( "column", association.getAsString( ORMKeys.fkcolumn ) );
+
+			if ( association.containsKey( ORMKeys.mappedBy ) ) {
+				keyNode.setAttribute( "property-ref", association.getAsString( ORMKeys.mappedBy ) );
+			}
+			theNode.appendChild( keyNode );
 		}
 		return theNode;
 	}

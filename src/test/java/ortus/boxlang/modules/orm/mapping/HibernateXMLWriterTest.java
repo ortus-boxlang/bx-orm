@@ -671,7 +671,7 @@ public class HibernateXMLWriterTest {
 		assertEquals( "FK_owner", columnNode.getAttributes().getNamedItem( "name" ).getTextContent() );
 	}
 
-	@Disabled( "Unimplemented" )
+	// @Disabled( "Unimplemented" )
 	@DisplayName( "It maps relationships with link tables" )
 	@Test
 	public void testManyToManyLinkTable() {
@@ -688,6 +688,7 @@ public class HibernateXMLWriterTest {
 				linkCatalog="myDB"
 				linkSchema="dbo"
 				fkcolumn="FK_owner"
+				mappedBy="owners"
 				orderBy="name";
 		}
 		""" );
@@ -707,6 +708,8 @@ public class HibernateXMLWriterTest {
 		NamedNodeMap bagAttrs = bagNode.getAttributes();
 		assertEquals( "owners", bagAttrs.getNamedItem( "name" ).getTextContent() );
 		assertEquals( "tblOwners", bagAttrs.getNamedItem( "table" ).getTextContent() );
+		assertEquals( "dbo", bagAttrs.getNamedItem( "schema" ).getTextContent() );
+		assertEquals( "myDB", bagAttrs.getNamedItem( "catalog" ).getTextContent() );
 		assertEquals( "all", bagAttrs.getNamedItem( "cascade" ).getTextContent() );
 
 		Node keyNode = bagNode.getFirstChild();
@@ -714,7 +717,10 @@ public class HibernateXMLWriterTest {
 		assertEquals( "key", keyNode.getNodeName() );
 
 		NamedNodeMap keyAttrs = keyNode.getAttributes();
+		// fkcolumn -> key.column
 		assertEquals( "FK_owner", keyAttrs.getNamedItem( "column" ).getTextContent() );
+		// mappedBy -> key.property-ref
+		assertEquals( "owners", keyAttrs.getNamedItem( "property-ref" ).getTextContent() );
 
 		Node oneToManyNode = bagNode.getLastChild();
 		assertNotNull( oneToManyNode );
