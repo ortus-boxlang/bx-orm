@@ -12,8 +12,37 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 		super( entityName, meta );
 	}
 
-	// @TODO: Design/choose a modern syntax, then implement!
+	/**
+	 * Get all association metadata.
+	 * <p>
+	 * If none of these keys are present, the property is not an association and an empty struct will be returned:
+	 * 
+	 * <ul>
+	 * <li>&#064;OneToOne</li>
+	 * <li>&#064;OneToMany</li>
+	 * <li>&#064;ManyToOne</li>
+	 * <li>&#064;ManyToMany</li>
+	 * </ul>
+	 * 
+	 * Here's a quick example of an ORM property defined as a one-to-many relationship:
+	 * 
+	 * <pre>
+	 * <code>
+	&#064;OneToMany {
+	mappedBy : "customer",
+	fetchMode : "select",
+	batchSize : 25
+	}
+	property invoices;
+	 * </code>
+	 * </pre>
+	 */
 	protected IStruct parseAssociation( IStruct annotations ) {
+		// @TODO: For *-to-many associations, lazy should default to true. (lazy fetch)
+		// @TODO: For *-to-one associations, lazy should default to true. (lazy fetch)
+		// @TODO: For one-to-one associations, lazy should default to false. (eager fetch)
+		// Note: fetch mode (select vs join) is NOT the same as fetch type (lazy vs eager).
+		// batch size is only applicable when fetch mode = select.
 		return Struct.EMPTY;
 	}
 
