@@ -1,5 +1,8 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -7,23 +10,25 @@ import ortus.boxlang.runtime.types.Struct;
 
 public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
-	protected IStruct	meta;
-	protected IStruct	annotations;
+	protected IStruct				meta;
+	protected IStruct				annotations;
 
 	/**
 	 * Parent entity name, for logging purposes
 	 */
-	protected String	entityName;
-	protected String	name;
-	protected boolean	isImmutable			= false;
-	protected boolean	isOptimisticLock	= true;
-	protected String	lazy;
-	protected String	formula;
-	protected IStruct	types;
-	protected IStruct	generator;
-	protected IStruct	column;
-	protected IStruct	association;
-	protected String	unsavedValue;
+	protected String				entityName;
+	protected String				name;
+	protected boolean				isImmutable			= false;
+	protected boolean				isOptimisticLock	= true;
+	protected String				lazy;
+	protected String				formula;
+	protected IStruct				types;
+	protected IStruct				generator;
+	protected IStruct				column;
+	protected IStruct				association;
+	protected String				unsavedValue;
+
+	protected final static Logger	logger				= LoggerFactory.getLogger( AbstractPropertyMeta.class );
 
 	public AbstractPropertyMeta( String entityName, IStruct meta ) {
 		this.entityName		= entityName;

@@ -76,7 +76,7 @@ public class ModernEntityMeta extends AbstractEntityMeta {
 			}
 		}
 
-		this.allPersistentProperties	= entityMeta.getAsArray( Key.properties ).stream()
+		this.allPersistentProperties	= this.allProperties.stream()
 		    .map( IStruct.class::cast )
 		    // Filter out transient properties, aka @Transient
 		    .filter( ( prop ) -> !prop.getAsStruct( Key.annotations ).containsKey( ORMKeys._transient ) )

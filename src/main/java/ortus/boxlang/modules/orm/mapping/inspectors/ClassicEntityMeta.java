@@ -40,7 +40,7 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 			this.discriminator.computeIfAbsent( Key.value, key -> this.annotations.getAsString( ORMKeys.discriminatorValue ) );
 		}
 
-		this.allPersistentProperties	= entityMeta.getAsArray( Key.properties ).stream()
+		this.allPersistentProperties	= this.allProperties.stream()
 		    .map( IStruct.class::cast )
 		    .filter( ( IStruct prop ) -> {
 											    var annotations = prop.getAsStruct( Key.annotations );

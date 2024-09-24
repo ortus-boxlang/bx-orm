@@ -28,6 +28,13 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( this.annotations.containsKey( ORMKeys.formula ) ) {
 			this.formula = this.annotations.getAsString( ORMKeys.formula );
 		}
+		if ( annotations.containsKey( ORMKeys.fieldtype ) ) {
+			String fieldType = annotations.getAsString( ORMKeys.fieldtype );
+			if ( fieldType == "collection" ) {
+				logger.warn( "Property {} on entity {} has fieldtype=collection, which is not yet supported. Please forward to your local Ortus agency.",
+				    this.name, entityName );
+			}
+		}
 	}
 
 	protected IStruct parseAssociation( IStruct annotations ) {

@@ -126,7 +126,7 @@ public class MappingGenerator {
 		}
 		entities.stream()
 		    .map( ( possibleEntity ) -> {
-			    logger.warn( "Discovered BoxLang class at path {}; loading entity metadata", possibleEntity.getAsString( Key.file ) );
+			    logger.info( "Discovered BoxLang class at path {}; loading entity metadata", possibleEntity.getAsString( Key.file ) );
 			    possibleEntity.put( Key.metadata, getClassMeta( Path.of( possibleEntity.getAsString( Key.file ) ) ) );
 			    return possibleEntity;
 		    } )
@@ -206,11 +206,13 @@ public class MappingGenerator {
 	 */
 	private Path writeXMLFile( IStruct meta ) {
 		String	name	= meta.getAsString( Key._name );
+		String	path	= meta.getAsString( Key.path );
+		String	fileExt	= path.substring( path.lastIndexOf( '.' ) );
 		Path	xmlPath	= this.saveMappingAlongsideEntity
-		    ? Path.of( meta.getAsString( Key.path ).replace( ".bx", ".hbm.xml" ) )
+		    ? Path.of( path.replace( fileExt, ".hbm.xml" ) )
 		    : Path.of( this.saveDirectory, name + ".hbm.xml" );
 		try {
-			logger.warn( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
+			logger.info( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
 			String finalXML = generateXML( meta );
 			if ( finalXML.isEmpty() ) {
 				logger.warn( "No XML mapping generated for entity [{}]; skipping file write", name );
@@ -244,7 +246,7 @@ public class MappingGenerator {
 		try {
 			IEntityMeta entity = null;
 			if ( meta.getAsStruct( Key.annotations ).containsKey( ORMKeys.persistent ) ) {
-				logger.warn( "Class contains 'persistent' annotation; using ClassicEntityMeta: [{}]",
+				logger.info( "Class contains 'persistent' annotation; using ClassicEntityMeta: [{}]",
 				    meta.getAsString( Key.path ) );
 				entity = new ClassicEntityMeta( meta );
 			} else {

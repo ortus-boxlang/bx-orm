@@ -41,8 +41,16 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	Document					document;
 
 	public HibernateXMLWriter( IEntityMeta entity ) {
-		this.entity		= entity;
-		this.document	= createDocument();
+		this.entity = entity;
+
+		// Validation
+		if ( entity.getIdProperties().isEmpty() ) {
+			logger.error( "Entity {} has no ID properties. Hibernate requires at least one.", entity.getEntityName() );
+			// @TODO: Check ORMConfig.ignoreParseErrors and throw if false.
+			// throw new BoxRuntimeException( "Entity %s has no ID properties. Hibernate requires at least one.".formatted( entity.getEntityName() ) );
+		}
+
+		this.document = createDocument();
 	}
 
 	public Document createDocument() {

@@ -1,19 +1,32 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
+import ortus.boxlang.compiler.parser.Parser;
+import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.exceptions.ParseException;
 
 public abstract class AbstractEntityMeta implements IEntityMeta {
 
 	protected IStruct				meta;
 	protected IStruct				annotations;
+	protected IStruct				parentMeta;
 
+	/**
+	 * All properties of the entity, including transient properties and parent properties.
+	 */
+	protected Array					allProperties;
 	protected List<IStruct>			allPersistentProperties;
 
 	protected List<IPropertyMeta>	idProperties;
@@ -63,8 +76,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		this.annotations			= entityMeta.getAsStruct( Key.annotations );
 
 		// Handle generic entity metadata, i.e. metadata that is common to both classic and modern annotation syntax.
-		this.isExtended				= this.meta.containsKey( Key._EXTENDS )
-		    && !this.meta.getAsStruct( Key._EXTENDS ).isEmpty();
+		this.isExtended				= this.annotations.containsKey( Key._EXTENDS )
+		    && !this.annotations.getAsString( Key._EXTENDS ).isEmpty();
 
 		this.isDynamicInsert		= this.annotations.containsKey( ORMKeys.dynamicInsert )
 		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.dynamicInsert, false ) );
@@ -76,6 +89,40 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.selectBeforeUpdate, false ) );
 
 		this.associations			= new ArrayList<>();
+
+		this.allProperties			= entityMeta.getAsArray( Key.properties );
+
+		// Parse extended entity metadata
+		this.parentMeta				= this.isExtended
+		    ? readParentEntityMeta( this.annotations.getAsString( Key._EXTENDS ) )
+		    : Struct.EMPTY;
+
+		if ( this.isExtended ) {
+			// Copy parent properties into the allProperties array
+			this.allProperties.addAll( this.parentMeta.getAsArray( Key.properties ) );
+		}
+
+	}
+
+	/**
+	 * Parse metadata from the parent (extended) entity and return it as a struct.
+	 * 
+	 * @param extendName Value of the `extends` attribute on the child entity. For example, `extends="BaseModel"` or `extends="models.orm.BaseModel"`.
+	 * 
+	 * @return
+	 */
+	protected IStruct readParentEntityMeta( String extendName ) {
+		Path			thisPath	= Paths.get( this.meta.getAsString( Key.path ) );
+		// @TODO: This is a hack, discuss w/ Luis how to use the ClassResolver.
+		// The BoxLang classResolver will enable us to resolve mappings and get this working on both .cfc and .bx files.
+		Path			parentPath	= thisPath.resolveSibling( extendName + ".cfc" );
+		ParsingResult	result		= new Parser().parse( new File( parentPath.toString() ) );
+		if ( !result.isCorrect() ) {
+			throw new ParseException( result.getIssues(), "" );
+		}
+		ClassMetadataVisitor visitor = new ClassMetadataVisitor();
+		result.getRoot().accept( visitor );
+		return visitor.getMetadata();
 	}
 
 	/**
@@ -158,17 +205,9 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		return this.where;
 	}
 
-	// public String getCatalog() {
-	// return this.catalogName;
-	// }
-
-	// public String getCatalog() {
-	// return this.catalogName;
-	// }
-
-	// public String getCatalog() {
-	// return this.catalogName;
-	// }
+	public IStruct getParentMeta() {
+		return this.parentMeta;
+	}
 
 	/**
 	 * Property methods

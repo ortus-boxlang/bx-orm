@@ -24,6 +24,13 @@ public interface IEntityMeta {
 	 */
 	public boolean isSimpleEntity();
 
+	/**
+	 * Determining whether this entity is "extended" or not. Aka, does this entity have a parent class.
+	 * <p>
+	 * Parent metadata can be retrieved via {@link #getParentMeta()}.
+	 * 
+	 * @return True if the entity is extended via `extends="SomeParentClass"`, else false.
+	 */
 	public boolean isExtended();
 
 	public boolean isImmutable();
@@ -64,6 +71,13 @@ public interface IEntityMeta {
 	public String getOptimisticLock();
 
 	public String getWhere();
+
+	/**
+	 * Retrieve the parent metadata for this entity, if it exists.
+	 * 
+	 * @return Struct of parent metadata, or EMPTY if no parent metadata exists.
+	 */
+	public IStruct getParentMeta();
 
 	/**
 	 * Property methods
