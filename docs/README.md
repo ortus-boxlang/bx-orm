@@ -13,3 +13,21 @@ For more details, see:
 
 * [Configuration Compatibility](./Configuration.md#compatibility)
 * [Entity Mapping Compatibility](./Mapping.md#compatibility)
+
+## Entity Mapping CLI
+
+Test your entity mapping capabilities via this command:
+
+```sh
+java -cp build/libs/bx-orm-1.0.0-all.jar:src/test/resources/libs/boxlang-1.0.0-snapshot-all.jar \
+    ortus.boxlang.modules.orm.tools.MappingGenerator \
+    --path src/test/resources/app
+```
+
+Where `build/libs/bx-orm-1.0.0-all.jar` is the path to the compiled bx-orm .jar file, and `src/test/resources/libs/boxlang-1.0.0-snapshot-all.jar` is the path to the compiled boxlang .jar file.
+
+Options:
+
+* `--path MY_PATH` - Required. Relative path to the ORM entity files.
+* `--failFast` - Inverse of the legacy CFML configuration `skipCFCWithError`. If `--failFast` is passed, the .xml generation will abort if any entity class files fail to parse.
+* `--debug` - Spit out debug logging. Not necessary for your first run, but this may be helpful in debugging mapping errors.

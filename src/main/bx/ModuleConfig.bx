@@ -41,12 +41,12 @@ class {
 	/**
 	 * Who built the module
 	 */
-	this.author = "Luis Majano";
+	this.author = "Michael Born";
 
 	/**
 	 * The module description
 	 */
-	this.description = "This module does amazing things";
+	this.description = "Implements Hibernate ORM support for BoxLang";
 
 	/**
 	 * The module web URL
@@ -72,8 +72,6 @@ class {
 		 * Every module has a settings configuration object
 		 */
 		settings = {
-			loadedOn : now(),
-			loadedBy : "Luis Majano"
 		};
 
 		/**
@@ -85,17 +83,13 @@ class {
 		 * bxModules.{this.mapping}.{mappingName}
 		 * Ex: bxModules.test.MyObject => bxModules.test.models.MyObject
 		 */
-		objectMappings = {
-			// { name="MyObject", class="models.utilities.MyObject" }
-		}
+		objectMappings = {};
 
 		/**
 		 * DataSources can be defined by a module and they will be registered
 		 * for you in the runtime
 		 */
-		datasources = {
-			// { name="MyDSN", class="coldbox.system.datasources.ColdBoxDataSource", properties={dsn="mydsn"} }
-		};
+		datasources = {};
 
 		/**
 		 * The module interceptors to register into the runtime
@@ -111,16 +105,12 @@ class {
 	/**
 	 * Called by the ModuleService on module activation
 	 */
-	function onLoad(){
-
-	}
+	function onLoad(){}
 
 	/**
 	 * Called by the ModuleService on module deactivation
 	 */
-	function onUnload(){
-
-	}
+	function onUnload(){}
 
 	/**
 	 * --------------------------------------------------------------------------
@@ -129,7 +119,5 @@ class {
 	 * You can listen to any Runtime events by creating the methods
 	 * that match the approved Runtime Interception Points
 	 */
-	 function afterModuleActivations(){
-		// do something
-	 }
+	 function afterModuleActivations(){}
 }
