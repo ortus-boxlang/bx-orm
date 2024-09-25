@@ -766,7 +766,7 @@ public class HibernateXMLWriterTest {
 		// assertEquals( "Person", manyToManyAttrs.getNamedItem( "class" ).getTextContent() );
 	}
 
-	// @Disabled( "Unimplemented" )
+	// @formatter:off
 	@DisplayName( "It maps one-to-many relationships" )
 	@ParameterizedTest
 	@ValueSource( strings = {
@@ -783,8 +783,6 @@ public class HibernateXMLWriterTest {
 	    		orderBy="name";
 	    }
 	    """
-	// , """
-	// """
 	} )
 	// @formatter:on
 	public void testOneToMany( String sourceCode ) {
@@ -819,6 +817,49 @@ public class HibernateXMLWriterTest {
 
 		// NamedNodeMap manyToManyAttrs = oneToManyNode.getAttributes();
 		// assertEquals( "Person", manyToManyAttrs.getNamedItem( "class" ).getTextContent() );
+	}
+
+	// @formatter:off
+	@Disabled( "Unimplemented" )
+	@DisplayName( "It maps many-to-one relationships" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+			property
+				name="createdBy"
+				fieldtype="many-to-one"
+				cfc="Developer"
+				fkcolumn="FK_creationDev"
+				fetch="select"
+				cascade="all"
+				insert="true"
+				update="false"
+				lazy="true"
+				persistent=true;
+		}
+	    """
+	} )
+	// @formatter:on
+	public void testManyToOne( String sourceCode ) {
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		String		xml				= xmlToString( doc );
+
+		Node		classEL			= doc.getDocumentElement().getFirstChild();
+
+		Node		manyToOneNode	= classEL.getLastChild();
+		assertNotNull( manyToOneNode );
+		assertEquals( "many-to-one", manyToOneNode.getNodeName() );
+
+		NamedNodeMap manyToOneAttrs = manyToOneNode.getAttributes();
+		assertEquals( "createdBy", manyToOneAttrs.getNamedItem( "name" ).getTextContent() );
+		assertEquals( "FK_creationDev", manyToOneAttrs.getNamedItem( "column" ).getTextContent() );
+		assertEquals( "select", manyToOneAttrs.getNamedItem( "fetch" ).getTextContent() );
+		assertEquals( "all", manyToOneAttrs.getNamedItem( "cascade" ).getTextContent() );
 	}
 
 	@Disabled( "Unimplemented" )

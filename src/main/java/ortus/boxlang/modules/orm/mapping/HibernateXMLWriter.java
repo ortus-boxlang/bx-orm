@@ -269,6 +269,9 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		IStruct	association	= prop.getAssociation();
 		String	type		= association.getAsString( Key.type );
 		Element	theNode		= this.document.createElement( type );
+		if ( association.containsKey( Key._NAME ) ) {
+			theNode.setAttribute( "name", association.getAsString( Key._NAME ) );
+		}
 		if ( association.containsKey( ORMKeys.cascade ) ) {
 			theNode.setAttribute( "cascade", association.getAsString( ORMKeys.cascade ) );
 		}
