@@ -30,6 +30,7 @@ import ortus.boxlang.modules.orm.mapping.inspectors.ClassicEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.ModernEntityMeta;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
@@ -133,7 +134,8 @@ public class MappingGenerator {
 		    .filter( ( IStruct possibleEntity ) -> {
 			    IStruct meta	= possibleEntity.getAsStruct( Key.metadata );
 			    IStruct annotations = meta.getAsStruct( Key.annotations );
-			    if ( annotations.containsKey( ORMKeys.persistent ) || annotations.containsKey( ORMKeys.entity ) ) {
+			    if ( annotations.containsKey( ORMKeys.entity )
+			        || ( annotations.containsKey( ORMKeys.persistent ) && BooleanCaster.cast( annotations.getOrDefault( ORMKeys.persistent, "false" ) ) ) ) {
 				    logger.debug(
 				        "Class is 'persistent'; generating XML: [{}] ",
 				        meta.getAsString( Key.path ) );
