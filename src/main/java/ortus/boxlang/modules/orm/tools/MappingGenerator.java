@@ -17,6 +17,12 @@
  */
 package ortus.boxlang.modules.orm.tools;
 
+import java.nio.file.Path;
+import java.util.HashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -41,19 +47,35 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  */
 public class MappingGenerator {
 
+	private final static Logger log = LoggerFactory.getLogger( MappingGenerator.class );
+
 	public static void main( String[] args ) {
 		BoxRuntime runtime = BoxRuntime.getInstance();
 
 		try {
-			Boolean	debugMode	= false;
-			Boolean	failFast	= false;
-			Array	entityPaths	= new Array();
+			Boolean					debugMode	= false;
+			Boolean					failFast	= false;
+			Array					entityPaths	= new Array();
+			HashMap<String, String>	mappings	= new HashMap<>();
+
+			log.info( "Parsing arguments" );
+
 			for ( int i = 0; i < args.length; i++ ) {
 				if ( args[ i ].equalsIgnoreCase( "--path" ) ) {
 					if ( i + 1 >= args.length || args[ i + 1 ].startsWith( "--" ) ) {
 						throw new BoxRuntimeException( "--path requires a path" );
 					}
 					entityPaths.add( args[ i + 1 ] );
+				}
+				if ( args[ i ].equalsIgnoreCase( "--mapping" ) ) {
+					if ( i + 1 >= args.length || args[ i + 1 ].startsWith( "--" ) ) {
+						throw new BoxRuntimeException( "--mapping requires a name:path value" );
+					}
+					String[] mapping = args[ i + 1 ].split( ":" );
+					if ( mapping.length != 2 || mapping[ 0 ].isEmpty() || mapping[ 1 ].isEmpty() ) {
+						throw new BoxRuntimeException( "--mapping requires a name:path value" );
+					}
+					mappings.put( mapping[ 0 ], mapping[ 1 ] );
 				}
 				if ( args[ i ].equalsIgnoreCase( "--failFast" ) ) {
 					failFast = true;
@@ -62,8 +84,16 @@ public class MappingGenerator {
 					debugMode = true;
 				}
 			}
+			// Note that none of our logging will print out until we set the debug mode.
 			if ( debugMode ) {
 				LoggingConfigurator.reconfigureDebugMode( debugMode );
+			}
+
+			if ( mappings.size() > 0 ) {
+				for ( String key : mappings.keySet() ) {
+					log.info( "Mapping: " + key + " -> " + mappings.get( key ) );
+					runtime.getConfiguration().registerMapping( key, Path.of( mappings.get( key ) ).toAbsolutePath().toString() );
+				}
 			}
 			ORMConfig											ormConfig	= new ORMConfig( Struct.of(
 			    // required that the user pass the correct path to their entity locations.
@@ -73,11 +103,18 @@ public class MappingGenerator {
 			    // by default, save the generated hbm.xml files to the same directory.
 			    ORMKeys.saveMapping, true
 			) );
+
+			// @TODO: Add a custom toString() to ORMConfig for logging purposes.
+			// log.info( "Using ORM Config: {}", ormConfig );
+
 			ortus.boxlang.modules.orm.mapping.MappingGenerator	generator	= new ortus.boxlang.modules.orm.mapping.MappingGenerator(
 			    runtime.getRuntimeContext(),
 			    ormConfig
 			);
+
+			log.info( "========= Generating mappings! " );
 			generator.generateMappings();
+			log.info( "========= Done! " );
 
 			System.exit( 0 );
 		} finally {
