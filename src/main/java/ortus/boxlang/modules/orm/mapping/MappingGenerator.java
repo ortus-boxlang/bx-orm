@@ -96,7 +96,7 @@ public class MappingGenerator {
 
 	public MappingGenerator generateMappings() {
 		final int			MAX_SYNCHRONOUS_ENTITIES	= 20;
-		ArrayList<IStruct>	entities					= this.entityPaths.stream()
+		ArrayList<IStruct>	classes						= this.entityPaths.stream()
 		    // @TODO: Resolve mappings for each entity path
 		    .flatMap( path -> {
 			    try {
@@ -106,7 +106,7 @@ public class MappingGenerator {
 				        .filter( Files::isRegularFile )
 				        // Only .bx or .cfc class files
 				        .filter( ( file ) -> StringUtils.endsWithAny( file.toString(), ".bx", ".cfc" ) )
-				        // map to a BetterFQN instance containing the location and file name. Allows us to generate a proper FQN for the entity.
+				        // map to a struct instance containing the location and file name. We need both to generate the FQN.
 				        .map( file -> Struct.of( this.location, path.toString(), Key.file, file.toString() ) );
 			    } catch ( IOException e ) {
 				    if ( config.ignoreParseErrors ) {
@@ -120,48 +120,63 @@ public class MappingGenerator {
 		    } )
 		    // collect to ArrayList so we can parallelize the metadata load+introspection
 		    .collect( java.util.stream.Collectors.toCollection( ArrayList::new ) );
-		// TODO: Once this is all working, switch to parallel streams IF > 20ish entities
-		if ( entities.size() > MAX_SYNCHRONOUS_ENTITIES ) {
-			logger.debug( "Detected more than {} entities; parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
-			// entities.parallelStream()...
+		if ( classes.size() > MAX_SYNCHRONOUS_ENTITIES ) {
+			logger.debug( "Detected more than {} classes; parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
+			classes.parallelStream()
+			    // Parse class metadata
+			    .map( ( IStruct possibleEntity ) -> readMeta( possibleEntity ) )
+			    // Filter out non-persistent entities
+			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
+			    // Convert to EntityRecord (includes generating the XML mapping file)
+			    .map( ( IStruct entity ) -> toEntityRecord( entity ) )
+			    // Add to entity map
+			    .forEach( ( entityRecord ) -> entityMap.put( entityRecord.entityName(), entityRecord ) );
+		} else {
+			classes.stream()
+			    // Parse class metadata
+			    .map( ( IStruct possibleEntity ) -> readMeta( possibleEntity ) )
+			    // Filter out non-persistent entities
+			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
+			    // Convert to EntityRecord (includes generating the XML mapping file)
+			    .map( ( IStruct entity ) -> toEntityRecord( entity ) )
+			    // Add to entity map
+			    .forEach( ( entityRecord ) -> entityMap.put( entityRecord.entityName(), entityRecord ) );
 		}
-		entities.stream()
-		    .map( ( possibleEntity ) -> {
-			    logger.info( "Discovered BoxLang class at path {}; loading entity metadata", possibleEntity.getAsString( Key.file ) );
-			    possibleEntity.put( Key.metadata, getClassMeta( Path.of( possibleEntity.getAsString( Key.file ) ) ) );
-			    return possibleEntity;
-		    } )
-		    .filter( ( IStruct possibleEntity ) -> {
-			    IStruct meta	= possibleEntity.getAsStruct( Key.metadata );
-			    IStruct annotations = meta.getAsStruct( Key.annotations );
-			    if ( annotations.containsKey( ORMKeys.entity )
-			        || ( annotations.containsKey( ORMKeys.persistent ) && BooleanCaster.cast( annotations.getOrDefault( ORMKeys.persistent, "false" ) ) ) ) {
-				    logger.debug(
-				        "Class is 'persistent'; generating XML: [{}] ",
-				        meta.getAsString( Key.path ) );
-				    return true;
-			    } else {
-				    logger.debug( "Class is unmarked or marked as as non-persistent; skipping: [{}]",
-				        meta.getAsString( Key.path ) );
-				    return false;
-			    }
-		    } )
-		    .forEach( ( IStruct theEntity ) -> {
-			    IStruct meta	= theEntity.getAsStruct( Key.metadata );
-			    String entityName = readEntityName( meta );
-			    String fqn		= new BetterFQN( Path.of( theEntity.getAsString( this.location ) ).getParent(), Path.of( meta.getAsString( Key.path ) ) )
-			        .toString();
-			    // TODO: Switch to .collect( Collectors.toMap(...) );
-			    entityMap.put( entityName,
-			        new EntityRecord(
-			            entityName,
-			            fqn,
-			            writeXMLFile( meta )
-			        )
-			    );
-		    } );
 
 		return this;
+	}
+
+	private boolean isPersistentEntity( IStruct entityMeta ) {
+		IStruct annotations = entityMeta.getAsStruct( Key.annotations );
+		if ( annotations.containsKey( ORMKeys.entity )
+		    || ( annotations.containsKey( ORMKeys.persistent ) && BooleanCaster.cast( annotations.getOrDefault( ORMKeys.persistent, "false" ) ) ) ) {
+			logger.debug(
+			    "Class is 'persistent'; generating XML: [{}] ",
+			    entityMeta.getAsString( Key.path ) );
+			return true;
+		} else {
+			logger.debug( "Class is unmarked or marked as as non-persistent; skipping: [{}]",
+			    entityMeta.getAsString( Key.path ) );
+			return false;
+		}
+	}
+
+	private IStruct readMeta( IStruct possibleEntity ) {
+		logger.info( "Loading metadata for class {}", possibleEntity.getAsString( Key.file ) );
+		possibleEntity.put( Key.metadata, getClassMeta( Path.of( possibleEntity.getAsString( Key.file ) ) ) );
+		return possibleEntity;
+	}
+
+	private EntityRecord toEntityRecord( IStruct theEntity ) {
+		IStruct	meta		= theEntity.getAsStruct( Key.metadata );
+		String	entityName	= readEntityName( meta );
+		String	fqn			= new BetterFQN( Path.of( theEntity.getAsString( this.location ) ).getParent(), Path.of( meta.getAsString( Key.path ) ) )
+		    .toString();
+		return new EntityRecord(
+		    entityName,
+		    fqn,
+		    writeXMLFile( meta )
+		);
 	}
 
 	private String readEntityName( IStruct meta ) {
