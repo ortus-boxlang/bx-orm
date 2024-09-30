@@ -28,6 +28,8 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	protected IStruct				association;
 	protected String				unsavedValue;
 
+	protected FIELDTYPE				fieldType;
+
 	protected final static Logger	logger				= LoggerFactory.getLogger( AbstractPropertyMeta.class );
 
 	public AbstractPropertyMeta( String entityName, IStruct meta ) {
@@ -162,6 +164,10 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
 	public IStruct getAssociation() {
 		return this.association;
+	}
+
+	public FIELDTYPE getFieldType() {
+		return this.fieldType;
 	}
 
 	/**

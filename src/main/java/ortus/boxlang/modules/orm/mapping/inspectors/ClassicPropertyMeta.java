@@ -35,6 +35,34 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				    this.name, entityName );
 			}
 		}
+
+		annotations.putIfAbsent( ORMKeys.fieldtype, "column" );
+		switch ( annotations.getAsString( ORMKeys.fieldtype ).toUpperCase() ) {
+			case "ID" :
+				this.fieldType = FIELDTYPE.ID;
+				break;
+			case "COLUMN" :
+				this.fieldType = FIELDTYPE.COLUMN;
+				break;
+			case "ONE-TO-ONE" :
+			case "ONE-TO-MANY" :
+			case "MANY-TO-ONE" :
+			case "MANY-TO-MANY" :
+				this.fieldType = FIELDTYPE.ASSOCIATION;
+				break;
+			case "COLLECTION" :
+				this.fieldType = FIELDTYPE.COLLECTION;
+				break;
+			case "TIMESTAMP" :
+				this.fieldType = FIELDTYPE.TIMESTAMP;
+				break;
+			case "VERSION" :
+				this.fieldType = FIELDTYPE.VERSION;
+				break;
+			default :
+				throw new BoxRuntimeException( String.format( "Unknown field type '%s' for property '%s' on entity '%s'",
+				    annotations.getAsString( ORMKeys.fieldtype ), this.name, this.entityName ) );
+		}
 	}
 
 	protected IStruct parseAssociation( IStruct annotations ) {
@@ -195,6 +223,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		}
 		if ( annotations.containsKey( ORMKeys.dbDefault ) ) {
 			column.put( Key._DEFAULT, annotations.getAsString( ORMKeys.dbDefault ) );
+		}
+		if ( annotations.containsKey( Key.sqltype ) ) {
+			column.put( Key.sqltype, annotations.getAsString( Key.sqltype ) );
 		}
 		column.putIfAbsent( "name", translateColumnName( this.name ) );
 		return column;

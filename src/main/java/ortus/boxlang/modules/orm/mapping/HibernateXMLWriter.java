@@ -210,39 +210,17 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		}
 
 		theNode.setAttribute( "name", prop.getName() );
-		if ( columnInfo.containsKey( ORMKeys.table ) ) {
-			theNode.setAttribute( "table", columnInfo.getAsString( Key.table ) );
-		}
-		if ( columnInfo.containsKey( ORMKeys.schema ) ) {
-			theNode.setAttribute( "schema", columnInfo.getAsString( ORMKeys.schema ) );
-		}
-		if ( association.containsKey( ORMKeys.lazy ) ) {
-			theNode.setAttribute( "lazy", association.getAsString( ORMKeys.lazy ) );
-		}
+		// non-string, non-simple attributes
 		if ( association.containsKey( ORMKeys.inverse ) ) {
 			theNode.setAttribute( "inverse", trueFalseFormat( association.getAsBoolean( ORMKeys.inverse ) ) );
-		}
-		if ( association.containsKey( ORMKeys.cascade ) ) {
-			theNode.setAttribute( "cascade", association.getAsString( ORMKeys.cascade ) );
-		}
-		if ( association.containsKey( ORMKeys.orderBy ) ) {
-			theNode.setAttribute( "order-by", association.getAsString( ORMKeys.orderBy ) );
-		}
-		if ( association.containsKey( ORMKeys.where ) ) {
-			theNode.setAttribute( "where", association.getAsString( ORMKeys.where ) );
-		}
-		if ( association.containsKey( ORMKeys.fetch ) ) {
-			theNode.setAttribute( "fetch", association.getAsString( ORMKeys.fetch ) );
-		}
-		if ( association.containsKey( ORMKeys.optimisticLock ) ) {
-			theNode.setAttribute( "optimistic-lock", association.getAsString( ORMKeys.optimisticLock ) );
 		}
 		if ( association.containsKey( ORMKeys.immutable ) ) {
 			theNode.setAttribute( "mutable", trueFalseFormat( !association.getAsBoolean( ORMKeys.immutable ) ) );
 		}
-		if ( association.containsKey( ORMKeys.embedXML ) ) {
-			theNode.setAttribute( "embedXML", association.getAsString( ORMKeys.embedXML ) );
-		}
+
+		List<Key> stringProperties = List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.lazy, ORMKeys.cascade, ORMKeys.orderBy, ORMKeys.where,
+		    ORMKeys.fetch, ORMKeys.optimisticLock, ORMKeys.embedXML );
+		populateNodeAttributes( theNode, association, stringProperties );
 
 		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys
 		if ( association.containsKey( ORMKeys.fkcolumn ) ) {
@@ -266,39 +244,21 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	 * @return A &lt;one-to-one/&gt; or &lt;many-to-one/&gt;, element ready to add to a Hibernate mapping document
 	 */
 	public Element generateToOneAssociation( IPropertyMeta prop ) {
-		IStruct	association	= prop.getAssociation();
-		String	type		= association.getAsString( Key.type );
-		Element	theNode		= this.document.createElement( type );
-		if ( association.containsKey( Key._NAME ) ) {
-			theNode.setAttribute( "name", association.getAsString( Key._NAME ) );
-		}
-		if ( association.containsKey( ORMKeys.cascade ) ) {
-			theNode.setAttribute( "cascade", association.getAsString( ORMKeys.cascade ) );
-		}
+		IStruct		association			= prop.getAssociation();
+		String		type				= association.getAsString( Key.type );
+		Element		theNode				= this.document.createElement( type );
+
+		// @TODO: entity-name="EntityName"
+		List<Key>	stringProperties	= List.of( Key._NAME, ORMKeys.cascade, ORMKeys.fetch, ORMKeys.mappedBy, ORMKeys.access,
+		    ORMKeys.lazy, ORMKeys.embedXML, ORMKeys.foreignKey );
+		populateNodeAttributes( theNode, association, stringProperties );
+
+		// non-simple attributes
 		if ( association.containsKey( ORMKeys.constrained ) && association.getAsBoolean( ORMKeys.constrained ) ) {
 			theNode.setAttribute( "constrained", "true" );
 		}
-		if ( association.containsKey( ORMKeys.fetch ) ) {
-			theNode.setAttribute( "fetch", association.getAsString( ORMKeys.fetch ) );
-		}
-		if ( association.containsKey( ORMKeys.mappedBy ) ) {
-			theNode.setAttribute( "property-ref", association.getAsString( ORMKeys.mappedBy ) );
-		}
-		if ( association.containsKey( ORMKeys.access ) ) {
-			theNode.setAttribute( "access", association.getAsString( ORMKeys.access ) );
-		}
 		if ( prop.getFormula() != null ) {
 			theNode.setAttribute( "formula", prop.getFormula() );
-		}
-		if ( association.containsKey( ORMKeys.lazy ) ) {
-			theNode.setAttribute( "lazy", association.getAsString( ORMKeys.lazy ) );
-		}
-		// @TODO: entity-name="EntityName"
-		if ( association.containsKey( ORMKeys.embedXML ) ) {
-			theNode.setAttribute( "embed-xml", association.getAsString( ORMKeys.embedXML ) );
-		}
-		if ( association.containsKey( ORMKeys.foreignKey ) ) {
-			theNode.setAttribute( "foreign-key", association.getAsString( ORMKeys.foreignKey ) );
 		}
 		if ( association.containsKey( Key.column ) ) {
 			// @TODO: Loop over all column values and create multiple <column> elements.
@@ -338,23 +298,17 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 	public Element generateColumnElement( IPropertyMeta prop ) {
 		Element	theNode		= this.document.createElement( "column" );
 		IStruct	columnInfo	= prop.getColumn();
-		IStruct	types		= prop.getTypes();
 
 		theNode.setAttribute( "name", prop.getName() );
+		List<Key> stringProperties = List.of( Key._DEFAULT, Key.sqltype, ORMKeys.length, ORMKeys.precision, ORMKeys.scale );
+		populateNodeAttributes( theNode, columnInfo, stringProperties );
+
+		// non-simple attributes
 		if ( columnInfo.containsKey( ORMKeys.nullable ) ) {
 			theNode.setAttribute( "not-null", trueFalseFormat( !columnInfo.getAsBoolean( ORMKeys.nullable ) ) );
 		}
 		if ( columnInfo.containsKey( ORMKeys.unique ) ) {
 			theNode.setAttribute( "unique", trueFalseFormat( columnInfo.getAsBoolean( ORMKeys.unique ) ) );
-		}
-		if ( columnInfo.containsKey( ORMKeys.length ) ) {
-			theNode.setAttribute( "length", columnInfo.getAsString( ORMKeys.length ) );
-		}
-		if ( columnInfo.containsKey( ORMKeys.precision ) ) {
-			theNode.setAttribute( "precision", columnInfo.getAsString( ORMKeys.precision ) );
-		}
-		if ( columnInfo.containsKey( ORMKeys.scale ) ) {
-			theNode.setAttribute( "scale", columnInfo.getAsString( ORMKeys.scale ) );
 		}
 		// if ( prop.hasPropertyAnnotation( prop, ORMKeys.unsavedValue ) ) {
 		// columnNode.setAttribute( "unsaved-value", prop.getPropertyAnnotation( prop, ORMKeys.unsavedValue ) );
@@ -362,12 +316,6 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		// if ( prop.hasPropertyAnnotation( prop, ORMKeys.check ) ) {
 		// columnNode.setAttribute( "check", prop.getPropertyAnnotation( prop, ORMKeys.check ) );
 		// }
-		if ( columnInfo.containsKey( Key._DEFAULT ) ) {
-			theNode.setAttribute( "default", columnInfo.getAsString( Key._DEFAULT ) );
-		}
-		if ( types.containsKey( Key.sqltype ) ) {
-			theNode.setAttribute( "sql-type", types.getAsString( Key.sqltype ) );
-		}
 		// String uniqueKey = prop.getPropertyUniqueKey( prop );
 		// if ( uniqueKey != null ) {
 		// columnNode.setAttribute( "unique-key", uniqueKey );
@@ -494,7 +442,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		String	generatorType	= generator.getAsString( Key._CLASS );
 
 		Element	theNode			= this.document.createElement( "generator" );
-		if ( !List.of( "assigned", "increment" ).contains( generatorType ) ) {
+		if ( !List.of( "assigned", "increment", "native" ).contains( generatorType ) ) {
 			logger.warn( "Untested generator type: {}. Please forward to your local Ortus agency.", generatorType );
 		}
 		theNode.setAttribute( "class", generatorType );
@@ -662,7 +610,48 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		return theNode;
 	}
 
+	/**
+	 * Convert a boolean value to a string representation of "true" or "false". Useful for XML-ifying booleans.
+	 * 
+	 * @param value Boolean value to convert
+	 */
 	private String trueFalseFormat( Boolean value ) {
 		return Boolean.TRUE.equals( value ) ? "true" : "false";
+	}
+
+	/**
+	 * Populate simple string attributes on the given XML node for the given list of Keys existing in the given struct.
+	 * 
+	 * @param theNode          XML node to populate
+	 * @param association      Struct containing the attribute values. Any missing or empty values will be skipped.
+	 * @param stringProperties List of keys to populate as attributes on the XML node. i.e., `List.of( ORMKeys.table, ORMKeys.schema )`
+	 */
+	private void populateNodeAttributes( Element theNode, IStruct association, List<Key> stringProperties ) {
+		for ( Key propertyName : stringProperties ) {
+			if ( association.containsKey( propertyName ) ) {
+				String value = association.getAsString( propertyName );
+				if ( value != null && !value.isBlank() ) {
+					theNode.setAttribute( toHibernateAttributeName( propertyName ), value.trim() );
+				}
+			}
+		}
+	}
+
+	private String toHibernateAttributeName( Key key ) {
+		String name = key.getName().toLowerCase();
+		switch ( name ) {
+			case "sqltype" :
+				return "sql-type";
+			case "selectkey" :
+				return "key";
+			case "mappedby" :
+				return "property-ref";
+			case "foreignkey" :
+				return "foreign-key";
+			case "embedxml" :
+				return "embed-xml";
+			default :
+				return name;
+		}
 	}
 }

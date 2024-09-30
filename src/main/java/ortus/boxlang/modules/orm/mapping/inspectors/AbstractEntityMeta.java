@@ -20,7 +20,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 * All properties of the entity, including transient properties and parent properties.
 	 */
 	protected Array					allProperties;
-	protected List<IStruct>			allPersistentProperties;
+	protected List<IPropertyMeta>	allPersistentProperties;
 
 	protected List<IPropertyMeta>	idProperties;
 

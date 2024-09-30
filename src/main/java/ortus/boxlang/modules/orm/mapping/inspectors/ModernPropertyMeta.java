@@ -10,6 +10,23 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 
 	public ModernPropertyMeta( String entityName, IStruct meta ) {
 		super( entityName, meta );
+
+		if ( this.annotations.containsKey( Key.version ) ) {
+			this.fieldType = FIELDTYPE.VERSION;
+		} else if ( this.annotations.containsKey( ORMKeys.timestamp ) ) {
+			this.fieldType = FIELDTYPE.TIMESTAMP;
+		} else if ( this.annotations.containsKey( Key.id ) ) {
+			this.fieldType = FIELDTYPE.ID;
+		} else if ( this.annotations.containsKey( Key.collection ) ) {
+			this.fieldType = FIELDTYPE.COLLECTION;
+		} else if ( this.annotations.containsKey( ORMKeys.OneToOne ) ||
+		    this.annotations.containsKey( ORMKeys.OneToMany ) ||
+		    this.annotations.containsKey( ORMKeys.ManyToOne ) ||
+		    this.annotations.containsKey( ORMKeys.ManyToMany ) ) {
+			this.fieldType = FIELDTYPE.ASSOCIATION;
+		} else {
+			this.fieldType = FIELDTYPE.COLUMN;
+		}
 	}
 
 	/**

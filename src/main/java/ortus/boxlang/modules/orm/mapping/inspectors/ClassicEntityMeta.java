@@ -1,6 +1,5 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
-import java.util.List;
 import java.util.stream.Collectors;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -47,45 +46,25 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 											    return !annotations.containsKey( ORMKeys.persistent )
 											        || BooleanCaster.cast( annotations.get( ORMKeys.persistent ), false );
 										    } )
+		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
 		    .collect( Collectors.toList() );
 
 		this.properties					= this.allPersistentProperties.stream()
-		    .filter( ( IStruct prop ) -> {
-											    var annotations = prop.getAsStruct( Key.annotations );
-											    return !annotations.containsKey( ORMKeys.fieldtype )
-											        || annotations.getAsString( ORMKeys.fieldtype ).equals( "column" );
-										    } )
-		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
+		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.COLUMN )
 		    .collect( Collectors.toList() );
 
 		this.idProperties				= this.allPersistentProperties.stream()
-		    .filter( ( IStruct prop ) -> {
-											    var annotations = prop.getAsStruct( Key.annotations );
-											    return annotations.containsKey( ORMKeys.fieldtype )
-											        && annotations.getAsString( ORMKeys.fieldtype ).equals( "id" );
-										    } )
-		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
+		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ID )
 		    .collect( Collectors.toList() );
 
 		this.versionProperty			= this.allPersistentProperties.stream()
-		    .filter( ( IStruct prop ) -> {
-											    var annotations = prop.getAsStruct( Key.annotations );
-											    return annotations.containsKey( ORMKeys.fieldtype )
-											        && ( annotations.getAsString( ORMKeys.fieldtype ).equals( "version" )
-											            || annotations.containsKey( ORMKeys.timestamp ) );
-										    } )
-		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
+		    .filter(
+		        ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.VERSION || prop.getFieldType() == IPropertyMeta.FIELDTYPE.TIMESTAMP )
 		    .findFirst()
 		    .orElse( null );
 
-		List<String> associationTypes = List.of( "one-to-one", "one-to-many", "many-to-one", "many-to-many" );
-		this.associations = this.allPersistentProperties.stream()
-		    .filter( ( IStruct prop ) -> {
-			    var annotations = prop.getAsStruct( Key.annotations );
-			    return annotations.containsKey( ORMKeys.fieldtype )
-			        && associationTypes.contains( annotations.getAsString( ORMKeys.fieldtype ) );
-		    } )
-		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
+		this.associations				= this.allPersistentProperties.stream()
+		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ASSOCIATION )
 		    .collect( Collectors.toList() );
 	}
 }

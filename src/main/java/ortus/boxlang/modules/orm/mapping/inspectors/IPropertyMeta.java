@@ -104,4 +104,15 @@ public interface IPropertyMeta {
 	 */
 	public IStruct getAssociation();
 
+	public FIELDTYPE getFieldType();
+
+	public enum FIELDTYPE {
+		COLUMN,
+		ASSOCIATION,
+		COLLECTION,
+		TIMESTAMP,
+		VERSION,
+		ID,
+		TRANSIENT
+	}
 }
