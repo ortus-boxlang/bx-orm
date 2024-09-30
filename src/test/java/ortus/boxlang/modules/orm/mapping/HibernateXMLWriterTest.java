@@ -369,24 +369,80 @@ public class HibernateXMLWriterTest {
 	/**********************
 	 * General property tests
 	 *********************/
-	@DisplayName( "It generates property element for a property" )
-	@Test
-	public void testProperty() {
-		IStruct		meta		= getClassMetaFromCode(
-		    """
-		    	component persistent {
-		    		property name="the_name";
-		    	}
-		    """
-		);
+	@DisplayName( "It generates proper formula xml" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+	    	property
+	    	name="the_name"
+	    	formula="SELECT TOP 1 name from theNames";
+	    }
+	    """,
+	    """
+	    @Entity
+	    class {
+	    	@Column{
+	    		formula="SELECT TOP 1 name from theNames"
+	    	}
+	     	property name="the_name";
+	    }
+	    """
+	} )
+	public void testPropertyFormula( String sourceCode ) {
+		IStruct			meta				= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document		doc					= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node		node		= doc.getDocumentElement().getFirstChild().getFirstChild();
+		String			xml					= xmlToString( doc );
 
-		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
+		Node			propertyNode		= doc.getDocumentElement().getFirstChild().getFirstChild();
+		NamedNodeMap	propertyAttributes	= propertyNode.getAttributes();
+
+		assertThat( propertyAttributes.getNamedItem( "name" ).getTextContent() )
 		    .isEqualTo( "the_name" );
+		assertThat( propertyAttributes.getNamedItem( "formula" ).getTextContent() )
+		    .isEqualTo( "( SELECT TOP 1 name from theNames )" );
+	}
+
+	@DisplayName( "It generates proper column xml" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+	    	property
+	    	name="the_name"
+	    	sqltype="varchar";
+	    }
+	    """,
+	    """
+	    @Entity
+	    class {
+	    	@Column{
+	    		sqltype="varchar"
+	    	}
+	     	property name="the_name";
+	    }
+	    """
+	} )
+	public void testProperty( String sourceCode ) {
+		IStruct			meta				= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document		doc					= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		String			xml					= xmlToString( doc );
+
+		Node			propertyNode		= doc.getDocumentElement().getFirstChild().getFirstChild();
+		NamedNodeMap	propertyAttributes	= propertyNode.getAttributes();
+
+		assertThat( propertyAttributes.getNamedItem( "name" ).getTextContent() )
+		    .isEqualTo( "the_name" );
+
+		Node columnNode = propertyNode.getFirstChild();
+		assertThat( columnNode.getAttributes().getNamedItem( "sql-type" ).getTextContent() )
+		    .isEqualTo( "varchar" );
 	}
 
 	@DisplayName( "It does not map properties annotated with @Persistent false" )
@@ -782,7 +838,8 @@ public class HibernateXMLWriterTest {
 	    		fieldtype="one-to-many"
 	    		fkcolumn="FK_owner"
 	    		mappedBy="owners"
-	    		orderBy="name";
+	    		orderBy="name"
+				where="Age IS NOT NULL";
 	    }
 	    """
 	} )
@@ -822,6 +879,7 @@ public class HibernateXMLWriterTest {
 		NamedNodeMap bagAttrs = bagNode.getAttributes();
 		assertEquals( "owners", bagAttrs.getNamedItem( "name" ).getTextContent() );
 		assertEquals( "all", bagAttrs.getNamedItem( "cascade" ).getTextContent() );
+		assertEquals( "Age IS NOT NULL", bagAttrs.getNamedItem( "where" ).getTextContent() );
 
 		Node keyNode = bagNode.getFirstChild();
 		assertNotNull( keyNode );
@@ -927,8 +985,6 @@ public class HibernateXMLWriterTest {
 	 * TODO: Test each below property annotation:
 	 * column
 	 * formula
-	 * where
-	 * sqltype
 	 * cfc
 	 * mappedBy
 	 * optimisticlock

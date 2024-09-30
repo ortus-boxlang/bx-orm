@@ -84,6 +84,10 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 		// type coercion
 		column.computeIfPresent( ORMKeys.insertable, ( key, object ) -> BooleanCaster.cast( column.get( ORMKeys.insertable ) ) );
 		column.computeIfPresent( ORMKeys.updateable, ( key, object ) -> BooleanCaster.cast( column.get( ORMKeys.updateable ) ) );
+
+		if ( column.containsKey( ORMKeys.formula ) ) {
+			this.formula = column.getAsString( ORMKeys.formula );
+		}
 		return column;
 	}
 

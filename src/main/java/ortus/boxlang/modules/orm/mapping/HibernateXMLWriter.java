@@ -111,7 +111,7 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		theNode.setAttribute( "type", types.getAsString( ORMKeys.ORMType ) );
 
 		if ( prop.getFormula() != null ) {
-			theNode.setAttribute( "formula", "(" + prop.getFormula() + ")" );
+			theNode.setAttribute( "formula", "( " + prop.getFormula() + " )" );
 		} else {
 			theNode.appendChild( generateColumnElement( prop ) );
 		}

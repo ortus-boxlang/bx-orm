@@ -147,6 +147,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.access ) ) {
 			association.put( ORMKeys.access, annotations.getAsString( ORMKeys.access ) );
 		}
+		if ( annotations.containsKey( ORMKeys.where ) ) {
+			association.put( ORMKeys.where, annotations.getAsString( ORMKeys.where ) );
+		}
 		if ( annotations.containsKey( ORMKeys.missingRowIgnored ) ) {
 			association.compute( ORMKeys.missingRowIgnored,
 			    ( key, object ) -> BooleanCaster.cast( annotations.get( ORMKeys.missingRowIgnored ) ) ? "ignore" : "exception" );
