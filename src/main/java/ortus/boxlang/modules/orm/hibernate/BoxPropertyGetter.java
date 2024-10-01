@@ -13,6 +13,9 @@ import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.runtime.context.IBoxContext;
 
+/**
+ * This class is used to get a property on a BoxLang class for a Hibernate entity.
+ */
 public class BoxPropertyGetter implements Getter {
 
 	private Property			mappedProperty;

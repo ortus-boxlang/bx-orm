@@ -13,6 +13,12 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 
+/**
+ * This class is used to set a property on a BoxLang class for a Hibernate entity.
+ * <p>
+ * In other words, this class takes care of populating the boxlang class properties by calling the appropriate setter method when a Hibernate entity
+ * is populated - whether by loading from the database or any other method.
+ */
 public class BoxPropertySetter implements Setter {
 
 	private Property			mappedProperty;

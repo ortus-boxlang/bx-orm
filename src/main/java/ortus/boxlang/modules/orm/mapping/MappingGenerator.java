@@ -94,32 +94,14 @@ public class MappingGenerator {
 		}
 	}
 
+	/**
+	 * Generate the mappings for all classes discovered in the entity paths which are marked as persistent entities.
+	 * <p>
+	 * This method will generate the XML mapping files for all discovered entities and store them in the entity map.
+	 */
 	public MappingGenerator generateMappings() {
 		final int			MAX_SYNCHRONOUS_ENTITIES	= 20;
-		ArrayList<IStruct>	classes						= this.entityPaths.stream()
-		    // @TODO: Resolve mappings for each entity path
-		    .flatMap( path -> {
-			    try {
-				    // TODO: Return path.parent() alongside each discovered entity file so we know the entity location / mapping and can get a correct FQN.
-				    return Files.walk( path )
-				        // only files
-				        .filter( Files::isRegularFile )
-				        // Only .bx or .cfc class files
-				        .filter( ( file ) -> StringUtils.endsWithAny( file.toString(), ".bx", ".cfc" ) )
-				        // map to a struct instance containing the location and file name. We need both to generate the FQN.
-				        .map( file -> Struct.of( this.location, path.toString(), Key.file, file.toString() ) );
-			    } catch ( IOException e ) {
-				    if ( config.ignoreParseErrors ) {
-					    e.printStackTrace();
-					    logger.error( "Failed to walk path: [{}]", path, e );
-				    } else {
-					    throw new BoxRuntimeException( String.format( "Failed to walk path: [%s]", path ), e );
-				    }
-			    }
-			    return null;
-		    } )
-		    // collect to ArrayList so we can parallelize the metadata load+introspection
-		    .collect( java.util.stream.Collectors.toCollection( ArrayList::new ) );
+		ArrayList<IStruct>	classes						= discoverBLClasses( this.entityPaths );
 		if ( classes.size() > MAX_SYNCHRONOUS_ENTITIES ) {
 			logger.debug( "Detected more than {} classes; parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
 			classes.parallelStream()
@@ -146,6 +128,50 @@ public class MappingGenerator {
 		return this;
 	}
 
+	/**
+	 * Discover all classes in the given entity paths.
+	 * <p>
+	 * Does NOT determine if the classes are persistent, nor does it load metadata. This method is a simple file walk, nothing more.
+	 * 
+	 * @param entityPaths The list of paths to search for entities.
+	 * 
+	 * @return A list of structs containing the location and file name of each discovered entity.
+	 */
+	private ArrayList<IStruct> discoverBLClasses( List<Path> entityPaths ) {
+		return entityPaths.stream()
+		    // @TODO: Resolve mappings for each entity path
+		    .flatMap( path -> {
+			    try {
+				    // TODO: Return path.parent() alongside each discovered entity file so we know the entity location / mapping and can get a correct FQN.
+				    return Files.walk( path )
+				        // only files
+				        .filter( Files::isRegularFile )
+				        // Only .bx or .cfc class files
+				        .filter( ( file ) -> StringUtils.endsWithAny( file.toString(), ".bx", ".cfc" ) )
+				        // map to a struct instance containing the location and file name. We need both to generate the FQN.
+				        .map( file -> Struct.of( this.location, path.toString(), Key.file, file.toString() ) );
+			    } catch ( IOException e ) {
+				    if ( config.ignoreParseErrors ) {
+					    e.printStackTrace();
+					    logger.error( "Failed to walk path: [{}]", path, e );
+				    } else {
+					    throw new BoxRuntimeException( String.format( "Failed to walk path: [%s]", path ), e );
+				    }
+			    }
+			    return null;
+		    } )
+		    // collect to ArrayList so we can parallelize the metadata load+introspection
+		    .collect( java.util.stream.Collectors.toCollection( ArrayList::new ) );
+	}
+
+	/**
+	 * Determine if the given entity metadata is marked as a persistent entity using either the classic (`persistent=true`) or modern (`@Entity`) metadata
+	 * syntax.
+	 * 
+	 * @param entityMeta The entity metadata struct.
+	 * 
+	 * @return True if the entity is marked as persistent.
+	 */
 	private boolean isPersistentEntity( IStruct entityMeta ) {
 		IStruct annotations = entityMeta.getAsStruct( Key.annotations );
 		if ( annotations.containsKey( ORMKeys.entity )
@@ -161,12 +187,26 @@ public class MappingGenerator {
 		}
 	}
 
+	/**
+	 * Parse the given class file and load metadata for the entity.
+	 * 
+	 * @param possibleEntity The entity struct to read metadata for.
+	 * 
+	 * @return The entity struct with the metadata added.
+	 */
 	private IStruct readMeta( IStruct possibleEntity ) {
 		logger.info( "Loading metadata for class {}", possibleEntity.getAsString( Key.file ) );
 		possibleEntity.put( Key.metadata, getClassMeta( Path.of( possibleEntity.getAsString( Key.file ) ) ) );
 		return possibleEntity;
 	}
 
+	/**
+	 * Convert the given entity struct to an EntityRecord instance.
+	 * 
+	 * @param theEntity Struct containing `location`, `path`, and `metadata` keys.
+	 * 
+	 * @return EntityRecord instance.
+	 */
 	private EntityRecord toEntityRecord( IStruct theEntity ) {
 		IStruct	meta		= theEntity.getAsStruct( Key.metadata );
 		String	entityName	= readEntityName( meta );
@@ -179,6 +219,13 @@ public class MappingGenerator {
 		);
 	}
 
+	/**
+	 * Determine the entity name from the given entity metadata.
+	 * 
+	 * @param meta The entity metadata.
+	 * 
+	 * @return The defined entity name, or the class name if no entity name is defined.
+	 */
 	private String readEntityName( IStruct meta ) {
 		String	entityName	= null;
 		var		annotations	= meta.getAsStruct( Key.annotations );
@@ -194,6 +241,13 @@ public class MappingGenerator {
 		return entityName;
 	}
 
+	/**
+	 * Parse the given class file and load metadata for the entity using BoxLang's `ClassMetadataVisitor` for speedy metadata parsing.
+	 * 
+	 * @param clazzPath Full path to the class file.
+	 * 
+	 * @return The entity metadata struct.
+	 */
 	private IStruct getClassMeta( Path clazzPath ) {
 		ParsingResult result = new Parser().parse( new File( clazzPath.toString() ) );
 		if ( !result.isCorrect() ) {
@@ -205,7 +259,7 @@ public class MappingGenerator {
 	}
 
 	/**
-	 * Get the map of discovered entities. Obviously, this is only useful once `mapEntities` has been called.
+	 * Get the map of discovered entities. Obviously, this is only useful once `generateMappings` has been called.
 	 * 
 	 * @return The map of discovered entities, where the key is the entity name and the value is an EntityRecord instance.
 	 */

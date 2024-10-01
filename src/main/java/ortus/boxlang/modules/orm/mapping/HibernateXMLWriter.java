@@ -21,7 +21,11 @@ import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
-public class HibernateXMLWriter implements IPersistenceWriter {
+/**
+ * Generate a Hibernate XML mapping document for a given IEntityMeta instance, which represents the parsed entity metadata (whether classic or modern
+ * syntax) in a normalized form.
+ */
+public class HibernateXMLWriter {
 
 	private static final Logger	logger	= LoggerFactory.getLogger( HibernateXMLWriter.class );
 
@@ -53,6 +57,11 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		this.document = createDocument();
 	}
 
+	/**
+	 * Create a new XML document for populating with Hibernate mapping data.
+	 * 
+	 * @return A new, empty XML document.
+	 */
 	public Document createDocument() {
 		DocumentBuilderFactory	factory	= DocumentBuilderFactory.newInstance();
 		DocumentBuilder			builder;
@@ -80,7 +89,11 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		}
 	}
 
-	@Override
+	/**
+	 * Generate the Hibernate XML mapping document, beginning with the &lt;class /&gt; element.
+	 * 
+	 * @return The complete Hibernate XML mapping document.
+	 */
 	public Document generateXML() {
 		this.document.getDocumentElement().appendChild( generateClassElement() );
 		return this.document;

@@ -10,6 +10,12 @@ import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.loader.ClassLocator;
 
+/**
+ * This class is used to instantiate a BoxLang class for a Hibernate entity.
+ * <p>
+ * In other words, here is where the magic happens to tie a Hibernate entity to a BoxLang class when loading entities from the database via
+ * `entityLoadByPK()`, creating new entities via `entityNew()`, etc, etc.
+ */
 public class BoxClassInstantiator implements Instantiator {
 
 	private EntityMetamodel	entityMetamodel;
