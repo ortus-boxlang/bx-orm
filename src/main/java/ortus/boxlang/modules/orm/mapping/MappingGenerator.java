@@ -55,7 +55,7 @@ public class MappingGenerator {
 	 * <p>
 	 * If true, the mapping files will be saved in the same directory as the entity files and {@link #xmlMappingLocation} will be ignored.
 	 */
-	private boolean						saveMappingAlongsideEntity;
+	private boolean						saveAlongsideEntity;
 
 	/**
 	 * Map of discovered entities.
@@ -72,20 +72,19 @@ public class MappingGenerator {
 	 */
 	private ORMConfig					config;
 
-	private Key							fullPath	= Key.of( "_FULLPATH" );
 	private Key							location	= Key.of( "location" );
 
 	private static final Logger			logger		= LoggerFactory.getLogger( MappingGenerator.class );
 
 	public MappingGenerator( IBoxContext context, ORMConfig config ) {
-		this.entityMap					= new java.util.HashMap<>();
-		this.config						= config;
-		this.saveDirectory				= Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", String.valueOf( config.hashCode() ) ).toString();
-		this.saveMappingAlongsideEntity	= config.saveMapping;
-		this.entityPaths				= new java.util.ArrayList<>();
+		this.entityMap				= new java.util.HashMap<>();
+		this.config					= config;
+		this.saveDirectory			= Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", String.valueOf( config.hashCode() ) ).toString();
+		this.saveAlongsideEntity	= config.saveMapping;
+		this.entityPaths			= new java.util.ArrayList<>();
 		// this.appDirectory = context.getParentOfType( ApplicationBoxContext.class ).getApplication().getApplicationDirectory();
 
-		if ( !this.saveMappingAlongsideEntity ) {
+		if ( !this.saveAlongsideEntity ) {
 			new File( this.saveDirectory ).mkdirs();
 		}
 
@@ -109,21 +108,28 @@ public class MappingGenerator {
 			    .map( ( IStruct possibleEntity ) -> readMeta( possibleEntity ) )
 			    // Filter out non-persistent entities
 			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
-			    // Convert to EntityRecord (includes generating the XML mapping file)
+			    // Convert to EntityRecord
 			    .map( ( IStruct entity ) -> toEntityRecord( entity ) )
 			    // Add to entity map
-			    .forEach( ( entityRecord ) -> entityMap.put( entityRecord.entityName(), entityRecord ) );
+			    .forEach( ( entityRecord ) -> entityMap.put( entityRecord.getEntityName(), entityRecord ) );
 		} else {
 			classes.stream()
 			    // Parse class metadata
 			    .map( ( IStruct possibleEntity ) -> readMeta( possibleEntity ) )
 			    // Filter out non-persistent entities
 			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
-			    // Convert to EntityRecord (includes generating the XML mapping file)
+			    // Convert to EntityRecord
 			    .map( ( IStruct entity ) -> toEntityRecord( entity ) )
 			    // Add to entity map
-			    .forEach( ( entityRecord ) -> entityMap.put( entityRecord.entityName(), entityRecord ) );
+			    .forEach( ( entityRecord ) -> entityMap.put( entityRecord.getEntityName(), entityRecord ) );
 		}
+
+		// Generate XML mapping files for each entity
+		// @TODO: Should this also be parallel???
+		entityMap.values().stream()
+		    .forEach( ( EntityRecord entity ) -> {
+			    entity.setXmlFilePath( writeXMLFile( entity.getMetadata() ) );
+		    } );
 
 		return this;
 	}
@@ -215,7 +221,7 @@ public class MappingGenerator {
 		return new EntityRecord(
 		    entityName,
 		    fqn,
-		    writeXMLFile( meta )
+		    meta
 		);
 	}
 
@@ -279,7 +285,7 @@ public class MappingGenerator {
 		String	name	= meta.getAsString( Key._name );
 		String	path	= meta.getAsString( Key.path );
 		String	fileExt	= path.substring( path.lastIndexOf( '.' ) );
-		Path	xmlPath	= this.saveMappingAlongsideEntity
+		Path	xmlPath	= this.saveAlongsideEntity
 		    ? Path.of( path.replace( fileExt, ".hbm.xml" ) )
 		    : Path.of( this.saveDirectory, name + ".hbm.xml" );
 		try {

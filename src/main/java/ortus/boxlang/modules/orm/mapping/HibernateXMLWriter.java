@@ -95,6 +95,8 @@ public class HibernateXMLWriter {
 	 * @return The complete Hibernate XML mapping document.
 	 */
 	public Document generateXML() {
+		// TODO: Track execution time and record in an XML comment prepended to the document.
+		// comment with: source, compilation-time, datasource
 		this.document.getDocumentElement().appendChild( generateClassElement() );
 		return this.document;
 	}

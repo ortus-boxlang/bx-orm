@@ -71,7 +71,7 @@ public class SessionFactoryBuilder {
 	public static String lookupBoxLangClass( SessionFactory sessionFactory, String entityName ) {
 		Map<String, EntityRecord> entityMap = ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
 
-		return entityMap.get( entityName ).classFQN();
+		return entityMap.get( entityName ).getClassFQN();
 	}
 
 	public static ApplicationBoxContext getApplicationContext( SessionFactory sessionFactory ) {
@@ -148,7 +148,7 @@ public class SessionFactoryBuilder {
 
 		entities.values()
 		    .stream()
-		    .map( EntityRecord::mappingFile )
+		    .map( EntityRecord::getXmlFilePath )
 		    .map( Path::toString )
 		    .forEach( ( path ) -> {
 			    configuration.addFile( path );
