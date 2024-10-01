@@ -217,9 +217,12 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		if ( association.containsKey( ORMKeys.immutable ) ) {
 			theNode.setAttribute( "mutable", trueFalseFormat( !association.getAsBoolean( ORMKeys.immutable ) ) );
 		}
+		if ( !prop.isOptimisticLock() ) {
+			theNode.setAttribute( "optimistic-lock", "false" );
+		}
 
 		List<Key> stringProperties = List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.lazy, ORMKeys.cascade, ORMKeys.orderBy, ORMKeys.where,
-		    ORMKeys.fetch, ORMKeys.optimisticLock, ORMKeys.embedXML );
+		    ORMKeys.fetch, ORMKeys.optimisticLock, ORMKeys.embedXML, ORMKeys.orderBy );
 		populateNodeAttributes( theNode, association, stringProperties );
 
 		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys
@@ -637,6 +640,13 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 		}
 	}
 
+	/**
+	 * Convert a BoxLang key name to a Hibernate XML attribute name.
+	 * 
+	 * @param key BoxLang annotation name, like `sqltype` or `selectkey`
+	 * 
+	 * @return Correct Hibernate XML attribute name, like `sql-type` or `key`
+	 */
 	private String toHibernateAttributeName( Key key ) {
 		String name = key.getName().toLowerCase();
 		switch ( name ) {
@@ -650,6 +660,8 @@ public class HibernateXMLWriter implements IPersistenceWriter {
 				return "foreign-key";
 			case "embedxml" :
 				return "embed-xml";
+			case "orderby" :
+				return "order-by";
 			default :
 				return name;
 		}

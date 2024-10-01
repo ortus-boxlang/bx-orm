@@ -61,6 +61,9 @@ public class ModernEntityMeta extends AbstractEntityMeta {
 		if ( this.annotations.containsKey( ORMKeys.where ) ) {
 			this.where = this.annotations.getAsString( ORMKeys.where );
 		}
+		if ( this.annotations.containsKey( ORMKeys.optimisticLock ) ) {
+			this.optimisticLock = this.annotations.getAsString( ORMKeys.optimisticLock );
+		}
 
 		// https://jakarta.ee/specifications/persistence/3.0/jakarta-persistence-spec-3.0#table-annotation
 		if ( this.annotations.containsKey( Key.table ) ) {

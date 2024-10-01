@@ -135,14 +135,14 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.formula ) ) {
 			association.put( ORMKeys.formula, annotations.getAsString( ORMKeys.formula ) );
 		}
-		if ( annotations.containsKey( ORMKeys.constrained ) ) {
-			association.put( ORMKeys.constrained, BooleanCaster.cast( annotations.getAsString( ORMKeys.constrained ) ) );
-		}
 		if ( annotations.containsKey( ORMKeys.mappedBy ) ) {
 			association.put( ORMKeys.mappedBy, annotations.getAsString( ORMKeys.mappedBy ) );
 		}
 		if ( annotations.containsKey( ORMKeys.embedXML ) ) {
 			association.put( ORMKeys.embedXML, annotations.getAsString( ORMKeys.embedXML ) );
+		}
+		if ( annotations.containsKey( ORMKeys.orderBy ) ) {
+			association.put( ORMKeys.orderBy, annotations.getAsString( ORMKeys.orderBy ) );
 		}
 		if ( annotations.containsKey( ORMKeys.access ) ) {
 			association.put( ORMKeys.access, annotations.getAsString( ORMKeys.access ) );
@@ -153,6 +153,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.missingRowIgnored ) ) {
 			association.compute( ORMKeys.missingRowIgnored,
 			    ( key, object ) -> BooleanCaster.cast( annotations.get( ORMKeys.missingRowIgnored ) ) ? "ignore" : "exception" );
+		}
+		if ( annotations.containsKey( ORMKeys.constrained ) ) {
+			association.put( ORMKeys.constrained, BooleanCaster.cast( annotations.getAsString( ORMKeys.constrained ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.cascade ) ) {
 			/*

@@ -21,6 +21,9 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 
 		this.annotations.computeIfAbsent( ORMKeys.table, key -> this.getEntityName() );
 		this.tableName = this.annotations.getAsString( Key.table );
+		if ( this.annotations.containsKey( ORMKeys.optimisticLock ) ) {
+			this.optimisticLock = this.annotations.getAsString( ORMKeys.optimisticLock );
+		}
 
 		if ( this.annotations.containsKey( ORMKeys.schema ) ) {
 			this.schemaName = this.annotations.getAsString( ORMKeys.schema );
