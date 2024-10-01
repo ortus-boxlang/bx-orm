@@ -30,6 +30,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 	protected IPropertyMeta			versionProperty;
 
+	protected String				datasource;
+
 	protected String				entityName;
 
 	protected boolean				isSimpleEntity;
@@ -109,6 +111,10 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 			return new ClassicEntityMeta( meta );
 		}
 		return new ModernEntityMeta( meta );
+	}
+
+	public String getDatasource() {
+		return this.datasource;
 	}
 
 	public String getEntityName() {

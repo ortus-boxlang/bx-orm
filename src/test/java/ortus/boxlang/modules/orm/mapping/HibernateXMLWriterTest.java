@@ -789,7 +789,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ) ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 
@@ -847,7 +847,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ) ).generateXML();
 
 		String		xml			= xmlToString( doc );
 		// @formatter:off
@@ -889,7 +889,7 @@ public class HibernateXMLWriterTest {
 		assertEquals( "one-to-many", oneToManyNode.getNodeName() );
 
 		NamedNodeMap manyToManyAttrs = oneToManyNode.getAttributes();
-		// assertEquals( "Person", manyToManyAttrs.getNamedItem( "entity-name" ).getTextContent() );
+		assertEquals( "Person", manyToManyAttrs.getNamedItem( "entity-name" ).getTextContent() );
 	}
 
 	// @formatter:off

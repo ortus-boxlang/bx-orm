@@ -41,6 +41,8 @@ public interface IEntityMeta {
 
 	public boolean isSelectBeforeUpdate();
 
+	public String getDatasource();
+
 	public String getTableName();
 
 	public String getSchema();

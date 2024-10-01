@@ -1,6 +1,7 @@
 package ortus.boxlang.modules.orm.mapping;
 
 import java.util.List;
+import java.util.function.BiFunction;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -27,7 +28,7 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  */
 public class HibernateXMLWriter {
 
-	private static final Logger	logger	= LoggerFactory.getLogger( HibernateXMLWriter.class );
+	private static final Logger					logger	= LoggerFactory.getLogger( HibernateXMLWriter.class );
 
 	/**
 	 * IEntityMeta instance which represents the parsed entity metadata in a normalized form.
@@ -35,17 +36,29 @@ public class HibernateXMLWriter {
 	 * The source of this metadata could be CFML persistent
 	 * annotations like `persistent=true` and `fieldtype="id"` OR modern BoxLang-syntax, JPA-style annotations like `@Entity` and `@Id`.
 	 */
-	IEntityMeta					entity;
+	IEntityMeta									entity;
 
 	/**
 	 * XML Document root, created by the constructor.
 	 * <p>
 	 * This is the root element of the Hibernate mapping document, and will be returned by {@link #generateXML()}.
 	 */
-	Document					document;
+	Document									document;
+
+	/**
+	 * A function that takes a class name and returns an EntityRecord instance.
+	 * <p>
+	 * This is used to look up the metadata for associated entities when generating association elements.
+	 */
+	BiFunction<String, String, EntityRecord>	lookupEntityByClassName;
 
 	public HibernateXMLWriter( IEntityMeta entity ) {
-		this.entity = entity;
+		this( entity, null );
+	}
+
+	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, String, EntityRecord> lookupEntityByClassName ) {
+		this.entity						= entity;
+		this.lookupEntityByClassName	= lookupEntityByClassName;
 
 		// Validation
 		if ( entity.getIdProperties().isEmpty() ) {
@@ -160,6 +173,8 @@ public class HibernateXMLWriter {
 	public Element generateToManyAssociation( IPropertyMeta prop ) {
 		IStruct	association		= prop.getAssociation();
 		IStruct	columnInfo		= prop.getColumn();
+
+		// bag, map, set, etc.
 		Element	collectionNode	= generateCollectionElement( prop, association, columnInfo );
 		if ( association.containsKey( ORMKeys.table ) ) {
 			collectionNode.setAttribute( "table", association.getAsString( ORMKeys.table ) );
@@ -170,11 +185,23 @@ public class HibernateXMLWriter {
 		if ( association.containsKey( ORMKeys.catalog ) ) {
 			collectionNode.setAttribute( "catalog", association.getAsString( ORMKeys.catalog ) );
 		}
+
+		// one-to-many or many-to-many
 		Element toManyNode = this.document.createElement( association.getAsString( Key.type ) );
 		// now here, we create the <one-to-many> or <many-to-many> element
 		if ( association.containsKey( ORMKeys.inverseJoinColumn ) ) {
 			// @TODO: Loop over all column values and create multiple <column> elements.
 			toManyNode.setAttribute( "column", association.getAsString( ORMKeys.inverseJoinColumn ) );
+		}
+		if ( association.containsKey( Key._CLASS ) ) {
+			String			relationClassName	= association.getAsString( Key._CLASS );
+			EntityRecord	associatedEntity	= lookupEntityByClassName.apply( relationClassName, this.entity.getDatasource() );
+			if ( associatedEntity == null ) {
+				// @TODO: Check ORMConfig.ignoreParseErrors and throw if false.
+				logger.error( "Could not find entity metadata for class: {}", relationClassName );
+				throw new BoxRuntimeException( "Could not find entity metadata for class: " + relationClassName );
+			}
+			toManyNode.setAttribute( "entity-name", associatedEntity.getEntityName() );
 		}
 		collectionNode.appendChild( toManyNode );
 		return collectionNode;

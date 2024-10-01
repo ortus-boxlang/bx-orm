@@ -291,11 +291,7 @@ public class MappingGenerator {
 		try {
 			logger.info( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
 			String finalXML = generateXML( meta );
-			if ( finalXML.isEmpty() ) {
-				logger.warn( "No XML mapping generated for entity [{}]; skipping file write", name );
-			} else {
-				Files.write( xmlPath, finalXML.getBytes() );
-			}
+			Files.write( xmlPath, !finalXML.isEmpty() ? finalXML.getBytes() : new byte[ 0 ] );
 
 		} catch ( IOException e ) {
 			String message = String.format( "Failed to save XML mapping for class: [%s]", name );
@@ -331,7 +327,27 @@ public class MappingGenerator {
 				    meta.getAsString( Key.path ) );
 				entity = new ModernEntityMeta( meta );
 			}
-			Document			doc			= new HibernateXMLWriter( entity ).generateXML();
+			// BiFunction<String, String, EntityRecord> entityLookup = ( String className, String datasource ) -> {
+			// return entityMap
+			// .values()
+			// .stream()
+			// .filter( ( EntityRecord e ) -> {
+			// String[] fqn = e
+			// .getClassFQN()
+			// .split(
+			// "." );
+			// return fqn[ fqn.length ]
+			// .equals(
+			// className )
+			// && ( datasource == null
+			// || e.getDatasource()
+			// .equals(
+			// datasource ) );
+			// } )
+			// .findFirst()
+			// .orElse( null );
+			// };
+			Document			doc			= new HibernateXMLWriter( entity, this::entityLookup ).generateXML();
 
 			TransformerFactory	tf			= TransformerFactory.newInstance();
 			Transformer			transformer	= tf.newTransformer();
@@ -357,5 +373,27 @@ public class MappingGenerator {
 		}
 
 		return "";
+	}
+
+	/**
+	 * Lookup an entity by class name and (optionally) datasource name.
+	 * <p>
+	 * Useful for determining relationship entity names based off the provided class name.
+	 * 
+	 * @param className  The class name to lookup.
+	 * @param datasource The datasource name to match on, if any.
+	 * 
+	 * @return EntityRecord instance or null.
+	 */
+	public EntityRecord entityLookup( String className, String datasource ) {
+		return entityMap
+		    .values()
+		    .stream()
+		    .filter( ( EntityRecord e ) -> {
+			    String[] fqn = e.getClassFQN().split( "." );
+			    return fqn[ fqn.length ].equals( className ) && ( datasource == null || e.getDatasource().equals( datasource ) );
+		    } )
+		    .findFirst()
+		    .orElse( null );
 	}
 }

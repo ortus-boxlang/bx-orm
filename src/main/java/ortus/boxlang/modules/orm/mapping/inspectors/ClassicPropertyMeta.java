@@ -124,7 +124,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			} );
 		}
 		if ( annotations.containsKey( ORMKeys.cfc ) ) {
-			annotations.put( Key._CLASS, annotations.getAsString( ORMKeys.cfc ) );
+			association.put( Key._CLASS, annotations.getAsString( ORMKeys.cfc ) );
 		}
 		if ( annotations.containsKey( Key._CLASS ) ) {
 			association.put( Key._CLASS, annotations.getAsString( Key._CLASS ) );
