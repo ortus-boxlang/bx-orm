@@ -9,6 +9,7 @@ public class EntityRecord {
 
 	private String	entityName;
 	private String	classFQN;
+	private String	className;
 	private String	datasource;
 	private IStruct	metadata;
 	private Path	xmlFilePath;
@@ -24,6 +25,9 @@ public class EntityRecord {
 		if ( metadata != null && metadata.containsKey( Key.datasource ) ) {
 			this.datasource = metadata.getAsString( Key.datasource );
 		}
+
+		String[] fqn = this.classFQN.split( "\\." );
+		this.className = fqn[ fqn.length - 1 ];
 	}
 
 	public void setXmlFilePath( Path xmlFilePath ) {
@@ -41,6 +45,10 @@ public class EntityRecord {
 
 	public String getEntityName() {
 		return entityName;
+	}
+
+	public String getClassName() {
+		return className;
 	}
 
 	public String getClassFQN() {

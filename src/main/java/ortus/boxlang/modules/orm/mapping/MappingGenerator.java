@@ -201,7 +201,7 @@ public class MappingGenerator {
 	 * @return The entity struct with the metadata added.
 	 */
 	private IStruct readMeta( IStruct possibleEntity ) {
-		logger.info( "Loading metadata for class {}", possibleEntity.getAsString( Key.file ) );
+		logger.debug( "Loading metadata for class {}", possibleEntity.getAsString( Key.file ) );
 		possibleEntity.put( Key.metadata, getClassMeta( Path.of( possibleEntity.getAsString( Key.file ) ) ) );
 		return possibleEntity;
 	}
@@ -218,6 +218,9 @@ public class MappingGenerator {
 		String	entityName	= readEntityName( meta );
 		String	fqn			= new BetterFQN( Path.of( theEntity.getAsString( this.location ) ).getParent(), Path.of( meta.getAsString( Key.path ) ) )
 		    .toString();
+		if ( fqn == null || fqn.isBlank() ) {
+			throw new BoxRuntimeException( "Failed to generate FQN for entity: " + entityName );
+		}
 		return new EntityRecord(
 		    entityName,
 		    fqn,
@@ -319,7 +322,7 @@ public class MappingGenerator {
 		try {
 			IEntityMeta entity = null;
 			if ( meta.getAsStruct( Key.annotations ).containsKey( ORMKeys.persistent ) ) {
-				logger.info( "Class contains 'persistent' annotation; using ClassicEntityMeta: [{}]",
+				logger.debug( "Class contains 'persistent' annotation; using ClassicEntityMeta: [{}]",
 				    meta.getAsString( Key.path ) );
 				entity = new ClassicEntityMeta( meta );
 			} else {
@@ -390,8 +393,8 @@ public class MappingGenerator {
 		    .values()
 		    .stream()
 		    .filter( ( EntityRecord e ) -> {
-			    String[] fqn = e.getClassFQN().split( "." );
-			    return fqn[ fqn.length ].equals( className ) && ( datasource == null || e.getDatasource().equals( datasource ) );
+			    return e.getClassName().equalsIgnoreCase( className )
+			        && ( datasource == null || e.getDatasource().equals( datasource ) );
 		    } )
 		    .findFirst()
 		    .orElse( null );
