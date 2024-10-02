@@ -171,20 +171,14 @@ public class HibernateXMLWriter {
 	 * @return
 	 */
 	public Element generateToManyAssociation( IPropertyMeta prop ) {
-		IStruct	association		= prop.getAssociation();
-		IStruct	columnInfo		= prop.getColumn();
+		IStruct		association			= prop.getAssociation();
+		IStruct		columnInfo			= prop.getColumn();
 
 		// bag, map, set, etc.
-		Element	collectionNode	= generateCollectionElement( prop, association, columnInfo );
-		if ( association.containsKey( ORMKeys.table ) ) {
-			collectionNode.setAttribute( "table", association.getAsString( ORMKeys.table ) );
-		}
-		if ( association.containsKey( ORMKeys.schema ) ) {
-			collectionNode.setAttribute( "schema", association.getAsString( ORMKeys.schema ) );
-		}
-		if ( association.containsKey( ORMKeys.catalog ) ) {
-			collectionNode.setAttribute( "catalog", association.getAsString( ORMKeys.catalog ) );
-		}
+		Element		collectionNode		= generateCollectionElement( prop, association, columnInfo );
+
+		List<Key>	stringProperties	= List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.catalog );
+		populateStringAttributes( collectionNode, association, stringProperties );
 
 		// one-to-many or many-to-many
 		Element toManyNode = this.document.createElement( association.getAsString( Key.type ) );
@@ -265,7 +259,7 @@ public class HibernateXMLWriter {
 
 		List<Key> stringProperties = List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.lazy, ORMKeys.cascade, ORMKeys.orderBy, ORMKeys.where,
 		    ORMKeys.fetch, ORMKeys.optimisticLock, ORMKeys.embedXML, ORMKeys.orderBy );
-		populateNodeAttributes( theNode, association, stringProperties );
+		populateStringAttributes( theNode, association, stringProperties );
 
 		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys
 		if ( association.containsKey( ORMKeys.fkcolumn ) ) {
@@ -293,10 +287,9 @@ public class HibernateXMLWriter {
 		String		type				= association.getAsString( Key.type );
 		Element		theNode				= this.document.createElement( type );
 
-		// @TODO: entity-name="EntityName"
 		List<Key>	stringProperties	= List.of( Key._NAME, ORMKeys.cascade, ORMKeys.fetch, ORMKeys.mappedBy, ORMKeys.access,
 		    ORMKeys.lazy, ORMKeys.embedXML, ORMKeys.foreignKey );
-		populateNodeAttributes( theNode, association, stringProperties );
+		populateStringAttributes( theNode, association, stringProperties );
 
 		// non-simple attributes
 		if ( association.containsKey( ORMKeys.constrained ) && association.getAsBoolean( ORMKeys.constrained ) ) {
@@ -346,7 +339,7 @@ public class HibernateXMLWriter {
 
 		theNode.setAttribute( "name", prop.getName() );
 		List<Key> stringProperties = List.of( Key._DEFAULT, Key.sqltype, ORMKeys.length, ORMKeys.precision, ORMKeys.scale );
-		populateNodeAttributes( theNode, columnInfo, stringProperties );
+		populateStringAttributes( theNode, columnInfo, stringProperties );
 
 		// non-simple attributes
 		if ( columnInfo.containsKey( ORMKeys.nullable ) ) {
@@ -668,10 +661,10 @@ public class HibernateXMLWriter {
 	 * Populate simple string attributes on the given XML node for the given list of Keys existing in the given struct.
 	 * 
 	 * @param theNode          XML node to populate
-	 * @param association      Struct containing the attribute values. Any missing or empty values will be skipped.
+	 * @param association      Struct containing the attribute values. Any null or empty values will be skipped.
 	 * @param stringProperties List of keys to populate as attributes on the XML node. i.e., `List.of( ORMKeys.table, ORMKeys.schema )`
 	 */
-	private void populateNodeAttributes( Element theNode, IStruct association, List<Key> stringProperties ) {
+	private void populateStringAttributes( Element theNode, IStruct association, List<Key> stringProperties ) {
 		for ( Key propertyName : stringProperties ) {
 			if ( association.containsKey( propertyName ) ) {
 				String value = association.getAsString( propertyName );
