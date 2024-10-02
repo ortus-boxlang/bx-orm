@@ -43,6 +43,11 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.association	= parseAssociation( this.annotations );
 	}
 
+	public IPropertyMeta setFieldType( FIELDTYPE fieldType ) {
+		this.fieldType = fieldType;
+		return this;
+	}
+
 	/**
 	 * Parse the column annotations. If property is not a basic column, returns an empty struct.
 	 * 

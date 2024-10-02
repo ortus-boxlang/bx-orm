@@ -52,21 +52,37 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
 		    .collect( Collectors.toList() );
 
-		this.properties					= this.allPersistentProperties.stream()
-		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.COLUMN )
-		    .collect( Collectors.toList() );
-
 		this.idProperties				= this.allPersistentProperties.stream()
 		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ID )
 		    .collect( Collectors.toList() );
 
-		this.versionProperty			= this.allPersistentProperties.stream()
+		// @TODO: Assume a property with name 'id' is the ID property.
+		if ( this.idProperties.size() == 0 ) {
+			this.idProperties = this.allPersistentProperties.stream()
+			    .filter( ( IPropertyMeta prop ) -> prop.getName().equalsIgnoreCase( "id" ) )
+			    .collect( Collectors.toList() );
+
+			if ( this.idProperties.size() > 0 ) {
+				logger.warn(
+				    "Entity {} has no ID properties; am mutating property {} to an id fieldtype. Please mark your property as fieldtype='id' to avoid this implicit and deprecated behavior",
+				    this.entityName, idProperties.get( 0 ).getName() );
+			}
+
+			// This ensures it is marked as an ID property, and will NOT be included in the standard COLUMN properties
+			this.idProperties.forEach( ( IPropertyMeta prop ) -> prop.setFieldType( IPropertyMeta.FIELDTYPE.ID ) );
+		}
+
+		this.properties			= this.allPersistentProperties.stream()
+		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.COLUMN )
+		    .collect( Collectors.toList() );
+
+		this.versionProperty	= this.allPersistentProperties.stream()
 		    .filter(
 		        ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.VERSION || prop.getFieldType() == IPropertyMeta.FIELDTYPE.TIMESTAMP )
 		    .findFirst()
 		    .orElse( null );
 
-		this.associations				= this.allPersistentProperties.stream()
+		this.associations		= this.allPersistentProperties.stream()
 		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ASSOCIATION )
 		    .collect( Collectors.toList() );
 	}

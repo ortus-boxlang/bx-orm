@@ -104,6 +104,13 @@ public interface IPropertyMeta {
 	 */
 	public IStruct getAssociation();
 
+	/**
+	 * Field type setter which allows amending the property type after instantiation.
+	 * 
+	 * @param fieldType Field type to set, like FIELDTYPE.COLUMN, FIELDTYPE.ASSOCIATION, etc.
+	 */
+	public IPropertyMeta setFieldType( FIELDTYPE fieldType );
+
 	public FIELDTYPE getFieldType();
 
 	public enum FIELDTYPE {
