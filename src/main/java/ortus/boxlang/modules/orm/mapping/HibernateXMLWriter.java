@@ -174,28 +174,20 @@ public class HibernateXMLWriter {
 		IStruct		association			= prop.getAssociation();
 		IStruct		columnInfo			= prop.getColumn();
 
-		// bag, map, set, etc.
+		// <bag>, <map>, <set>, etc.
 		Element		collectionNode		= generateCollectionElement( prop, association, columnInfo );
 
 		List<Key>	stringProperties	= List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.catalog );
 		populateStringAttributes( collectionNode, association, stringProperties );
 
-		// one-to-many or many-to-many
+		// <one-to-many> or <many-to-many>
 		Element toManyNode = this.document.createElement( association.getAsString( Key.type ) );
-		// now here, we create the <one-to-many> or <many-to-many> element
 		if ( association.containsKey( ORMKeys.inverseJoinColumn ) ) {
 			// @TODO: Loop over all column values and create multiple <column> elements.
 			toManyNode.setAttribute( "column", association.getAsString( ORMKeys.inverseJoinColumn ) );
 		}
 		if ( association.containsKey( Key._CLASS ) ) {
-			String			relationClassName	= association.getAsString( Key._CLASS );
-			EntityRecord	associatedEntity	= lookupEntityByClassName.apply( relationClassName, this.entity.getDatasource() );
-			if ( associatedEntity == null ) {
-				// @TODO: Check ORMConfig.ignoreParseErrors and throw if false.
-				logger.error( "Could not find entity metadata for class: {}", relationClassName );
-				throw new BoxRuntimeException( "Could not find entity metadata for class: " + relationClassName );
-			}
-			toManyNode.setAttribute( "entity-name", associatedEntity.getEntityName() );
+			setEntityName( toManyNode, association.getAsString( Key._CLASS ) );
 		}
 		collectionNode.appendChild( toManyNode );
 		return collectionNode;
@@ -283,11 +275,15 @@ public class HibernateXMLWriter {
 	 * @return A &lt;one-to-one/&gt; or &lt;many-to-one/&gt;, element ready to add to a Hibernate mapping document
 	 */
 	public Element generateToOneAssociation( IPropertyMeta prop ) {
-		IStruct		association			= prop.getAssociation();
-		String		type				= association.getAsString( Key.type );
-		Element		theNode				= this.document.createElement( type );
+		IStruct	association	= prop.getAssociation();
+		String	type		= association.getAsString( Key.type );
+		Element	theNode		= this.document.createElement( type );
 
-		List<Key>	stringProperties	= List.of( Key._NAME, ORMKeys.cascade, ORMKeys.fetch, ORMKeys.mappedBy, ORMKeys.access,
+		if ( association.containsKey( Key._CLASS ) ) {
+			setEntityName( theNode, association.getAsString( Key._CLASS ) );
+		}
+
+		List<Key> stringProperties = List.of( Key._NAME, ORMKeys.cascade, ORMKeys.fetch, ORMKeys.mappedBy, ORMKeys.access,
 		    ORMKeys.lazy, ORMKeys.embedXML, ORMKeys.foreignKey );
 		populateStringAttributes( theNode, association, stringProperties );
 
@@ -646,6 +642,26 @@ public class HibernateXMLWriter {
 			theNode.setAttribute( "insert", trueFalseFormat( columnInfo.getAsBoolean( ORMKeys.insertable ) ) );
 		}
 		return theNode;
+	}
+
+	/**
+	 * Look up an entity from the entity map by class name and set it into the entity-name attribute on the provided node.
+	 * 
+	 * @param theNode           XML node onw hich to populate entity-name attribute
+	 * @param relationClassName Class name of the associated entity. If null or empty, this method will do nothing.
+	 */
+	private void setEntityName( Element theNode, String relationClassName ) {
+		if ( relationClassName == null || relationClassName.isBlank() ) {
+			return;
+		}
+		EntityRecord associatedEntity = lookupEntityByClassName.apply( relationClassName, this.entity.getDatasource() );
+		if ( associatedEntity == null ) {
+			// @TODO: Add entity name and property name to error message for MUCH easier
+			logger.error( "Could not find entity metadata for class: {}", relationClassName );
+			// @TODO: Check ORMConfig.ignoreParseErrors and only throw if false.
+			throw new BoxRuntimeException( "Could not find entity metadata for class: " + relationClassName );
+		}
+		theNode.setAttribute( "entity-name", associatedEntity.getEntityName() );
 	}
 
 	/**
