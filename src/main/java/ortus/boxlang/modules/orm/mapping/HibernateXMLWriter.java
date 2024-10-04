@@ -254,10 +254,10 @@ public class HibernateXMLWriter {
 		populateStringAttributes( theNode, association, stringProperties );
 
 		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys
-		if ( association.containsKey( ORMKeys.fkcolumn ) ) {
+		if ( association.containsKey( Key.column ) ) {
 			Element keyNode = this.document.createElement( "key" );
 			// @TODO: Loop over all column values and create multiple <column> elements.
-			keyNode.setAttribute( "column", association.getAsString( ORMKeys.fkcolumn ) );
+			keyNode.setAttribute( "column", association.getAsString( Key.column ) );
 
 			if ( association.containsKey( ORMKeys.mappedBy ) ) {
 				keyNode.setAttribute( "property-ref", association.getAsString( ORMKeys.mappedBy ) );
@@ -303,9 +303,10 @@ public class HibernateXMLWriter {
 		}
 		if ( association.containsKey( Key.column ) ) {
 			// @TODO: Loop over all column values and create multiple <column> elements.
-			Element columnNode = this.document.createElement( "column" );
-			columnNode.setAttribute( "name", association.getAsString( Key.column ) );
-			theNode.appendChild( columnNode );
+			// Element columnNode = this.document.createElement( "column" );
+			// columnNode.setAttribute( "name", association.getAsString( Key.column ) );
+			// theNode.appendChild( columnNode );
+			theNode.setAttribute( "column", association.getAsString( Key.column ) );
 		}
 
 		// for attributes specific to each association type
@@ -337,11 +338,10 @@ public class HibernateXMLWriter {
 	 * @return A &lt;column /&gt; element ready to add to a Hibernate mapping document
 	 */
 	public Element generateColumnElement( IPropertyMeta prop ) {
-		Element	theNode		= this.document.createElement( "column" );
-		IStruct	columnInfo	= prop.getColumn();
+		Element		theNode				= this.document.createElement( "column" );
+		IStruct		columnInfo			= prop.getColumn();
 
-		theNode.setAttribute( "name", prop.getName() );
-		List<Key> stringProperties = List.of( Key._DEFAULT, Key.sqltype, ORMKeys.length, ORMKeys.precision, ORMKeys.scale );
+		List<Key>	stringProperties	= List.of( Key._DEFAULT, Key._name, Key.sqltype, ORMKeys.length, ORMKeys.precision, ORMKeys.scale );
 		populateStringAttributes( theNode, columnInfo, stringProperties );
 
 		// non-simple attributes

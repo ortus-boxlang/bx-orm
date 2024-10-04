@@ -112,7 +112,7 @@ public class MappingGenerator {
 			    ormConfig
 			);
 
-			log.info( "========= Generating mappings! " );
+			log.info( "========= Generating XML mappings! " );
 			generator.generateMappings();
 			log.info( "========= Done! " );
 

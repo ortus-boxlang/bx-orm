@@ -185,7 +185,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			association.put( ORMKeys.inverseJoinColumn, translateColumnName( annotations.getAsString( ORMKeys.inverseJoinColumn ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.fkcolumn ) ) {
-			association.put( ORMKeys.fkcolumn, translateColumnName( annotations.getAsString( ORMKeys.fkcolumn ) ) );
+			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.fkcolumn ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.linkTable ) ) {
 			association.putIfAbsent( Key.table, translateTableName( annotations.getAsString( ORMKeys.linkTable ) ) );

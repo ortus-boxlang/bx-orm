@@ -21,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
-import ortus.boxlang.runtime.util.BoxFQN;
 import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
 import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
@@ -37,6 +36,7 @@ import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.types.exceptions.ParseException;
+import ortus.boxlang.runtime.util.BoxFQN;
 import ortus.boxlang.runtime.util.FileSystemUtil;
 
 public class MappingGenerator {
@@ -103,7 +103,7 @@ public class MappingGenerator {
 		final int			MAX_SYNCHRONOUS_ENTITIES	= 20;
 		ArrayList<IStruct>	classes						= discoverBLClasses( this.entityPaths );
 		if ( classes.size() > MAX_SYNCHRONOUS_ENTITIES ) {
-			logger.debug( "Detected more than {} classes; parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
+			logger.debug( "Parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
 			classes.parallelStream()
 			    // Parse class metadata
 			    .map( ( IStruct possibleEntity ) -> readMeta( possibleEntity ) )

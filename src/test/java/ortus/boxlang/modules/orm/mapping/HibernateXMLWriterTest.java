@@ -410,15 +410,17 @@ public class HibernateXMLWriterTest {
 	    """
 	    class persistent {
 	    	property
-	    	name="the_name"
-	    	sqltype="varchar";
+	    		name="the_name"
+	    		column="NameColumn"
+	    		sqltype="varchar";
 	    }
 	    """,
 	    """
 	    @Entity
 	    class {
 	    	@Column{
-	    		sqltype="varchar"
+	    		sqltype="varchar",
+	    		name="NameColumn"
 	    	}
 	     	property name="the_name";
 	    }
@@ -430,20 +432,15 @@ public class HibernateXMLWriterTest {
 		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document		doc					= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		String			xml					= xmlToString( doc );
-
 		Node			propertyNode		= doc.getDocumentElement().getFirstChild().getFirstChild();
 		NamedNodeMap	propertyAttributes	= propertyNode.getAttributes();
 
-		assertThat( propertyAttributes.getNamedItem( "name" ).getTextContent() )
-		    .isEqualTo( "the_name" );
-
-		assertThat( propertyAttributes.getNamedItem( "type" ).getTextContent() )
-		    .isEqualTo( "string" );
+		assertEquals( "the_name", propertyAttributes.getNamedItem( "name" ).getTextContent() );
+		assertEquals( "string", propertyAttributes.getNamedItem( "type" ).getTextContent() );
 
 		Node columnNode = propertyNode.getFirstChild();
-		assertThat( columnNode.getAttributes().getNamedItem( "sql-type" ).getTextContent() )
-		    .isEqualTo( "varchar" );
+		assertEquals( "varchar", columnNode.getAttributes().getNamedItem( "sql-type" ).getTextContent() );
+		assertEquals( "NameColumn", columnNode.getAttributes().getNamedItem( "name" ).getTextContent() );
 	}
 
 	@DisplayName( "It does not map properties annotated with @Persistent false" )
@@ -744,8 +741,6 @@ public class HibernateXMLWriterTest {
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ) ).generateXML();
 
-		String		xml				= xmlToString( doc );
-
 		Node		classEL			= doc.getDocumentElement().getFirstChild();
 		Node		oneToOneNode	= classEL.getFirstChild();
 		assertEquals( "many-to-one", oneToOneNode.getNodeName() );
@@ -756,11 +751,7 @@ public class HibernateXMLWriterTest {
 		assertEquals( "all", attrs.getNamedItem( "cascade" ).getTextContent() );
 		assertEquals( "fooID", attrs.getNamedItem( "foreign-key" ).getTextContent() );
 		assertEquals( "true", attrs.getNamedItem( "constrained" ).getTextContent() );
-
-		// <one-to-one><column name="fooID" /></one-to-one>
-		Node columnNode = oneToOneNode.getFirstChild();
-		assertEquals( "column", columnNode.getNodeName() );
-		assertEquals( "FK_owner", columnNode.getAttributes().getNamedItem( "name" ).getTextContent() );
+		assertEquals( "FK_owner", attrs.getNamedItem( "column" ).getTextContent() );
 	}
 
 	@DisplayName( "It maps many-to-many relationships" )
