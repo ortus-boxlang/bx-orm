@@ -88,6 +88,8 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 		if ( column.containsKey( ORMKeys.formula ) ) {
 			this.formula = column.getAsString( ORMKeys.formula );
 		}
+		// Column should ALWAYS have a name.
+		column.putIfAbsent( Key._NAME, translateColumnName( this.name ) );
 		return column;
 	}
 

@@ -237,7 +237,8 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( Key.sqltype ) ) {
 			column.put( Key.sqltype, annotations.getAsString( Key.sqltype ) );
 		}
-		column.putIfAbsent( "name", translateColumnName( this.name ) );
+		// Column should ALWAYS have a name.
+		column.putIfAbsent( Key._NAME, translateColumnName( this.name ) );
 		return column;
 	}
 

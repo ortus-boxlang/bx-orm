@@ -38,8 +38,8 @@ Here's a full example:
 ```
 java -cp /path/to/bx-orm-1.0.0-all.jar:/path/to/boxlang-1.0.0-snapshot-all.jar \
     ortus.boxlang.modules.orm.tools.MappingGenerator \
-    --mapping MYMODULE:/my/app/modules/MYMODULE/ \
-    --mapping cborm:/my/app/modules/cborm \
-    --path /my/app/models/orm \
+    --mapping MYMODULE:./modules/MYMODULE/ \
+    --mapping cborm:./modules/cborm \
+    --path ./models/orm \
     --debug
 ```

@@ -506,6 +506,7 @@ public class HibernateXMLWriterTest {
 				length=12 
 				scale=10 
 				precision=2 
+				column="amountCol"
 				name="amount";
 		}
 		""",
@@ -513,9 +514,10 @@ public class HibernateXMLWriterTest {
 		@Entity
 		class {
 			@Column{
-				"length"    : 12,
-				"scale"     : 10,
-				"precision" : 2
+				name      : "amountCol",
+				length    : 12,
+				scale     : 10,
+				precision : 2
 			}
 			property name="amount";
 		}
@@ -524,22 +526,20 @@ public class HibernateXMLWriterTest {
 	// @formatter:on
 	@ParameterizedTest
 	public void testLengthPrecisionScale( String sourceCode ) {
-		IStruct		meta		= getClassMetaFromCode( sourceCode );
+		IStruct			meta				= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document		doc					= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node		classEL		= doc.getDocumentElement().getFirstChild();
-		Node		node		= classEL.getFirstChild().getFirstChild();
+		Node			classEL				= doc.getDocumentElement().getFirstChild();
+		Node			propertyNode		= classEL.getFirstChild();
+		Node			columnNode			= propertyNode.getFirstChild();
+		NamedNodeMap	columnAttributes	= columnNode.getAttributes();
 
-		assertThat( node.getAttributes().getNamedItem( "name" ).getTextContent() )
-		    .isEqualTo( "amount" );
-		assertThat( node.getAttributes().getNamedItem( "length" ).getTextContent() )
-		    .isEqualTo( "12" );
-		assertThat( node.getAttributes().getNamedItem( "precision" ).getTextContent() )
-		    .isEqualTo( "2" );
-		assertThat( node.getAttributes().getNamedItem( "scale" ).getTextContent() )
-		    .isEqualTo( "10" );
+		assertEquals( "amountCol", columnAttributes.getNamedItem( "name" ).getTextContent() );
+		assertEquals( "12", columnAttributes.getNamedItem( "length" ).getTextContent() );
+		assertEquals( "2", columnAttributes.getNamedItem( "precision" ).getTextContent() );
+		assertEquals( "10", columnAttributes.getNamedItem( "scale" ).getTextContent() );
 	}
 
 	// @formatter:off
@@ -937,7 +937,7 @@ public class HibernateXMLWriterTest {
 	    """,
 	    """
 	    @Cache {
-	    	strategy": "transactional",
+	    	strategy: "transactional",
 	    	region  : "foo",
 	    	include   : "non-lazy"
 	    }
@@ -951,7 +951,7 @@ public class HibernateXMLWriterTest {
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
-		String		xml			= xmlToString( doc );
+
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 		Node		cacheNode	= classEL.getFirstChild();
 

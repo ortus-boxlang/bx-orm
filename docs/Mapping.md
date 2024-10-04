@@ -204,9 +204,9 @@ Specify custom 2nd-layer-cache configuration for this entity:
 ```js
 @Entity
 @Cache{
-	strategy: "transactional",
-	region: "adminStuff",
-	include: "non-lazy"
+	strategy : "transactional",
+	region   : "adminStuff",
+	include  : "non-lazy"
 }
 class {
 	// entity properties and methods
