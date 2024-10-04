@@ -79,6 +79,10 @@ public class ModernEntityMeta extends AbstractEntityMeta {
 			}
 		}
 
+		if ( this.annotations.containsKey( Key.cache ) ) {
+			this.cache = this.annotations.getAsStruct( Key.cache );
+		}
+
 		this.allPersistentProperties	= this.allProperties.stream()
 		    .map( IStruct.class::cast )
 		    // Filter out transient properties, aka @Transient

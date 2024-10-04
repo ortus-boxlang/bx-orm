@@ -64,6 +64,18 @@ public interface IEntityMeta {
 	 */
 	public IStruct getDiscriminator();
 
+	/**
+	 * Get the second-level cache properties for this entity.
+	 * 
+	 * @return A struct of cache properties - EMPTY if none defined, else a struct with the following keys (any of which may be null):
+	 *         <ul>
+	 *         <li>{@link Key#region} - The cache region to use</li>
+	 *         <li>{@link Key#strategy} - Caching strategy to use - one of NONE|NONSTRICT_READ_WRITE|READ_ONLY|READ_WRITE|TRANSACTIONAL</li>
+	 *         <li>{@link ORMKeys#include} - How lazy properties are included in the cache - one of all|non-lazy</li>
+	 *         </ul>
+	 */
+	public IStruct getCache();
+
 	public Integer getBatchSize();
 
 	public String getRowID();

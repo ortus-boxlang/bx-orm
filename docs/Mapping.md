@@ -197,6 +197,28 @@ class readonly="true" MyEntity {
 
 > *Legacy - prefer `@Immutable`*
 
+### Cache (struct)
+
+Specify custom 2nd-layer-cache configuration for this entity:
+
+```js
+@Entity
+@Cache{
+	strategy: "transactional",
+	region: "adminStuff",
+	include: "non-lazy"
+}
+class {
+	// entity properties and methods
+}
+```
+
+The available cache properties/settings are:
+
+* `strategy` - Caching strategy to use - one of `none`,`nonstrict_read_write`,`read_only`,`read_write`, or `transactional`
+* `region` - The cache region to use. (String)
+* `include` - Specify whether to include `lazy` properties or not. One of `all` or `non-lazy`. Default: `all`.
+
 ## Property Annotations
 
 ### Column (string)

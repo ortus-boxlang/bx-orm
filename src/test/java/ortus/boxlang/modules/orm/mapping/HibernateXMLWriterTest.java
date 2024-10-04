@@ -928,6 +928,42 @@ public class HibernateXMLWriterTest {
 		// assertEquals( "FK_creationDev", manyToOneAttrs.getNamedItem( "column" ).getTextContent() );
 	}
 
+	// @formatter:off
+	@DisplayName( "It maps cache meta" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent cacheuse="transactional" cacheName="foo" cacheInclude="non-lazy" {}
+	    """,
+	    """
+	    @Cache {
+	    	strategy": "transactional",
+	    	region  : "foo",
+	    	include   : "non-lazy"
+	    }
+	    @Entity
+	    class {}
+	    """
+	} )
+	// @formatter:on
+	public void testCacheMapping( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+		String		xml			= xmlToString( doc );
+		Node		classEL		= doc.getDocumentElement().getFirstChild();
+		Node		cacheNode	= classEL.getFirstChild();
+
+		assertNotNull( cacheNode );
+		assertEquals( "cache", cacheNode.getNodeName() );
+
+		NamedNodeMap cacheAttrs = cacheNode.getAttributes();
+		assertEquals( "transactional", cacheAttrs.getNamedItem( "usage" ).getTextContent() );
+		assertEquals( "foo", cacheAttrs.getNamedItem( "region" ).getTextContent() );
+		assertEquals( "non-lazy", cacheAttrs.getNamedItem( "include" ).getTextContent() );
+	}
+
 	@Disabled( "Unimplemented" )
 	@DisplayName( "It can handle string-delimited column names for a composite key" )
 	@ParameterizedTest

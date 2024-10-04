@@ -42,6 +42,13 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 			this.discriminator.computeIfAbsent( Key.value, key -> this.annotations.getAsString( ORMKeys.discriminatorValue ) );
 		}
 
+		if ( this.annotations.containsKey( ORMKeys.cacheUse ) ) {
+			this.cache = new Struct();
+			this.cache.computeIfAbsent( ORMKeys.strategy, key -> this.annotations.getAsString( ORMKeys.cacheUse ) );
+			this.cache.computeIfAbsent( Key.region, key -> this.annotations.getAsString( ORMKeys.cacheName ) );
+			this.cache.computeIfAbsent( ORMKeys.include, key -> this.annotations.getAsString( ORMKeys.cacheInclude ) );
+		}
+
 		this.allPersistentProperties	= this.allProperties.stream()
 		    .map( IStruct.class::cast )
 		    .filter( ( IStruct prop ) -> {

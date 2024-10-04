@@ -570,6 +570,10 @@ public class HibernateXMLWriter {
 			}
 		}
 
+		if ( !entity.getCache().isEmpty() ) {
+			classElement.appendChild( generateCacheElement( entity.getCache() ) );
+		}
+
 		// generate keys, aka <id> elements
 		entity.getIdProperties().stream().forEach( ( propertyMeta ) ->
 
@@ -617,6 +621,28 @@ public class HibernateXMLWriter {
 		// @TODO: generate/handle optimistic lock
 
 		return classElement;
+	}
+
+	/**
+	 * Generate a &lt;cache/&gt; element for the given cache metadata.
+	 * <p>
+	 * Uses these annotations:
+	 * <ul>
+	 * <li>strategy</li>
+	 * <li>region</li>
+	 * </ul>
+	 *
+	 * @param cache Cache metadata in struct form
+	 *
+	 * @return A &lt;cache /&gt; element ready to add to a Hibernate mapping document
+	 */
+	public Element generateCacheElement( IStruct cache ) {
+		Element		theNode				= this.document.createElement( "cache" );
+
+		List<Key>	stringProperties	= List.of( ORMKeys.strategy, Key.region, ORMKeys.include );
+		populateStringAttributes( theNode, cache, stringProperties );
+
+		return theNode;
 	}
 
 	/**
@@ -708,6 +734,9 @@ public class HibernateXMLWriter {
 	private String toHibernateAttributeName( Key key ) {
 		String name = key.getName().toLowerCase();
 		switch ( name ) {
+			// Warning: This may backfire if 'strategy' is used in a different context than the <cache> node.
+			case "strategy" :
+				return "usage";
 			case "sqltype" :
 				return "sql-type";
 			case "selectkey" :

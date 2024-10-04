@@ -53,6 +53,10 @@ public class ORMKeys {
 	 * Entity annotations
 	 */
 	public static final Key	entityName				= Key.of( "entityName" );
+	public static final Key	cacheUse				= Key.of( "cacheUse" );
+	public static final Key	cacheName				= Key.of( "cacheName" );
+	public static final Key	cacheInclude			= Key.of( "cacheInclude" );
+	public static final Key	include					= Key.of( "include" );
 	public static final Key	fieldtype				= Key.of( "fieldtype" );
 	public static final Key	generator				= Key.of( "generator" );
 	public static final Key	unsavedValue			= Key.of( "unsavedValue" );

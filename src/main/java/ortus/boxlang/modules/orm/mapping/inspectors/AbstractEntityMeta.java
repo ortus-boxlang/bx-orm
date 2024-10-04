@@ -69,6 +69,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 	protected IStruct				discriminator	= Struct.EMPTY;
 
+	protected IStruct				cache			= Struct.EMPTY;
+
 	public AbstractEntityMeta( IStruct entityMeta ) {
 
 		// Setup the basic entity metadata
@@ -165,6 +167,10 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 	public IStruct getDiscriminator() {
 		return this.discriminator;
+	}
+
+	public IStruct getCache() {
+		return this.cache;
 	}
 
 	public Integer getBatchSize() {
