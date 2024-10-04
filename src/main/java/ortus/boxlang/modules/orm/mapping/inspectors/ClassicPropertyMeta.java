@@ -123,11 +123,15 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				return lazy;
 			} );
 		}
-		if ( annotations.containsKey( ORMKeys.cfc ) ) {
-			association.put( Key._CLASS, annotations.getAsString( ORMKeys.cfc ) );
-		}
+		association.putIfAbsent( Key._CLASS, annotations.getAsString( ORMKeys.cfc ) );
 		if ( annotations.containsKey( Key._CLASS ) ) {
 			association.put( Key._CLASS, annotations.getAsString( Key._CLASS ) );
+		}
+		if ( annotations.containsKey( ORMKeys.insert ) ) {
+			association.put( ORMKeys.insertable, BooleanCaster.cast( annotations.get( ORMKeys.insert ) ) );
+		}
+		if ( annotations.containsKey( ORMKeys.update ) ) {
+			association.put( ORMKeys.updateable, BooleanCaster.cast( annotations.get( ORMKeys.update ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.fetch ) ) {
 			association.put( ORMKeys.fetch, annotations.getAsString( ORMKeys.fetch ) );

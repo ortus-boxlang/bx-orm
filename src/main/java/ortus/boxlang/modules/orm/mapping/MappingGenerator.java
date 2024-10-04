@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
+import ortus.boxlang.runtime.util.BoxFQN;
 import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
 import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
@@ -216,7 +217,7 @@ public class MappingGenerator {
 	private EntityRecord toEntityRecord( IStruct theEntity ) {
 		IStruct	meta		= theEntity.getAsStruct( Key.metadata );
 		String	entityName	= readEntityName( meta );
-		String	fqn			= new BetterFQN( Path.of( theEntity.getAsString( this.location ) ).getParent(), Path.of( meta.getAsString( Key.path ) ) )
+		String	fqn			= new BoxFQN( Path.of( theEntity.getAsString( this.location ) ).getParent(), Path.of( meta.getAsString( Key.path ) ) )
 		    .toString();
 		if ( fqn == null || fqn.isBlank() ) {
 			throw new BoxRuntimeException( "Failed to generate FQN for entity: " + entityName );

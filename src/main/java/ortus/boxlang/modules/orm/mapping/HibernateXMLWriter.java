@@ -287,6 +287,13 @@ public class HibernateXMLWriter {
 		    ORMKeys.lazy, ORMKeys.embedXML, ORMKeys.foreignKey );
 		populateStringAttributes( theNode, association, stringProperties );
 
+		if ( association.containsKey( ORMKeys.insertable ) ) {
+			theNode.setAttribute( "insert", trueFalseFormat( association.getAsBoolean( ORMKeys.insertable ) ) );
+		}
+		if ( association.containsKey( ORMKeys.updateable ) ) {
+			theNode.setAttribute( "update", trueFalseFormat( association.getAsBoolean( ORMKeys.updateable ) ) );
+		}
+
 		// non-simple attributes
 		if ( association.containsKey( ORMKeys.constrained ) && association.getAsBoolean( ORMKeys.constrained ) ) {
 			theNode.setAttribute( "constrained", "true" );

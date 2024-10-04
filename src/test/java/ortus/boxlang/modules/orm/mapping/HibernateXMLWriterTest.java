@@ -689,9 +689,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
-
-		String		xml				= xmlToString( doc );
+		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ) ).generateXML();
 
 		Node		classEL			= doc.getDocumentElement().getFirstChild();
 		Node		oneToOneNode	= classEL.getFirstChild();
@@ -744,7 +742,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
+		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ) ).generateXML();
 
 		String		xml				= xmlToString( doc );
 
@@ -908,7 +906,7 @@ public class HibernateXMLWriterTest {
 				fkcolumn="FK_creationDev"
 				fetch="select"
 				cascade="all"
-				insert="true"
+				insert="false"
 				update="false"
 				lazy="true"
 				persistent=true;
@@ -933,6 +931,8 @@ public class HibernateXMLWriterTest {
 		assertEquals( "select", manyToOneAttrs.getNamedItem( "fetch" ).getTextContent() );
 		assertEquals( "all", manyToOneAttrs.getNamedItem( "cascade" ).getTextContent() );
 		assertEquals( "Developer", manyToOneAttrs.getNamedItem( "entity-name" ).getTextContent() );
+		assertEquals( "false", manyToOneAttrs.getNamedItem( "insert" ).getTextContent() );
+		assertEquals( "false", manyToOneAttrs.getNamedItem( "update" ).getTextContent() );
 		// @TODO: Fix!
 		// assertEquals( "FK_creationDev", manyToOneAttrs.getNamedItem( "column" ).getTextContent() );
 	}

@@ -112,6 +112,7 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	 * 
 	 * @return
 	 */
+	@Deprecated
 	private IStruct parseTypeAnnotations( IStruct annotations ) {
 		IStruct typeInfo = new Struct();
 		if ( annotations.containsKey( Key.type ) ) {
