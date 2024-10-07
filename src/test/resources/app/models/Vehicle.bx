@@ -15,13 +15,6 @@ class entityName="Vehicle" table="vehicles" persistent="true" {
         name="model" 
         type="string";
 
-    property 
-        name="owner"
-        cfc="Developer"
-        fieldtype="one-to-one"
-        cascade="none"
-        lazy="false";
-
     function onPreInsert(){
         log.info( "Inserting new Vehicle: #getMake()# #getModel()#" );
     }
