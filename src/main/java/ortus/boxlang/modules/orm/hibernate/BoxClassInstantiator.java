@@ -5,10 +5,13 @@ import java.io.Serializable;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.tuple.Instantiator;
 import org.hibernate.tuple.entity.EntityMetamodel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.loader.ClassLocator;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 
 /**
  * This class is used to instantiate a BoxLang class for a Hibernate entity.
@@ -17,6 +20,8 @@ import ortus.boxlang.runtime.loader.ClassLocator;
  * `entityLoadByPK()`, creating new entities via `entityNew()`, etc, etc.
  */
 public class BoxClassInstantiator implements Instantiator {
+
+	Logger					logger			= LoggerFactory.getLogger( BoxClassInstantiator.class );
 
 	private EntityMetamodel	entityMetamodel;
 	private PersistentClass	mappingInfo;
@@ -30,26 +35,30 @@ public class BoxClassInstantiator implements Instantiator {
 
 	@Override
 	public Object instantiate( Serializable id ) {
-		String		bxClassFQN	= SessionFactoryBuilder.lookupBoxLangClass( entityMetamodel.getSessionFactory(),
+		String			bxClassFQN	= SessionFactoryBuilder.lookupBoxLangClass( entityMetamodel.getSessionFactory(),
 		    entityMetamodel.getName() );
-		IBoxContext	context		= SessionFactoryBuilder
+		IBoxContext		context		= SessionFactoryBuilder
 		    .getApplicationContext( entityMetamodel.getSessionFactory() );
 
-		Object		theEntity	= classLocator.load( context, bxClassFQN, "bx" )
+		IClassRunnable	theEntity	= ( IClassRunnable ) classLocator.load( context, bxClassFQN, "bx" )
 		    .invokeConstructor( context )
 		    .unWrapBoxLangClass();
 
-		// @TODO: Get this working!
-		// Arrays.stream( this.entityMetamodel.getPropertyTypes() )
-		// .filter( propertyType -> propertyType.isAssociationType() )
-		// .forEach( propertyType -> {
-		// String associationName = this.entityMetamodel.getPropertyNames()[propertyType.getPropertyIndex()];
-		// // add has
-		// theEntity.getThisScope().put( Key.of( "has" + associationName, hasUDF )
-		// // add add (for to-many associations)
-		// theEntity.getThisScope().put( Key.of( "add" + associationName, addUDF )
-		// // add remove (for to-many associations)
-		// theEntity.getThisScope().put( Key.of( "remove" + associationName, removeUDF ) );
+		// Arrays.stream( this.entityMetamodel.getProperties() )
+		// .filter( prop -> prop.getType().isAssociationType() )
+		// .forEach( prop -> {
+		// String associationName = prop.getName();
+		// logger.debug( "Adding association methods for property: {} on entity {}", associationName, this.entityMetamodel.getName() );
+
+		// // add has to THIS scope
+		// // theEntity.put( Key.of( "has" + associationName ), hasUDF);
+
+		// // // add add (for to-many associations)
+		// // theEntity.put( Key.of( "add" + associationName, addUDF )
+
+		// // // add remove (for to-many associations)
+		// // theEntity.put( Key.of( "remove" + associationName, removeUDF ) );
+		// } );
 
 		return theEntity;
 	}
