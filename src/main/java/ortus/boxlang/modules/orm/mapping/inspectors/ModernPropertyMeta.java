@@ -19,11 +19,28 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 			this.fieldType = FIELDTYPE.ID;
 		} else if ( this.annotations.containsKey( Key.collection ) ) {
 			this.fieldType = FIELDTYPE.COLLECTION;
-		} else if ( this.annotations.containsKey( ORMKeys.OneToOne ) ||
-		    this.annotations.containsKey( ORMKeys.OneToMany ) ||
-		    this.annotations.containsKey( ORMKeys.ManyToOne ) ||
-		    this.annotations.containsKey( ORMKeys.ManyToMany ) ) {
-			this.fieldType = FIELDTYPE.ASSOCIATION;
+		} else if ( this.annotations.containsKey( ORMKeys.OneToOne ) ) {
+			if ( ( getAssociation().containsKey( ORMKeys.fkcolumn ) || getAssociation().containsKey( ORMKeys.linkTable ) ) ) {
+				// behaves as many-to-one
+				this.fieldType = FIELDTYPE.MANY_TO_ONE;
+				this.getAssociation().put( Key.type, "many-to-one" );
+				this.getAssociation().put( ORMKeys.unique, true );
+			} else {
+				this.fieldType = FIELDTYPE.ONE_TO_ONE;
+			}
+		} else if ( this.annotations.containsKey( ORMKeys.OneToMany ) ) {
+			if ( getAssociation().containsKey( ORMKeys.linkTable ) ) {
+				// behaves as many-to-many
+				this.fieldType = FIELDTYPE.MANY_TO_MANY;
+				this.getAssociation().put( Key.type, "many-to-many" );
+				this.getAssociation().put( ORMKeys.unique, true );
+			} else {
+				this.fieldType = FIELDTYPE.ONE_TO_MANY;
+			}
+		} else if ( this.annotations.containsKey( ORMKeys.ManyToOne ) ) {
+			this.fieldType = FIELDTYPE.MANY_TO_ONE;
+		} else if ( this.annotations.containsKey( ORMKeys.ManyToMany ) ) {
+			this.fieldType = FIELDTYPE.MANY_TO_MANY;
 		} else {
 			this.fieldType = FIELDTYPE.COLUMN;
 		}
@@ -60,7 +77,29 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 		// @TODO: For one-to-one associations, lazy should default to false. (eager fetch)
 		// Note: fetch mode (select vs join) is NOT the same as fetch type (lazy vs eager).
 		// batch size is only applicable when fetch mode = select.
-		return Struct.EMPTY;
+		IStruct association;
+		if ( annotations.containsKey( ORMKeys.OneToOne ) ) {
+			association = annotations.getAsStruct( ORMKeys.OneToOne );
+			association.put( Key.type, "one-to-one" );
+		} else if ( annotations.containsKey( ORMKeys.OneToMany ) ) {
+			association = annotations.getAsStruct( ORMKeys.OneToMany );
+			association.put( Key.type, "one-to-many" );
+		} else if ( annotations.containsKey( ORMKeys.ManyToOne ) ) {
+			association = annotations.getAsStruct( ORMKeys.ManyToOne );
+			association.put( Key.type, "many-to-one" );
+		} else if ( annotations.containsKey( ORMKeys.ManyToMany ) ) {
+			association = annotations.getAsStruct( ORMKeys.ManyToMany );
+			association.put( Key.type, "many-to-many" );
+		} else {
+			return Struct.EMPTY;
+		}
+
+		association.computeIfPresent( ORMKeys.inverseJoinColumn, ( key, value ) -> translateColumnName( ( String ) value ) );
+		association.computeIfPresent( ORMKeys.fkcolumn, ( key, value ) -> translateColumnName( ( String ) value ) );
+		if ( association.containsKey( ORMKeys.fkcolumn ) ) {
+			association.put( Key.column, association.getAsString( ORMKeys.fkcolumn ) );
+		}
+		return association;
 	}
 
 	protected IStruct parseColumnAnnotations( IStruct annotations ) {

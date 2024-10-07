@@ -124,6 +124,7 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		if ( annotations.containsKey( Key.sqltype ) ) {
 			typeInfo.put( Key.sqltype, annotations.getAsString( Key.sqltype ) );
 		}
+		// @TODO: Map ORM type to java type? Varchar->string, etc.
 		typeInfo.put( ORMKeys.ORMType, annotations.getOrDefault( ORMKeys.ORMType, "string" ) );
 		return typeInfo;
 	}
@@ -174,6 +175,10 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
 	public FIELDTYPE getFieldType() {
 		return this.fieldType;
+	}
+
+	public boolean isAssociationType() {
+		return this.fieldType.isAssociationType();
 	}
 
 	/**

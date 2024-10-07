@@ -15,6 +15,15 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 	public ClassicPropertyMeta( String entityName, IStruct meta ) {
 		super( entityName, meta );
 
+		annotations.putIfAbsent( ORMKeys.fieldtype, "column" );
+		if ( this.fieldType == null ) {
+			this.fieldType = FIELDTYPE.fromString( annotations.getAsString( ORMKeys.fieldtype ) );
+			if ( this.fieldType == null ) {
+				throw new BoxRuntimeException( String.format( "Unknown field type '%s' for property '%s' on entity '%s'",
+				    annotations.getAsString( ORMKeys.fieldtype ), this.name, this.entityName ) );
+			}
+		}
+
 		// General property annotations
 		if ( this.annotations.containsKey( ORMKeys.lazy ) ) {
 			this.lazy = this.annotations.getAsString( ORMKeys.lazy );
@@ -34,34 +43,6 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				logger.warn( "Property {} on entity {} has fieldtype=collection, which is not yet supported. Please forward to your local Ortus agency.",
 				    this.name, entityName );
 			}
-		}
-
-		annotations.putIfAbsent( ORMKeys.fieldtype, "column" );
-		switch ( annotations.getAsString( ORMKeys.fieldtype ).toUpperCase() ) {
-			case "ID" :
-				this.fieldType = FIELDTYPE.ID;
-				break;
-			case "COLUMN" :
-				this.fieldType = FIELDTYPE.COLUMN;
-				break;
-			case "ONE-TO-ONE" :
-			case "ONE-TO-MANY" :
-			case "MANY-TO-ONE" :
-			case "MANY-TO-MANY" :
-				this.fieldType = FIELDTYPE.ASSOCIATION;
-				break;
-			case "COLLECTION" :
-				this.fieldType = FIELDTYPE.COLLECTION;
-				break;
-			case "TIMESTAMP" :
-				this.fieldType = FIELDTYPE.TIMESTAMP;
-				break;
-			case "VERSION" :
-				this.fieldType = FIELDTYPE.VERSION;
-				break;
-			default :
-				throw new BoxRuntimeException( String.format( "Unknown field type '%s' for property '%s' on entity '%s'",
-				    annotations.getAsString( ORMKeys.fieldtype ), this.name, this.entityName ) );
 		}
 	}
 
@@ -90,6 +71,10 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.inverseJoinColumn ) ) );
 		}
 		association.put( Key.type, associationType );
+
+		// Update fieldtype annotation just in case we altered it.
+		annotations.put( ORMKeys.fieldtype, associationType );
+
 		if ( associationType.endsWith( "-to-many" ) ) {
 			// IS A COLLECTION
 			association.compute( ORMKeys.collectionType, ( key, object ) -> {
@@ -181,9 +166,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.inverse ) ) {
 			association.put( ORMKeys.inverse, BooleanCaster.cast( annotations.get( ORMKeys.inverse ) ) );
 		}
-		if ( annotations.containsKey( ORMKeys.inverseJoinColumn ) ) {
-			association.put( ORMKeys.inverseJoinColumn, translateColumnName( annotations.getAsString( ORMKeys.inverseJoinColumn ) ) );
-		}
+		association.computeIfPresent( ORMKeys.inverseJoinColumn, ( key, value ) -> translateColumnName( ( String ) value ) );
 		if ( annotations.containsKey( ORMKeys.fkcolumn ) ) {
 			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.fkcolumn ) ) );
 		}

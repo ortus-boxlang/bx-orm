@@ -659,7 +659,6 @@ public class HibernateXMLWriterTest {
 				fieldtype="one-to-one"
 				foreignKey="fooID"
 				cascade="all-delete-orphan"
-				embedXML="true"
 				constrained="true"
 				fetch="join"
 				lazy="extra";
@@ -672,7 +671,6 @@ public class HibernateXMLWriterTest {
 		// 	  	"mappedBy"   : "id",
 		// 		"foreignKey" : "fooID",
 		// 		"cascade"    : "all-delete-orphan",
-		// 		"embedXML"   : true,
 		// 		"constrained": true,
 		// 		"fetch"      : "join",
 		// 		"lazy"       : "extra"
@@ -709,30 +707,30 @@ public class HibernateXMLWriterTest {
 	    """
 	    class persistent {
 	    	property
-	    		name="owner"
-	    		cfc="Person"
-	    		fieldtype="one-to-one"
-	    		fkcolumn="FK_owner"
-	    		foreignKey="fooID"
-	    		cascade="all"
-	    		constrained="true";
+	    		name        = "owner"
+	    		cfc         = "Person"
+	    		fieldtype   = "one-to-one"
+	    		fkcolumn    = "FK_owner"
+	    		foreignKey  = "fooID"
+	    		cascade     = "all"
+	    		constrained = "true";
+	    }
+	    """,
+	    """
+	    @Entity
+	    class {
+	    	@OneToOne {
+	    		// "mappedBy" : "id",
+	    		"fkcolumn"   : "FK_owner",
+	    		"foreignKey" : "fooID",
+	    		"cascade"    : "all",
+	    		"constrained": true,
+	    		"fetch"      : "join",
+	    		"lazy"       : "extra"
+	    	}
+	    	property name="owner";
 	    }
 	    """
-	// , """
-	// @Entity
-	// class {
-	// @OneToOne{
-	// "mappedBy" : "id",
-	// "foreignKey" : "fooID",
-	// "cascade" : "all-delete-orphan",
-	// "embedXML" : true,
-	// "constrained": true,
-	// "fetch" : "join",
-	// "lazy" : "extra"
-	// }
-	// property name="owner";
-	// }
-	// """
 	} )
 	// @formatter:on
 	public void testOneToOneAsManyToOne( String sourceCode ) {
@@ -740,6 +738,8 @@ public class HibernateXMLWriterTest {
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ) ).generateXML();
+
+		String		xml				= xmlToString( doc );
 
 		Node		classEL			= doc.getDocumentElement().getFirstChild();
 		Node		oneToOneNode	= classEL.getFirstChild();
@@ -1005,7 +1005,7 @@ public class HibernateXMLWriterTest {
 
 	/**
 	 * TODO: The following ORM annotations are still lacking tests at either the entity level, the property level, or both:
-	 * cfc
+	 * embedXml
 	 * uniqueKey
 	 * missingRowIgnored
 	 * joinColumn

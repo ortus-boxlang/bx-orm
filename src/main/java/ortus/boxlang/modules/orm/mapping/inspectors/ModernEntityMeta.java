@@ -121,7 +121,7 @@ public class ModernEntityMeta extends AbstractEntityMeta {
 		    .orElse( null );
 
 		this.associations		= this.allPersistentProperties.stream()
-		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ASSOCIATION )
+		    .filter( ( IPropertyMeta prop ) -> prop.isAssociationType() )
 		    .collect( Collectors.toList() );
 	}
 }

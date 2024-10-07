@@ -111,15 +111,54 @@ public interface IPropertyMeta {
 	 */
 	public IPropertyMeta setFieldType( FIELDTYPE fieldType );
 
+	/**
+	 * Is this property an association type?
+	 * 
+	 * @return True if fieldtype is one of
+	 */
+	public boolean isAssociationType();
+
 	public FIELDTYPE getFieldType();
 
 	public enum FIELDTYPE {
+
 		COLUMN,
 		ASSOCIATION,
 		COLLECTION,
 		TIMESTAMP,
 		VERSION,
 		ID,
-		TRANSIENT
+		TRANSIENT,
+		ONE_TO_ONE,
+		ONE_TO_MANY,
+		MANY_TO_ONE,
+		MANY_TO_MANY;
+
+		/**
+		 * Return true if the field type is one of one-to-one, one-to-many, many-to-one, or many-to-many.
+		 */
+		public boolean isAssociationType() {
+			return this == ONE_TO_ONE || this == ONE_TO_MANY || this == MANY_TO_ONE || this == MANY_TO_MANY;
+		}
+
+		/**
+		 * Convert a string to a FIELDTYPE enum. Returns null if no match. It is up to the implementor to detect nulls and validate/throw an exception.
+		 * 
+		 * @param fieldType String representation of the field type, like "id", "column", "one-to-one", etc.
+		 */
+		public static FIELDTYPE fromString( String fieldType ) {
+			return switch ( fieldType.toUpperCase() ) {
+				case "ID" -> FIELDTYPE.ID;
+				case "COLUMN" -> FIELDTYPE.COLUMN;
+				case "ONE-TO-ONE" -> FIELDTYPE.ONE_TO_ONE;
+				case "ONE-TO-MANY" -> FIELDTYPE.ONE_TO_MANY;
+				case "MANY-TO-ONE" -> FIELDTYPE.MANY_TO_ONE;
+				case "MANY-TO-MANY" -> FIELDTYPE.MANY_TO_MANY;
+				case "COLLECTION" -> FIELDTYPE.COLLECTION;
+				case "TIMESTAMP" -> FIELDTYPE.TIMESTAMP;
+				case "VERSION" -> FIELDTYPE.VERSION;
+				default -> null;
+			};
+		}
 	}
 }

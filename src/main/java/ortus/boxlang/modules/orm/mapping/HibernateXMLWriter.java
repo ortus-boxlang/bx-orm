@@ -596,21 +596,17 @@ public class HibernateXMLWriter {
 
 		// generate associations, aka <one-to-one>, <one-to-many>, etc.
 		entity.getAssociations().stream().forEach( ( propertyMeta ) -> {
-			String associationType = propertyMeta.getAssociation().getAsString( Key.type );
-			switch ( associationType ) {
-				case "one-to-one" :
-				case "many-to-one" :
+			switch ( propertyMeta.getFieldType() ) {
+				case ONE_TO_ONE :
+				case MANY_TO_ONE :
 					classElement.appendChild( generateToOneAssociation( propertyMeta ) );
 					break;
-				case "one-to-many" :
-				case "many-to-many" :
+				case ONE_TO_MANY :
+				case MANY_TO_MANY :
 					classElement.appendChild( generateToManyAssociation( propertyMeta ) );
 					break;
 				default :
-					logger.warn( "Unknown association type: {}. Please forward to your local Ortus agency.",
-					    associationType );
-					// @TODO: Check ORMConfig.ignoreParseErrors and throw if false.
-					throw new BoxRuntimeException( "Unknown association type: %s".formatted( associationType ) );
+					logger.warn( "Unhandled association/field type: {} on property {}", propertyMeta.getFieldType(), propertyMeta.getName() );
 			}
 
 		} );
