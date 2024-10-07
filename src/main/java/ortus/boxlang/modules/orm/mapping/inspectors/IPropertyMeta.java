@@ -36,19 +36,6 @@ public interface IPropertyMeta {
 	public IStruct getAnnotations();
 
 	/**
-	 * Get all property type metadata.
-	 * <p>
-	 * A full list of keys is shown below. Any or all of these keys may be absent.
-	 * <ul>
-	 * <li>`type` - Property type used in BoxLang class instances</li>
-	 * <li>`sqltype` - Database column type used in table creation only</li>
-	 * <li>`ormtype` - ORM type</li>
-	 * <li>`fieldtype` - One of `id`, `column`, `one`-to-one, `one`-to-many, `many`-to-many, `many`-to-one, `collection`, `timestamp`, `version`</li>
-	 * </ul>
-	 */
-	public IStruct getTypes();
-
-	/**
 	 * Get all generator info metadata.
 	 * <p>
 	 * A full list of keys is shown below. Any or all of these keys may be absent.
@@ -105,20 +92,36 @@ public interface IPropertyMeta {
 	public IStruct getAssociation();
 
 	/**
+	 * Is this property an association type?
+	 * 
+	 * @return True if fieldtype is one of one-to-one, one-to-many, many-to-one, or many-to-many.
+	 */
+	public boolean isAssociationType();
+
+	/**
+	 * Get the SQL type, aka `property sqltype="varchar"...`.
+	 */
+	public String getSqlType();
+
+	/**
+	 * Get the ORM type, aka `property ormtype="string"...`.
+	 */
+	public String getORMType();
+
+	/**
+	 * Get the property fieldtype.
+	 * <p>
+	 * One of `id`, `column`, `one`-to-one, `one`-to-many, `many`-to-many, `many`-to-one, `collection`, `timestamp`,
+	 * `version`
+	 */
+	public FIELDTYPE getFieldType();
+
+	/**
 	 * Field type setter which allows amending the property type after instantiation.
 	 * 
 	 * @param fieldType Field type to set, like FIELDTYPE.COLUMN, FIELDTYPE.ASSOCIATION, etc.
 	 */
 	public IPropertyMeta setFieldType( FIELDTYPE fieldType );
-
-	/**
-	 * Is this property an association type?
-	 * 
-	 * @return True if fieldtype is one of
-	 */
-	public boolean isAssociationType();
-
-	public FIELDTYPE getFieldType();
 
 	public enum FIELDTYPE {
 

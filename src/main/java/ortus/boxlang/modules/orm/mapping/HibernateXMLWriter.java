@@ -132,11 +132,10 @@ public class HibernateXMLWriter {
 	 */
 	public Element generatePropertyElement( IPropertyMeta prop ) {
 		IStruct	columnInfo	= prop.getColumn();
-		IStruct	types		= prop.getTypes();
 
 		Element	theNode		= this.document.createElement( "property" );
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", types.getAsString( ORMKeys.ORMType ) );
+		theNode.setAttribute( "type", prop.getORMType() );
 
 		if ( prop.getFormula() != null ) {
 			theNode.setAttribute( "formula", "( " + prop.getFormula() + " )" );
@@ -390,10 +389,7 @@ public class HibernateXMLWriter {
 
 		// set common attributes
 		theNode.setAttribute( "name", prop.getName() );
-		IStruct types = prop.getTypes();
-		if ( types.containsKey( ORMKeys.ORMType ) ) {
-			theNode.setAttribute( "type", types.getAsString( ORMKeys.ORMType ) );
-		}
+		theNode.setAttribute( "type", prop.getORMType() );
 		if ( prop.getUnsavedValue() != null ) {
 			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );
 		}
@@ -647,16 +643,13 @@ public class HibernateXMLWriter {
 	public Element generateVersionElement( IPropertyMeta prop ) {
 		Element	theNode		= this.document.createElement( "version" );
 		IStruct	columnInfo	= prop.getColumn();
-		IStruct	types		= prop.getTypes();
 
 		// PROPERTY name
 		theNode.setAttribute( "name", prop.getName() );
+		theNode.setAttribute( "type", prop.getORMType() );
 		// COLUMN name
 		if ( columnInfo.containsKey( Key._NAME ) ) {
 			theNode.setAttribute( "column", columnInfo.getAsString( Key._NAME ) );
-		}
-		if ( types.containsKey( ORMKeys.ORMType ) ) {
-			theNode.setAttribute( "type", types.getAsString( ORMKeys.ORMType ) );
 		}
 		if ( prop.getUnsavedValue() != null ) {
 			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );

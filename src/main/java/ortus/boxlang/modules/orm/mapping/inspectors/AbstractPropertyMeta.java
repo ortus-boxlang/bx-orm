@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
-import ortus.boxlang.runtime.types.Struct;
 
 public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
@@ -24,7 +23,8 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	protected boolean				isOptimisticLock	= true;
 	protected String				lazy;
 	protected String				formula;
-	protected IStruct				types;
+	protected String				sqlType;
+	protected String				ormType;
 	protected IStruct				generator;
 	protected IStruct				column;
 	protected IStruct				association;
@@ -40,25 +40,22 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.annotations	= this.meta.getAsStruct( Key.annotations );
 		this.name			= this.meta.getAsString( Key._NAME );
 		this.column			= parseColumnAnnotations( this.annotations );
-		this.types			= parseTypeAnnotations( this.annotations );
 		this.generator		= parseGeneratorAnnotations( this.annotations );
 		this.association	= parseAssociation( this.annotations );
 
 		if ( !this.generator.isEmpty() && this.generator.containsKey( Key._CLASS ) ) {
 			if ( List.of( "identity", "native", "increment" ).contains( this.generator.getAsString( Key._CLASS ) ) ) {
-				this.types.putIfAbsent( ORMKeys.ORMType, "integer" );
-			} else {
-				this.types.putIfAbsent( ORMKeys.ORMType, "string" );
+				this.annotations.putIfAbsent( ORMKeys.ORMType, "integer" );
 			}
 		}
 
-		// @TODO: Map ORM type to java type? Varchar->string, etc.
-		this.types.putIfAbsent( ORMKeys.ORMType, annotations.getOrDefault( ORMKeys.ORMType, "string" ) );
-	}
+		if ( annotations.containsKey( Key.sqltype ) ) {
+			this.sqlType = annotations.getAsString( Key.sqltype );
+		}
 
-	public IPropertyMeta setFieldType( FIELDTYPE fieldType ) {
-		this.fieldType = fieldType;
-		return this;
+		this.annotations.putIfAbsent( ORMKeys.ORMType, annotations.getOrDefault( Key.type, "string" ) );
+		this.ormType = annotations.getAsString( ORMKeys.ORMType );
+
 	}
 
 	/**
@@ -120,26 +117,6 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	 */
 	protected abstract IStruct parseAssociation( IStruct annotations );
 
-	/**
-	 * @deprecated Please refactor to flat type methods instead: `getSqlType()`, `getOrmType()`, `getFieldType()`, `getOrmType()`.
-	 * 
-	 * @return
-	 */
-	@Deprecated
-	private IStruct parseTypeAnnotations( IStruct annotations ) {
-		IStruct typeInfo = new Struct();
-		if ( annotations.containsKey( Key.type ) ) {
-			typeInfo.put( Key.type, annotations.getAsString( Key.type ) );
-		}
-		if ( annotations.containsKey( ORMKeys.fieldtype ) ) {
-			typeInfo.put( ORMKeys.fieldtype, annotations.getAsString( ORMKeys.fieldtype ) );
-		}
-		if ( annotations.containsKey( Key.sqltype ) ) {
-			typeInfo.put( Key.sqltype, annotations.getAsString( Key.sqltype ) );
-		}
-		return typeInfo;
-	}
-
 	public IStruct getAnnotations() {
 		return this.annotations;
 	}
@@ -168,16 +145,16 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		return this.unsavedValue;
 	}
 
-	public IStruct getTypes() {
-		return this.types;
-	}
-
 	public IStruct getColumn() {
 		return this.column;
 	}
 
 	public IStruct getGenerator() {
 		return this.generator;
+	}
+
+	public boolean isAssociationType() {
+		return this.fieldType.isAssociationType();
 	}
 
 	public IStruct getAssociation() {
@@ -188,8 +165,17 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		return this.fieldType;
 	}
 
-	public boolean isAssociationType() {
-		return this.fieldType.isAssociationType();
+	public IPropertyMeta setFieldType( FIELDTYPE fieldType ) {
+		this.fieldType = fieldType;
+		return this;
+	}
+
+	public String getORMType() {
+		return this.ormType;
+	}
+
+	public String getSqlType() {
+		return this.sqlType;
 	}
 
 	/**
