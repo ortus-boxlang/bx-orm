@@ -63,10 +63,12 @@ public class SessionFactoryBuilder {
 	private ApplicationBoxContext	applicationContext;
 
 	/**
-	 * Lookup the BoxLang class for a given entity name.
+	 * Lookup the BoxLang class FQN for a given entity name.
 	 * 
 	 * @param sessionFactory The Hibernate session factory
 	 * @param entityName     The entity name to look up
+	 * 
+	 * @return The BoxLang class FQN, like `models.orm.MyClass`, for the given entity name
 	 */
 	public static String lookupBoxLangClass( SessionFactory sessionFactory, String entityName ) {
 		Map<String, EntityRecord> entityMap = ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );

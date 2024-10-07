@@ -17,7 +17,6 @@ import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 
-// TODO implement test
 @Disabled
 public class ORMFlushTest {
 
@@ -37,11 +36,25 @@ public class ORMFlushTest {
 		variables	= context.getScopeNearby( VariablesScope.name );
 	}
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can flush the session" )
 	@Test
-	public void testExampleBIF() {
-		instance.executeSource( "result = ORMFlush()", context );
-		assertEquals( "Hello from an ORMFlush!", variables.get( result ) );
+	public void testORMFlush() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+				var developer = entityNew( "Developer" );
+				developer.setRole( "CEO" );
+				entitySave( "Developer" );
+				result = queryExecute( "SELECT * FROM developers" );
+				ormFlush();
+				result = queryExecute( "SELECT * FROM developers" );
+			""",
+			context
+		);
+		// @formatter:on
+		assertEquals( 3, variables.getAsQuery( result ).size() );
+		assertEquals( 4, variables.getAsQuery( Key.of( "result2" ) ).size() );
+		assertEquals( "CEO", variables.get( result ) );
 	}
 
 }

@@ -1,6 +1,6 @@
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import java.nio.file.Path;
 
@@ -13,11 +13,11 @@ import org.junit.jupiter.api.Test;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 
-// TODO implement test
 @Disabled
 public class EntityNewTest {
 
@@ -37,18 +37,18 @@ public class EntityNewTest {
 		variables	= context.getScopeNearby( VariablesScope.name );
 	}
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can create new entities" )
 	@Test
-	public void testExampleBIF() {
-		instance.executeSource( "result = ORMFlush()", context );
-		assertEquals( "Hello from an ORMFlush!", variables.get( result ) );
-	}
-
-	@DisplayName( "It can test the ExampleBIF" )
-	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testEntityNew() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+				result = entityNew( "Developer" );
+			""",
+			context
+		);
+		// @formatter:on
+		assertInstanceOf( IClassRunnable.class, variables.get( result ) );
 	}
 
 }
