@@ -739,14 +739,13 @@ public class HibernateXMLWriterTest {
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ) ).generateXML();
 
-		String		xml				= xmlToString( doc );
-
 		Node		classEL			= doc.getDocumentElement().getFirstChild();
 		Node		oneToOneNode	= classEL.getFirstChild();
 		assertEquals( "many-to-one", oneToOneNode.getNodeName() );
 
 		NamedNodeMap attrs = oneToOneNode.getAttributes();
 
+		assertEquals( "owner", attrs.getNamedItem( "name" ).getTextContent() );
 		assertEquals( "true", attrs.getNamedItem( "unique" ).getTextContent() );
 		assertEquals( "all", attrs.getNamedItem( "cascade" ).getTextContent() );
 		assertEquals( "fooID", attrs.getNamedItem( "foreign-key" ).getTextContent() );

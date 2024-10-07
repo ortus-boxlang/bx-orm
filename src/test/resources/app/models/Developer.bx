@@ -14,4 +14,13 @@ class accessors=true {
     @Column
     @ORMType "string"
     property name="role";
+
+    @OneToOne{
+        class     = "Vehicle",
+        fieldtype = "one-to-one",
+        cascade   = "none",
+        lazy      = "false",
+        fkColumn  = "vehicle_id",
+    }
+    property name="vehicle";
 }

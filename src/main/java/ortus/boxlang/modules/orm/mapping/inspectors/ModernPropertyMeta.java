@@ -94,6 +94,7 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 			return Struct.EMPTY;
 		}
 
+		association.putIfAbsent( Key._NAME, this.name );
 		association.computeIfPresent( ORMKeys.inverseJoinColumn, ( key, value ) -> translateColumnName( ( String ) value ) );
 		association.computeIfPresent( ORMKeys.fkcolumn, ( key, value ) -> translateColumnName( ( String ) value ) );
 		if ( association.containsKey( ORMKeys.fkcolumn ) ) {

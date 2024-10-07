@@ -39,7 +39,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 	public void testEntityHasMethod() {
 		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
 
-		instance.executeStatement( "result = entityLoadByPK( 'Developer', 1 ).hasPermissions()", context );
+		instance.executeStatement( "result = entityLoadByPK( 'Vehicle', 1 ).hasOwner()", context );
 		assertTrue( variables.get( result ) instanceof Boolean );
 		assertFalse( variables.getAsBoolean( result ) );
 	}
