@@ -289,14 +289,19 @@ public class HibernateXMLWriterTest {
 	// @formatter:on
 	@ParameterizedTest
 	public void testIDGeneratorAnnotation( String sourceCode ) {
-		IStruct		meta			= getClassMetaFromCode( sourceCode );
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta ).generateXML();
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
 
-		Node		classEl			= doc.getDocumentElement().getFirstChild();
-		Node		idNode			= classEl.getFirstChild();
-		Node		generatorNode	= idNode.getLastChild();
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
+		Node		idNode		= classEl.getFirstChild();
+
+		// increment, identity, and native all default to 'integer'
+		assertThat( idNode.getAttributes().getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "integer" );
+
+		Node generatorNode = idNode.getLastChild();
 
 		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
 		    .isEqualTo( "increment" );

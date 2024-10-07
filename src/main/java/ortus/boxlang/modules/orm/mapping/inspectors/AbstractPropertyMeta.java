@@ -1,5 +1,7 @@
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +43,17 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.types			= parseTypeAnnotations( this.annotations );
 		this.generator		= parseGeneratorAnnotations( this.annotations );
 		this.association	= parseAssociation( this.annotations );
+
+		if ( !this.generator.isEmpty() && this.generator.containsKey( Key._CLASS ) ) {
+			if ( List.of( "identity", "native", "increment" ).contains( this.generator.getAsString( Key._CLASS ) ) ) {
+				this.types.putIfAbsent( ORMKeys.ORMType, "integer" );
+			} else {
+				this.types.putIfAbsent( ORMKeys.ORMType, "string" );
+			}
+		}
+
+		// @TODO: Map ORM type to java type? Varchar->string, etc.
+		this.types.putIfAbsent( ORMKeys.ORMType, annotations.getOrDefault( ORMKeys.ORMType, "string" ) );
 	}
 
 	public IPropertyMeta setFieldType( FIELDTYPE fieldType ) {
@@ -124,8 +137,6 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		if ( annotations.containsKey( Key.sqltype ) ) {
 			typeInfo.put( Key.sqltype, annotations.getAsString( Key.sqltype ) );
 		}
-		// @TODO: Map ORM type to java type? Varchar->string, etc.
-		typeInfo.put( ORMKeys.ORMType, annotations.getOrDefault( ORMKeys.ORMType, "string" ) );
 		return typeInfo;
 	}
 

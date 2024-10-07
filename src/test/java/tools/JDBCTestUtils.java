@@ -163,7 +163,7 @@ public class JDBCTestUtils {
 		        "connectionString", "jdbc:derby:memory:" + databaseName + ";create=true"
 		    ) );
 		try {
-			datasource.execute( "CREATE TABLE developers ( id INTEGER, name VARCHAR(155), role VARCHAR(155) )" );
+			datasource.execute( "CREATE TABLE developers ( id INTEGER, name VARCHAR(155), role VARCHAR(155), vehicle_id INTEGER )" );
 			datasource.execute( "CREATE TABLE vehicles ( vin VARCHAR(17), make VARCHAR(155), model VARCHAR(155) )" );
 		} catch ( DatabaseException e ) {
 			// Ignore the exception if the table already exists

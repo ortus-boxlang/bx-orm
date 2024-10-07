@@ -401,8 +401,7 @@ public class HibernateXMLWriter {
 		theNode.appendChild( generateColumnElement( prop ) );
 
 		if ( !prop.getGenerator().isEmpty() ) {
-			theNode.appendChild( generateGeneratorElement( prop ) );
-			// @TODO: Determine ID type from generator type IF a generator is specified.
+			theNode.appendChild( generateGeneratorElement( prop.getGenerator() ) );
 		}
 
 		return theNode;
@@ -478,34 +477,29 @@ public class HibernateXMLWriter {
 	 *
 	 * @return A &lt;generator /&gt; element ready to add to a Hibernate mapping document
 	 */
-	public Element generateGeneratorElement( IPropertyMeta prop ) {
-		IStruct	generator		= prop.getGenerator();
-		String	generatorType	= generator.getAsString( Key._CLASS );
+	public Element generateGeneratorElement( IStruct generatorInfo ) {
+		Element theNode = this.document.createElement( "generator" );
+		theNode.setAttribute( "class", generatorInfo.getAsString( Key._CLASS ) );
 
-		Element	theNode			= this.document.createElement( "generator" );
-		if ( !List.of( "assigned", "increment", "native" ).contains( generatorType ) ) {
-			logger.warn( "Untested generator type: {}. Please forward to your local Ortus agency.", generatorType );
-		}
-		theNode.setAttribute( "class", generatorType );
 		IStruct params = new Struct();
 
 		// generator=foreign
-		if ( generator.containsKey( ORMKeys.property ) ) {
-			params.put( "property", generator.getAsString( ORMKeys.property ) );
+		if ( generatorInfo.containsKey( ORMKeys.property ) ) {
+			params.put( "property", generatorInfo.getAsString( ORMKeys.property ) );
 		}
 		// generator=select
-		if ( generator.containsKey( ORMKeys.selectKey ) ) {
-			params.put( "key", generator.getAsString( ORMKeys.selectKey ) );
+		if ( generatorInfo.containsKey( ORMKeys.selectKey ) ) {
+			params.put( "key", generatorInfo.getAsString( ORMKeys.selectKey ) );
 		}
-		if ( generator.containsKey( ORMKeys.generated ) ) {
-			params.put( "generated", generator.getAsString( ORMKeys.generated ) );
+		if ( generatorInfo.containsKey( ORMKeys.generated ) ) {
+			params.put( "generated", generatorInfo.getAsString( ORMKeys.generated ) );
 		}
 		// generator=sequence|sequence-identity
-		if ( generator.containsKey( ORMKeys.sequence ) ) {
-			params.put( "sequence", generator.getAsString( ORMKeys.sequence ) );
+		if ( generatorInfo.containsKey( ORMKeys.sequence ) ) {
+			params.put( "sequence", generatorInfo.getAsString( ORMKeys.sequence ) );
 		}
-		if ( generator.containsKey( Key.params ) ) {
-			params.putAll( generator.getAsStruct( Key.params ) );
+		if ( generatorInfo.containsKey( Key.params ) ) {
+			params.putAll( generatorInfo.getAsStruct( Key.params ) );
 		}
 		params.forEach( ( key, value ) -> {
 			Element paramEl = this.document.createElement( "param" );
