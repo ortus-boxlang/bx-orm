@@ -1,41 +1,17 @@
 package ortus.boxlang.modules.orm.bifs;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-import java.nio.file.Path;
-
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
-import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.scopes.VariablesScope;
+import tools.BaseORMTest;
 
-@Disabled
-public class EntityNewTest {
-
-	static BoxRuntime	instance;
-	IBoxContext			context;
-	IScope				variables;
-	static Key			result	= new Key( "result" );
-
-	@BeforeAll
-	public static void setUp() {
-		instance = BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
-	}
-
-	@BeforeEach
-	public void setupEach() {
-		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		variables	= context.getScopeNearby( VariablesScope.name );
-	}
+// @Disabled
+public class EntityNewTest extends BaseORMTest {
 
 	@DisplayName( "It can create new entities" )
 	@Test
@@ -49,6 +25,24 @@ public class EntityNewTest {
 		);
 		// @formatter:on
 		assertInstanceOf( IClassRunnable.class, variables.get( result ) );
+	}
+
+	@DisplayName( "It can populate new entities with data" )
+	@Test
+	public void testEntityNewWithProperties() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+				result = entityNew( "Developer", { name : "Jacob", role : "Engineer" } );
+				name = result.getName();
+				role = result.getRole();
+			""",
+			context
+		);
+		// @formatter:on
+		assertInstanceOf( IClassRunnable.class, variables.get( result ) );
+		assertEquals( "Jacob", variables.get( Key._NAME ) );
+		assertEquals( "Engineer", variables.get( Key.of( "role" ) ) );
 	}
 
 }
