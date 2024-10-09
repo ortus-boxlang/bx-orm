@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.hibernate.EntityMode;
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
@@ -68,18 +69,32 @@ public class SessionFactoryBuilder {
 	 * @param sessionFactory The Hibernate session factory
 	 * @param entityName     The entity name to look up
 	 * 
-	 * @return The BoxLang class FQN, like `models.orm.MyClass`, for the given entity name
+	 * @return The BoxLang entityRecord defining the entity name, filepath, FQN, and mapping xml file path
 	 */
-	public static String lookupBoxLangClass( SessionFactory sessionFactory, String entityName ) {
+	public static EntityRecord lookupEntity( SessionFactory sessionFactory, String entityName ) {
 		Map<String, EntityRecord> entityMap = ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
 
-		return entityMap.get( entityName ).getClassFQN();
+		return entityMap.get( entityName );
 	}
 
+	public static EntityRecord lookupEntity( Session session, String entityName ) {
+		return lookupEntity( session.getSessionFactory(), entityName );
+	}
+
+	/**
+	 * Get the application context tied to this Hibernate session factory.
+	 * 
+	 * @param sessionFactory The Hibernate session factory
+	 */
 	public static ApplicationBoxContext getApplicationContext( SessionFactory sessionFactory ) {
 		return ( ApplicationBoxContext ) sessionFactory.getProperties().get( BOXLANG_APPLICATION_CONTEXT );
 	}
 
+	/**
+	 * Get the BoxLang context tied to this Hibernate session factory.
+	 * 
+	 * @param sessionFactory The Hibernate session factory
+	 */
 	public static IBoxContext getContext( SessionFactory sessionFactory ) {
 		return ( IBoxContext ) sessionFactory.getProperties().get( BOXLANG_CONTEXT );
 	}

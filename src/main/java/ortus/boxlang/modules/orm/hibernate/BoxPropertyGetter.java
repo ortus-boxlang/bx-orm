@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 
 /**
  * This class is used to get a property on a BoxLang class for a Hibernate entity.
@@ -33,14 +34,13 @@ public class BoxPropertyGetter implements Getter {
 	@Override
 	public Object get( Object owner ) {
 		log.debug( "getting property {} on entity {}", mappedProperty.getName(), mappedEntity.getEntityName() );
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'get'" );
+		// @TODO: I think we should call the getter method on the BoxLang class, and not just return the property from the scope?
+		return ( ( IClassRunnable ) owner ).getVariablesScope().get( mappedProperty.getName() );
 	}
 
 	@Override
 	public Object getForInsert( Object owner, Map mergeMap, SharedSessionContractImplementor session ) {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getForInsert'" );
+		return get( owner );
 	}
 
 	@Override

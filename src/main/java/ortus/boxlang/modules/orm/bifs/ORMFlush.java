@@ -19,7 +19,7 @@ public class ORMFlush extends BIF {
 	public ORMFlush() {
 		super();
 		declaredArguments = new Argument[] {
-		    new Argument( true, "String", ORMKeys.datasource )
+		    new Argument( false, "String", ORMKeys.datasource )
 		};
 	}
 

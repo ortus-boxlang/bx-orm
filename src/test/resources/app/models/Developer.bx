@@ -5,6 +5,9 @@
 class accessors=true {
     @id
     @ORMType "integer"
+    @GeneratedValue{
+        "strategy" : "increment"
+    }
     property name="id";
 
     @Column

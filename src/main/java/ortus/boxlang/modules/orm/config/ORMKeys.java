@@ -136,4 +136,9 @@ public class ORMKeys {
 	public static final Key	strategy				= Key.of( "strategy" );
 	public static final Key	insertable				= Key.of( "insertable" );
 	public static final Key	updateable				= Key.of( "updateable" );
+
+	/**
+	 * BIF argument keys
+	 */
+	public static final Key	forceinsert				= Key.of( "forceinsert" );
 }

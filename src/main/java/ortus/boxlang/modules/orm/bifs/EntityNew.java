@@ -42,7 +42,8 @@ public class EntityNew extends BIF {
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		Session			session		= ORMService.getInstance().getSessionForContext( context );
-		String			bxClassFQN	= SessionFactoryBuilder.lookupBoxLangClass( session.getSessionFactory(), arguments.getAsString( ORMKeys.entityName ) );
+		String			bxClassFQN	= SessionFactoryBuilder.lookupEntity( session, arguments.getAsString( ORMKeys.entityName ) )
+		    .getClassFQN();
 
 		IClassRunnable	entity		= ( IClassRunnable ) classLocator.load( context, bxClassFQN, "bx" )
 		    .invokeConstructor( context )

@@ -35,8 +35,8 @@ public class BoxClassInstantiator implements Instantiator {
 
 	@Override
 	public Object instantiate( Serializable id ) {
-		String			bxClassFQN	= SessionFactoryBuilder.lookupBoxLangClass( entityMetamodel.getSessionFactory(),
-		    entityMetamodel.getName() );
+		String			bxClassFQN	= SessionFactoryBuilder.lookupEntity( entityMetamodel.getSessionFactory(),
+		    entityMetamodel.getName() ).getClassFQN();
 		IBoxContext		context		= SessionFactoryBuilder
 		    .getApplicationContext( entityMetamodel.getSessionFactory() );
 
