@@ -100,6 +100,30 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 		if ( association.containsKey( ORMKeys.fkcolumn ) ) {
 			association.put( Key.column, association.getAsString( ORMKeys.fkcolumn ) );
 		}
+		association.compute( ORMKeys.collectionType, ( key, object ) -> {
+			String propertyType = annotations.getAsString( Key.type );
+			if ( propertyType == null || propertyType.isBlank() || propertyType.trim().toLowerCase().equals( "any" ) ) {
+				propertyType = "array";
+			}
+			return propertyType.equalsIgnoreCase( "array" ) ? "bag" : "map";
+		} );
+		if ( association.get( ORMKeys.collectionType ).equals( "map" ) ) {
+			if ( association.containsKey( ORMKeys.structKeyColumn ) ) {
+				association.put( ORMKeys.structKeyColumn, translateColumnName( association.getAsString( ORMKeys.structKeyColumn ) ) );
+			}
+			if ( association.containsKey( ORMKeys.structKeyType ) ) {
+				association.put( ORMKeys.structKeyType, association.getAsString( ORMKeys.structKeyType ) );
+			}
+			// NEW in BoxLang.
+			if ( association.containsKey( ORMKeys.structKeyFormula ) ) {
+				association.put( ORMKeys.structKeyFormula, association.getAsString( ORMKeys.structKeyFormula ) );
+			}
+		}
+		if ( association.containsKey( ORMKeys.optimisticLock ) ) {
+			this.isOptimisticLock = BooleanCaster.cast( association.get( ORMKeys.optimisticLock ) );
+		}
+		// Move to bx-compat
+		association.putIfAbsent( Key._CLASS, annotations.getAsString( ORMKeys.cfc ) );
 		return association;
 	}
 

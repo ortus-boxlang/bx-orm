@@ -249,7 +249,7 @@ public class HibernateXMLWriter {
 		}
 
 		List<Key> stringProperties = List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.lazy, ORMKeys.cascade, ORMKeys.orderBy, ORMKeys.where,
-		    ORMKeys.fetch, ORMKeys.optimisticLock, ORMKeys.embedXML, ORMKeys.orderBy );
+		    ORMKeys.fetch, ORMKeys.embedXML, ORMKeys.orderBy );
 		populateStringAttributes( theNode, association, stringProperties );
 
 		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys

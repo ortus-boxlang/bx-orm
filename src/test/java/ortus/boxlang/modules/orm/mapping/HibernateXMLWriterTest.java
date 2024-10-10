@@ -833,8 +833,23 @@ public class HibernateXMLWriterTest {
 	    		fkcolumn="FK_owner"
 	    		mappedBy="owners"
 	    		orderBy="name DESC"
-				where="Age IS NOT NULL"
-				optimisticLock="false";
+	    		where="Age IS NOT NULL"
+	    		optimisticLock="false";
+	    }
+	    """,
+	    """
+	    @Entity
+	    class {
+	    	@OneToMany{
+	    		"mappedBy"       : "owners",
+	    		"orderBy"        : "name DESC",
+	    		"where"          : "Age IS NOT NULL",
+	    		"optimisticLock" : false,
+	    		"fkcolumn"       : "FK_owner",
+	    		"cascade"        : "all",
+	    		"class"          : "Person"
+	    	}
+	    	property name="owners" type="array";
 	    }
 	    """
 	} )
@@ -849,7 +864,7 @@ public class HibernateXMLWriterTest {
 		// @formatter:off
 		// <hibernate-mapping>
 		// 	<class table="">
-		// 		<bag cascade="all" catalog="" name="owners" schema="" table="">
+		// 		<bag cascade="all" name="owners" optimistic-lock="false">
 		// 			<key column="FK_owner" property-ref="owners"/>
 		// 			<one-to-many entity-name="Person"/>
 		// 		</bag>
@@ -894,18 +909,18 @@ public class HibernateXMLWriterTest {
 	@ValueSource( strings = {
 	    """
 	    class persistent {
-			property
-				name="createdBy"
-				fieldtype="many-to-one"
-				cfc="Vehicle"
-				fkcolumn="FK_manufacturer"
-				fetch="select"
-				cascade="all"
-				insert="false"
-				update="false"
-				lazy="true"
-				persistent=true;
-		}
+	    	property
+	    		name="createdBy"
+	    		fieldtype="many-to-one"
+	    		cfc="Vehicle"
+	    		fkcolumn="FK_manufacturer"
+	    		fetch="select"
+	    		cascade="all"
+	    		insert="false"
+	    		update="false"
+	    		lazy="true"
+	    		persistent=true;
+	    }
 	    """
 	} )
 	// @formatter:on
