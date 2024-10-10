@@ -1,6 +1,6 @@
 @Entity
 @Table {
-    "name" : "developers"
+    "name" : "manufacturers"
 }
 class accessors=true {
     @id
@@ -16,6 +16,6 @@ class accessors=true {
 
     @Column
     @ORMType "string"
-    property name="role";
+    property name="address";
 
 }

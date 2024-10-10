@@ -1,6 +1,7 @@
 package ortus.boxlang.modules.orm.hibernate;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.tuple.Instantiator;
@@ -12,6 +13,10 @@ import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.types.DynamicFunction;
+import ortus.boxlang.runtime.types.Struct;
 
 /**
  * This class is used to instantiate a BoxLang class for a Hibernate entity.
@@ -37,28 +42,29 @@ public class BoxClassInstantiator implements Instantiator {
 	public Object instantiate( Serializable id ) {
 		String			bxClassFQN	= SessionFactoryBuilder.lookupEntity( entityMetamodel.getSessionFactory(),
 		    entityMetamodel.getName() ).getClassFQN();
-		IBoxContext		context		= SessionFactoryBuilder
+		IBoxContext		appContext	= SessionFactoryBuilder
 		    .getApplicationContext( entityMetamodel.getSessionFactory() );
 
-		IClassRunnable	theEntity	= ( IClassRunnable ) classLocator.load( context, bxClassFQN, "bx" )
-		    .invokeConstructor( context )
+		IClassRunnable	theEntity	= ( IClassRunnable ) classLocator.load( appContext, bxClassFQN, "bx" )
+		    .invokeConstructor( appContext )
 		    .unWrapBoxLangClass();
 
-		// Arrays.stream( this.entityMetamodel.getProperties() )
-		// .filter( prop -> prop.getType().isAssociationType() )
-		// .forEach( prop -> {
-		// String associationName = prop.getName();
-		// logger.debug( "Adding association methods for property: {} on entity {}", associationName, this.entityMetamodel.getName() );
+		Arrays.stream( this.entityMetamodel.getProperties() )
+		    .filter( prop -> prop.getType().isAssociationType() )
+		    .forEach( prop -> {
+			    String associationName = prop.getName();
+			    logger.debug( "Adding association methods for property: {} on entity {}", associationName, this.entityMetamodel.getName() );
 
-		// // add has to THIS scope
-		// // theEntity.put( Key.of( "has" + associationName ), hasUDF);
+			    // add has to THIS scope
+			    DynamicFunction hasUDF = getHasMethod( associationName );
+			    theEntity.put( hasUDF.getName(), hasUDF );
 
-		// // // add add (for to-many associations)
-		// // theEntity.put( Key.of( "add" + associationName, addUDF )
+			    // // add add (for to-many associations)
+			    // theEntity.put( Key.of( "add" + associationName, addUDF )
 
-		// // // add remove (for to-many associations)
-		// // theEntity.put( Key.of( "remove" + associationName, removeUDF ) );
-		// } );
+			    // // add remove (for to-many associations)
+			    // theEntity.put( Key.of( "remove" + associationName, removeUDF ) );
+		    } );
 
 		return theEntity;
 	}
@@ -73,6 +79,20 @@ public class BoxClassInstantiator implements Instantiator {
 	public boolean isInstance( Object object ) {
 		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException( "Unimplemented method 'isInstance'" );
+	}
+
+	private DynamicFunction getHasMethod( String associationName ) {
+		return new DynamicFunction(
+		    Key.of( "has" + associationName ),
+		    ( context, function ) -> {
+			    // System.out.println( context.getArgumentsScope().toString() );
+			    return context.getThisClass().getVariablesScope().get( associationName ) != null;
+		    },
+		    new Argument[] {},
+		    "boolean",
+		    "Returns true if the entity has a value for the association " + associationName,
+		    Struct.EMPTY
+		);
 	}
 
 }

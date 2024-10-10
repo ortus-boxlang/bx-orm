@@ -23,25 +23,24 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				result = entityLoadByPK( "Developer", 1 ).getRole();
-				result2 = queryExecute( "SELECT * FROM developers" );
+				result = entityLoadByPK( "Manufacturer", 1 ).getAddress();
+				result2 = queryExecute( "SELECT * FROM Manufacturers" );
 			""",
 			context
 		);
 		// @formatter:on
+		assertEquals( "202 Ford Way, Dearborn MI", variables.get( result ) );
 		assertEquals( 3, variables.getAsQuery( Key.of( "result2" ) ).size() );
-		assertEquals( "CEO", variables.get( result ) );
 	}
 
-	@Disabled( "Unimplemented." )
 	@DisplayName( "It will add has* methods for associations" )
 	@Test
 	public void testEntityHasMethod() {
 		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
 
-		instance.executeStatement( "result = entityLoadByPK( 'Vehicle', 1 ).hasOwner()", context );
+		instance.executeStatement( "result = entityLoadByPK( 'Vehicle', '1HGCM82633A123456' ).hasManufacturer()", context );
 		assertTrue( variables.get( result ) instanceof Boolean );
-		assertFalse( variables.getAsBoolean( result ) );
+		assertTrue( variables.getAsBoolean( result ) );
 	}
 
 	@Disabled( "Unimplemented." )
@@ -52,9 +51,9 @@ public class EntityLoadByPKTest extends BaseORMTest {
 
 		// @formatter:off
 		instance.executeSource( """
-			developer = entityLoadByPK( 'Developer', 1 );
-			developer.addPermission( entityLoadByPK( 'Permission', 1 ) );
-			result = developer.hasPermissions();
+			Manufacturer = entityLoadByPK( 'Manufacturer', 1 );
+			Manufacturer.addVehicle( entityLoadByPK( 'Vehicle', 1 ) );
+			result = Manufacturer.hasVehicles();
 			""", context );
 		// @formatter:on
 
@@ -70,13 +69,13 @@ public class EntityLoadByPKTest extends BaseORMTest {
 
 		// @formatter:off
 		instance.executeSource( """
-			developer = entityLoadByPK( 'Developer', 1 );
+			Manufacturer = entityLoadByPK( 'Manufacturer', 1 );
 			
-			developer.addPermission( entityLoadByPK( 'Permission', 1 ) );
-			result = developer.hasPermissions();
+			Manufacturer.addPermission( entityLoadByPK( 'Vehicle', 1 ) );
+			result = Manufacturer.hasPermissions();
 
-			developer.removePermission( entityLoadByPK( 'Permission', 1 ) );
-			hasPermissionAfterRemove = developer.hasPermissions();
+			Manufacturer.removePermission( entityLoadByPK( 'Permission', 1 ) );
+			hasPermissionAfterRemove = Manufacturer.hasPermissions();
 			""", context );
 		// @formatter:on
 

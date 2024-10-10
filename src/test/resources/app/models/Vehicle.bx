@@ -14,6 +14,15 @@ class entityName="Vehicle" table="vehicles" persistent="true" {
     property 
         name="model" 
         type="string";
+    
+
+    property 
+        name="manufacturer" 
+        type="string"
+        fieldtype="one-to-one"
+        cfc="Manufacturer"
+        fkcolumn="FK_manufacturer"
+        lazy="false";
 
     function onPreInsert(){
         log.info( "Inserting new Vehicle: #getMake()# #getModel()#" );

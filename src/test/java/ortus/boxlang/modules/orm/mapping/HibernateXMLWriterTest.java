@@ -69,15 +69,15 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It generates the entity-name from the class name" )
 	@Test
 	public void testMapping() {
-		IStruct		meta		= getClassMetaFromFile( "src/test/resources/app/models/Developer.bx" );
+		IStruct		meta		= getClassMetaFromFile( "src/test/resources/app/models/Manufacturer.bx" );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ) ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Vehicle", "models.Vehicle" ) ).generateXML();
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 
 		assertThat( classEl.getAttributes().getNamedItem( "entity-name" ).getTextContent() )
-		    .isEqualTo( "Developer" );
+		    .isEqualTo( "Manufacturer" );
 	}
 
 	@DisplayName( "It can set entity attributes" )
@@ -86,7 +86,7 @@ public class HibernateXMLWriterTest {
 	    class
 	    	persistent="true"
 	    	entityName="Car"
-	    	table="developers"
+	    	table="vehicles"
 	    	schema="foo"
 	    	catalog="morefoo"
 	    	optimisticLock="all"
@@ -95,7 +95,7 @@ public class HibernateXMLWriterTest {
 	    """
 	    @Entity "Car"
 	    @Table{
-	    	"name"   : "developers",
+	    	"name"   : "vehicles",
 	    	"schema" : "foo",
 	    	"catalog": "morefoo"
 	    }
@@ -116,7 +116,7 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "Car" );
 
 		assertThat( attrs.getNamedItem( "table" ).getTextContent() )
-		    .isEqualTo( "developers" );
+		    .isEqualTo( "vehicles" );
 
 		assertThat( attrs.getNamedItem( "schema" ).getTextContent() )
 		    .isEqualTo( "foo" );
@@ -897,8 +897,8 @@ public class HibernateXMLWriterTest {
 			property
 				name="createdBy"
 				fieldtype="many-to-one"
-				cfc="Developer"
-				fkcolumn="FK_creationDev"
+				cfc="Vehicle"
+				fkcolumn="FK_manufacturer"
 				fetch="select"
 				cascade="all"
 				insert="false"
@@ -913,7 +913,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Developer", "models.Developer" ) ).generateXML();
+		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Manufacturer", "models.Manufacturer" ) ).generateXML();
 
 		Node		classEL			= doc.getDocumentElement().getFirstChild();
 
@@ -925,11 +925,11 @@ public class HibernateXMLWriterTest {
 		assertEquals( "createdBy", manyToOneAttrs.getNamedItem( "name" ).getTextContent() );
 		assertEquals( "select", manyToOneAttrs.getNamedItem( "fetch" ).getTextContent() );
 		assertEquals( "all", manyToOneAttrs.getNamedItem( "cascade" ).getTextContent() );
-		assertEquals( "Developer", manyToOneAttrs.getNamedItem( "entity-name" ).getTextContent() );
+		assertEquals( "Manufacturer", manyToOneAttrs.getNamedItem( "entity-name" ).getTextContent() );
 		assertEquals( "false", manyToOneAttrs.getNamedItem( "insert" ).getTextContent() );
 		assertEquals( "false", manyToOneAttrs.getNamedItem( "update" ).getTextContent() );
 		// @TODO: Fix!
-		// assertEquals( "FK_creationDev", manyToOneAttrs.getNamedItem( "column" ).getTextContent() );
+		// assertEquals( "FK_manufacturer", manyToOneAttrs.getNamedItem( "column" ).getTextContent() );
 	}
 
 	// @formatter:off

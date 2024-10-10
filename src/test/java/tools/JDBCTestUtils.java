@@ -152,7 +152,7 @@ public class JDBCTestUtils {
 	 * @param databaseName String database name; must be unique for each test. In the future, we can change this to use either reflection or a stack trace
 	 *                     to grab the caller class name and thus ensure uniqueness.
 	 *
-	 * @return A DataSource instance with a consistent `DEVELOPERS` table created.
+	 * @return A DataSource instance with a consistent `manufacturers` table created.
 	 */
 	public static DataSource constructTestDataSource( String databaseName ) {
 		DataSource datasource = DataSource.fromStruct(
@@ -163,8 +163,8 @@ public class JDBCTestUtils {
 		        "connectionString", "jdbc:derby:memory:" + databaseName + ";create=true"
 		    ) );
 		try {
-			datasource.execute( "CREATE TABLE developers ( id INTEGER, name VARCHAR(155), role VARCHAR(155) )" );
-			datasource.execute( "CREATE TABLE vehicles ( vin VARCHAR(17), make VARCHAR(155), model VARCHAR(155) )" );
+			datasource.execute( "CREATE TABLE manufacturers ( id INTEGER, name VARCHAR(155), address VARCHAR(155) )" );
+			datasource.execute( "CREATE TABLE vehicles ( vin VARCHAR(17), make VARCHAR(155), model VARCHAR(155), FK_manufacturer INTEGER )" );
 		} catch ( DatabaseException e ) {
 			// Ignore the exception if the table already exists
 		}
@@ -172,25 +172,29 @@ public class JDBCTestUtils {
 	}
 
 	/**
-	 * Remove the developers table from the database.
+	 * Remove the manufacturers table from the database.
 	 *
 	 * @param datasource
 	 */
 	public static void cleanupTables( DataSource datasource ) {
-		datasource.execute( "DROP TABLE developers" );
+		datasource.execute( "DROP TABLE manufacturers" );
 	}
 
 	/**
-	 * Reset the `developers` table to a known, consistent state for testing.
+	 * Reset the `manufacturers` table to a known, consistent state for testing.
 	 *
 	 * @param datasource
 	 */
 	public static void resetTables( DataSource datasource ) {
-		datasource.execute( "TRUNCATE TABLE developers" );
-		datasource.execute( "INSERT INTO developers ( id, name, role ) VALUES ( 77, 'Michael Born', 'Developer' )" );
-		datasource.execute( "INSERT INTO developers ( id, name, role ) VALUES ( 1, 'Luis Majano', 'CEO' )" );
-		datasource.execute( "INSERT INTO developers ( id, name, role ) VALUES ( 42, 'Eric Peterson', 'Developer' )" );
+		datasource.execute( "TRUNCATE TABLE manufacturers" );
+		datasource.execute(
+		    "INSERT INTO manufacturers ( id, name, address ) VALUES ( 1, 'Ford Motor Company', '202 Ford Way, Dearborn MI' )" );
+		datasource
+		    .execute( "INSERT INTO manufacturers ( id, name, address ) VALUES ( 77, 'General Moters Corporation', 'P.O. BOX 33170, Detroit, MI 48232-5170' )" );
+		datasource.execute(
+		    "INSERT INTO manufacturers ( id, name, address ) VALUES ( 42, 'Honda Motor Co.', 'CHI-5, 1919 Torrance Blvd., Torrance, CA 90501 - 2746 ' )" );
 
-		datasource.execute( "TRUNCATE TABLE vehicles;INSERT INTO vehicles (vin,make,model) VALUES('1HGCM82633A123456','Honda', 'Accord' );" );
+		datasource
+		    .execute( "TRUNCATE TABLE vehicles;INSERT INTO vehicles (vin,make,model,FK_manufacturer) VALUES('1HGCM82633A123456','Honda', 'Accord', 42 );" );
 	}
 }

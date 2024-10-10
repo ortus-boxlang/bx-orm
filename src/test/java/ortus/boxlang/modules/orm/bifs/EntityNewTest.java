@@ -19,7 +19,7 @@ public class EntityNewTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				result = entityNew( "Developer" );
+				result = entityNew( "Manufacturer" );
 			""",
 			context
 		);
@@ -33,16 +33,16 @@ public class EntityNewTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				result = entityNew( "Developer", { name : "Jacob", role : "Engineer" } );
+				result = entityNew( "Manufacturer", { name : "Bugatti Automobiles", address : "101 Bugatti Way" } );
 				name = result.getName();
-				role = result.getRole();
+				address = result.getAddress();
 			""",
 			context
 		);
 		// @formatter:on
 		assertInstanceOf( IClassRunnable.class, variables.get( result ) );
-		assertEquals( "Jacob", variables.get( Key._NAME ) );
-		assertEquals( "Engineer", variables.get( Key.of( "role" ) ) );
+		assertEquals( "Bugatti Automobiles", variables.get( Key._NAME ) );
+		assertEquals( "101 Bugatti Way", variables.get( Key.of( "address" ) ) );
 	}
 
 }

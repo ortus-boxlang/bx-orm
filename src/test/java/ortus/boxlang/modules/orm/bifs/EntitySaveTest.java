@@ -17,11 +17,11 @@ public class EntitySaveTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				dev1 = entityNew( "Developer", { name : "Dan", role : "Software Engineer" } );
-				dev2 = entityNew( "Developer", { name : "Daniel", role : "Software Engineer" } );
+				dev1 = entityNew( "manufacturer", { name : "Dan", role : "Software Engineer" } );
+				dev2 = entityNew( "manufacturer", { name : "Daniel", role : "Software Engineer" } );
 				entitySave( dev1 );
 				ormFlush();
-				result = queryExecute( "SELECT * FROM developers" );
+				result = queryExecute( "SELECT * FROM manufacturers" );
 			""",
 			context
 		);

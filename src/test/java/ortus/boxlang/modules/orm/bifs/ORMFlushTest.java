@@ -42,12 +42,12 @@ public class ORMFlushTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				var developer = entityNew( "Developer" );
-				developer.setRole( "CEO" );
-				entitySave( "Developer" );
-				result = queryExecute( "SELECT * FROM developers" );
+				var manufacturer = entityNew( "Manufacturer" );
+				manufacturer.setRole( "CEO" );
+				entitySave( "manufacturer" );
+				result = queryExecute( "SELECT * FROM manufacturers" );
 				ormFlush();
-				result = queryExecute( "SELECT * FROM developers" );
+				result = queryExecute( "SELECT * FROM manufacturers" );
 			""",
 			context
 		);
