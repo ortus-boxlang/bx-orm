@@ -1,8 +1,11 @@
 package ortus.boxlang.modules.orm.bifs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -45,4 +48,12 @@ public class EntityNewTest extends BaseORMTest {
 		assertEquals( "101 Bugatti Way", variables.get( Key.of( "address" ) ) );
 	}
 
+	@Disabled( "Unimplemented." )
+	@DisplayName( "It can populate new entities with association UDFs" )
+	@Test
+	public void testEntityNewAssociationUDFs() {
+		instance.executeStatement( "result = entityNew( 'Vehicle', { name : 'Dodge Powerwagon' } ).hasManufacturer()", context );
+		assertTrue( variables.get( result ) instanceof Boolean );
+		assertFalse( variables.getAsBoolean( result ) );
+	}
 }

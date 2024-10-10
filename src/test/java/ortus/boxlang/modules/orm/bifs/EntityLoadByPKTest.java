@@ -44,15 +44,15 @@ public class EntityLoadByPKTest extends BaseORMTest {
 	}
 
 	@Disabled( "Unimplemented." )
-	@DisplayName( "It will add add* methods for associations" )
+	@DisplayName( "It will add add* methods for *-to-many associations" )
 	@Test
 	public void testEntityAddMethod() {
 		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
 
 		// @formatter:off
 		instance.executeSource( """
-			Manufacturer = entityLoadByPK( 'Manufacturer', 1 );
-			Manufacturer.addVehicle( entityLoadByPK( 'Vehicle', 1 ) );
+			Manufacturer = entityLoadByPK( 'Manufacturer', 42 );
+			Manufacturer.addVehicles( entityLoadByPK( 'Vehicle', '1HGCM82633A123456' ) );
 			result = Manufacturer.hasVehicles();
 			""", context );
 		// @formatter:on

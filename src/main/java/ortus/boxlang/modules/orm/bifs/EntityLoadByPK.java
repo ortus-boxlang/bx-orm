@@ -53,7 +53,10 @@ public class EntityLoadByPK extends BIF {
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		Session session = ORMService.getInstance().getSessionForContext( context );
 
-		session.beginTransaction();
+		// @TODO: Move this to a more sensible location.
+		if ( session.getTransaction() == null ) {
+			session.beginTransaction();
+		}
 
 		String	entityName	= arguments.getAsString( ORMKeys.entity );
 		Object	keyValue	= arguments.get( Key.id );
