@@ -43,7 +43,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertTrue( variables.getAsBoolean( result ) );
 	}
 
-	@Disabled( "Unimplemented." )
 	@DisplayName( "It will add add* methods for *-to-many associations" )
 	@Test
 	public void testEntityAddMethod() {
@@ -52,8 +51,8 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource( """
 			Manufacturer = entityLoadByPK( 'Manufacturer', 42 );
-			Manufacturer.addVehicles( entityLoadByPK( 'Vehicle', '1HGCM82633A123456' ) );
-			result = Manufacturer.hasVehicles();
+			Manufacturer.addVehicle( entityLoadByPK( 'Vehicle', '1HGCM82633A123456' ) );
+			result = Manufacturer.hasVehicle();
 			""", context );
 		// @formatter:on
 
@@ -61,7 +60,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertTrue( variables.getAsBoolean( result ) );
 	}
 
-	@Disabled( "Unimplemented." )
 	@DisplayName( "It will add remove* methods for associations" )
 	@Test
 	public void testEntityRemoveMethod() {
@@ -69,13 +67,14 @@ public class EntityLoadByPKTest extends BaseORMTest {
 
 		// @formatter:off
 		instance.executeSource( """
-			Manufacturer = entityLoadByPK( 'Manufacturer', 1 );
-			
-			Manufacturer.addPermission( entityLoadByPK( 'Vehicle', 1 ) );
-			result = Manufacturer.hasPermissions();
+			honda = entityLoadByPK( 'Manufacturer', 42 );
 
-			Manufacturer.removePermission( entityLoadByPK( 'Permission', 1 ) );
-			hasPermissionAfterRemove = Manufacturer.hasPermissions();
+			myVehicle = entityLoadByPK( 'Vehicle', '1HGCM82633A123456' );
+			honda.addVehicle( myVehicle );
+			result = honda.hasVehicle();
+
+			honda.removeVehicle( myVehicle );
+			hasVehicleAfterRemove = honda.hasVehicle();
 			""", context );
 		// @formatter:on
 
@@ -84,8 +83,8 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertTrue( variables.getAsBoolean( result ) );
 
 		// has permission after add: nope!
-		assertTrue( variables.get( Key.of( "hasPermissionAfterRemove" ) ) instanceof Boolean );
-		assertFalse( variables.getAsBoolean( Key.of( "hasPermissionAfterRemove" ) ) );
+		assertTrue( variables.get( Key.of( "hasVehicleAfterRemove" ) ) instanceof Boolean );
+		assertFalse( variables.getAsBoolean( Key.of( "hasVehicleAfterRemove" ) ) );
 	}
 
 	// @Disabled( "Lacking proper support for key types; aka, we've hardcoded integer types for now." )

@@ -2,17 +2,19 @@ package ortus.boxlang.modules.orm.mapping;
 
 import java.nio.file.Path;
 
+import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
 public class EntityRecord {
 
-	private String	entityName;
-	private String	classFQN;
-	private String	className;
-	private String	datasource;
-	private IStruct	metadata;
-	private Path	xmlFilePath;
+	private String		entityName;
+	private String		classFQN;
+	private String		className;
+	private String		datasource;
+	private IStruct		metadata;
+	private Path		xmlFilePath;
+	private IEntityMeta	entityMeta;
 
 	public EntityRecord( String entityName, String classFQN ) {
 		this( entityName, classFQN, null );
@@ -39,12 +41,21 @@ public class EntityRecord {
 		return this;
 	}
 
+	public EntityRecord setEntityMeta( IEntityMeta entityMeta ) {
+		this.entityMeta = entityMeta;
+		return this;
+	}
+
 	public IStruct getMetadata() {
 		return metadata;
 	}
 
 	public String getEntityName() {
 		return entityName;
+	}
+
+	public IEntityMeta getEntityMeta() {
+		return entityMeta;
 	}
 
 	public String getClassName() {

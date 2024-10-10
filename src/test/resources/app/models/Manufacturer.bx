@@ -19,8 +19,7 @@ class accessors=true {
     property name="address";
 
     @OneToMany{
-        // @TODO: Implement
-        // "singularname" : "Vehicle",
+        "singularname" : "Vehicle",
         // "mappedBy" : "manufacturer",
         "class"    : "Vehicle",
         "fkcolumn" : "FK_manufacturer"

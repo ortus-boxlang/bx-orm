@@ -26,9 +26,8 @@ import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.modules.orm.mapping.inspectors.ClassicEntityMeta;
+import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
-import ortus.boxlang.modules.orm.mapping.inspectors.ModernEntityMeta;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.scopes.Key;
@@ -129,7 +128,7 @@ public class MappingGenerator {
 		// @TODO: Should this also be parallel???
 		entityMap.values().stream()
 		    .forEach( ( EntityRecord entity ) -> {
-			    entity.setXmlFilePath( writeXMLFile( entity.getMetadata() ) );
+			    entity.setXmlFilePath( writeXMLFile( entity ) );
 		    } );
 
 		return this;
@@ -280,12 +279,13 @@ public class MappingGenerator {
 	/**
 	 * Write the XML mapping file for the given entity metadata.
 	 * 
-	 * @param meta The entity metadata.
+	 * @param entity EntityRecord containing the entity metadata.
 	 * 
 	 * @return The path to the generated XML mapping file If `saveMappingAlongsideEntity` is true, the path will be the same as the entity file, but with
 	 *         a `.hbm.xml` extension.
 	 */
-	private Path writeXMLFile( IStruct meta ) {
+	private Path writeXMLFile( EntityRecord entity ) {
+		IStruct	meta	= entity.getMetadata();
 		String	name	= meta.getAsString( Key._name );
 		String	path	= meta.getAsString( Key.path );
 		String	fileExt	= path.substring( path.lastIndexOf( '.' ) );
@@ -294,7 +294,7 @@ public class MappingGenerator {
 		    : Path.of( this.saveDirectory, name + ".hbm.xml" );
 		try {
 			logger.info( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
-			String finalXML = generateXML( meta );
+			String finalXML = generateXML( entity );
 			Files.write( xmlPath, !finalXML.isEmpty() ? finalXML.getBytes() : new byte[ 0 ] );
 
 		} catch ( IOException e ) {
@@ -314,44 +314,18 @@ public class MappingGenerator {
 	 * <p>
 	 * Calls the HibernateXMLWriter to generate the XML mapping, then wraps it with a bit of pre and post XML to close out the file.
 	 * 
-	 * @param meta The entity metadata.
+	 * @param entity The EntityRecord instance.
 	 * 
 	 * @return The full XML mapping for the entity as a string. If an exception was encountered and {@link ORMConfig#ignoreParseErrors} is true, an empty
 	 *         string will be returned.
 	 */
-	private String generateXML( IStruct meta ) {
+	private String generateXML( EntityRecord entity ) {
 		try {
-			IEntityMeta entity = null;
-			if ( meta.getAsStruct( Key.annotations ).containsKey( ORMKeys.persistent ) ) {
-				logger.debug( "Class contains 'persistent' annotation; using ClassicEntityMeta: [{}]",
-				    meta.getAsString( Key.path ) );
-				entity = new ClassicEntityMeta( meta );
-			} else {
-				logger.debug( "Using ModernEntityMeta: [{}]",
-				    meta.getAsString( Key.path ) );
-				entity = new ModernEntityMeta( meta );
-			}
-			// BiFunction<String, String, EntityRecord> entityLookup = ( String className, String datasource ) -> {
-			// return entityMap
-			// .values()
-			// .stream()
-			// .filter( ( EntityRecord e ) -> {
-			// String[] fqn = e
-			// .getClassFQN()
-			// .split(
-			// "." );
-			// return fqn[ fqn.length ]
-			// .equals(
-			// className )
-			// && ( datasource == null
-			// || e.getDatasource()
-			// .equals(
-			// datasource ) );
-			// } )
-			// .findFirst()
-			// .orElse( null );
-			// };
-			Document			doc			= new HibernateXMLWriter( entity, this::entityLookup ).generateXML();
+			IStruct		meta		= entity.getMetadata();
+			IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+			entity.setEntityMeta( entityMeta );
+
+			Document			doc			= new HibernateXMLWriter( entityMeta, this::entityLookup ).generateXML();
 
 			TransformerFactory	tf			= TransformerFactory.newInstance();
 			Transformer			transformer	= tf.newTransformer();
@@ -369,10 +343,9 @@ public class MappingGenerator {
 
 			return writer.getBuffer().toString();
 		} catch ( TransformerException e ) {
-			String entityName = meta.getAsString( Key._name );
-			logger.warn( "Failed to transform XML to string for entity [{}]", entityName, e );
+			logger.warn( "Failed to transform XML to string for entity [{}]", entity.getEntityName(), e );
 			if ( !config.ignoreParseErrors ) {
-				throw new BoxRuntimeException( String.format( "Failed to transform XML to string for entity [%s]", entityName ), e );
+				throw new BoxRuntimeException( String.format( "Failed to transform XML to string for entity [%s]", entity.getEntityName() ), e );
 			}
 		}
 

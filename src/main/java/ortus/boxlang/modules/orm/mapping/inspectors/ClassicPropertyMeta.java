@@ -96,6 +96,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 					association.put( ORMKeys.structKeyFormula, annotations.getAsString( ORMKeys.structKeyFormula ) );
 				}
 			}
+			if ( annotations.containsKey( ORMKeys.singularName ) ) {
+				association.put( ORMKeys.singularName, annotations.getAsString( ORMKeys.singularName ) );
+			}
 		}
 		if ( annotations.containsKey( ORMKeys.lazy ) ) {
 			association.compute( ORMKeys.lazy, ( key, object ) -> {

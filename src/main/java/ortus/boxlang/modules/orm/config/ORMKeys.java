@@ -123,6 +123,7 @@ public class ORMKeys {
 	public static final Key	elementColumn			= Key.of( "elementColumn" );
 	public static final Key	elementType				= Key.of( "elementType" );
 	public static final Key	elementFormula			= Key.of( "elementFormula" );
+	public static final Key	singularName			= Key.of( "singularName" );
 
 	/**
 	 * OLD setting name. Deprecated. Use {@link Key._CLASS} instead.

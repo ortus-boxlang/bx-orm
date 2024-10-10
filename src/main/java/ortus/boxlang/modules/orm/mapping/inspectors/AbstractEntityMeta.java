@@ -113,10 +113,12 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 * @return Instance of IEntityMeta, either ClassicEntityMeta or ModernEntityMeta.
 	 */
 	public static IEntityMeta autoDiscoverMetaType( IStruct meta ) {
+		// logger.debug( "Class contains 'persistent' annotation; using ClassicEntityMeta: [{}]", meta.getAsString( Key.path ) );
 		var annotations = meta.getAsStruct( Key.annotations );
 		if ( annotations.containsKey( ORMKeys.persistent ) ) {
 			return new ClassicEntityMeta( meta );
 		}
+		// logger.debug( "Using ModernEntityMeta: [{}]", meta.getAsString( Key.path ) );
 		return new ModernEntityMeta( meta );
 	}
 

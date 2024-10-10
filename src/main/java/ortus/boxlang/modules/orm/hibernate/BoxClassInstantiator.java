@@ -1,10 +1,11 @@
 package ortus.boxlang.modules.orm.hibernate;
 
 import java.io.Serializable;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
-import org.hibernate.collection.internal.PersistentBag;
-import org.hibernate.collection.internal.PersistentMap;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.tuple.Instantiator;
 import org.hibernate.tuple.entity.EntityMetamodel;
@@ -12,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
+import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.loader.ClassLocator;
@@ -21,7 +24,10 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.DynamicFunction;
+import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.validation.Validator;
 
 /**
  * This class is used to instantiate a BoxLang class for a Hibernate entity.
@@ -31,22 +37,34 @@ import ortus.boxlang.runtime.types.Struct;
  */
 public class BoxClassInstantiator implements Instantiator {
 
-	Logger					logger			= LoggerFactory.getLogger( BoxClassInstantiator.class );
+	Logger					logger				= LoggerFactory.getLogger( BoxClassInstantiator.class );
 
 	private EntityMetamodel	entityMetamodel;
 	private PersistentClass	mappingInfo;
+	private String			entityName;
+	private EntityRecord	entityRecord;
+	private List<String>	subclassClassNames	= new ArrayList<>();
 
-	private ClassLocator	classLocator	= ClassLocator.getInstance();
+	private ClassLocator	classLocator		= ClassLocator.getInstance();
 
 	public BoxClassInstantiator( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
 		this.entityMetamodel	= entityMetamodel;
 		this.mappingInfo		= mappingInfo;
+		this.entityRecord		= SessionFactoryBuilder.lookupEntity( entityMetamodel.getSessionFactory(),
+		    entityMetamodel.getName() );
+		this.entityName			= mappingInfo.getEntityName();
+		if ( mappingInfo.hasSubclasses() ) {
+			Iterator<PersistentClass> itr = mappingInfo.getSubclassClosureIterator();
+			while ( itr.hasNext() ) {
+				final PersistentClass subclassInfo = itr.next();
+				subclassClassNames.add( subclassInfo.getClassName() );
+			}
+		}
 	}
 
 	@Override
 	public Object instantiate( Serializable id ) {
-		String			bxClassFQN	= SessionFactoryBuilder.lookupEntity( entityMetamodel.getSessionFactory(),
-		    entityMetamodel.getName() ).getClassFQN();
+		String			bxClassFQN	= entityRecord.getClassFQN();
 		IBoxContext		appContext	= SessionFactoryBuilder
 		    .getApplicationContext( entityMetamodel.getSessionFactory() );
 
@@ -54,24 +72,30 @@ public class BoxClassInstantiator implements Instantiator {
 		    .invokeConstructor( appContext )
 		    .unWrapBoxLangClass();
 
-		Arrays.stream( this.entityMetamodel.getProperties() )
-		    .filter( prop -> prop.getType().isAssociationType() )
+		entityRecord.getEntityMeta().getAssociations().stream()
 		    .forEach( prop -> {
-			    String associationName = prop.getName();
-			    logger.debug( "Adding association methods for property: {} on entity {}", associationName, this.entityMetamodel.getName() );
+			    IStruct association	= prop.getAssociation();
+			    String methodName	= association.getAsString( Key._NAME );
+			    String collectionType = association.getAsString( ORMKeys.collectionType );
+			    if ( association.containsKey( ORMKeys.singularName ) ) {
+				    methodName = association.getAsString( ORMKeys.singularName );
+			    }
+			    logger.trace( "Adding 'has{}' methods for property: {} on entity {}", methodName, prop.getName(), this.entityMetamodel.getName() );
 
 			    // add has to THIS scope
-			    DynamicFunction hasUDF = getHasMethod( associationName );
+			    DynamicFunction hasUDF = getHasMethod( methodName, collectionType );
 			    theEntity.put( hasUDF.getName(), hasUDF );
 
-			    logger.error( "Adding addX() method for property: {} on entity {}", associationName, this.entityMetamodel.getName() );
-			    if ( prop.getType().isCollectionType() ) {
+			    if ( association.containsKey( ORMKeys.collectionType ) ) {
+				    logger.trace( "Adding 'add{}' method for property: {} on entity {}", methodName, prop.getName(), this.entityMetamodel.getName() );
 				    // add add (for to-many associations)
-				    DynamicFunction addUDF = getAddMethod( associationName );
+				    DynamicFunction addUDF = getAddMethod( methodName, collectionType, association );
 				    theEntity.put( addUDF.getName(), addUDF );
 
 				    // add remove (for to-many associations)
-				    // theEntity.put( Key.of( "remove" + associationName, removeUDF ) );
+				    logger.trace( "Adding 'remove{}' method for property: {} on entity {}", methodName, prop.getName(), this.entityMetamodel.getName() );
+				    DynamicFunction removeUDF = getRemoveMethod( methodName, collectionType, association );
+				    theEntity.put( removeUDF.getName(), removeUDF );
 			    }
 		    } );
 
@@ -86,8 +110,18 @@ public class BoxClassInstantiator implements Instantiator {
 
 	@Override
 	public boolean isInstance( Object object ) {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'isInstance'" );
+		if ( object instanceof IClassRunnable theClass ) {
+			logger.trace( "Checking to see if {} is an instance of {}", theClass.getClass().getName(), this.entityName );
+			IStruct	annotations			= theClass.getAnnotations();
+			String	objectEntityName	= annotations.containsKey( ORMKeys.entityName )
+			    ? annotations.getAsString( ORMKeys.entityName )
+			    : annotations.getAsString( ORMKeys.entity );
+			logger.trace( "Looking at annotations, found entity name {}", objectEntityName );
+			return this.entityName.equals( objectEntityName )
+			    || subclassClassNames.contains( objectEntityName );
+		}
+		return false;
+
 	}
 
 	/**
@@ -95,15 +129,18 @@ public class BoxClassInstantiator implements Instantiator {
 	 * or more ) for the given association.
 	 * 
 	 * @param associationName The name of the association, like 'manufacturer' or 'vehicles'. Used to construct the method name.
+	 * @param collectionType  The type of collection, like 'bag' or 'map'.
 	 * 
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	private DynamicFunction getHasMethod( String associationName ) {
+	private DynamicFunction getHasMethod( String associationName, String collectionType ) {
 		return new DynamicFunction(
 		    Key.of( "has" + associationName ),
 		    ( context, function ) -> {
-			    // System.out.println( context.getArgumentsScope().toString() );
-			    return context.getThisClass().getVariablesScope().get( associationName ) != null;
+			    VariablesScope scope = context.getThisClass().getVariablesScope();
+			    return scope.get( associationName ) != null && ( collectionType == "bag"
+			        ? scope.getAsArray( Key.of( associationName ) ).size() > 0
+			        : scope.getAsStruct( Key.of( associationName ) ).size() > 0 );
 		    },
 		    new Argument[] {},
 		    "boolean",
@@ -118,38 +155,117 @@ public class BoxClassInstantiator implements Instantiator {
 	 * Supports both array and struct associations, or, in the Hibernate vernacular, "bag" and "map" collections.
 	 * 
 	 * @param associationName The name of the association, like 'manufacturer' or 'vehicles'. Used to construct the method name.
+	 * @param collectionType  The type of collection, like 'bag' or 'map'.
+	 * @param associationMeta The metadata for the association.
 	 * 
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	private DynamicFunction getAddMethod( String associationName ) {
+	private DynamicFunction getAddMethod( String associationName, String collectionType, IStruct associationMeta ) {
+		Key collectionKey = Key.of( associationName );
 		return new DynamicFunction(
 		    Key.of( "add" + associationName ),
 		    ( context, function ) -> {
-			    // @TODO: Determine the association type (bag or map, i.e. array or struct) so we can create the correct type.
-			    boolean		isArrayCollection	= true;
+			    boolean		isArrayCollection	= collectionType == "bag";
 
-			    Object		itemToAdd			= context.getArgumentsScope().get( 0 );
+			    Object		itemToAdd			= context.getArgumentsScope().get( collectionKey );
 			    VariablesScope variablesScope	= context.getThisClass().getVariablesScope();
 
+			    if ( itemToAdd == null ) {
+				    throw new BoxRuntimeException( "Cannot add a null entity to the collection." );
+			    }
+
 			    // create collection if it doesn't exist
-			    if ( !variablesScope.containsKey( associationName ) ) {
-				    variablesScope.put( associationName, isArrayCollection ? new Array() : new Struct() );
+			    if ( !variablesScope.containsKey( collectionKey ) ) {
+				    variablesScope.put( collectionKey, isArrayCollection ? new Array() : new Struct() );
 			    }
 
 			    if ( isArrayCollection ) {
-				    ( ( PersistentBag ) variablesScope.get( associationName ) ).add( itemToAdd );
+				    variablesScope.getAsArray( collectionKey ).append( itemToAdd );
 			    } else {
-				    // struct collection
-				    String structKey = StringCaster.cast( context.getArgumentsScope().get( 1 ) );
-				    ( ( PersistentMap ) variablesScope.get( associationName ) ).put( structKey, itemToAdd );
+				    // @TODO: implement/test this
+				    String structKey = StringCaster.cast( context.getArgumentsScope().get( Key.key ) );
+				    variablesScope.getAsStruct( collectionKey ).put( structKey, itemToAdd );
 			    }
 
 			    // Return this for chainability.
 			    return context.getThisClass();
 		    },
-		    new Argument[] {},
+		    new Argument[] {
+		        new Argument( true, "any", collectionKey, Set.of( Validator.REQUIRED ) ),
+		    },
 		    "class",
-		    String.format( "Append the provided entity to the {} association, creating it if it does not exist.", associationName ),
+		    String.format( "Append the provided entity to the {} collection, creating it if it does not exist.", associationName ),
+		    Struct.EMPTY
+		);
+	}
+
+	/**
+	 * Create an `remove*` method for the entity association, like `removeManufacturer()`, which removes the provided entity from the association, if
+	 * found.
+	 * <p>
+	 * Supports both array and struct associations, or, in the Hibernate vernacular, "bag" and "map" collections.
+	 * 
+	 * @param associationName The name of the association, like 'manufacturer' or 'vehicles'. Used to construct the method name.
+	 * @param collectionType  The type of collection, like 'bag' or 'map'.
+	 * @param associationMeta The metadata for the association.
+	 * 
+	 * @return A DynamicFunction that can be injected into the entity class.
+	 */
+	private DynamicFunction getRemoveMethod( String associationName, String collectionType, IStruct associationMeta ) {
+		Key collectionKey = Key.of( associationName );
+		return new DynamicFunction(
+		    Key.of( "remove" + associationName ),
+		    ( context, function ) -> {
+			    boolean		isArrayCollection	= collectionType == "bag";
+
+			    // @TODO: Pull this from the associated entity's getIdProperties().getName().
+			    List<Key>	keys				= associationMeta.getAsString( Key._CLASS ).equals( "Vehicle" )
+			        ? List.of( Key.of( "vin" ) )
+			        : List.of( Key.id );
+			    IClassRunnable itemToRemove		= ( IClassRunnable ) context.getArgumentsScope().get( collectionKey );
+			    VariablesScope variablesScope	= context.getThisClass().getVariablesScope();
+
+			    // return early if the collection doesn't exist - possibly throw an error for compat?
+			    if ( !variablesScope.containsKey( collectionKey ) ) {
+				    return context.getThisClass();
+			    }
+			    if ( itemToRemove == null ) {
+				    throw new BoxRuntimeException( "Cannot remove a null entity from the collection." );
+			    }
+
+			    if ( isArrayCollection ) {
+				    Array collection = variablesScope.getAsArray( collectionKey );
+				    collection.stream()
+				        .map( item -> ( IClassRunnable ) item )
+				        .filter( item -> {
+					        VariablesScope itemVariablesScope	= item.getVariablesScope();
+					        VariablesScope itemToRemoveVariablesScope = itemToRemove.getVariablesScope();
+					        for ( Key key : keys ) {
+						        if ( !itemVariablesScope.containsKey( key ) || !itemToRemoveVariablesScope.containsKey( key ) ) {
+							        return false;
+						        }
+						        if ( !itemVariablesScope.get( key ).equals( itemToRemoveVariablesScope.get( key ) ) ) {
+							        return false;
+						        }
+					        }
+					        return true;
+				        } )
+				        .findFirst()
+				        .ifPresent( collection::remove );
+			    } else {
+				    // @TODO: test this!
+				    String structKey = StringCaster.cast( context.getArgumentsScope().get( Key.key ) );
+				    variablesScope.getAsStruct( collectionKey ).remove( structKey );
+			    }
+
+			    // Return this for chainability.
+			    return context.getThisClass();
+		    },
+		    new Argument[] {
+		        new Argument( true, "any", collectionKey, Set.of( Validator.REQUIRED ) ),
+		    },
+		    "class",
+		    String.format( "Remove the provided entity from the {} collection.", associationName ),
 		    Struct.EMPTY
 		);
 	}
