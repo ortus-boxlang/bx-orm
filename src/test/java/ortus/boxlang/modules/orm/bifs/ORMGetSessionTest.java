@@ -6,11 +6,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.hibernate.Session;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.modules.orm.SessionFactoryBuilder;
+import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.jdbc.ConnectionManager;
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 import tools.BaseORMTest;
 
 public class ORMGetSessionTest extends BaseORMTest {
@@ -26,7 +31,6 @@ public class ORMGetSessionTest extends BaseORMTest {
 		assertEquals( session, variables.get( result ) );
 	}
 
-	@Disabled
 	@DisplayName( "It throws if the named datasource does not exist or is not configured for ORM" )
 	@Test
 	public void testBadDSN() {
@@ -34,28 +38,42 @@ public class ORMGetSessionTest extends BaseORMTest {
 		assertNotNull( session );
 
 		assertThrows(
-		    BoxRuntimeException.class,
+		    DatabaseException.class,
 		    () -> instance.executeSource( "result = ormGetSession( 'nonexistentDSN' ) ", context )
-		);
-
-		assertThrows(
-		    BoxRuntimeException.class,
-		    () -> instance.executeSource( "result = ormGetSession( 'dsnNotConfiguredForORM' ) ", context )
 		);
 	}
 
-	@Disabled
 	@DisplayName( "It can get the ORM session from a named datasource" )
 	@Test
 	public void testNamedDatasource() {
-		Session normalDSNSession = ormService.getSessionForContext( context );
-		// Session secondDSNSession = ormService.getSessionForContext( context, Key.of( "dsn2" ) );
-		assertNotNull( normalDSNSession );
+		Session defaultORMSession = ormService.getSessionForContext( context );
+		assertNotNull( defaultORMSession );
+
+		// constrct a second datasource
+		Key					datasource2Name		= Key.of( "dsn2" );
+		ConnectionManager	connectionManager	= ( ( IJDBCCapableContext ) context ).getConnectionManager();
+		connectionManager.register( datasource2Name, Struct.of(
+		    "database", "dsn2",
+		    "driver", "derby",
+		    "connectionString", "jdbc:derby:memory:" + "dsn2" + ";create=true"
+		) );
+
+		// Construct a new session factory for the second datasource
+		SessionFactoryBuilder alternateBuilder = new SessionFactoryBuilder(
+		    context,
+		    appName,
+		    connectionManager.getDatasource( datasource2Name ),
+		    new ORMConfig( Struct.of() )
+		);
+		ormService.setSessionFactoryForName( alternateBuilder.getUniqueName(), alternateBuilder.build() );
+
+		Session secondDSNSession = ormService.getSessionForContext( context, datasource2Name );
+		assertNotNull( secondDSNSession );
 
 		instance.executeSource( "result = ormGetSession( 'dsn2' ) ", context );
 
 		assertNotNull( variables.get( result ) );
-		assertNotEquals( normalDSNSession, variables.get( result ) );
-		// assertEquals( secondDSNSession, variables.get( result ) );
+		assertNotEquals( defaultORMSession, variables.get( result ) );
+		assertEquals( secondDSNSession, variables.get( result ) );
 	}
 }

@@ -18,7 +18,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 	@DisplayName( "It can load an entity by integer key" )
 	@Test
 	public void testEntityLoadByPK() {
-		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
 
 		// @formatter:off
 		instance.executeSource(
@@ -36,7 +35,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 	@DisplayName( "It will add has* methods for associations" )
 	@Test
 	public void testEntityHasMethod() {
-		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
 
 		instance.executeStatement( "result = entityLoadByPK( 'Vehicle', '1HGCM82633A123456' ).hasManufacturer()", context );
 		assertTrue( variables.get( result ) instanceof Boolean );
@@ -46,7 +44,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 	@DisplayName( "It will add add* methods for *-to-many associations" )
 	@Test
 	public void testEntityAddMethod() {
-		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
 
 		// @formatter:off
 		instance.executeSource( """
@@ -63,7 +60,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 	@DisplayName( "It will add remove* methods for associations" )
 	@Test
 	public void testEntityRemoveMethod() {
-		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
 
 		// @formatter:off
 		instance.executeSource( """
@@ -91,7 +87,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 	@DisplayName( "It can load an entity by varchar key" )
 	@Test
 	public void testEntityLoadByVarcharKey() {
-		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
 		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
 
 		// @formatter:off
@@ -109,7 +104,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 	@DisplayName( "It can load an entity by composite key" )
 	@Test
 	public void testEntityLoadByCompositeKey() {
-		assertNotNull( ormService.getSessionFactoryForName( BaseORMTest.appName ) );
 		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
 
 		// @formatter:off

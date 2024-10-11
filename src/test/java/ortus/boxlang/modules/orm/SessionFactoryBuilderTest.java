@@ -7,13 +7,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import tools.BaseORMTest;
 import tools.JDBCTestUtils;
@@ -38,10 +38,10 @@ public class SessionFactoryBuilderTest {
 	@DisplayName( "It can setup a session factory" )
 	@Test
 	public void testSimpleCase() {
-		IStruct			ormSettings		= Struct.of(
+		ORMConfig		config			= new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB"
-		);
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
+		) );
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, datasource, config ).build();
 
 		assertNotNull( sessionFactory );
 	}
@@ -49,11 +49,11 @@ public class SessionFactoryBuilderTest {
 	@DisplayName( "It can set dialects with alias names" )
 	@Test
 	public void testDerbyShortNameDialect() {
-		IStruct			ormSettings		= Struct.of(
+		ORMConfig		config			= new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.dialect, "DerbyTenSeven"
-		);
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
+		) );
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, datasource, config ).build();
 
 		assertNotNull( sessionFactory );
 	}
@@ -71,8 +71,8 @@ public class SessionFactoryBuilderTest {
 		    			connectionString = "jdbc:derby:memory:TestDB;create=true"
 		    		};
 		    """, context );
-		IStruct			ormSettings		= Struct.of();
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
+		ORMConfig		config			= new ORMConfig( Struct.of() );
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, datasource, config ).build();
 
 		assertNotNull( sessionFactory );
 	}
@@ -92,10 +92,10 @@ public class SessionFactoryBuilderTest {
 		    			}
 		    		};
 		    """, context );
-		IStruct			ormSettings		= Struct.of(
+		ORMConfig		config			= new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB2"
-		);
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, ormSettings ).build();
+		) );
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, datasource, config ).build();
 
 		assertNotNull( sessionFactory );
 	}

@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.jdbc.ConnectionManager;
+import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.loader.DynamicClassLoader;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.IService;
@@ -79,7 +81,7 @@ public class ORMService implements IService {
 	 * Register a new Hibernate session factory with the ORM engine.
 	 *
 	 * @param name           The name of the session factory - in most cases this
-	 *                       will be the web application name.
+	 *                       will be the web application name plus datasource name.
 	 * @param sessionFactory The Hibernate session factory, constructed via the
 	 *                       {@link SessionFactoryBuilder}.
 	 */
@@ -107,9 +109,24 @@ public class ORMService implements IService {
 	 * @return The Hibernate session.
 	 */
 	public SessionFactory getSessionFactoryForContext( IBoxContext context ) {
-		Key applicationName = context.getParentOfType( ortus.boxlang.runtime.context.ApplicationBoxContext.class )
+		return getSessionFactoryForContext( context, null );
+	}
+
+	/**
+	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 *
+	 * @param context    The context for which to get a session.
+	 * @param datasource The datasource to get the session for.
+	 *
+	 * @return The Hibernate session.
+	 */
+	public SessionFactory getSessionFactoryForContext( IBoxContext context, Key datasource ) {
+		String	datasourceName		= getDatasourceForNameOrDefault( context, datasource ).getUniqueName().getName();
+
+		Key		applicationName		= context.getParentOfType( ortus.boxlang.runtime.context.ApplicationBoxContext.class )
 		    .getApplication().getName();
-		return getSessionFactoryForName( applicationName );
+		Key		sessionFactoryKey	= Key.of( applicationName.getName() + "_" + datasourceName );
+		return getSessionFactoryForName( sessionFactoryKey );
 	}
 
 	/**
@@ -120,18 +137,29 @@ public class ORMService implements IService {
 	 * @return The Hibernate session.
 	 */
 	public Session getSessionForContext( IBoxContext context ) {
-		// @TODO: Add Datasource argument to this method:
-		// connectionManager.getDatasourceOrThrow( datasource );
+		return getSessionForContext( context, null );
+	}
 
-		// Get the nearest JDBC capable context. This can be either a thread or a request.
-		IBoxContext jdbcContext = ( IBoxContext ) context.getParentOfType( IJDBCCapableContext.class );
-		if ( jdbcContext.hasAttachment( ORMKeys.ORMSession ) ) {
-			return jdbcContext.getAttachment( ORMKeys.ORMSession );
+	/**
+	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 *
+	 * @param context    The context for which to get a session.
+	 * @param datasource The datasource to get the session for.
+	 *
+	 * @return The Hibernate session.
+	 */
+	public Session getSessionForContext( IBoxContext context, Key datasource ) {
+		IBoxContext	jdbcContext		= ( IBoxContext ) context.getParentOfType( IJDBCCapableContext.class );
+		String		datasourceName	= getDatasourceForNameOrDefault( context, datasource ).getUniqueName().getName();
+		Key			sessionKey		= Key.of( "session_" + datasourceName );
+
+		if ( jdbcContext.hasAttachment( sessionKey ) ) {
+			return jdbcContext.getAttachment( sessionKey );
 		}
 
-		SessionFactory sessionFactory = getSessionFactoryForContext( context );
-		jdbcContext.putAttachment( ORMKeys.ORMSession, sessionFactory.openSession() );
-		return jdbcContext.getAttachment( ORMKeys.ORMSession );
+		SessionFactory sessionFactory = getSessionFactoryForContext( context, datasource );
+		jdbcContext.putAttachment( sessionKey, sessionFactory.openSession() );
+		return jdbcContext.getAttachment( sessionKey );
 	}
 
 	/**
@@ -145,6 +173,12 @@ public class ORMService implements IService {
 		sessionFactories.forEach( ( key, sessionFactory ) -> {
 			sessionFactory.close();
 		} );
+	}
+
+	private DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {
+		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
+		return datasourceName != null ? connectionManager.getDatasourceOrThrow( datasourceName )
+		    : connectionManager.getDefaultDatasourceOrThrow();
 	}
 
 	/**

@@ -20,10 +20,8 @@ import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
-import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 public class SessionFactoryBuilder {
@@ -53,12 +51,6 @@ public class SessionFactoryBuilder {
 	 * hash maps.
 	 */
 	private Key						appName;
-
-	/**
-	 * The context-level connection manager, used for retrieving datasources that we
-	 * can be sure have been registered with the datasource manager.
-	 */
-	private ConnectionManager		connectionManager;
 
 	private IJDBCCapableContext		context;
 	private ApplicationBoxContext	applicationContext;
@@ -99,15 +91,31 @@ public class SessionFactoryBuilder {
 		return ( IBoxContext ) sessionFactory.getProperties().get( BOXLANG_CONTEXT );
 	}
 
-	public SessionFactoryBuilder( IJDBCCapableContext context, Key appName, IStruct properties ) {
+	public SessionFactoryBuilder( IJDBCCapableContext context, Key appName, DataSource datasource, ORMConfig ormConfig ) {
 		this.appName			= appName;
-		this.connectionManager	= context.getConnectionManager();
-		this.ormConfig			= new ORMConfig( properties );
+		this.ormConfig			= ormConfig;
 		this.context			= context;
-		this.datasource			= getORMDataSource();
+		this.datasource			= datasource;
 		this.applicationContext	= ( ( IBoxContext ) context ).getParentOfType( ApplicationBoxContext.class );
 	}
 
+	/**
+	 * Get a unique name for this session factory.
+	 * 
+	 * @return a unique name for this session factory, based on the application name and datasource name.
+	 */
+	public Key getUniqueName() {
+		return Key.of( getAppName().getName() + "_" + datasource.getUniqueName().getName() );
+	}
+
+	/**
+	 * Build the Hibernate session factory.
+	 * <p>
+	 * This method will generate entity mappings if `ormConfig.autoGenMap` is true, as well as parse the ORM configuration and set up the Hibernate
+	 * configuration.
+	 * 
+	 * @return a Hibernate session factory ready for use.
+	 */
 	public SessionFactory build() {
 		Configuration	configuration	= buildConfiguration();
 
@@ -118,23 +126,6 @@ public class SessionFactoryBuilder {
 		factory.getProperties().put( BOXLANG_ENTITY_MAP, configuration.getProperties().get( BOXLANG_ENTITY_MAP ) );
 
 		return factory;
-	}
-
-	/**
-	 * Get the ORM datasource from the ORM configuration.
-	 * We currently throw a BoxRuntimeException if no datasource is found in the ORM
-	 * configuration, but eventually we will support a default datasource.
-	 */
-	private DataSource getORMDataSource() {
-		Object ormDatasource = this.ormConfig.datasource;
-		if ( ormDatasource != null ) {
-			if ( ormDatasource instanceof IStruct datasourceStruct ) {
-				return connectionManager.getOnTheFlyDataSource( datasourceStruct );
-			}
-			return connectionManager.getDatasourceOrThrow( Key.of( ormDatasource ) );
-		}
-		logger.warn( "ORM configuration is missing 'datasource' key; falling back to default datasource" );
-		return connectionManager.getDefaultDatasourceOrThrow();
 	}
 
 	/**
@@ -177,9 +168,9 @@ public class SessionFactoryBuilder {
 	}
 
 	/**
-	 * Read or generate entity mappings and return a map of entity names to entity file paths
+	 * Retrieve the entity map for this session factory, constructing them if necessary.
 	 * 
-	 * @return
+	 * @return a map of entity names to entity file paths
 	 */
 	private Map<String, EntityRecord> getEntityMap() {
 		if ( !ormConfig.autoGenMap ) {
@@ -194,9 +185,6 @@ public class SessionFactoryBuilder {
 	}
 
 	/**
-	 * Get the application name for this session factory.
-	 * /**
-	 *
 	 * Get the application name for this session factory. Used as an identifier in
 	 * hash maps.
 	 */

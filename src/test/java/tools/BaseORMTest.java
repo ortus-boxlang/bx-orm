@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.compiler.parser.BoxSourceType;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
+import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -29,23 +30,23 @@ import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.types.Array;
-import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 public class BaseORMTest {
 
-	public static BoxRuntime		instance;
-	public static RequestBoxContext	startupContext;
-	public RequestBoxContext		context;
-	public IScope					variables;
-	public static ORMService		ormService;
-	public static Key				appName	= Key.of( "BXORMTest" );
-	public static Key				result	= Key.of( "result" );
+	public static BoxRuntime			instance;
+	public static RequestBoxContext		startupContext;
+	public RequestBoxContext			context;
+	public IScope						variables;
+	public static ORMService			ormService;
+	public static Key					appName	= Key.of( "BXORMTest" );
+	public static Key					result	= Key.of( "result" );
+	public static SessionFactoryBuilder	builder;
 
-	static DataSource				datasource;
+	static DataSource					datasource;
 
-	static final Logger				log		= LoggerFactory.getLogger( BaseORMTest.class );
+	static final Logger					log		= LoggerFactory.getLogger( BaseORMTest.class );
 
 	@BeforeAll
 	public static void setUp() {
@@ -57,15 +58,15 @@ public class BaseORMTest {
 		BaseORMTest.setupApplicationContext( startupContext );
 
 		// and start up the ORM service
-		IStruct ormSettings = Struct.of(
+		ORMConfig config = new ORMConfig( Struct.of(
 		    "datasource", "TestDB",
 		    "entityPaths", Array.of( "models" ),
 		    "saveMapping", "true",
 		    "logSQL", "true",
 		    "dialect", "DerbyTenSevenDialect"
-		);
-		ormService.setSessionFactoryForName( appName,
-		    new SessionFactoryBuilder( startupContext, appName, ormSettings ).build() );
+		) );
+		builder = new SessionFactoryBuilder( startupContext, appName, datasource, config );
+		ormService.setSessionFactoryForName( builder.getUniqueName(), builder.build() );
 	}
 
 	@AfterAll

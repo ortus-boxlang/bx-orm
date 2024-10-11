@@ -1,58 +1,76 @@
 package ortus.boxlang.modules.orm.bifs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.hibernate.SessionFactory;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.modules.orm.SessionFactoryBuilder;
+import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.jdbc.ConnectionManager;
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 import tools.BaseORMTest;
 
 public class ORMGetSessionFactoryTest extends BaseORMTest {
 
-	@DisplayName( "It can get the current ORM session" )
+	@DisplayName( "It can get the default ORM session factory" )
 	@Test
 	public void testORMGetSessionFactory() {
-		SessionFactory sessionFactory = ormService.getSessionFactoryForName( BaseORMTest.appName );
+		SessionFactory sessionFactory = ormService.getSessionFactoryForName( builder.getUniqueName() );
 		assertNotNull( sessionFactory );
 
-		instance.executeSource( "result = ormGetSessionFactory() ", context );
+		instance.executeSource( "result = ormGetSessionFactory()", context );
 		assertNotNull( variables.get( result ) );
 		assertEquals( sessionFactory, variables.get( result ) );
 	}
 
-	@Disabled
-	@DisplayName( "It throws if the named datasource does not exist or is not configured for ORM" )
+	@DisplayName( "It throws if the named datasource does not exist" )
 	@Test
 	public void testBadDSN() {
-		SessionFactory sessionFactory = ormService.getSessionFactoryForName( BaseORMTest.appName );
-		assertNotNull( sessionFactory );
-
 		assertThrows(
-		    BoxRuntimeException.class,
+		    DatabaseException.class,
 		    () -> instance.executeSource( "result = ormGetSessionFactory( 'nonexistentDSN' ) ", context )
 		);
-
-		assertThrows(
-		    BoxRuntimeException.class,
-		    () -> instance.executeSource( "result = ormGetSessionFactory( 'dsnNotConfiguredForORM' ) ", context )
-		);
 	}
-
-	@Disabled
 
 	@DisplayName( "It can get the session factory from a named datasource" )
 	@Test
 	public void testNamedDatasource() {
-		SessionFactory sessionFactory = ormService.getSessionFactoryForName( BaseORMTest.appName );
-		assertNotNull( sessionFactory );
+		SessionFactory defaultSessionFactory = ormService.getSessionFactoryForContext( context );
+		assertNotNull( defaultSessionFactory );
 
-		instance.executeSource( "result = ormGetSessionFactory( 'dsn2' ) ", context );
+		// constrct a second datasource
+		Key					datasource2Name		= Key.of( "dsn2" );
+		ConnectionManager	connectionManager	= ( ( IJDBCCapableContext ) context ).getConnectionManager();
+		connectionManager.register( datasource2Name, Struct.of(
+		    "database", datasource2Name.getName(),
+		    "driver", "derby",
+		    "connectionString", "jdbc:derby:memory:" + datasource2Name.getName() + ";create=true"
+		) );
 
-		// @TODO: Flesh out test
+		// Construct a new session factory for the second datasource
+		SessionFactoryBuilder alternateBuilder = new SessionFactoryBuilder(
+		    context,
+		    appName,
+		    connectionManager.getDatasource( datasource2Name ),
+		    new ORMConfig( Struct.of() )
+		);
+		ormService.setSessionFactoryForName( alternateBuilder.getUniqueName(), alternateBuilder.build() );
+
+		SessionFactory alternateSessionFactory = ormService.getSessionFactoryForContext( context, datasource2Name );
+		assertNotNull( alternateSessionFactory );
+
+		instance.executeSource( "result = ormGetSessionFactory( 'dsn2' )", context );
+
+		assertNotNull( variables.get( result ) );
+		assertNotEquals( defaultSessionFactory, variables.get( result ) );
+		assertEquals( alternateSessionFactory, variables.get( result ) );
 	}
 }
