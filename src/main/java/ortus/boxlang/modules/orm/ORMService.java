@@ -160,19 +160,19 @@ public class ORMService implements IService {
 	}
 
 	/**
-	 * Get a Hibernate session factory for the given application name and datasource combo.
+	 * Get a Hibernate session factory for the given context and datasource combo.
 	 * 
-	 * @param appName    The application name.
+	 * @param context    The IBoxContext. MUST have a parent ApplicationBoxContext.
 	 * @param datasource The datasource this session factory acts upon
 	 * 
 	 * @return
 	 */
-	public SessionFactory getSessionFactoryForNameAndDataSource( Key appName, DataSource datasource ) {
-		return getSessionFactoryForName( SessionFactoryBuilder.getUniqueName( appName, datasource ) );
+	public SessionFactory getSessionFactoryForContextAndDataSource( IBoxContext context, DataSource datasource ) {
+		return getSessionFactoryForName( SessionFactoryBuilder.getUniqueName( context, datasource ) );
 	}
 
 	/**
-	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 * Get a Hibernate session factory for a given Boxlang context. Will return the session factory matching the default datasource.
 	 *
 	 * @param context The context for which to get a session.
 	 *
@@ -191,10 +191,7 @@ public class ORMService implements IService {
 	 * @return The Hibernate session.
 	 */
 	public SessionFactory getSessionFactoryForContext( IBoxContext context, Key datasource ) {
-		Key applicationName = context.getParentOfType( ortus.boxlang.runtime.context.ApplicationBoxContext.class )
-		    .getApplication()
-		    .getName();
-		return getSessionFactoryForNameAndDataSource( applicationName, getDatasourceForNameOrDefault( context, datasource ) );
+		return getSessionFactoryForContextAndDataSource( context, getDatasourceForNameOrDefault( context, datasource ) );
 	}
 
 	/**

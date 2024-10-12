@@ -88,10 +88,22 @@ public class SessionFactoryBuilder {
 	/**
 	 * Get a unique name for this session factory.
 	 * 
-	 * @return a unique name for this session factory, based on the application name and datasource name.
+	 * @return a unique key for the given context's application.
 	 */
-	public static Key getUniqueName( Key appName, DataSource datasource ) {
-		return Key.of( appName.getName() + "_" + datasource.getUniqueName().getName() );
+	public static String getUniqueAppName( IBoxContext context ) {
+		ApplicationBoxContext appContext = ( ApplicationBoxContext ) context.getParentOfType( ApplicationBoxContext.class );
+		// @TODO: Avoid issues with duplicate/reused app names by using the app config hash as part of the ORM application key:
+		// return Key.of( context.getApplication().getName() + "_" + context.getConfig().hashCode() );
+		return appContext.getApplication().getName().getName();
+	}
+
+	/**
+	 * Get a unique key for the given context/datasource combination.
+	 * 
+	 * @return a unique key for the given context/datasource combination.
+	 */
+	public static Key getUniqueName( IBoxContext context, DataSource datasource ) {
+		return Key.of( SessionFactoryBuilder.getUniqueAppName( context ) + "_" + datasource.getUniqueName().getName() );
 	}
 
 	public SessionFactoryBuilder( IJDBCCapableContext context, DataSource datasource, ORMConfig ormConfig ) {
@@ -107,7 +119,7 @@ public class SessionFactoryBuilder {
 	 * @return a unique name for this session factory, based on the application name and datasource name.
 	 */
 	public Key getUniqueName() {
-		return SessionFactoryBuilder.getUniqueName( getAppName(), datasource );
+		return SessionFactoryBuilder.getUniqueName( ( IBoxContext ) this.context, datasource );
 	}
 
 	/**

@@ -63,7 +63,7 @@ public class ORMServiceTest {
 		ormService.startupApp( ( RequestBoxContext ) context, appName, new ORMConfig( Struct.of(
 		    "datasource", testDatasourceName.getName()
 		) ) );
-		SessionFactory theFactory = ormService.getSessionFactoryForNameAndDataSource( appName, connectionManager.getDatasource( testDatasourceName ) );
+		SessionFactory theFactory = ormService.getSessionFactoryForContextAndDataSource( context, connectionManager.getDatasource( testDatasourceName ) );
 		assertNotNull( theFactory );
 
 		ormService.shutdownApp( appName );

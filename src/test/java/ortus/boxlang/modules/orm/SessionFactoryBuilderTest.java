@@ -1,6 +1,7 @@
 package ortus.boxlang.modules.orm;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -98,5 +99,14 @@ public class SessionFactoryBuilderTest {
 		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, datasource, config ).build();
 
 		assertNotNull( sessionFactory );
+	}
+
+	@DisplayName( "It can generate a unique key" )
+	@Test
+	public void testUniqueKey() {
+		Key key = SessionFactoryBuilder.getUniqueName( context, datasource );
+
+		assertNotNull( key );
+		assertEquals( "BXORMTest_" + datasource.getUniqueName().getName(), key.getName() );
 	}
 }
