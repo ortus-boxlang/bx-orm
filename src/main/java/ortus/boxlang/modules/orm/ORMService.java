@@ -1,5 +1,6 @@
 package ortus.boxlang.modules.orm;
 
+import java.util.List;
 import java.util.Map;
 
 import org.hibernate.Session;
@@ -46,12 +47,15 @@ public class ORMService implements IService {
 	 */
 	private Map<Key, SessionFactory>	sessionFactories;
 
+	private Map<Key, List<Key>>			sessionFactoriesByApp;
+
 	/**
 	 * Private constructor for the ORMEngine. Use the getInstance method to get an
 	 * instance of the ORMEngine.
 	 */
 	private ORMService() {
-		this.sessionFactories = new java.util.HashMap<>();
+		this.sessionFactories		= new java.util.HashMap<>();
+		this.sessionFactoriesByApp	= new java.util.HashMap<>();
 		setupCustomLogLevels();
 	}
 
@@ -106,12 +110,42 @@ public class ORMService implements IService {
 			logger.error( "ORMService startupApp called with a context that is not inside an application context; aborting." );
 			return;
 		}
-		DataSource				datasource	= readDefaultDatasource( context, config );
-		SessionFactoryBuilder	builder		= new SessionFactoryBuilder( context, appName, datasource, config );
-		SessionFactory			factory		= builder.build();
+		DataSource			datasource	= readDefaultDatasource( context, config );
+		// @TODO: this list should be populated from the populated EntityRecord classes plus the ORMConfig's datasource setting as the default.
+		List<DataSource>	datasources	= List.of( datasource );
+		datasources.forEach( ( ds ) -> {
+			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, appName, datasource, config );
+			SessionFactory			factory	= builder.build();
 
-		setSessionFactoryForName( builder.getUniqueName(), factory );
-		logger.info( "Session factory created! {}", factory );
+			setSessionFactoryForName( builder.getUniqueName(), factory );
+			// @TODO: Avoid issues with duplicate/reused app names by using the app config hash as part of the key:
+			if ( !sessionFactoriesByApp.containsKey( appName ) ) {
+				sessionFactoriesByApp.put( appName, new java.util.ArrayList<>() );
+			}
+			this.sessionFactoriesByApp.get( appName ).add( builder.getUniqueName() );
+			logger.info( "Session factory created! {}", factory );
+			// @TODO: end datasource loop
+		} );
+	}
+
+	/**
+	 * Shut down a particular ORM application.
+	 * <p>
+	 * Will retrieve and close all session factories associated with the given application name.
+	 * 
+	 * @param appName Application name - used for identifying this exact Boxlang application.
+	 */
+	public void shutdownApp( Key appName ) {
+		// @TODO: Avoid issues with duplicate/reused app names by using the app config hash as part of the ORM application key:
+		// Key appName = Key.of( context.getApplication().getName() + "_" + context.getConfig().hashCode() );
+		List<Key> sessionFactoriesToClose = sessionFactoriesByApp.get( appName );
+		if ( sessionFactoriesToClose != null ) {
+			sessionFactoriesToClose.forEach( ( name ) -> {
+				SessionFactory sessionFactory = sessionFactories.get( name );
+				sessionFactory.close();
+				sessionFactories.remove( name );
+			} );
+		}
 	}
 
 	/**

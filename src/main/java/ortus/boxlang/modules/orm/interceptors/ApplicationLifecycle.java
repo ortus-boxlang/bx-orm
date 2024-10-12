@@ -90,7 +90,9 @@ public class ApplicationLifecycle extends BaseInterceptor {
 	@InterceptionPoint
 	public void onApplicationEnd( IStruct args ) {
 		logger.info( "onApplicationEnd fired; cleaning up ORM resources for this application context" );
-		ORMService.getInstance().onShutdown( false );
+		ORMService.getInstance().shutdownApp( ( ( BaseApplicationListener ) args.get( "listener" ) ).getAppName() );
+		// @TODO: Switch to:
+		// ORMService.getInstance().shutdownApp( ( RequestBoxContext ) args.get( "context" ) );
 	}
 
 	/**
