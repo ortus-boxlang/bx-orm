@@ -107,6 +107,6 @@ public class SessionFactoryBuilderTest {
 		Key key = SessionFactoryBuilder.getUniqueName( context, datasource );
 
 		assertNotNull( key );
-		assertEquals( "BXORMTest_" + datasource.getUniqueName().getName(), key.getName() );
+		assertEquals( "BXORMTest_" + context.getConfig().hashCode() + "_" + datasource.getUniqueName().getName(), key.getName() );
 	}
 }

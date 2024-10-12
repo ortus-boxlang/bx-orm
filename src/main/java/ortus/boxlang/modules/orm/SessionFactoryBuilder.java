@@ -93,8 +93,8 @@ public class SessionFactoryBuilder {
 	public static String getUniqueAppName( IBoxContext context ) {
 		ApplicationBoxContext appContext = ( ApplicationBoxContext ) context.getParentOfType( ApplicationBoxContext.class );
 		// @TODO: Avoid issues with duplicate/reused app names by using the app config hash as part of the ORM application key:
-		// return Key.of( context.getApplication().getName() + "_" + context.getConfig().hashCode() );
-		return appContext.getApplication().getName().getName();
+		return appContext.getApplication().getName() + "_" + context.getConfig().hashCode();
+		// return appContext.getApplication().getName().getName();
 	}
 
 	/**

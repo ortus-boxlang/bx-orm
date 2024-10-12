@@ -60,13 +60,13 @@ public class ORMServiceTest {
 		// ensure we have an application context in the context stack
 		BaseORMTest.setupApplicationContext( ( RequestBoxContext ) context );
 
-		ormService.startupApp( ( RequestBoxContext ) context, appName, new ORMConfig( Struct.of(
+		ormService.startupApp( ( RequestBoxContext ) context, new ORMConfig( Struct.of(
 		    "datasource", testDatasourceName.getName()
 		) ) );
 		SessionFactory theFactory = ormService.getSessionFactoryForContextAndDataSource( context, connectionManager.getDatasource( testDatasourceName ) );
 		assertNotNull( theFactory );
 
-		ormService.shutdownApp( appName );
+		ormService.shutdownApp( context );
 		assertTrue( theFactory.isClosed() );
 	}
 

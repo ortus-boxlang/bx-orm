@@ -99,46 +99,44 @@ public class ORMService implements IService {
 	}
 
 	/**
-	 * Start up a new ORM application with the given context, application name, and ORM
+	 * Start up a new ORM application with the given context and ORM configuration.
 	 * 
 	 * @param context The IBoxContext for the application.
-	 * @param appName Application name - used for identifying this exact Boxlang application.
 	 * @param config  The ORM configuration - parsed from the application settings.
 	 */
-	public void startupApp( RequestBoxContext context, Key appName, ORMConfig config ) {
+	public void startupApp( RequestBoxContext context, ORMConfig config ) {
 		if ( context.getParentOfType( ApplicationBoxContext.class ) == null ) {
 			logger.error( "ORMService startupApp called with a context that is not inside an application context; aborting." );
 			return;
 		}
+		Key					appName		= Key.of( SessionFactoryBuilder.getUniqueAppName( context ) );
 		DataSource			datasource	= readDefaultDatasource( context, config );
+
 		// @TODO: this list should be populated from the populated EntityRecord classes plus the ORMConfig's datasource setting as the default.
 		List<DataSource>	datasources	= List.of( datasource );
 		datasources.forEach( ( ds ) -> {
+
 			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, datasource, config );
 			SessionFactory			factory	= builder.build();
 
 			setSessionFactoryForName( builder.getUniqueName(), factory );
-			// @TODO: Avoid issues with duplicate/reused app names by using the app config hash as part of the key:
-			if ( !sessionFactoriesByApp.containsKey( appName ) ) {
-				sessionFactoriesByApp.put( appName, new java.util.ArrayList<>() );
-			}
-			this.sessionFactoriesByApp.get( appName ).add( builder.getUniqueName() );
 			logger.info( "Session factory created! {}", factory );
-			// @TODO: end datasource loop
+
+			sessionFactoriesByApp.putIfAbsent( appName, new java.util.ArrayList<>() );
+			this.sessionFactoriesByApp.get( appName ).add( builder.getUniqueName() );
 		} );
 	}
 
 	/**
 	 * Shut down a particular ORM application.
 	 * <p>
-	 * Will retrieve and close all session factories associated with the given application name.
+	 * Will retrieve and close all session factories associated with the provided context.
 	 * 
-	 * @param appName Application name - used for identifying this exact Boxlang application.
+	 * @param context The IBoxContext for the application.
 	 */
-	public void shutdownApp( Key appName ) {
-		// @TODO: Avoid issues with duplicate/reused app names by using the app config hash as part of the ORM application key:
-		// Key appName = Key.of( context.getApplication().getName() + "_" + context.getConfig().hashCode() );
-		List<Key> sessionFactoriesToClose = sessionFactoriesByApp.get( appName );
+	public void shutdownApp( IBoxContext context ) {
+		Key			appName					= Key.of( SessionFactoryBuilder.getUniqueAppName( context ) );
+		List<Key>	sessionFactoriesToClose	= sessionFactoriesByApp.get( appName );
 		if ( sessionFactoriesToClose != null ) {
 			sessionFactoriesToClose.forEach( ( name ) -> {
 				SessionFactory sessionFactory = sessionFactories.get( name );

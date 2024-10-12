@@ -56,17 +56,6 @@ public class BaseORMTest {
 		datasource		= JDBCTestUtils.constructTestDataSource( "TestDB" );
 
 		BaseORMTest.setupApplicationContext( startupContext );
-
-		// and start up the ORM service
-		ORMConfig config = new ORMConfig( Struct.of(
-		    "datasource", "TestDB",
-		    "entityPaths", Array.of( "models" ),
-		    "saveMapping", "true",
-		    "logSQL", "true",
-		    "dialect", "DerbyTenSevenDialect"
-		) );
-		builder = new SessionFactoryBuilder( startupContext, datasource, config );
-		ormService.setSessionFactoryForName( builder.getUniqueName(), builder.build() );
 	}
 
 	@AfterAll
@@ -149,5 +138,18 @@ public class BaseORMTest {
 		variables = context.getScopeNearby( VariablesScope.name );
 		context.getConnectionManager().setDefaultDatasource( datasource );
 		assertDoesNotThrow( () -> JDBCTestUtils.resetTables( datasource ) );
+
+		// and start up the ORM service
+		if ( builder == null ) {
+			ORMConfig config = new ORMConfig( Struct.of(
+			    "datasource", "TestDB",
+			    "entityPaths", Array.of( "models" ),
+			    "saveMapping", "true",
+			    "logSQL", "true",
+			    "dialect", "DerbyTenSevenDialect"
+			) );
+			builder = new SessionFactoryBuilder( context, datasource, config );
+			ormService.setSessionFactoryForName( builder.getUniqueName(), builder.build() );
+		}
 	}
 }

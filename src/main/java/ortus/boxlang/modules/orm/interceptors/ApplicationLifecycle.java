@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.application.BaseApplicationListener;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
@@ -41,10 +40,9 @@ public class ApplicationLifecycle extends BaseInterceptor {
 		logger.info(
 		    "afterApplicationListenerLoad fired; checking for ORM configuration in the application context config" );
 
-		BaseApplicationListener	listener	= ( BaseApplicationListener ) args.get( "listener" );
-		RequestBoxContext		context		= ( RequestBoxContext ) args.get( "context" );
+		RequestBoxContext	context		= ( RequestBoxContext ) args.get( "context" );
 
-		IStruct					appSettings	= ( IStruct ) context.getConfigItem( Key.applicationSettings );
+		IStruct				appSettings	= ( IStruct ) context.getConfigItem( Key.applicationSettings );
 		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
 		    || Boolean.FALSE.equals( appSettings.getAsBoolean( ORMKeys.ORMEnabled ) ) ) {
 			logger.info( "ORMEnabled is false or not specified; Refusing to start ORM Service for this application." );
@@ -58,7 +56,7 @@ public class ApplicationLifecycle extends BaseInterceptor {
 		ORMConfig config = getORMConfig( context );
 		if ( config != null ) {
 			logger.info( "ORMEnabled is true and ORM settings are specified - Firing ORM application startup." );
-			ORMService.getInstance().startupApp( context, listener.getAppName(), config );
+			ORMService.getInstance().startupApp( context, config );
 		}
 	}
 
@@ -90,9 +88,7 @@ public class ApplicationLifecycle extends BaseInterceptor {
 	@InterceptionPoint
 	public void onApplicationEnd( IStruct args ) {
 		logger.info( "onApplicationEnd fired; cleaning up ORM resources for this application context" );
-		ORMService.getInstance().shutdownApp( ( ( BaseApplicationListener ) args.get( "listener" ) ).getAppName() );
-		// @TODO: Switch to:
-		// ORMService.getInstance().shutdownApp( ( RequestBoxContext ) args.get( "context" ) );
+		ORMService.getInstance().shutdownApp( ( RequestBoxContext ) args.get( "context" ) );
 	}
 
 	/**
