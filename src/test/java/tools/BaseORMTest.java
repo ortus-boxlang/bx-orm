@@ -65,7 +65,7 @@ public class BaseORMTest {
 		    "logSQL", "true",
 		    "dialect", "DerbyTenSevenDialect"
 		) );
-		builder = new SessionFactoryBuilder( startupContext, appName, datasource, config );
+		builder = new SessionFactoryBuilder( startupContext, datasource, config );
 		ormService.setSessionFactoryForName( builder.getUniqueName(), builder.build() );
 	}
 

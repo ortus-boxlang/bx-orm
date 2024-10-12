@@ -41,7 +41,7 @@ public class SessionFactoryBuilderTest {
 		ORMConfig		config			= new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB"
 		) );
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, datasource, config ).build();
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, datasource, config ).build();
 
 		assertNotNull( sessionFactory );
 	}
@@ -53,7 +53,7 @@ public class SessionFactoryBuilderTest {
 		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.dialect, "DerbyTenSeven"
 		) );
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, datasource, config ).build();
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, datasource, config ).build();
 
 		assertNotNull( sessionFactory );
 	}
@@ -72,7 +72,7 @@ public class SessionFactoryBuilderTest {
 		    		};
 		    """, context );
 		ORMConfig		config			= new ORMConfig( Struct.of() );
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, datasource, config ).build();
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, datasource, config ).build();
 
 		assertNotNull( sessionFactory );
 	}
@@ -95,7 +95,7 @@ public class SessionFactoryBuilderTest {
 		ORMConfig		config			= new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB2"
 		) );
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, appName, datasource, config ).build();
+		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, datasource, config ).build();
 
 		assertNotNull( sessionFactory );
 	}

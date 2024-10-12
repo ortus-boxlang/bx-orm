@@ -2,9 +2,11 @@ package ortus.boxlang.modules.orm;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,8 +43,8 @@ public class ORMServiceTest {
 	}
 
 	@Test
-	public void testAppStartup() {
-		Key			appName		= Key.of( "testApp" );
+	public void testAppStartupAndShutdown() {
+		Key			appName		= BaseORMTest.appName;
 		ORMService	ormService	= ORMService.getInstance();
 		assertNull( ormService.getSessionFactoryForName( appName ) );
 
@@ -61,7 +63,11 @@ public class ORMServiceTest {
 		ormService.startupApp( ( RequestBoxContext ) context, appName, new ORMConfig( Struct.of(
 		    "datasource", testDatasourceName.getName()
 		) ) );
-		assertNotNull( ormService.getSessionFactoryForNameAndDataSource( appName, connectionManager.getDatasource( testDatasourceName ) ) );
+		SessionFactory theFactory = ormService.getSessionFactoryForNameAndDataSource( appName, connectionManager.getDatasource( testDatasourceName ) );
+		assertNotNull( theFactory );
+
+		ormService.shutdownApp( appName );
+		assertTrue( theFactory.isClosed() );
 	}
 
 }

@@ -114,7 +114,7 @@ public class ORMService implements IService {
 		// @TODO: this list should be populated from the populated EntityRecord classes plus the ORMConfig's datasource setting as the default.
 		List<DataSource>	datasources	= List.of( datasource );
 		datasources.forEach( ( ds ) -> {
-			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, appName, datasource, config );
+			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, datasource, config );
 			SessionFactory			factory	= builder.build();
 
 			setSessionFactoryForName( builder.getUniqueName(), factory );

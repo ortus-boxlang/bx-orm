@@ -58,7 +58,6 @@ public class ORMGetSessionFactoryTest extends BaseORMTest {
 		// Construct a new session factory for the second datasource
 		SessionFactoryBuilder alternateBuilder = new SessionFactoryBuilder(
 		    context,
-		    appName,
 		    connectionManager.getDatasource( datasource2Name ),
 		    new ORMConfig( Struct.of() )
 		);

@@ -46,12 +46,6 @@ public class SessionFactoryBuilder {
 	 */
 	private ORMConfig				ormConfig;
 
-	/**
-	 * The application name for this session factory. Used as an identifier in
-	 * hash maps.
-	 */
-	private Key						appName;
-
 	private IJDBCCapableContext		context;
 	private ApplicationBoxContext	applicationContext;
 
@@ -100,8 +94,7 @@ public class SessionFactoryBuilder {
 		return Key.of( appName.getName() + "_" + datasource.getUniqueName().getName() );
 	}
 
-	public SessionFactoryBuilder( IJDBCCapableContext context, Key appName, DataSource datasource, ORMConfig ormConfig ) {
-		this.appName			= appName;
+	public SessionFactoryBuilder( IJDBCCapableContext context, DataSource datasource, ORMConfig ormConfig ) {
 		this.ormConfig			= ormConfig;
 		this.context			= context;
 		this.datasource			= datasource;
@@ -194,10 +187,9 @@ public class SessionFactoryBuilder {
 	}
 
 	/**
-	 * Get the application name for this session factory. Used as an identifier in
-	 * hash maps.
+	 * Get the application name for this session factory. Used as an identifier in hash maps.
 	 */
 	private Key getAppName() {
-		return appName;
+		return this.applicationContext.getApplication().getName();
 	}
 }
