@@ -1,19 +1,14 @@
 package ortus.boxlang.modules.orm.interceptors;
 
-import org.hibernate.SessionFactory;
 import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.ORMService;
-import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.application.BaseApplicationListener;
-import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
-import ortus.boxlang.runtime.jdbc.ConnectionManager;
-import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
@@ -60,15 +55,33 @@ public class ApplicationLifecycle extends BaseInterceptor {
 			logger.info( "No ORM configuration found in application configuration; Refusing to start ORM Service for this application." );
 			return;
 		}
-		IStruct					ormSettings	= ( IStruct ) appSettings.get( ORMKeys.ORMSettings );
-		ORMService				ormService	= ORMService.getInstance();
+		ORMConfig config = getORMConfig( context );
+		if ( config != null ) {
+			logger.info( "ORMEnabled is true and ORM settings are specified - Firing ORM application startup." );
+			ORMService.getInstance().startupApp( context, listener.getAppName(), config );
+		}
+	}
 
-		ORMConfig				config		= new ORMConfig( ormSettings );
-		DataSource				datasource	= readDefaultDatasource( context, config );
-		SessionFactoryBuilder	builder		= new SessionFactoryBuilder( context, listener.getAppName(), datasource, config );
-		SessionFactory			factory		= builder.build();
-		ormService.setSessionFactoryForName( builder.getUniqueName(), factory );
-		this.logger.info( "Session factory created! {}", factory );
+	/**
+	 * Construct an ORMConfig object from the application settings.
+	 * 
+	 * @param context The IBoxContext object for the current request.
+	 * 
+	 * @return ORMConfig object or null if ORM is not enabled or no ORM settings are present in the application settings.
+	 */
+	private ORMConfig getORMConfig( RequestBoxContext context ) {
+		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
+		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
+		    || Boolean.FALSE.equals( appSettings.getAsBoolean( ORMKeys.ORMEnabled ) ) ) {
+			logger.info( "ORMEnabled is false or not specified; Refusing to start ORM Service for this application." );
+			return null;
+		}
+		if ( !appSettings.containsKey( ORMKeys.ORMSettings )
+		    || appSettings.get( ORMKeys.ORMSettings ) == null ) {
+			logger.info( "No ORM configuration found in application configuration; Refusing to start ORM Service for this application." );
+			return null;
+		}
+		return new ORMConfig( ( IStruct ) appSettings.get( ORMKeys.ORMSettings ) );
 	}
 
 	/**
@@ -87,23 +100,5 @@ public class ApplicationLifecycle extends BaseInterceptor {
 	public void onApplicationRestart( IStruct args ) {
 		logger.info( "onApplicationRestart fired; cleaning up ORM resources for this application context" );
 		// @TODO: clean up Hibernate resources
-	}
-
-	/**
-	 * Get the ORM datasource from the ORM configuration.
-	 * We currently throw a BoxRuntimeException if no datasource is found in the ORM
-	 * configuration, but eventually we will support a default datasource.
-	 */
-	private DataSource readDefaultDatasource( IJDBCCapableContext context, ORMConfig ormConfig ) {
-		ConnectionManager	connectionManager	= context.getConnectionManager();
-		Object				ormDatasource		= ormConfig.datasource;
-		if ( ormDatasource != null ) {
-			if ( ormDatasource instanceof IStruct datasourceStruct ) {
-				return connectionManager.getOnTheFlyDataSource( datasourceStruct );
-			}
-			return connectionManager.getDatasourceOrThrow( Key.of( ormDatasource ) );
-		}
-		logger.warn( "ORM configuration is missing 'datasource' key; falling back to default datasource" );
-		return connectionManager.getDefaultDatasourceOrThrow();
 	}
 }

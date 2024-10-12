@@ -7,14 +7,18 @@ import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.loader.DynamicClassLoader;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.IService;
+import ortus.boxlang.runtime.types.IStruct;
 
 /**
  * Java class responsible for constructing and managing the Hibernate ORM
@@ -91,14 +95,46 @@ public class ORMService implements IService {
 	}
 
 	/**
-	 * Get a Hibernate session factory by application name.
+	 * Start up a new ORM application with the given context, application name, and ORM
+	 * 
+	 * @param context The IBoxContext for the application.
+	 * @param appName Application name - used for identifying this exact Boxlang application.
+	 * @param config  The ORM configuration - parsed from the application settings.
+	 */
+	public void startupApp( RequestBoxContext context, Key appName, ORMConfig config ) {
+		if ( context.getParentOfType( ApplicationBoxContext.class ) == null ) {
+			logger.error( "ORMService startupApp called with a context that is not inside an application context; aborting." );
+			return;
+		}
+		DataSource				datasource	= readDefaultDatasource( context, config );
+		SessionFactoryBuilder	builder		= new SessionFactoryBuilder( context, appName, datasource, config );
+		SessionFactory			factory		= builder.build();
+
+		setSessionFactoryForName( builder.getUniqueName(), factory );
+		logger.info( "Session factory created! {}", factory );
+	}
+
+	/**
+	 * Get a Hibernate session factory by unique key.
 	 *
-	 * @param name The name of the application for which to get the session factory.
+	 * @param name The unique key for this session factory - usually the application name plus datasource name.
 	 *
 	 * @return The Hibernate session factory.
 	 */
 	public SessionFactory getSessionFactoryForName( Key name ) {
 		return sessionFactories.get( name );
+	}
+
+	/**
+	 * Get a Hibernate session factory for the given application name and datasource combo.
+	 * 
+	 * @param appName    The application name.
+	 * @param datasource The datasource this session factory acts upon
+	 * 
+	 * @return
+	 */
+	public SessionFactory getSessionFactoryForNameAndDataSource( Key appName, DataSource datasource ) {
+		return getSessionFactoryForName( SessionFactoryBuilder.getUniqueName( appName, datasource ) );
 	}
 
 	/**
@@ -121,12 +157,10 @@ public class ORMService implements IService {
 	 * @return The Hibernate session.
 	 */
 	public SessionFactory getSessionFactoryForContext( IBoxContext context, Key datasource ) {
-		String	datasourceName		= getDatasourceForNameOrDefault( context, datasource ).getUniqueName().getName();
-
-		Key		applicationName		= context.getParentOfType( ortus.boxlang.runtime.context.ApplicationBoxContext.class )
-		    .getApplication().getName();
-		Key		sessionFactoryKey	= Key.of( applicationName.getName() + "_" + datasourceName );
-		return getSessionFactoryForName( sessionFactoryKey );
+		Key applicationName = context.getParentOfType( ortus.boxlang.runtime.context.ApplicationBoxContext.class )
+		    .getApplication()
+		    .getName();
+		return getSessionFactoryForNameAndDataSource( applicationName, getDatasourceForNameOrDefault( context, datasource ) );
 	}
 
 	/**
@@ -173,6 +207,24 @@ public class ORMService implements IService {
 		sessionFactories.forEach( ( key, sessionFactory ) -> {
 			sessionFactory.close();
 		} );
+	}
+
+	/**
+	 * Get the ORM datasource from the ORM configuration.
+	 * We currently throw a BoxRuntimeException if no datasource is found in the ORM
+	 * configuration, but eventually we will support a default datasource.
+	 */
+	private DataSource readDefaultDatasource( IJDBCCapableContext context, ORMConfig ormConfig ) {
+		ConnectionManager	connectionManager	= context.getConnectionManager();
+		Object				ormDatasource		= ormConfig.datasource;
+		if ( ormDatasource != null ) {
+			if ( ormDatasource instanceof IStruct datasourceStruct ) {
+				return connectionManager.getOnTheFlyDataSource( datasourceStruct );
+			}
+			return connectionManager.getDatasourceOrThrow( Key.of( ormDatasource ) );
+		}
+		logger.warn( "ORM configuration is missing 'datasource' key; falling back to default datasource" );
+		return connectionManager.getDefaultDatasourceOrThrow();
 	}
 
 	private DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {

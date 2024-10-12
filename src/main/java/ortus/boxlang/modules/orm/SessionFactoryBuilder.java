@@ -91,6 +91,15 @@ public class SessionFactoryBuilder {
 		return ( IBoxContext ) sessionFactory.getProperties().get( BOXLANG_CONTEXT );
 	}
 
+	/**
+	 * Get a unique name for this session factory.
+	 * 
+	 * @return a unique name for this session factory, based on the application name and datasource name.
+	 */
+	public static Key getUniqueName( Key appName, DataSource datasource ) {
+		return Key.of( appName.getName() + "_" + datasource.getUniqueName().getName() );
+	}
+
 	public SessionFactoryBuilder( IJDBCCapableContext context, Key appName, DataSource datasource, ORMConfig ormConfig ) {
 		this.appName			= appName;
 		this.ormConfig			= ormConfig;
@@ -105,7 +114,7 @@ public class SessionFactoryBuilder {
 	 * @return a unique name for this session factory, based on the application name and datasource name.
 	 */
 	public Key getUniqueName() {
-		return Key.of( getAppName().getName() + "_" + datasource.getUniqueName().getName() );
+		return SessionFactoryBuilder.getUniqueName( getAppName(), datasource );
 	}
 
 	/**
