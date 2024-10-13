@@ -46,16 +46,12 @@ public class EntitySave extends BIF {
 		// @TODO: Implement forceinsert
 		IClassRunnable	entity		= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		String			entityName	= getClassNameFromFQN( entity.getName().getName() );
-		logger.error( "IClassRunnable name: {}", entityName );
-		IStruct annotations = entity.getAnnotations();
+		IStruct			annotations	= entity.getAnnotations();
 		if ( annotations.containsKey( ORMKeys.entity ) && !annotations.getAsString( ORMKeys.entity ).isBlank() ) {
 			entityName = annotations.getAsString( ORMKeys.entity );
-			logger.error( "entity annotation is: {}", entityName );
 		} else if ( annotations.containsKey( ORMKeys.entityName ) && !annotations.getAsString( ORMKeys.entityName ).isBlank() ) {
 			entityName = annotations.getAsString( ORMKeys.entityName );
-			logger.error( "entityName annotation is: {}", entityName );
 		}
-		logger.error( "Saving entity: {}", entityName );
 		// throw new UnsupportedOperationException( entityName );
 		session.save( entityName, entity );
 

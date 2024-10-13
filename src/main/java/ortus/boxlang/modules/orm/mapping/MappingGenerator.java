@@ -274,7 +274,6 @@ public class MappingGenerator {
 		if ( datasource == null && this.defaultDatasource != null ) {
 			datasource = this.defaultDatasource;
 		}
-		logger.error( "Tracking entity [{}] with datasource: [{}]", entityName, datasource.getOriginalName() );
 		return new EntityRecord(
 		    entityName,
 		    fqn,
