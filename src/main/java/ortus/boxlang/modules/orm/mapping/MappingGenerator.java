@@ -29,7 +29,10 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.jdbc.ConnectionManager;
+import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
@@ -40,12 +43,16 @@ import ortus.boxlang.runtime.util.FileSystemUtil;
 
 public class MappingGenerator {
 
+	private static final Logger	logger		= LoggerFactory.getLogger( MappingGenerator.class );
+
+	private Key					location	= Key.of( "location" );
+
 	/**
 	 * The location to save the generated XML mapping files.
 	 * <p>
 	 * This could be a temporary directory, or (when `savemapping` is enabled) the same as the entity directory.
 	 */
-	private String						saveDirectory;
+	private String				saveDirectory;
 
 	/**
 	 * Whether to save the mapping files alongside the entity files. (Default: false)
@@ -55,33 +62,38 @@ public class MappingGenerator {
 	 * <p>
 	 * If true, the mapping files will be saved in the same directory as the entity files and {@link #xmlMappingLocation} will be ignored.
 	 */
-	private boolean						saveAlongsideEntity;
-
-	/**
-	 * Map of discovered entities.
-	 */
-	private Map<String, EntityRecord>	entityMap;
+	private boolean				saveAlongsideEntity;
 
 	/**
 	 * List of paths to search for entities.
 	 */
-	private List<Path>					entityPaths;
+	private List<Path>			entityPaths;
 
 	/**
 	 * ALL ORM configuration.
 	 */
-	private ORMConfig					config;
+	private ORMConfig			config;
 
-	private Key							location	= Key.of( "location" );
+	/**
+	 * List of discovered entities.
+	 */
+	private List<EntityRecord>	entities;
 
-	private static final Logger			logger		= LoggerFactory.getLogger( MappingGenerator.class );
+	/**
+	 * The default datasource to "discover" the entity under when an entity has none specified.
+	 */
+	private DataSource			defaultDatasource;
+
+	private IJDBCCapableContext	context;
 
 	public MappingGenerator( IBoxContext context, ORMConfig config ) {
-		this.entityMap				= new java.util.HashMap<>();
+		this.entities				= new ArrayList<>();
 		this.config					= config;
 		this.saveDirectory			= Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", String.valueOf( config.hashCode() ) ).toString();
 		this.saveAlongsideEntity	= config.saveMapping;
 		this.entityPaths			= new java.util.ArrayList<>();
+		this.context				= ( IJDBCCapableContext ) context;
+		this.defaultDatasource		= getDefaultDatasource();
 		// this.appDirectory = context.getParentOfType( ApplicationBoxContext.class ).getApplication().getApplicationDirectory();
 
 		if ( !this.saveAlongsideEntity ) {
@@ -90,6 +102,11 @@ public class MappingGenerator {
 
 		for ( String entityPath : config.entityPaths ) {
 			this.entityPaths.add( FileSystemUtil.expandPath( context, entityPath ).absolutePath() );
+		}
+		if ( this.entityPaths.isEmpty() ) {
+			this.entityPaths.add( FileSystemUtil.expandPath( context, "." ).absolutePath() );
+			logger.warn(
+			    "No entity paths found in ORM configuration; defaulting to app root. (You should STRONGLY consider setting an 'entityPaths' array in your ORM settings.)" );
 		}
 	}
 
@@ -103,35 +120,56 @@ public class MappingGenerator {
 		ArrayList<IStruct>	classes						= discoverBLClasses( this.entityPaths );
 		if ( classes.size() > MAX_SYNCHRONOUS_ENTITIES ) {
 			logger.debug( "Parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
-			classes.parallelStream()
+			this.entities = classes.parallelStream()
 			    // Parse class metadata
 			    .map( ( IStruct possibleEntity ) -> readMeta( possibleEntity ) )
 			    // Filter out non-persistent entities
 			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
 			    // Convert to EntityRecord
 			    .map( ( IStruct entity ) -> toEntityRecord( entity ) )
-			    // Add to entity map
-			    .forEach( ( entityRecord ) -> entityMap.put( entityRecord.getEntityName(), entityRecord ) );
+			    .collect( java.util.stream.Collectors.toList() );
+			// // Add to entity map
+			// .forEach( ( entityRecord ) -> entityMap.put( entityRecord.getEntityName(), entityRecord ) );
 		} else {
-			classes.stream()
+			this.entities = classes.stream()
 			    // Parse class metadata
 			    .map( ( IStruct possibleEntity ) -> readMeta( possibleEntity ) )
 			    // Filter out non-persistent entities
 			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
 			    // Convert to EntityRecord
 			    .map( ( IStruct entity ) -> toEntityRecord( entity ) )
-			    // Add to entity map
-			    .forEach( ( entityRecord ) -> entityMap.put( entityRecord.getEntityName(), entityRecord ) );
+			    .collect( java.util.stream.Collectors.toList() );
+			// Add to entity map
+			// .forEach( ( entityRecord ) -> entityMap.put( entityRecord.getEntityName(), entityRecord ) );
 		}
 
 		// Generate XML mapping files for each entity
 		// @TODO: Should this also be parallel???
-		entityMap.values().stream()
+		this.entities.stream()
 		    .forEach( ( EntityRecord entity ) -> {
 			    entity.setXmlFilePath( writeXMLFile( entity ) );
 		    } );
 
 		return this;
+	}
+
+	/**
+	 * Get the ORM datasource from the ORM configuration.
+	 * We currently throw a BoxRuntimeException if no datasource is found in the ORM
+	 * configuration, but eventually we will support a default datasource.
+	 * 
+	 */
+	private DataSource getDefaultDatasource() {
+		ConnectionManager	connectionManager	= this.context.getConnectionManager();
+		Object				ormDatasource		= this.config.datasource;
+		if ( ormDatasource != null ) {
+			if ( ormDatasource instanceof IStruct datasourceStruct ) {
+				return connectionManager.getOnTheFlyDataSource( datasourceStruct );
+			}
+			return connectionManager.getDatasourceOrThrow( Key.of( ormDatasource ) );
+		}
+		logger.warn( "ORM configuration is missing 'datasource' key; falling back to default datasource" );
+		return connectionManager.getDefaultDatasourceOrThrow();
 	}
 
 	/**
@@ -221,10 +259,27 @@ public class MappingGenerator {
 		if ( fqn == null || fqn.isBlank() ) {
 			throw new BoxRuntimeException( "Failed to generate FQN for entity: " + entityName );
 		}
+
+		DataSource datasource = null;
+		if ( meta != null && meta.containsKey( Key.datasource ) ) {
+			String datasourceName = meta.getAsString( Key.datasource );
+			if ( datasourceName != null && !datasourceName.isBlank() ) {
+				datasource = context.getConnectionManager().getDatasource( Key.of( datasourceName ) );
+				if ( datasource == null ) {
+					// @TODO: check config.skipParseErrors before throwing...
+					throw new BoxRuntimeException( "Failed to find datasource: " + datasourceName );
+				}
+			}
+		}
+		if ( datasource == null && this.defaultDatasource != null ) {
+			datasource = this.defaultDatasource;
+		}
+		logger.error( "Tracking entity [{}] with datasource: [{}]", entityName, datasource.getOriginalName() );
 		return new EntityRecord(
 		    entityName,
 		    fqn,
-		    meta
+		    meta,
+		    datasource.getOriginalName()
 		);
 	}
 
@@ -268,12 +323,12 @@ public class MappingGenerator {
 	}
 
 	/**
-	 * Get the map of discovered entities. Obviously, this is only useful once `generateMappings` has been called.
+	 * Get a list of discovered entities by datasource name. Obviously, this is only useful once `generateMappings` has been called.
 	 * 
-	 * @return The map of discovered entities, where the key is the entity name and the value is an EntityRecord instance.
+	 * @return The map of discovered entities, where the key is the datasource name and the value is a List of EntityRecord instances for that datasource.
 	 */
-	public Map<String, EntityRecord> getEntityMap() {
-		return entityMap;
+	public Map<String, List<EntityRecord>> getEntityDatasourceMap() {
+		return this.entities.stream().collect( java.util.stream.Collectors.groupingBy( EntityRecord::getDatasource ) );
 	}
 
 	/**
@@ -363,8 +418,7 @@ public class MappingGenerator {
 	 * @return EntityRecord instance or null.
 	 */
 	public EntityRecord entityLookup( String className, String datasource ) {
-		return entityMap
-		    .values()
+		return this.entities
 		    .stream()
 		    .filter( ( EntityRecord e ) -> {
 			    return e.getClassName().equalsIgnoreCase( className )

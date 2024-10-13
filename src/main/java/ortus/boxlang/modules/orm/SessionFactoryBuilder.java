@@ -1,6 +1,7 @@
 package ortus.boxlang.modules.orm;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -16,13 +17,11 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMConnectionProvider;
 import ortus.boxlang.modules.orm.hibernate.EntityTuplizer;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
-import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 public class SessionFactoryBuilder {
 
@@ -45,6 +44,11 @@ public class SessionFactoryBuilder {
 	 * The ORM configuration for this session factory.
 	 */
 	private ORMConfig				ormConfig;
+
+	/**
+	 * The discovered entities for this session factory.
+	 */
+	private List<EntityRecord>		entities;
 
 	private IJDBCCapableContext		context;
 	private ApplicationBoxContext	applicationContext;
@@ -92,9 +96,7 @@ public class SessionFactoryBuilder {
 	 */
 	public static String getUniqueAppName( IBoxContext context ) {
 		ApplicationBoxContext appContext = ( ApplicationBoxContext ) context.getParentOfType( ApplicationBoxContext.class );
-		// @TODO: Avoid issues with duplicate/reused app names by using the app config hash as part of the ORM application key:
 		return appContext.getApplication().getName() + "_" + context.getConfig().hashCode();
-		// return appContext.getApplication().getName().getName();
 	}
 
 	/**
@@ -106,10 +108,11 @@ public class SessionFactoryBuilder {
 		return Key.of( SessionFactoryBuilder.getUniqueAppName( context ) + "_" + datasource.getUniqueName().getName() );
 	}
 
-	public SessionFactoryBuilder( IJDBCCapableContext context, DataSource datasource, ORMConfig ormConfig ) {
+	public SessionFactoryBuilder( IJDBCCapableContext context, DataSource datasource, ORMConfig ormConfig, List<EntityRecord> entities ) {
 		this.ormConfig			= ormConfig;
 		this.context			= context;
 		this.datasource			= datasource;
+		this.entities			= entities;
 		this.applicationContext	= ( ( IBoxContext ) context ).getParentOfType( ApplicationBoxContext.class );
 	}
 
@@ -165,10 +168,11 @@ public class SessionFactoryBuilder {
 		// Don't pretend our BL entities are POJOs.
 		configuration.setProperty( AvailableSettings.DEFAULT_ENTITY_MODE, "dynamic-map" );
 
-		Map<String, EntityRecord> entities = getEntityMap();
-		properties.put( BOXLANG_ENTITY_MAP, entities );
+		Map<String, EntityRecord> entityMap = this.entities.stream()
+		    .collect( java.util.stream.Collectors.toMap( EntityRecord::getEntityName, ( entity ) -> entity ) );
+		properties.put( BOXLANG_ENTITY_MAP, entityMap );
 
-		entities.values()
+		entityMap.values()
 		    .stream()
 		    .map( EntityRecord::getXmlFilePath )
 		    .map( Path::toString )
@@ -179,29 +183,5 @@ public class SessionFactoryBuilder {
 		configuration.addProperties( properties );
 
 		return configuration;
-	}
-
-	/**
-	 * Retrieve the entity map for this session factory, constructing them if necessary.
-	 * 
-	 * @return a map of entity names to entity file paths
-	 */
-	private Map<String, EntityRecord> getEntityMap() {
-		if ( !ormConfig.autoGenMap ) {
-			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
-			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
-		} else {
-			// generate xml mappings on the fly, saving them either to a temp directory or alongside the entity class files if `ormConfig.saveMapping` is true.
-			return new MappingGenerator( ( IBoxContext ) context, ormConfig )
-			    .generateMappings()
-			    .getEntityMap();
-		}
-	}
-
-	/**
-	 * Get the application name for this session factory. Used as an identifier in hash maps.
-	 */
-	private Key getAppName() {
-		return this.applicationContext.getApplication().getName();
 	}
 }

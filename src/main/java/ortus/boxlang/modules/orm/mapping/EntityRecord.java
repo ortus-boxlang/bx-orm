@@ -3,7 +3,6 @@ package ortus.boxlang.modules.orm.mapping;
 import java.nio.file.Path;
 
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
-import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
 public class EntityRecord {
@@ -21,12 +20,14 @@ public class EntityRecord {
 	}
 
 	public EntityRecord( String entityName, String classFQN, IStruct metadata ) {
+		this( entityName, classFQN, metadata, null );
+	}
+
+	public EntityRecord( String entityName, String classFQN, IStruct metadata, String onDatasource ) {
 		this.entityName	= entityName;
 		this.classFQN	= classFQN;
 		this.metadata	= metadata;
-		if ( metadata != null && metadata.containsKey( Key.datasource ) ) {
-			this.datasource = metadata.getAsString( Key.datasource );
-		}
+		this.datasource	= onDatasource;
 
 		String[] fqn = this.classFQN.split( "\\." );
 		this.className = fqn[ fqn.length - 1 ];

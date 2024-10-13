@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -19,7 +21,7 @@ import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.loader.DynamicClassLoader;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.IService;
-import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Java class responsible for constructing and managing the Hibernate ORM
@@ -109,15 +111,19 @@ public class ORMService implements IService {
 			logger.error( "ORMService startupApp called with a context that is not inside an application context; aborting." );
 			return;
 		}
-		Key					appName		= Key.of( SessionFactoryBuilder.getUniqueAppName( context ) );
-		DataSource			datasource	= readDefaultDatasource( context, config );
+		Key								appName				= Key.of( SessionFactoryBuilder.getUniqueAppName( context ) );
+
+		Map<String, List<EntityRecord>>	entityDatasources	= discoverEntities( context, config );
+		logger.debug( "Discovered entities on {} datasources:", entityDatasources.size() );
 
 		// @TODO: this list should be populated from the populated EntityRecord classes plus the ORMConfig's datasource setting as the default.
-		List<DataSource>	datasources	= List.of( datasource );
-		datasources.forEach( ( ds ) -> {
+		// List<DataSource> datasources = List.of( datasource );
+		entityDatasources.forEach( ( datasourceName, entities ) -> {
+			logger.debug( "Creating session factory for datasource: {}", datasourceName );
+			DataSource				datasource	= context.getConnectionManager().getDatasourceOrThrow( Key.of( datasourceName ) );
 
-			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, datasource, config );
-			SessionFactory			factory	= builder.build();
+			SessionFactoryBuilder	builder		= new SessionFactoryBuilder( context, datasource, config, entities );
+			SessionFactory			factory		= builder.build();
 
 			setSessionFactoryForName( builder.getUniqueName(), factory );
 			logger.info( "Session factory created! {}", factory );
@@ -236,24 +242,24 @@ public class ORMService implements IService {
 		sessionFactories.forEach( ( key, sessionFactory ) -> {
 			sessionFactory.close();
 		} );
+		sessionFactoriesByApp.clear();
 	}
 
 	/**
-	 * Get the ORM datasource from the ORM configuration.
-	 * We currently throw a BoxRuntimeException if no datasource is found in the ORM
-	 * configuration, but eventually we will support a default datasource.
+	 * Retrieve the entity map for this session factory, constructing them if necessary.
+	 * 
+	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
 	 */
-	private DataSource readDefaultDatasource( IJDBCCapableContext context, ORMConfig ormConfig ) {
-		ConnectionManager	connectionManager	= context.getConnectionManager();
-		Object				ormDatasource		= ormConfig.datasource;
-		if ( ormDatasource != null ) {
-			if ( ormDatasource instanceof IStruct datasourceStruct ) {
-				return connectionManager.getOnTheFlyDataSource( datasourceStruct );
-			}
-			return connectionManager.getDatasourceOrThrow( Key.of( ormDatasource ) );
+	public static Map<String, List<EntityRecord>> discoverEntities( IBoxContext context, ORMConfig ormConfig ) {
+		if ( !ormConfig.autoGenMap ) {
+			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
+			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
+		} else {
+			// generate xml mappings on the fly, saving them either to a temp directory or alongside the entity class files if `ormConfig.saveMapping` is true.
+			return new MappingGenerator( context, ormConfig )
+			    .generateMappings()
+			    .getEntityDatasourceMap();
 		}
-		logger.warn( "ORM configuration is missing 'datasource' key; falling back to default datasource" );
-		return connectionManager.getDefaultDatasourceOrThrow();
 	}
 
 	private DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {

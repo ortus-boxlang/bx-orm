@@ -3,6 +3,9 @@ package ortus.boxlang.modules.orm;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.List;
+import java.util.Map;
+
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -10,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
@@ -39,10 +43,12 @@ public class SessionFactoryBuilderTest {
 	@DisplayName( "It can setup a session factory" )
 	@Test
 	public void testSimpleCase() {
-		ORMConfig		config			= new ORMConfig( Struct.of(
+		ORMConfig						config			= new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB"
 		) );
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, datasource, config ).build();
+		Map<String, List<EntityRecord>>	entities		= ORMService.discoverEntities( context, config );
+		SessionFactory					sessionFactory	= new SessionFactoryBuilder( context, datasource, config,
+		    entities.get( datasource.getOriginalName() ) ).build();
 
 		assertNotNull( sessionFactory );
 	}
@@ -50,11 +56,13 @@ public class SessionFactoryBuilderTest {
 	@DisplayName( "It can set dialects with alias names" )
 	@Test
 	public void testDerbyShortNameDialect() {
-		ORMConfig		config			= new ORMConfig( Struct.of(
+		ORMConfig						config			= new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.dialect, "DerbyTenSeven"
 		) );
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, datasource, config ).build();
+		Map<String, List<EntityRecord>>	entities		= ORMService.discoverEntities( context, config );
+		SessionFactory					sessionFactory	= new SessionFactoryBuilder( context, datasource, config,
+		    entities.get( datasource.getOriginalName() ) ).build();
 
 		assertNotNull( sessionFactory );
 	}
@@ -72,10 +80,17 @@ public class SessionFactoryBuilderTest {
 		    			connectionString = "jdbc:derby:memory:TestDB;create=true"
 		    		};
 		    """, context );
-		ORMConfig		config			= new ORMConfig( Struct.of() );
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, datasource, config ).build();
+		ORMConfig						config		= new ORMConfig( Struct.of() );
+		// DataSource datasource2 = context.getConnectionManager().getDefaultDatasource();
+		Map<String, List<EntityRecord>>	entities	= ORMService.discoverEntities( context, config );
+		for ( String datasourceName : entities.keySet() ) {
+			DataSource		thisDataSource	= context.getConnectionManager().getDatasource( Key.of( datasourceName ) );
 
-		assertNotNull( sessionFactory );
+			SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, thisDataSource, config,
+			    entities.get( datasourceName ) ).build();
+
+			assertNotNull( sessionFactory );
+		}
 	}
 
 	@DisplayName( "It can use a named application datasource" )
@@ -93,10 +108,12 @@ public class SessionFactoryBuilderTest {
 		    			}
 		    		};
 		    """, context );
-		ORMConfig		config			= new ORMConfig( Struct.of(
+		ORMConfig						config			= new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB2"
 		) );
-		SessionFactory	sessionFactory	= new SessionFactoryBuilder( context, datasource, config ).build();
+		Map<String, List<EntityRecord>>	entities		= ORMService.discoverEntities( context, config );
+		SessionFactory					sessionFactory	= new SessionFactoryBuilder( context, datasource, config,
+		    entities.get( "TestDB2" ) ).build();
 
 		assertNotNull( sessionFactory );
 	}

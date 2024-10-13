@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -18,6 +19,7 @@ import ortus.boxlang.compiler.parser.BoxSourceType;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -137,18 +139,20 @@ public class BaseORMTest {
 
 		variables = context.getScopeNearby( VariablesScope.name );
 		context.getConnectionManager().setDefaultDatasource( datasource );
+		context.getConnectionManager().register( datasource );
 		assertDoesNotThrow( () -> JDBCTestUtils.resetTables( datasource ) );
 
 		// and start up the ORM service
 		if ( builder == null ) {
-			ORMConfig config = new ORMConfig( Struct.of(
+			ORMConfig						config		= new ORMConfig( Struct.of(
 			    "datasource", "TestDB",
 			    "entityPaths", Array.of( "models" ),
 			    "saveMapping", "true",
 			    "logSQL", "true",
 			    "dialect", "DerbyTenSevenDialect"
 			) );
-			builder = new SessionFactoryBuilder( context, datasource, config );
+			Map<String, List<EntityRecord>>	entities	= ORMService.discoverEntities( context, config );
+			builder = new SessionFactoryBuilder( context, datasource, config, entities.get( datasource.getOriginalName() ) );
 			ormService.setSessionFactoryForName( builder.getUniqueName(), builder.build() );
 		}
 	}

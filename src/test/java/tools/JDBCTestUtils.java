@@ -149,18 +149,18 @@ public class JDBCTestUtils {
 	 * <p>
 	 * This method is useful for creating a DataSource for use in testing, and is especially useful for in-memory databases like Apache Derby.
 	 *
-	 * @param databaseName String database name; must be unique for each test. In the future, we can change this to use either reflection or a stack trace
-	 *                     to grab the caller class name and thus ensure uniqueness.
+	 * @param datasourceName String database name; must be unique for each test. In the future, we can change this to use either reflection or a stack
+	 *                       trace to grab the caller class name and thus ensure uniqueness.
 	 *
 	 * @return A DataSource instance with a consistent `manufacturers` table created.
 	 */
-	public static DataSource constructTestDataSource( String databaseName ) {
+	public static DataSource constructTestDataSource( String datasourceName ) {
 		DataSource datasource = DataSource.fromStruct(
-		    databaseName,
+		    datasourceName,
 		    Struct.of(
-		        "database", databaseName,
+		        "database", datasourceName,
 		        "driver", "derby",
-		        "connectionString", "jdbc:derby:memory:" + databaseName + ";create=true"
+		        "connectionString", "jdbc:derby:memory:" + datasourceName + ";create=true"
 		    ) );
 		try {
 			datasource.execute( "CREATE TABLE manufacturers ( id INTEGER, name VARCHAR(155), address VARCHAR(155) )" );
