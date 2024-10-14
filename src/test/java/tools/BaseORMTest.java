@@ -23,8 +23,10 @@ import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
+import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.loader.ImportDefinition;
 import ortus.boxlang.runtime.runnables.BoxTemplate;
@@ -45,6 +47,8 @@ public class BaseORMTest {
 	public static Key					appName	= Key.of( "BXORMTest" );
 	public static Key					result	= Key.of( "result" );
 	public static SessionFactoryBuilder	builder;
+	public static SessionFactoryBuilder	alternateBuilder;
+	public static DataSource			alternateDataSource;
 
 	static DataSource					datasource;
 
@@ -138,8 +142,9 @@ public class BaseORMTest {
 		context.injectParentContext( startupContext.getParentOfType( ApplicationBoxContext.class ) );
 
 		variables = context.getScopeNearby( VariablesScope.name );
-		context.getConnectionManager().setDefaultDatasource( datasource );
-		context.getConnectionManager().register( datasource );
+		ConnectionManager connectionManager = ( ( IJDBCCapableContext ) context ).getConnectionManager();
+		connectionManager.setDefaultDatasource( datasource );
+		connectionManager.register( datasource );
 		assertDoesNotThrow( () -> JDBCTestUtils.resetTables( datasource ) );
 
 		// and start up the ORM service
@@ -154,6 +159,31 @@ public class BaseORMTest {
 			Map<String, List<EntityRecord>>	entities	= ORMService.discoverEntities( context, config );
 			builder = new SessionFactoryBuilder( context, datasource, config, entities.get( datasource.getOriginalName() ) );
 			ormService.setSessionFactoryForName( builder.getUniqueName(), builder.build() );
+		}
+
+		if ( alternateDataSource == null ) {
+			// constrct a second datasource
+			alternateDataSource = DataSource.fromStruct( "dsn2", Struct.of(
+			    "database", "dsn2",
+			    "driver", "derby",
+			    "connectionString", "jdbc:derby:memory:" + "dsn2" + ";create=true"
+			) );
+		}
+		connectionManager.register( alternateDataSource );
+
+		if ( alternateBuilder == null ) {
+			// Construct a new session factory for the second datasource
+			ORMConfig						config				= new ORMConfig( Struct.of(
+			    "datasource", "dsn2"
+			) );
+			Map<String, List<EntityRecord>>	entities			= ORMService.discoverEntities( context, config );
+			SessionFactoryBuilder			alternateBuilder	= new SessionFactoryBuilder(
+			    context,
+			    alternateDataSource,
+			    config,
+			    entities.get( "dsn2" )
+			);
+			ormService.setSessionFactoryForName( alternateBuilder.getUniqueName(), alternateBuilder.build() );
 		}
 	}
 }

@@ -83,7 +83,6 @@ public class SessionFactoryBuilderTest {
 		    		};
 		    """, context );
 		ORMConfig						config		= new ORMConfig( Struct.of() );
-		// DataSource datasource2 = context.getConnectionManager().getDefaultDatasource();
 		Map<String, List<EntityRecord>>	entities	= ORMService.discoverEntities( context, config );
 		for ( String datasourceName : entities.keySet() ) {
 			DataSource		thisDataSource	= context.getConnectionManager().getDatasource( Key.of( datasourceName ) );
