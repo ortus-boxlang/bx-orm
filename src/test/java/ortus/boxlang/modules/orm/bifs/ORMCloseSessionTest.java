@@ -1,54 +1,46 @@
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertFalse;
 
-import java.nio.file.Path;
-
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
+import org.hibernate.Session;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
-import ortus.boxlang.runtime.scopes.IScope;
-import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.scopes.VariablesScope;
+import ortus.boxlang.modules.orm.ORMService;
+import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
-public class ORMCloseSessionTest {
+public class ORMCloseSessionTest extends BaseORMTest {
 
-	static BoxRuntime	instance;
-	IBoxContext			context;
-	IScope				variables;
-	static Key			result	= new Key( "result" );
-
-	@BeforeAll
-	public static void setUp() {
-		instance = BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
-	}
-
-	@BeforeEach
-	public void setupEach() {
-		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		variables	= context.getScopeNearby( VariablesScope.name );
-	}
-
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can close the session for the default datasource" )
 	@Test
-	public void testExampleBIF() {
-		instance.executeSource( "result = ORMFlush()", context );
-		assertEquals( "Hello from an ORMFlush!", variables.get( result ) );
+	public void testSessionClose() {
+		Session session = ORMService.getInstance().getSessionForContext( context );
+		// @formatter:off
+		instance.executeSource(
+			"""
+				ormCloseSession();
+			""",
+			context
+		);
+		// @formatter:on
+
+		assertFalse( session.isOpen() );
 	}
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can close the session on the named datasource" )
 	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testSessionCloseOnNamedDatasource() {
+		Session session = ORMService.getInstance().getSessionForContext( context, alternateDataSource.getConfiguration().name );
+		// @formatter:off
+		instance.executeSource(
+			"""
+				ormCloseSession( "dsn2" );
+			""",
+			context
+		);
+		// @formatter:on
+
+		assertFalse( session.isOpen() );
 	}
 
 }
