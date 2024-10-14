@@ -54,6 +54,7 @@ public class BoxClassInstantiator implements Instantiator {
 		    entityMetamodel.getName() );
 		this.entityName			= mappingInfo.getEntityName();
 		if ( mappingInfo.hasSubclasses() ) {
+			@SuppressWarnings( "unchecked" )
 			Iterator<PersistentClass> itr = mappingInfo.getSubclassClosureIterator();
 			while ( itr.hasNext() ) {
 				final PersistentClass subclassInfo = itr.next();

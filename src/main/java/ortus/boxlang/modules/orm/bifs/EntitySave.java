@@ -45,6 +45,7 @@ public class EntitySave extends BIF {
 		Session			session		= ORMService.getInstance().getSessionForContext( context );
 		// @TODO: Implement forceinsert
 		IClassRunnable	entity		= ( IClassRunnable ) arguments.get( ORMKeys.entity );
+		// @TODO: Should we look up the EntityRecord and use that to grab the class name?
 		String			entityName	= getClassNameFromFQN( entity.getName().getName() );
 		IStruct			annotations	= entity.getAnnotations();
 		if ( annotations.containsKey( ORMKeys.entity ) && !annotations.getAsString( ORMKeys.entity ).isBlank() ) {
@@ -52,7 +53,6 @@ public class EntitySave extends BIF {
 		} else if ( annotations.containsKey( ORMKeys.entityName ) && !annotations.getAsString( ORMKeys.entityName ).isBlank() ) {
 			entityName = annotations.getAsString( ORMKeys.entityName );
 		}
-		// throw new UnsupportedOperationException( entityName );
 		session.save( entityName, entity );
 
 		return null;
