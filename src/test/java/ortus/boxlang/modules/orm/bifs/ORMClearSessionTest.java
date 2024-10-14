@@ -1,54 +1,55 @@
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import java.nio.file.Path;
-
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.hibernate.Session;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
-import ortus.boxlang.runtime.scopes.IScope;
-import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.scopes.VariablesScope;
+import ortus.boxlang.modules.orm.ORMService;
+import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
-public class ORMClearSessionTest {
+public class ORMClearSessionTest extends BaseORMTest {
 
-	static BoxRuntime	instance;
-	IBoxContext			context;
-	IScope				variables;
-	static Key			result	= new Key( "result" );
-
-	@BeforeAll
-	public static void setUp() {
-		instance = BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
-	}
-
-	@BeforeEach
-	public void setupEach() {
-		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		variables	= context.getScopeNearby( VariablesScope.name );
-	}
-
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can clear the session for the default datasource" )
 	@Test
-	public void testExampleBIF() {
-		instance.executeSource( "result = ORMFlush()", context );
-		assertEquals( "Hello from an ORMFlush!", variables.get( result ) );
+	public void testSessionClear() {
+		Session session = ORMService.getInstance().getSessionForContext( context );
+
+		instance.executeSource(
+		    """
+		        result = entityNew( "Manufacturer", { name : "Bugatti Automobiles", address : "101 Bugatti Way" } );
+		        entitySave( result );
+		    """,
+		    context
+		);
+		assertTrue( session.contains( variables.get( result ) ) );
+
+		instance.executeSource( "ormClearSession();", context );
+
+		assertFalse( session.contains( variables.get( result ) ) );
 	}
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@Disabled( "Test fails due to a mismatch between the alternate datasource and the default datasource used in the entity save. We need to update our test entities to use alternate datasources, then also update the BIF methods to use the correct session for the entity datasource - not the default datasource" )
+	@DisplayName( "It can clear the session on a named (alternate) datasource" )
 	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testSessionClearOnNamedDatasource() {
+		Session session = ORMService.getInstance().getSessionForContext( context, alternateDataSource.getConfiguration().name );
+
+		instance.executeSource(
+		    """
+		    	result = entityNew( "Manufacturer", { name : "Bugatti Automobiles", address : "101 Bugatti Way" } );
+		        entitySave( result );
+		    """,
+		    context
+		);
+		assertTrue( session.contains( variables.get( result ) ) );
+
+		instance.executeSource( "ormClearSession( 'dsn2' );", context );
+
+		assertFalse( session.contains( variables.get( result ) ) );
 	}
 
 }

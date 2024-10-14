@@ -27,7 +27,7 @@ public class ORMCloseSessionTest extends BaseORMTest {
 		assertFalse( session.isOpen() );
 	}
 
-	@DisplayName( "It can close the session on the named datasource" )
+	@DisplayName( "It can close the session on a named (alternate) datasource" )
 	@Test
 	public void testSessionCloseOnNamedDatasource() {
 		Session session = ORMService.getInstance().getSessionForContext( context, alternateDataSource.getConfiguration().name );

@@ -34,7 +34,7 @@ public class ORMCloseSession extends BIF {
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 * 
-	 * @argument.datasource The datasource to close the session for. If not provided, the default datasource will be used.
+	 * @argument.datasource The datasource on which to close the current session. If not provided, the default datasource will be used.
 	 * 
 	 * @return null.
 	 */
