@@ -3,11 +3,13 @@ package ortus.boxlang.modules.orm;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -125,5 +127,29 @@ public class SessionFactoryBuilderTest {
 
 		assertNotNull( key );
 		assertEquals( "BXORMTest_" + context.getConfig().hashCode() + "_" + datasource.getUniqueName().getName(), key.getName() );
+	}
+
+	@Disabled
+	@DisplayName( "It can lookup entities by entity name" )
+	@Test
+	public void testEntityLookup() {
+		List<EntityRecord>	entities		= List
+		    .of(
+		        new EntityRecord( "Auto", "models.Auto", Struct.EMPTY, "default" )
+		            .setXmlFilePath( Path.of( "src/test/resources/app/models/Auto.hbm.xml" ).toAbsolutePath() ),
+		        new EntityRecord( "Vehicle", "models.Vehicle", Struct.EMPTY, "default" )
+		            .setXmlFilePath( Path.of( "src/test/resources/app/models/Vehicle.hbm.xml" ).toAbsolutePath() )
+		    );
+		SessionFactory		sessionFactory	= new SessionFactoryBuilder( context, datasource, new ORMConfig( Struct.EMPTY ),
+		    entities ).build();
+		EntityRecord		foundEntity		= SessionFactoryBuilder.lookupEntity( sessionFactory, "Auto" );
+
+		assertNotNull( foundEntity );
+		assertEquals( "Auto", foundEntity.getEntityName() );
+
+		EntityRecord foundEntityByLowercaseName = SessionFactoryBuilder.lookupEntity( sessionFactory, "auto " );
+
+		assertNotNull( foundEntityByLowercaseName );
+		assertEquals( "Auto", foundEntityByLowercaseName.getEntityName() );
 	}
 }

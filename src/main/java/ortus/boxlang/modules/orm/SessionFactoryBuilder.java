@@ -22,6 +22,7 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 public class SessionFactoryBuilder {
 
@@ -62,9 +63,16 @@ public class SessionFactoryBuilder {
 	 * @return The BoxLang entityRecord defining the entity name, filepath, FQN, and mapping xml file path
 	 */
 	public static EntityRecord lookupEntity( SessionFactory sessionFactory, String entityName ) {
-		Map<String, EntityRecord> entityMap = ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
+		String						lookup		= entityName.trim().toLowerCase();
+		@SuppressWarnings( "unchecked" )
+		Map<String, EntityRecord>	entityMap	= ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
+		if ( !entityMap.containsKey( lookup ) ) {
+			logger.warn( "Entity {} not found in entity map.", entityName );
+			// @TODO: Catch this in calling code and silence if ormConfig.skipParseErrors is true.
+			throw new BoxRuntimeException( "Entity " + entityName + " not found in entity map." );
+		}
 
-		return entityMap.get( entityName );
+		return entityMap.get( lookup );
 	}
 
 	public static EntityRecord lookupEntity( Session session, String entityName ) {
@@ -169,7 +177,7 @@ public class SessionFactoryBuilder {
 		configuration.setProperty( AvailableSettings.DEFAULT_ENTITY_MODE, "dynamic-map" );
 
 		Map<String, EntityRecord> entityMap = this.entities.stream()
-		    .collect( java.util.stream.Collectors.toMap( EntityRecord::getEntityName, ( entity ) -> entity ) );
+		    .collect( java.util.stream.Collectors.toMap( ( entity ) -> entity.getEntityName().toLowerCase().trim(), ( entity ) -> entity ) );
 		properties.put( BOXLANG_ENTITY_MAP, entityMap );
 
 		entityMap.values()

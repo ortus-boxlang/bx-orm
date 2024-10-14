@@ -33,8 +33,9 @@ public class EntityRecord {
 		this.className = fqn[ fqn.length - 1 ];
 	}
 
-	public void setXmlFilePath( Path xmlFilePath ) {
+	public EntityRecord setXmlFilePath( Path xmlFilePath ) {
 		this.xmlFilePath = xmlFilePath;
+		return this;
 	}
 
 	public EntityRecord setMetadata( IStruct metadata ) {
