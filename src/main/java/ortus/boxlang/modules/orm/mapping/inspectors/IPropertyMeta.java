@@ -16,6 +16,11 @@ public interface IPropertyMeta {
 	 */
 	public String getName();
 
+	/**
+	 * Get the entity metadata for the entity which contains this property.
+	 */
+	public IEntityMeta getDefiningEntity();
+
 	public boolean isImmutable();
 
 	public boolean isOptimisticLock();

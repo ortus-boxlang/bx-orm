@@ -56,7 +56,7 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 											    return !annotations.containsKey( ORMKeys.persistent )
 											        || BooleanCaster.cast( annotations.get( ORMKeys.persistent ), false );
 										    } )
-		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop ) )
+		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop, this ) )
 		    .collect( Collectors.toList() );
 
 		this.idProperties				= this.allPersistentProperties.stream()

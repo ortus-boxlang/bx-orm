@@ -12,6 +12,7 @@ import ortus.boxlang.runtime.types.IStruct;
 public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
 	protected IStruct				meta;
+	protected IEntityMeta			definingEntity;
 	protected IStruct				annotations;
 
 	/**
@@ -34,9 +35,10 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
 	protected final static Logger	logger				= LoggerFactory.getLogger( AbstractPropertyMeta.class );
 
-	public AbstractPropertyMeta( String entityName, IStruct meta ) {
+	public AbstractPropertyMeta( String entityName, IStruct meta, IEntityMeta definingEntity ) {
 		this.entityName		= entityName;
 		this.meta			= meta;
+		this.definingEntity	= definingEntity;
 		this.annotations	= this.meta.getAsStruct( Key.annotations );
 		this.name			= this.meta.getAsString( Key._NAME );
 		this.column			= parseColumnAnnotations( this.annotations );
@@ -56,6 +58,13 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.annotations.putIfAbsent( ORMKeys.ORMType, annotations.getOrDefault( Key.type, "string" ) );
 		this.ormType = annotations.getAsString( ORMKeys.ORMType );
 
+	}
+
+	/**
+	 * Get the entity metadata for the entity which contains this property.
+	 */
+	public IEntityMeta getDefiningEntity() {
+		return this.definingEntity;
 	}
 
 	/**

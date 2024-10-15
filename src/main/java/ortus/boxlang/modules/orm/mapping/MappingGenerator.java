@@ -379,7 +379,7 @@ public class MappingGenerator {
 			IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 			entity.setEntityMeta( entityMeta );
 
-			Document			doc			= new HibernateXMLWriter( entityMeta, this::entityLookup ).generateXML();
+			Document			doc			= new HibernateXMLWriter( entityMeta, this::entityLookup, !this.config.ignoreParseErrors ).generateXML();
 
 			TransformerFactory	tf			= TransformerFactory.newInstance();
 			Transformer			transformer	= tf.newTransformer();

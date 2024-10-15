@@ -8,8 +8,8 @@ import ortus.boxlang.runtime.types.Struct;
 
 public class ModernPropertyMeta extends AbstractPropertyMeta {
 
-	public ModernPropertyMeta( String entityName, IStruct meta ) {
-		super( entityName, meta );
+	public ModernPropertyMeta( String entityName, IStruct meta, IEntityMeta definingEntity ) {
+		super( entityName, meta, definingEntity );
 
 		if ( this.annotations.containsKey( Key.version ) ) {
 			this.fieldType = FIELDTYPE.VERSION;

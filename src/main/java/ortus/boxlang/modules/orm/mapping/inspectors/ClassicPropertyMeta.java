@@ -12,8 +12,8 @@ import ortus.boxlang.runtime.types.util.JSONUtil;
 
 public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
-	public ClassicPropertyMeta( String entityName, IStruct meta ) {
-		super( entityName, meta );
+	public ClassicPropertyMeta( String entityName, IStruct meta, IEntityMeta definingEntity ) {
+		super( entityName, meta, definingEntity );
 
 		annotations.putIfAbsent( ORMKeys.fieldtype, "column" );
 		if ( this.fieldType == null ) {

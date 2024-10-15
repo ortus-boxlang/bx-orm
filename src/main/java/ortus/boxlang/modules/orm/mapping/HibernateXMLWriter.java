@@ -52,13 +52,23 @@ public class HibernateXMLWriter {
 	 */
 	BiFunction<String, String, EntityRecord>	lookupEntityByClassName;
 
+	/**
+	 * Whether to throw an exception when an error occurs during XML generation.
+	 */
+	boolean										throwOnErrors;
+
 	public HibernateXMLWriter( IEntityMeta entity ) {
-		this( entity, null );
+		this( entity, null, true );
 	}
 
 	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, String, EntityRecord> lookupEntityByClassName ) {
+		this( entity, lookupEntityByClassName, true );
+	}
+
+	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, String, EntityRecord> lookupEntityByClassName, boolean throwOnErrors ) {
 		this.entity						= entity;
 		this.lookupEntityByClassName	= lookupEntityByClassName;
+		this.throwOnErrors				= throwOnErrors;
 
 		// Validation
 		if ( entity.getIdProperties().isEmpty() ) {
@@ -186,7 +196,7 @@ public class HibernateXMLWriter {
 			toManyNode.setAttribute( "column", association.getAsString( ORMKeys.inverseJoinColumn ) );
 		}
 		if ( association.containsKey( Key._CLASS ) ) {
-			setEntityName( toManyNode, association.getAsString( Key._CLASS ) );
+			setEntityName( toManyNode, association.getAsString( Key._CLASS ), prop );
 		}
 		collectionNode.appendChild( toManyNode );
 		return collectionNode;
@@ -279,7 +289,7 @@ public class HibernateXMLWriter {
 		Element	theNode		= this.document.createElement( type );
 
 		if ( association.containsKey( Key._CLASS ) ) {
-			setEntityName( theNode, association.getAsString( Key._CLASS ) );
+			setEntityName( theNode, association.getAsString( Key._CLASS ), prop );
 		}
 
 		List<Key> stringProperties = List.of( Key._NAME, ORMKeys.cascade, ORMKeys.fetch, ORMKeys.mappedBy, ORMKeys.access,
@@ -665,17 +675,20 @@ public class HibernateXMLWriter {
 	 * 
 	 * @param theNode           XML node onw hich to populate entity-name attribute
 	 * @param relationClassName Class name of the associated entity. If null or empty, this method will do nothing.
+	 * @param prop              Property metadata, used for log messages if the entity lookup fails.
 	 */
-	private void setEntityName( Element theNode, String relationClassName ) {
+	private void setEntityName( Element theNode, String relationClassName, IPropertyMeta prop ) {
 		if ( relationClassName == null || relationClassName.isBlank() ) {
 			return;
 		}
 		EntityRecord associatedEntity = lookupEntityByClassName.apply( relationClassName, this.entity.getDatasource() );
 		if ( associatedEntity == null ) {
-			// @TODO: Add entity name and property name to error message for MUCH easier
-			logger.error( "Could not find entity metadata for class: {}", relationClassName );
-			// @TODO: Check ORMConfig.ignoreParseErrors and only throw if false.
-			throw new BoxRuntimeException( "Could not find entity metadata for class: " + relationClassName );
+			String message = String.format( "Could not find entity '%s' referenced in property '%s' on entity '%s'", relationClassName, prop.getName(),
+			    prop.getDefiningEntity().getEntityName() );
+			logger.error( message );
+			if ( this.throwOnErrors ) {
+				throw new BoxRuntimeException( message );
+			}
 		}
 		theNode.setAttribute( "entity-name", associatedEntity.getEntityName() );
 	}
