@@ -7,15 +7,18 @@ import org.hibernate.Session;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.hibernate.BoxClassInstantiator;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
+import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.loader.ClassLocator;
-import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
@@ -41,22 +44,11 @@ public class EntityNew extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session		= ORMService.getInstance().getSessionForContext( context );
-		String			bxClassFQN	= SessionFactoryBuilder.lookupEntity( session, arguments.getAsString( ORMKeys.entityName ) )
-		    .getClassFQN();
+		Session			session			= ORMService.getInstance().getSessionForContext( context );
+		EntityRecord	entityRecord	= SessionFactoryBuilder.lookupEntity( session, arguments.getAsString( ORMKeys.entityName ) );
+		IStruct			properties		= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 
-		IClassRunnable	entity		= ( IClassRunnable ) classLocator.load( context, bxClassFQN, "bx" )
-		    .invokeConstructor( context )
-		    .unWrapBoxLangClass();
-
-		if ( arguments.containsKey( Key.properties ) ) {
-			IStruct properties = arguments.getAsStruct( Key.properties );
-			if ( properties != null && properties.size() > 0 ) {
-				entity.getVariablesScope().putAll( properties );
-			}
-		}
-
-		return entity;
+		return BoxClassInstantiator.instantiate( context.getParentOfType( ApplicationBoxContext.class ), entityRecord, properties );
 	}
 
 }

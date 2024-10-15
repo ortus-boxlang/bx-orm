@@ -18,7 +18,6 @@ class entityName="Vehicle" table="vehicles" persistent="true" {
 
     property 
         name="manufacturer" 
-        type="string"
         fieldtype="one-to-one"
         cfc="Manufacturer"
         fkcolumn="FK_manufacturer"

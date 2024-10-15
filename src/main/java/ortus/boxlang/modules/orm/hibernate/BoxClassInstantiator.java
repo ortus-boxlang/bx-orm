@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
-import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
@@ -37,15 +37,56 @@ import ortus.boxlang.runtime.validation.Validator;
  */
 public class BoxClassInstantiator implements Instantiator {
 
-	Logger					logger				= LoggerFactory.getLogger( BoxClassInstantiator.class );
+	public static final Logger	logger				= LoggerFactory.getLogger( BoxClassInstantiator.class );
 
-	private EntityMetamodel	entityMetamodel;
-	private PersistentClass	mappingInfo;
-	private String			entityName;
-	private EntityRecord	entityRecord;
-	private List<String>	subclassClassNames	= new ArrayList<>();
+	private EntityMetamodel		entityMetamodel;
+	private PersistentClass		mappingInfo;
+	private String				entityName;
+	private EntityRecord		entityRecord;
+	private List<String>		subclassClassNames	= new ArrayList<>();
 
-	private ClassLocator	classLocator		= ClassLocator.getInstance();
+	public static IClassRunnable instantiate( ApplicationBoxContext context, EntityRecord entityRecord, IStruct properties ) {
+		IClassRunnable theEntity = ( IClassRunnable ) ClassLocator.getInstance().load( context, entityRecord.getClassFQN(), "bx" )
+		    .invokeConstructor( context )
+		    .unWrapBoxLangClass();
+
+		entityRecord.getEntityMeta().getAssociations().stream()
+		    .forEach( prop -> {
+			    IStruct association	= prop.getAssociation();
+			    String methodName	= association.getAsString( Key._NAME );
+			    String collectionType = association.getAsString( ORMKeys.collectionType );
+			    if ( association.containsKey( ORMKeys.singularName ) ) {
+				    methodName = association.getAsString( ORMKeys.singularName );
+			    }
+			    methodName = methodName.substring( 0, 1 ).toUpperCase() + methodName.substring( 1 );
+			    BoxClassInstantiator.logger.error( "Adding 'has{}' methods for property '{}' on entity '{}", methodName, prop.getName(),
+			        entityRecord.getEntityName() );
+
+			    // add has to THIS scope
+			    DynamicFunction hasUDF = BoxClassInstantiator.getHasMethod( methodName, collectionType );
+			    theEntity.put( hasUDF.getName(), hasUDF );
+
+			    if ( association.containsKey( ORMKeys.collectionType ) ) {
+				    BoxClassInstantiator.logger.error( "Adding 'add{}' method for property '{}' on entity '{}", methodName, prop.getName(),
+				        entityRecord.getEntityName() );
+				    // add add (for to-many associations)
+				    DynamicFunction addUDF = BoxClassInstantiator.getAddMethod( methodName, collectionType, association );
+				    theEntity.put( addUDF.getName(), addUDF );
+
+				    // add remove (for to-many associations)
+				    BoxClassInstantiator.logger.error( "Adding 'remove{}' method for property '{}' on entity '{}", methodName, prop.getName(),
+				        entityRecord.getEntityName() );
+				    DynamicFunction removeUDF = BoxClassInstantiator.getRemoveMethod( methodName, collectionType, association );
+				    theEntity.put( removeUDF.getName(), removeUDF );
+			    }
+		    } );
+
+		if ( properties != null && !properties.isEmpty() ) {
+			theEntity.getVariablesScope().putAll( properties );
+		}
+
+		return theEntity;
+	}
 
 	public BoxClassInstantiator( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
 		this.entityMetamodel	= entityMetamodel;
@@ -65,42 +106,8 @@ public class BoxClassInstantiator implements Instantiator {
 
 	@Override
 	public Object instantiate( Serializable id ) {
-		String			bxClassFQN	= entityRecord.getClassFQN();
-		IBoxContext		appContext	= SessionFactoryBuilder
-		    .getApplicationContext( entityMetamodel.getSessionFactory() );
-
-		IClassRunnable	theEntity	= ( IClassRunnable ) classLocator.load( appContext, bxClassFQN, "bx" )
-		    .invokeConstructor( appContext )
-		    .unWrapBoxLangClass();
-
-		entityRecord.getEntityMeta().getAssociations().stream()
-		    .forEach( prop -> {
-			    IStruct association	= prop.getAssociation();
-			    String methodName	= association.getAsString( Key._NAME );
-			    String collectionType = association.getAsString( ORMKeys.collectionType );
-			    if ( association.containsKey( ORMKeys.singularName ) ) {
-				    methodName = association.getAsString( ORMKeys.singularName );
-			    }
-			    logger.trace( "Adding 'has{}' methods for property: {} on entity {}", methodName, prop.getName(), this.entityMetamodel.getName() );
-
-			    // add has to THIS scope
-			    DynamicFunction hasUDF = getHasMethod( methodName, collectionType );
-			    theEntity.put( hasUDF.getName(), hasUDF );
-
-			    if ( association.containsKey( ORMKeys.collectionType ) ) {
-				    logger.trace( "Adding 'add{}' method for property: {} on entity {}", methodName, prop.getName(), this.entityMetamodel.getName() );
-				    // add add (for to-many associations)
-				    DynamicFunction addUDF = getAddMethod( methodName, collectionType, association );
-				    theEntity.put( addUDF.getName(), addUDF );
-
-				    // add remove (for to-many associations)
-				    logger.trace( "Adding 'remove{}' method for property: {} on entity {}", methodName, prop.getName(), this.entityMetamodel.getName() );
-				    DynamicFunction removeUDF = getRemoveMethod( methodName, collectionType, association );
-				    theEntity.put( removeUDF.getName(), removeUDF );
-			    }
-		    } );
-
-		return theEntity;
+		return BoxClassInstantiator.instantiate( SessionFactoryBuilder
+		    .getApplicationContext( entityMetamodel.getSessionFactory() ), entityRecord, null );
 	}
 
 	@Override
@@ -134,7 +141,7 @@ public class BoxClassInstantiator implements Instantiator {
 	 * 
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	private DynamicFunction getHasMethod( String associationName, String collectionType ) {
+	public static DynamicFunction getHasMethod( String associationName, String collectionType ) {
 		return new DynamicFunction(
 		    Key.of( "has" + associationName ),
 		    ( context, function ) -> {
@@ -161,7 +168,7 @@ public class BoxClassInstantiator implements Instantiator {
 	 * 
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	private DynamicFunction getAddMethod( String associationName, String collectionType, IStruct associationMeta ) {
+	public static DynamicFunction getAddMethod( String associationName, String collectionType, IStruct associationMeta ) {
 		Key collectionKey = Key.of( associationName );
 		return new DynamicFunction(
 		    Key.of( "add" + associationName ),
@@ -212,7 +219,7 @@ public class BoxClassInstantiator implements Instantiator {
 	 * 
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	private DynamicFunction getRemoveMethod( String associationName, String collectionType, IStruct associationMeta ) {
+	public static DynamicFunction getRemoveMethod( String associationName, String collectionType, IStruct associationMeta ) {
 		Key collectionKey = Key.of( associationName );
 		return new DynamicFunction(
 		    Key.of( "remove" + associationName ),
