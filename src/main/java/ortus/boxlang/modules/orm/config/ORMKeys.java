@@ -52,6 +52,7 @@ public class ORMKeys {
 	/**
 	 * Entity annotations
 	 */
+	public static final Key	mappedSuperClass		= Key.of( "mappedSuperClass" );
 	public static final Key	entityName				= Key.of( "entityName" );
 	public static final Key	cacheUse				= Key.of( "cacheUse" );
 	public static final Key	cacheName				= Key.of( "cacheName" );

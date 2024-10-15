@@ -91,18 +91,33 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.selectBeforeUpdate, false ) );
 
 		this.associations			= new ArrayList<>();
-		this.allProperties			= this.meta.getAsArray( Key.properties );
+		this.allProperties			= new Array();
 
 		// Parse extended entity metadata
 		this.parentMeta				= this.isExtended
 		    ? this.meta.getAsStruct( Key._EXTENDS )
 		    : Struct.EMPTY;
 
+		// @TODO: We need to reimplement or rethink this to work recursively upwards. i.e., this current logic only works for one level of inheritance. :/
 		if ( this.isExtended ) {
-			// Copy parent properties into the allProperties array
-			this.allProperties.addAll( this.parentMeta.getAsArray( Key.properties ) );
+			IStruct	parentAnnotations			= this.parentMeta.getAsStruct( Key.annotations );
+			// @Entity
+			boolean	isParentPersistent			= parentAnnotations.containsKey( ORMKeys.entity )
+			    // persistent="false"
+			    || ( parentAnnotations.containsKey( ORMKeys.persistent )
+			        && BooleanCaster.cast( parentAnnotations.getOrDefault( ORMKeys.persistent, false ) ) );
+			// @mappedSuperClass
+			boolean	isParentMappedSuperClass	= parentAnnotations.containsKey( ORMKeys.mappedSuperClass )
+			    // Default to true to support @mappedSuperClass without a value. Otherwise, mappedSuperClass=false will be parsed as boolean.
+			    && BooleanCaster.cast( parentAnnotations.getOrDefault( ORMKeys.mappedSuperClass, true ) );
+
+			if ( !isParentPersistent && isParentMappedSuperClass ) {
+				this.allProperties.addAll( this.parentMeta.getAsArray( Key.properties ) );
+			}
 		}
 
+		// Only add the current entity's properties after first adding any parent properties.
+		this.allProperties.addAll( this.meta.getAsArray( Key.properties ) );
 	}
 
 	/**
