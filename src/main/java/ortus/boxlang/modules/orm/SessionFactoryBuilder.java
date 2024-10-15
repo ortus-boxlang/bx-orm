@@ -29,6 +29,7 @@ public class SessionFactoryBuilder {
 	public static final String		BOXLANG_APPLICATION_CONTEXT	= "BOXLANG_APPLICATION_CONTEXT";
 	public static final String		BOXLANG_CONTEXT				= "BOXLANG_CONTEXT";
 	public static final String		BOXLANG_ENTITY_MAP			= "BOXLANG_ENTITY_MAP";
+	public static final String		BOXLANG_EVENT_LISTENER		= "BOXLANG_EVENT_LISTENER";
 
 	/**
 	 * The logger for this class. We may log warnings or errors if we encounter
@@ -149,6 +150,7 @@ public class SessionFactoryBuilder {
 		factory.getProperties().put( BOXLANG_APPLICATION_CONTEXT, configuration.getProperties().get( BOXLANG_APPLICATION_CONTEXT ) );
 		factory.getProperties().put( BOXLANG_CONTEXT, configuration.getProperties().get( BOXLANG_CONTEXT ) );
 		factory.getProperties().put( BOXLANG_ENTITY_MAP, configuration.getProperties().get( BOXLANG_ENTITY_MAP ) );
+		factory.getProperties().put( BOXLANG_EVENT_LISTENER, this.ormConfig.eventHandler );
 
 		return factory;
 	}

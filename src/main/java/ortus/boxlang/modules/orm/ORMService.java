@@ -116,8 +116,6 @@ public class ORMService implements IService {
 		Map<String, List<EntityRecord>>	entityDatasources	= discoverEntities( context, config );
 		logger.debug( "Discovered entities on {} datasources:", entityDatasources.size() );
 
-		// @TODO: this list should be populated from the populated EntityRecord classes plus the ORMConfig's datasource setting as the default.
-		// List<DataSource> datasources = List.of( datasource );
 		entityDatasources.forEach( ( datasourceName, entities ) -> {
 			logger.debug( "Creating session factory for datasource: {}", datasourceName );
 			DataSource				datasource	= context.getConnectionManager().getDatasourceOrThrow( Key.of( datasourceName ) );

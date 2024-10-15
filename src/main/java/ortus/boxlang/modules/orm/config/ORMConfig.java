@@ -1,10 +1,11 @@
 package ortus.boxlang.modules.orm.config;
 
 import java.io.File;
-import java.nio.file.Paths;
 import java.util.Arrays;
 
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
+import org.hibernate.boot.registry.BootstrapServiceRegistry;
+import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.tool.schema.Action;
@@ -13,13 +14,13 @@ import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.config.naming.BoxLangClassNamingStrategy;
 import ortus.boxlang.modules.orm.config.naming.MacroCaseNamingStrategy;
+import ortus.boxlang.modules.orm.hibernate.BoxClassInstantiator;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
-import ortus.boxlang.runtime.runnables.IBoxRunnable;
-import ortus.boxlang.runtime.runnables.RunnableLoader;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
-import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 public class ORMConfig {
 
@@ -199,9 +200,15 @@ public class ORMConfig {
 	public boolean				useDBForMapping			= false;
 
 	/**
+	 * Application context used for class lookups in naming strategies, event handlers, etc.
+	 */
+	private IBoxContext			appContext;
+
+	/**
 	 * Constructor
 	 */
 	public ORMConfig( IStruct properties ) {
+		this.appContext = BoxRuntime.getInstance().getRuntimeContext();
 		implementBackwardsCompatibility( properties );
 		process( properties );
 	}
@@ -368,7 +375,13 @@ public class ORMConfig {
 	 * properties.
 	 */
 	public Configuration toHibernateConfig() {
-		Configuration configuration = new Configuration();
+		IClassRunnable				eventHandlerClass	= this.eventHandler != null
+		    ? BoxClassInstantiator.instantiateByFQN( this.appContext, this.eventHandler )
+		    : null;
+		BootstrapServiceRegistry	bootstrapRegistry	= new BootstrapServiceRegistryBuilder()
+		    .applyIntegrator( new EventListener( eventHandlerClass ) )
+		    .build();
+		Configuration				configuration		= new Configuration( bootstrapRegistry );
 
 		if ( this.dbcreate != null ) {
 			switch ( dbcreate ) {
@@ -474,21 +487,8 @@ public class ORMConfig {
 			 * The "cfc" naming strategy allows apps to define their own naming strategy by
 			 * providing a full CFC path.
 			 */
-			default -> new BoxLangClassNamingStrategy( loadBoxlangClassByPath( name ) );
+			default -> new BoxLangClassNamingStrategy( BoxClassInstantiator.instantiateByFQN( this.appContext, name ) );
 		};
-	}
-
-	/**
-	 * Load and instantiate the Boxlang class by its string path. Useful for using a
-	 * .bx class as a custom naming strategy.
-	 *
-	 * @param classPath The path to the Boxlang class, either slash or dot
-	 *                  delimited.
-	 */
-	private Class<IBoxRunnable> loadBoxlangClassByPath( String classPath ) {
-		String packageName = Paths.get( classPath ).getParent().toString().replace( "/", "." );
-		return RunnableLoader.getInstance().loadClass( ResolvedFilePath.of( Paths.get( classPath ) ),
-		    BoxRuntime.getInstance().getRuntimeContext() );
 	}
 
 	/**

@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
-import ortus.boxlang.runtime.context.ApplicationBoxContext;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
@@ -45,10 +45,14 @@ public class BoxClassInstantiator implements Instantiator {
 	private EntityRecord		entityRecord;
 	private List<String>		subclassClassNames	= new ArrayList<>();
 
-	public static IClassRunnable instantiate( ApplicationBoxContext context, EntityRecord entityRecord, IStruct properties ) {
-		IClassRunnable theEntity = ( IClassRunnable ) ClassLocator.getInstance().load( context, entityRecord.getClassFQN(), "bx" )
+	public static IClassRunnable instantiateByFQN( IBoxContext context, String fqn ) {
+		return ( IClassRunnable ) ClassLocator.getInstance().load( context, fqn, "bx" )
 		    .invokeConstructor( context )
 		    .unWrapBoxLangClass();
+	}
+
+	public static IClassRunnable instantiate( IBoxContext context, EntityRecord entityRecord, IStruct properties ) {
+		IClassRunnable theEntity = instantiateByFQN( context, entityRecord.getClassFQN() );
 
 		entityRecord.getEntityMeta().getAssociations().stream()
 		    .forEach( prop -> {

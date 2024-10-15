@@ -143,4 +143,24 @@ public class ORMKeys {
 	 * BIF argument keys
 	 */
 	public static final Key	forceinsert				= Key.of( "forceinsert" );
+
+	/**
+	 * ORM event keys
+	 */
+	public static final Key	event					= Key.of( "event" );
+	public static final Key	onPreLoad				= Key.of( "onPreLoad" );
+	public static final Key	onPostLoad				= Key.of( "onPostLoad" );
+	public static final Key	onEvict					= Key.of( "onEvict" );
+	public static final Key	onDirtyCheck			= Key.of( "onDirtyCheck" );
+	public static final Key	onDelete				= Key.of( "onDelete" );
+	public static final Key	onClear					= Key.of( "onClear" );
+	public static final Key	onAutoFlush				= Key.of( "onAutoFlush" );
+	public static final Key	onFlush					= Key.of( "onFlush" );
+	public static final Key	onPreInsert				= Key.of( "preInsert" );
+	public static final Key	onPreUpdate				= Key.of( "preUpdate" );
+	public static final Key	onPostDelete			= Key.of( "postDelete" );
+	public static final Key	onPreDelete				= Key.of( "preDelete" );
+	public static final Key	onPostUpdate			= Key.of( "postUpdate" );
+	public static final Key	onPostInsert			= Key.of( "postInsert" );
+	public static final Key	oldData					= Key.of( "oldData" );
 }
