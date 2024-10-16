@@ -1,29 +1,30 @@
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.types.Array;
 import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
 public class EntityNameArrayTest extends BaseORMTest {
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It returns an array of entity names" )
 	@Test
-	public void testExampleBIF() {
-		instance.executeSource( "result = ORMFlush()", context );
-		assertEquals( "Hello from an ORMFlush!", variables.get( result ) );
+	public void testEntityNameArray() {
+		instance.executeSource( "result = entityNameArray()", context );
+		assertInstanceOf( Array.class, variables.get( result ) );
+		assertTrue( Array.of( "Manufacturer", "Vehicle" ).equals( variables.getAsArray( result ) ) );
 	}
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can get entities for a custom datasource name" )
 	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testEntityNameArrayWithCustomDatasource() {
+		instance.executeSource( "result = entityNameArray( datasource = 'dsn2' )", context );
+		assertInstanceOf( Array.class, variables.get( result ) );
+		// @TODO: Set up other entities for the alternate datasource.
+		assertTrue( Array.of( "Manufacturer", "Vehicle" ).equals( variables.getAsArray( result ) ) );
 	}
-
 }

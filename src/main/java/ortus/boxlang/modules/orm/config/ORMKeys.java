@@ -143,6 +143,7 @@ public class ORMKeys {
 	 * BIF argument keys
 	 */
 	public static final Key	forceinsert				= Key.of( "forceinsert" );
+	public static final Key	entityNameList			= Key.of( "entityNameList" );
 
 	/**
 	 * ORM event keys
