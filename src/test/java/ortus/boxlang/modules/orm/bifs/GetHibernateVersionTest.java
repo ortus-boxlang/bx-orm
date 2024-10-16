@@ -2,11 +2,8 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.nio.file.Path;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +23,7 @@ public class GetHibernateVersionTest {
 
 	@BeforeAll
 	public static void setUp() {
-		instance = BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
+		instance = BoxRuntime.getInstance( true );
 	}
 
 	@BeforeEach
@@ -35,7 +32,6 @@ public class GetHibernateVersionTest {
 		variables	= context.getScopeNearby( VariablesScope.name );
 	}
 
-	@Disabled( "Not working; please revisit." )
 	@DisplayName( "It can get the hibernate version" )
 	@Test
 	public void testGetHibernateVersion() {
