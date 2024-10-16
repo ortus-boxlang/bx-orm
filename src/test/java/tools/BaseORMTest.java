@@ -163,6 +163,7 @@ public class BaseORMTest {
 
 		if ( alternateDataSource == null ) {
 			// constrct a second datasource
+			// @TODO: Set up other entities for the alternate datasource.
 			alternateDataSource = DataSource.fromStruct( "dsn2", Struct.of(
 			    "database", "dsn2",
 			    "driver", "derby",
@@ -176,6 +177,7 @@ public class BaseORMTest {
 			ORMConfig						config				= new ORMConfig( Struct.of(
 			    "datasource", "dsn2"
 			) );
+			// @TODO: Set up other entities for the alternate datasource.
 			Map<String, List<EntityRecord>>	entities			= ORMService.discoverEntities( context, config );
 			SessionFactoryBuilder			alternateBuilder	= new SessionFactoryBuilder(
 			    context,

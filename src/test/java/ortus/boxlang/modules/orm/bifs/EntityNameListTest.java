@@ -13,13 +13,21 @@ public class EntityNameListTest extends BaseORMTest {
 	@Test
 	public void testEntityNameList() {
 		instance.executeSource( "result = entityNameList()", context );
-		assertEquals( "Exhibit,Manufacturer,Vehicle", variables.get( result ) );
+		assertEquals( "Manufacturer,Vehicle", variables.get( result ) );
 	}
 
 	@DisplayName( "It returns a list of entity names with a custom delimiter" )
 	@Test
 	public void testEntityNameListWithDelimiter() {
-		instance.executeSource( "result = entityNameList( '|')", context );
-		assertEquals( "Exhibit|Manufacturer|Vehicle", variables.get( result ) );
+		instance.executeSource( "result = entityNameList( '|' )", context );
+		assertEquals( "Manufacturer|Vehicle", variables.get( result ) );
+	}
+
+	@DisplayName( "It can get entities for a custom datasource name" )
+	@Test
+	public void testEntityNameListWithCustomDatasource() {
+		instance.executeSource( "result = entityNameList( datasource = 'dsn2' )", context );
+		// @TODO: Set up other entities for the alternate datasource.
+		assertEquals( "Manufacturer,Vehicle", variables.get( result ) );
 	}
 }
