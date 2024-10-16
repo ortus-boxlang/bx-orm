@@ -13,7 +13,6 @@ import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
@@ -23,8 +22,6 @@ import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
 public class EntityNew extends BIF {
-
-	private ClassLocator classLocator = ClassLocator.getInstance();
 
 	/**
 	 * Constructor
