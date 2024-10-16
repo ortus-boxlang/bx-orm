@@ -63,10 +63,14 @@ public class EntityNameArray extends BIF {
 		SessionFactory	sessionFactory	= datasource != null
 		    ? ORMService.getInstance().getSessionFactoryForContextAndDataSource( context, datasource )
 		    : ORMService.getInstance().getSessionFactoryForContext( context );
+
 		Array			entityNames		= Array.fromList( SessionFactoryBuilder.getEntityMap( sessionFactory )
 		    .values()
 		    .stream()
 		    .map( entity -> entity.getEntityName() )
+		    // Sort alphabetically to ensure a consistent order. The order of entities in the entity map is not guaranteed, as it is a HashMap and is
+		    // populated in order of discovery.
+		    .sorted()
 		    .toList() );
 
 		return bifMethodKey.equals( ORMKeys.entityNameList ) ? ListUtil.asString( entityNames, delimiter ) : entityNames;
