@@ -83,7 +83,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertFalse( variables.getAsBoolean( Key.of( "hasVehicleAfterRemove" ) ) );
 	}
 
-	// @Disabled( "Lacking proper support for key types; aka, we've hardcoded integer types for now." )
 	@DisplayName( "It can load an entity by varchar key" )
 	@Test
 	public void testEntityLoadByVarcharKey() {

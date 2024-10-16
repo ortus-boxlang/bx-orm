@@ -269,9 +269,12 @@ public class ORMService implements IService {
 	/**
 	 * Set up custom log levels for the ORM engine.
 	 *
-	 * We can use this method or similar to adjust Hibernate logging levels and pipe them to a destination (log file) of choice.
+	 * @TODO: use this method or similar to adjust Hibernate logging levels and pipe them to a destination (log file) of choice.
 	 */
 	private void setupCustomLogLevels() {
+		ch.qos.logback.classic.Level ORMModuleLevel = ch.qos.logback.classic.Level.DEBUG;
+		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "ortus.boxlang.modules.orm" ) ).setLevel( ORMModuleLevel );
+
 		ch.qos.logback.classic.Level customLogLevel = ch.qos.logback.classic.Level.WARN;
 		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "com.zaxxer.hikari" ) ).setLevel( customLogLevel );
 		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "org.hibernate" ) ).setLevel( customLogLevel );

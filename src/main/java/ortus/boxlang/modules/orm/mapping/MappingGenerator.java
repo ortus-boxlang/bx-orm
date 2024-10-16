@@ -347,7 +347,7 @@ public class MappingGenerator {
 		    ? Path.of( path.replace( fileExt, ".hbm.xml" ) )
 		    : Path.of( this.saveDirectory, name + ".hbm.xml" );
 		try {
-			logger.info( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
+			logger.debug( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
 			String finalXML = generateXML( entity );
 			Files.write( xmlPath, !finalXML.isEmpty() ? finalXML.getBytes() : new byte[ 0 ] );
 

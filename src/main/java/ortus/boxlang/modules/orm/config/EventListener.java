@@ -245,13 +245,13 @@ public class EventListener
 
 	private void announceGlobalEvent( Key eventType, AbstractEvent event, IStruct args ) {
 		if ( globalListener != null && globalListener.containsKey( ORMKeys.onPreLoad ) ) {
-			logger.error( "Ready to invoke EventHandler.onPreLoad() with args {}", args.toString() );
+			logger.debug( "Ready to invoke EventHandler.onPreLoad() with args {}", args.toString() );
 		}
 	}
 
 	private void announceEntityEvent( Key eventType, IClassRunnable entity, IStruct args ) {
 		if ( entity.containsKey( ORMKeys.onPreLoad ) ) {
-			logger.error( "Ready to invoke entity.onPreLoad() with args {}", args.toString() );
+			logger.debug( "Ready to invoke entity.onPreLoad() with args {}", args.toString() );
 			// entity.dereferenceAndInvoke( context, ORMKeys.onPreLoad, args, false );
 		}
 	}

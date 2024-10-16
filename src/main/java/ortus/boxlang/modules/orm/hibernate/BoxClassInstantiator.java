@@ -63,7 +63,7 @@ public class BoxClassInstantiator implements Instantiator {
 				    methodName = association.getAsString( ORMKeys.singularName );
 			    }
 			    methodName = methodName.substring( 0, 1 ).toUpperCase() + methodName.substring( 1 );
-			    BoxClassInstantiator.logger.error( "Adding 'has{}' methods for property '{}' on entity '{}", methodName, prop.getName(),
+			    BoxClassInstantiator.logger.trace( "Adding 'has{}' methods for property '{}' on entity '{}", methodName, prop.getName(),
 			        entityRecord.getEntityName() );
 
 			    // add has to THIS scope
@@ -71,14 +71,14 @@ public class BoxClassInstantiator implements Instantiator {
 			    theEntity.put( hasUDF.getName(), hasUDF );
 
 			    if ( association.containsKey( ORMKeys.collectionType ) ) {
-				    BoxClassInstantiator.logger.error( "Adding 'add{}' method for property '{}' on entity '{}", methodName, prop.getName(),
+				    BoxClassInstantiator.logger.trace( "Adding 'add{}' method for property '{}' on entity '{}", methodName, prop.getName(),
 				        entityRecord.getEntityName() );
 				    // add add (for to-many associations)
 				    DynamicFunction addUDF = BoxClassInstantiator.getAddMethod( methodName, collectionType, association );
 				    theEntity.put( addUDF.getName(), addUDF );
 
 				    // add remove (for to-many associations)
-				    BoxClassInstantiator.logger.error( "Adding 'remove{}' method for property '{}' on entity '{}", methodName, prop.getName(),
+				    BoxClassInstantiator.logger.trace( "Adding 'remove{}' method for property '{}' on entity '{}", methodName, prop.getName(),
 				        entityRecord.getEntityName() );
 				    DynamicFunction removeUDF = BoxClassInstantiator.getRemoveMethod( methodName, collectionType, association );
 				    theEntity.put( removeUDF.getName(), removeUDF );

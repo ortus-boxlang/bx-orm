@@ -1,5 +1,6 @@
 package ortus.boxlang.modules.orm.interceptors;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.ORMService;
@@ -19,6 +20,8 @@ import ortus.boxlang.runtime.types.IStruct;
  */
 public class ApplicationLifecycle extends BaseInterceptor {
 
+	private static final Logger logger = LoggerFactory.getLogger( ApplicationLifecycle.class );
+
 	/**
 	 * This method is called by the BoxLang runtime to configure the interceptor
 	 * with a Struct of properties
@@ -27,8 +30,7 @@ public class ApplicationLifecycle extends BaseInterceptor {
 	 */
 	@Override
 	public void configure( IStruct properties ) {
-		this.properties	= properties;
-		this.logger		= LoggerFactory.getLogger( this.getClass() );
+		this.properties = properties;
 	}
 
 	/**
