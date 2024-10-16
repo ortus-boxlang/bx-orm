@@ -58,6 +58,22 @@ public class SessionFactoryBuilder {
 	/**
 	 * Lookup the BoxLang EntityRecord object containing known entity information for a given entity name.
 	 * 
+	 * @TODO: Move this into our Session wrapper class.
+	 * 
+	 * @param session    The Hibernate session
+	 * @param entityName The entity name to look up
+	 * 
+	 * @return
+	 */
+	public static EntityRecord lookupEntity( Session session, String entityName ) {
+		return lookupEntity( session.getSessionFactory(), entityName );
+	}
+
+	/**
+	 * Lookup the BoxLang EntityRecord object containing known entity information for a given entity name.
+	 * 
+	 * @TODO: Move this into our SessionFactory wrapper class.
+	 * 
 	 * @param sessionFactory The Hibernate session factory
 	 * @param entityName     The entity name to look up
 	 * 
@@ -79,14 +95,16 @@ public class SessionFactoryBuilder {
 	/**
 	 * Lookup the BoxLang EntityRecord object containing known entity information for a given CLASS name.
 	 * 
+	 * @TODO: Move this into our SessionFactory wrapper class.
+	 * 
 	 * @param sessionFactory The Hibernate session factory
 	 * @param entityName     The entity name to look up
 	 * 
 	 * @return The BoxLang entityRecord defining the entity name, filepath, FQN, and mapping xml file path
 	 */
+	@SuppressWarnings( "unchecked" )
 	public static EntityRecord lookupEntityByClassName( SessionFactory sessionFactory, String className ) {
 		String						lookup		= className.trim().toLowerCase();
-		@SuppressWarnings( "unchecked" )
 		Map<String, EntityRecord>	entityMap	= ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
 
 		return entityMap.values().stream()
@@ -100,12 +118,22 @@ public class SessionFactoryBuilder {
 		    } );
 	}
 
-	public static EntityRecord lookupEntity( Session session, String entityName ) {
-		return lookupEntity( session.getSessionFactory(), entityName );
+	/**
+	 * Get the entity map for this Hibernate session factory.
+	 * 
+	 * @TODO: Move this into our SessionFactory wrapper class.
+	 * 
+	 * @param sessionFactory The Hibernate session factory
+	 */
+	@SuppressWarnings( "unchecked" )
+	public static Map<String, EntityRecord> getEntityMap( SessionFactory sessionFactory ) {
+		return ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
 	}
 
 	/**
 	 * Get the application context tied to this Hibernate session factory.
+	 * 
+	 * @TODO: Move this into our SessionFactory wrapper class.
 	 * 
 	 * @param sessionFactory The Hibernate session factory
 	 */
@@ -123,7 +151,9 @@ public class SessionFactoryBuilder {
 	}
 
 	/**
-	 * Get a unique name for this session factory.
+	 * Get a unique name for this context's ORM Application.
+	 * 
+	 * Used to ensure we can tell the various ORM apps apart.
 	 * 
 	 * @return a unique key for the given context's application.
 	 */
