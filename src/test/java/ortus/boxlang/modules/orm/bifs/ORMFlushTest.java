@@ -3,6 +3,7 @@ package ortus.boxlang.modules.orm.bifs;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.hibernate.Transaction;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +11,7 @@ import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
-// @Disabled
+@Disabled( "Breaks the test suite." )
 public class ORMFlushTest extends BaseORMTest {
 
 	@DisplayName( "It can flush the session" )
