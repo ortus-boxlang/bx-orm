@@ -2,59 +2,41 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.nio.file.Path;
-
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
+import org.hibernate.Transaction;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
-import ortus.boxlang.runtime.scopes.IScope;
+import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.scopes.VariablesScope;
+import tools.BaseORMTest;
 
-@Disabled
-public class ORMFlushTest {
-
-	static BoxRuntime	instance;
-	IBoxContext			context;
-	IScope				variables;
-	static Key			result	= new Key( "result" );
-
-	@BeforeAll
-	public static void setUp() {
-		instance = BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
-	}
-
-	@BeforeEach
-	public void setupEach() {
-		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		variables	= context.getScopeNearby( VariablesScope.name );
-	}
+// @Disabled
+public class ORMFlushTest extends BaseORMTest {
 
 	@DisplayName( "It can flush the session" )
 	@Test
 	public void testORMFlush() {
+		// @TODO: Plan and implement ORM transaction management.
+		Transaction tx = ORMService.getInstance().getSessionForContext( context ).beginTransaction();
 		// @formatter:off
 		instance.executeSource(
 			"""
-				var manufacturer = entityNew( "Manufacturer" );
-				manufacturer.setRole( "CEO" );
-				entitySave( "manufacturer" );
-				result = queryExecute( "SELECT * FROM manufacturers" );
+				manufacturer = entityNew( "Manufacturer" );
+				manufacturer.setAddress( "101 Dodge Circle" ).setName( "Dodge" );
+				entitySave( manufacturer );
+				result = queryExecute( "SELECT * FROM manufacturers WHERE name='Dodge'" );
 				ormFlush();
-				result = queryExecute( "SELECT * FROM manufacturers" );
+				// ugh. This is a hack to close the transaction so we don't block the SELECT query.
+				ormGetSession().getTransaction().commit();
+				result2 = queryExecute( "SELECT * FROM manufacturers WHERE name='Dodge'" );
 			""",
 			context
 		);
 		// @formatter:on
-		assertEquals( 3, variables.getAsQuery( result ).size() );
-		assertEquals( 4, variables.getAsQuery( Key.of( "result2" ) ).size() );
-		assertEquals( "CEO", variables.get( result ) );
+		// tx.commit();
+		assertEquals( 0, variables.getAsQuery( result ).size() );
+		assertEquals( 1, variables.getAsQuery( Key.of( "result2" ) ).size() );
+		assertEquals( "101 Dodge Circle", variables.getAsQuery( Key.of( "result2" ) ).getRowAsStruct( 0 ).get( "address" ) );
 	}
 
 }
