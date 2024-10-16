@@ -67,7 +67,7 @@ public class BoxClassInstantiator implements Instantiator {
 			        entityRecord.getEntityName() );
 
 			    // add has to THIS scope
-			    DynamicFunction hasUDF = BoxClassInstantiator.getHasMethod( methodName, collectionType );
+			    DynamicFunction hasUDF = BoxClassInstantiator.getHasMethod( methodName, collectionType, association );
 			    theEntity.put( hasUDF.getName(), hasUDF );
 
 			    if ( association.containsKey( ORMKeys.collectionType ) ) {
@@ -142,10 +142,11 @@ public class BoxClassInstantiator implements Instantiator {
 	 * 
 	 * @param associationName The name of the association, like 'manufacturer' or 'vehicles'. Used to construct the method name.
 	 * @param collectionType  The type of collection, like 'bag' or 'map'.
+	 * @param associationMeta The metadata for the association.
 	 * 
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	public static DynamicFunction getHasMethod( String associationName, String collectionType ) {
+	public static DynamicFunction getHasMethod( String associationName, String collectionType, IStruct associationMeta ) {
 		return new DynamicFunction(
 		    Key.of( "has" + associationName ),
 		    ( context, function ) -> {
@@ -230,6 +231,14 @@ public class BoxClassInstantiator implements Instantiator {
 		    ( context, function ) -> {
 			    boolean		isArrayCollection	= collectionType == "bag";
 
+			    // @TODO: We just need the SessionFactory to get this working.
+			    // List<Key> keys = SessionFactoryBuilder.lookupEntityByClassName( sessionFactory,
+			    // associationMeta.getAsString( Key._CLASS ) )
+			    // .getEntityMeta()
+			    // .getIdProperties()
+			    // .stream()
+			    // .map( prop -> Key.of( prop.getName() ) )
+			    // .toList();
 			    // @TODO: Pull this from the associated entity's getIdProperties().getName().
 			    List<Key>	keys				= associationMeta.getAsString( Key._CLASS ).equals( "Vehicle" )
 			        ? List.of( Key.of( "vin" ) )
