@@ -50,7 +50,7 @@ public class HibernateXMLWriter {
 	 * <p>
 	 * This is used to look up the metadata for associated entities when generating association elements.
 	 */
-	BiFunction<String, String, EntityRecord>	lookupEntityByClassName;
+	BiFunction<String, String, EntityRecord>	entityLookup;
 
 	/**
 	 * Whether to throw an exception when an error occurs during XML generation.
@@ -61,14 +61,14 @@ public class HibernateXMLWriter {
 		this( entity, null, true );
 	}
 
-	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, String, EntityRecord> lookupEntityByClassName ) {
-		this( entity, lookupEntityByClassName, true );
+	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, String, EntityRecord> entityLookup ) {
+		this( entity, entityLookup, true );
 	}
 
-	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, String, EntityRecord> lookupEntityByClassName, boolean throwOnErrors ) {
-		this.entity						= entity;
-		this.lookupEntityByClassName	= lookupEntityByClassName;
-		this.throwOnErrors				= throwOnErrors;
+	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, String, EntityRecord> entityLookup, boolean throwOnErrors ) {
+		this.entity			= entity;
+		this.entityLookup	= entityLookup;
+		this.throwOnErrors	= throwOnErrors;
 
 		// Validation
 		if ( entity.getIdProperties().isEmpty() ) {
@@ -681,7 +681,7 @@ public class HibernateXMLWriter {
 		if ( relationClassName == null || relationClassName.isBlank() ) {
 			return;
 		}
-		EntityRecord associatedEntity = lookupEntityByClassName.apply( relationClassName, this.entity.getDatasource() );
+		EntityRecord associatedEntity = entityLookup.apply( relationClassName, this.entity.getDatasource() );
 		if ( associatedEntity == null ) {
 			String message = String.format( "Could not find entity '%s' referenced in property '%s' on entity '%s'", relationClassName, prop.getName(),
 			    prop.getDefiningEntity().getEntityName() );

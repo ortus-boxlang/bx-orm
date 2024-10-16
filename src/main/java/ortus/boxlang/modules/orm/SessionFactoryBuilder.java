@@ -56,7 +56,7 @@ public class SessionFactoryBuilder {
 	private ApplicationBoxContext	applicationContext;
 
 	/**
-	 * Lookup the BoxLang class FQN for a given entity name.
+	 * Lookup the BoxLang EntityRecord object containing known entity information for a given entity name.
 	 * 
 	 * @param sessionFactory The Hibernate session factory
 	 * @param entityName     The entity name to look up
@@ -74,6 +74,30 @@ public class SessionFactoryBuilder {
 		}
 
 		return entityMap.get( lookup );
+	}
+
+	/**
+	 * Lookup the BoxLang EntityRecord object containing known entity information for a given CLASS name.
+	 * 
+	 * @param sessionFactory The Hibernate session factory
+	 * @param entityName     The entity name to look up
+	 * 
+	 * @return The BoxLang entityRecord defining the entity name, filepath, FQN, and mapping xml file path
+	 */
+	public static EntityRecord lookupEntityByClassName( SessionFactory sessionFactory, String className ) {
+		String						lookup		= className.trim().toLowerCase();
+		@SuppressWarnings( "unchecked" )
+		Map<String, EntityRecord>	entityMap	= ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
+
+		return entityMap.values().stream()
+		    .filter( ( entity ) -> entity.getClassName().equalsIgnoreCase( className ) )
+		    .findFirst()
+		    .orElseThrow( () -> {
+			    String message = String.format( "Entity '%s' not found in entity map.", lookup );
+			    logger.warn( message );
+			    // @TODO: Catch this in calling code and silence if ormConfig.skipParseErrors is true.
+			    return new BoxRuntimeException( message );
+		    } );
 	}
 
 	public static EntityRecord lookupEntity( Session session, String entityName ) {
