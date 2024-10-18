@@ -1,17 +1,15 @@
 package ortus.boxlang.modules.orm.bifs;
 
+import java.util.List;
 import java.util.Set;
 
-import org.hibernate.SessionFactory;
-
+import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMService;
-import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.IJDBCCapableContext;
-import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
@@ -51,27 +49,22 @@ public class EntityNameArray extends BIF {
 		if ( delimiter == null ) {
 			delimiter = ",";
 		}
-		String		datasourceName	= ( String ) arguments.getAsString( Key.datasource );
-		DataSource	datasource		= null;
-		if ( datasourceName != null && !datasourceName.isBlank() ) {
-			datasource = context.getParentOfType( IJDBCCapableContext.class )
-			    .getConnectionManager()
-			    .getDatasourceOrThrow( Key.of( datasourceName ) );
-		}
-		// @TODO: This technically only works for a SINGLE datasource. We need to rearchitect the way ORMService stores and retrieves session factories, so
-		// we can retrieve ALL session factories for the given RequestBoxContext, or for the specific RequestBoxContext/datasource name pair.
-		SessionFactory	sessionFactory	= datasource != null
-		    ? ORMService.getInstance().getSessionFactoryForContextAndDataSource( context, datasource )
-		    : ORMService.getInstance().getSessionFactoryForContext( context );
+		String				datasourceName	= ( String ) arguments.getAsString( Key.datasource );
 
-		Array			entityNames		= Array.fromList( SessionFactoryBuilder.getEntityMap( sessionFactory )
-		    .values()
-		    .stream()
-		    .map( entity -> entity.getEntityName() )
-		    // Sort alphabetically to ensure a consistent order. The order of entities in the entity map is not guaranteed, as it is a HashMap and is
-		    // populated in order of discovery.
-		    .sorted()
-		    .toList() );
+		ORMApp				ormApp			= ORMService.getInstance().getORMApp( context );
+		List<EntityRecord>	entityList		= datasourceName != null
+		    ? ormApp.getEntityRecords( datasourceName )
+		    : ormApp.getEntityRecords();
+
+		Array				entityNames		= Array.fromList(
+		    entityList
+		        .stream()
+		        .map( entity -> entity.getEntityName() )
+		        // Sort alphabetically to ensure a consistent order. The order of entities in the entity map is not guaranteed, as it is a HashMap and is
+		        // populated in order of discovery.
+		        .sorted()
+		        .toList()
+		);
 
 		return bifMethodKey.equals( ORMKeys.entityNameList ) ? ListUtil.asString( entityNames, delimiter ) : entityNames;
 	}

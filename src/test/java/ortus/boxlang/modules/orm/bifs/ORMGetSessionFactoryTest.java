@@ -17,12 +17,12 @@ public class ORMGetSessionFactoryTest extends BaseORMTest {
 	@DisplayName( "It can get the default ORM session factory" )
 	@Test
 	public void testORMGetSessionFactory() {
-		SessionFactory sessionFactory = ormService.getSessionFactoryForName( builder.getUniqueName() );
-		assertNotNull( sessionFactory );
+		SessionFactory defaultSessionFactory = ormService.getORMApp( context ).getDefaultSessionFactoryOrThrow();
+		assertNotNull( defaultSessionFactory );
 
 		instance.executeSource( "result = ormGetSessionFactory()", context );
 		assertNotNull( variables.get( result ) );
-		assertEquals( sessionFactory, variables.get( result ) );
+		assertEquals( defaultSessionFactory, variables.get( result ) );
 	}
 
 	@DisplayName( "It throws if the named datasource does not exist" )
@@ -37,10 +37,10 @@ public class ORMGetSessionFactoryTest extends BaseORMTest {
 	@DisplayName( "It can get the session factory from a named datasource" )
 	@Test
 	public void testNamedDatasource() {
-		SessionFactory defaultSessionFactory = ormService.getSessionFactoryForContext( context );
+		SessionFactory defaultSessionFactory = ormService.getORMApp( context ).getDefaultSessionFactoryOrThrow();
 		assertNotNull( defaultSessionFactory );
 
-		SessionFactory alternateSessionFactory = ormService.getSessionFactoryForContext( context, alternateDataSource.getConfiguration().name );
+		SessionFactory alternateSessionFactory = ormService.getORMApp( context ).getSessionFactoryOrThrow( alternateDataSource );
 		assertNotNull( alternateSessionFactory );
 
 		instance.executeSource( "result = ormGetSessionFactory( 'dsn2' )", context );

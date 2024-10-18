@@ -42,9 +42,9 @@ public class ORMClearSession extends BIF {
 		Session	session;
 		String	datasourceName	= StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 		if ( !datasourceName.isBlank() ) {
-			session = ORMService.getInstance().getSessionForContext( context, Key.of( datasourceName ) );
+			session = ORMService.getInstance().getORMApp( context ).getSession( context, Key.of( datasourceName ) );
 		} else {
-			session = ORMService.getInstance().getSessionForContext( context );
+			session = ORMService.getInstance().getORMApp( context ).getSession( context );
 		}
 		session.clear();
 

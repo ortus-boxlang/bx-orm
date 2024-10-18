@@ -17,7 +17,7 @@ public class ORMGetSessionTest extends BaseORMTest {
 	@DisplayName( "It can get the current ORM session" )
 	@Test
 	public void testDefaultDatasource() {
-		Session session = ormService.getSessionForContext( context );
+		Session session = ormService.getORMApp( context ).getSession( context );
 		assertNotNull( session );
 
 		instance.executeSource( "result = ormGetSession() ", context );
@@ -28,7 +28,7 @@ public class ORMGetSessionTest extends BaseORMTest {
 	@DisplayName( "It throws if the named datasource does not exist or is not configured for ORM" )
 	@Test
 	public void testBadDSN() {
-		Session session = ormService.getSessionForContext( context );
+		Session session = ormService.getORMApp( context ).getSession( context );
 		assertNotNull( session );
 
 		assertThrows(
@@ -40,10 +40,10 @@ public class ORMGetSessionTest extends BaseORMTest {
 	@DisplayName( "It can get the ORM session from a named datasource" )
 	@Test
 	public void testNamedDatasource() {
-		Session defaultORMSession = ormService.getSessionForContext( context );
+		Session defaultORMSession = ormService.getORMApp( context ).getSession( context );
 		assertNotNull( defaultORMSession );
 
-		Session secondDSNSession = ormService.getSessionForContext( context, alternateDataSource.getConfiguration().name );
+		Session secondDSNSession = ormService.getORMApp( context ).getSession( context, alternateDataSource.getConfiguration().name );
 		assertNotNull( secondDSNSession );
 
 		instance.executeSource( "result = ormGetSession( 'dsn2' ) ", context );
@@ -52,4 +52,23 @@ public class ORMGetSessionTest extends BaseORMTest {
 		assertNotEquals( defaultORMSession, variables.get( result ) );
 		assertEquals( secondDSNSession, variables.get( result ) );
 	}
+
+	@DisplayName( "It can use queryExecute after opening ORM session" )
+	@Test
+	public void testSharedTransaction() {
+		instance.executeSource(
+		    """
+		    transaction{
+		    	ormGetSession();
+		    	dev1 = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
+		    	entitySave( dev1 );
+		    	ORMFlush();
+		    	result = queryExecute( "SELECT COUNT(*) FROM vehicles" );
+		    }
+		    """, context );
+
+		assertNotNull( variables.get( result ) );
+		assertEquals( 1, variables.getAsQuery( result ).size() );
+	}
+
 }

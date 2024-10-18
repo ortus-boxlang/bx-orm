@@ -39,9 +39,9 @@ public class ORMGetSession extends BIF {
 	public Session _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String datasourceName = StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 		if ( !datasourceName.isBlank() ) {
-			return ORMService.getInstance().getSessionForContext( context, Key.of( datasourceName ) );
+			return ORMService.getInstance().getORMApp( context ).getSession( context, Key.of( datasourceName ) );
 		}
-		return ORMService.getInstance().getSessionForContext( context );
+		return ORMService.getInstance().getORMApp( context ).getSession( context );
 	}
 
 }

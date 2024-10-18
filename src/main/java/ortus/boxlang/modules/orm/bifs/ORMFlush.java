@@ -32,7 +32,7 @@ public class ORMFlush extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session session = ORMService.getInstance().getSessionForContext( context );
+		Session session = ORMService.getInstance().getORMApp( context ).getSession( context );
 		session.flush();
 
 		return null;

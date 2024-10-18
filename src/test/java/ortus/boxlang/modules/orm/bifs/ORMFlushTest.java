@@ -18,7 +18,7 @@ public class ORMFlushTest extends BaseORMTest {
 	@Test
 	public void testORMFlush() {
 		// @TODO: Plan and implement ORM transaction management.
-		Transaction tx = ORMService.getInstance().getSessionForContext( context ).beginTransaction();
+		Transaction tx = ORMService.getInstance().getORMApp( context ).getSession( context ).beginTransaction();
 		// @formatter:off
 		instance.executeSource(
 			"""

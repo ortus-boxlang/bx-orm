@@ -14,7 +14,7 @@ public class ORMCloseSessionTest extends BaseORMTest {
 	@DisplayName( "It can close the session for the default datasource" )
 	@Test
 	public void testSessionClose() {
-		Session session = ORMService.getInstance().getSessionForContext( context );
+		Session session = ORMService.getInstance().getORMApp( context ).getSession( context );
 		// @formatter:off
 		instance.executeSource(
 			"""
@@ -30,7 +30,7 @@ public class ORMCloseSessionTest extends BaseORMTest {
 	@DisplayName( "It can close the session on a named (alternate) datasource" )
 	@Test
 	public void testSessionCloseOnNamedDatasource() {
-		Session session = ORMService.getInstance().getSessionForContext( context, alternateDataSource.getConfiguration().name );
+		Session session = ORMService.getInstance().getORMApp( context ).getSession( context, alternateDataSource.getConfiguration().name );
 		// @formatter:off
 		instance.executeSource(
 			"""

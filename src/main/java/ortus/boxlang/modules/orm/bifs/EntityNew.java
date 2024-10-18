@@ -41,7 +41,7 @@ public class EntityNew extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session			= ORMService.getInstance().getSessionForContext( context );
+		Session			session			= ORMService.getInstance().getORMApp( context ).getSession( context );
 		EntityRecord	entityRecord	= SessionFactoryBuilder.lookupEntity( session, arguments.getAsString( ORMKeys.entityName ) );
 		IStruct			properties		= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 

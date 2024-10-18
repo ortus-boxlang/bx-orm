@@ -84,7 +84,27 @@ public class MappingGenerator {
 	 */
 	private DataSource			defaultDatasource;
 
+	/**
+	 * The JDBC-capable boxlang context, used to look up datasources referenced in the ORM config or on the entities themselves.
+	 */
 	private IJDBCCapableContext	context;
+
+	/**
+	 * Retrieve the entity map for this session factory, constructing them if necessary.
+	 * 
+	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
+	 */
+	public static Map<String, List<EntityRecord>> discoverEntities( IBoxContext context, ORMConfig ormConfig ) {
+		if ( !ormConfig.autoGenMap ) {
+			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
+			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
+		} else {
+			// generate xml mappings on the fly, saving them either to a temp directory or alongside the entity class files if `ormConfig.saveMapping` is true.
+			return new MappingGenerator( context, ormConfig )
+			    .generateMappings()
+			    .getEntityDatasourceMap();
+		}
+	}
 
 	public MappingGenerator( IBoxContext context, ORMConfig config ) {
 		this.entities				= new ArrayList<>();

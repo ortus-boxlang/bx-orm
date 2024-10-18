@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -16,10 +15,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.compiler.parser.BoxSourceType;
+import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMConfig;
-import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -49,6 +48,7 @@ public class BaseORMTest {
 	public static SessionFactoryBuilder	builder;
 	public static SessionFactoryBuilder	alternateBuilder;
 	public static DataSource			alternateDataSource;
+	public static ORMApp				ormApp;
 
 	static DataSource					datasource;
 
@@ -147,20 +147,6 @@ public class BaseORMTest {
 		connectionManager.register( datasource );
 		assertDoesNotThrow( () -> JDBCTestUtils.resetTables( datasource ) );
 
-		// and start up the ORM service
-		if ( builder == null ) {
-			ORMConfig						config		= new ORMConfig( Struct.of(
-			    "datasource", "TestDB",
-			    "entityPaths", Array.of( "models" ),
-			    "saveMapping", "true",
-			    "logSQL", "true",
-			    "dialect", "DerbyTenSevenDialect"
-			) );
-			Map<String, List<EntityRecord>>	entities	= ORMService.discoverEntities( context, config );
-			builder = new SessionFactoryBuilder( context, datasource, config, entities.get( datasource.getOriginalName() ) );
-			ormService.setSessionFactoryForName( builder.getUniqueName(), builder.build() );
-		}
-
 		if ( alternateDataSource == null ) {
 			// constrct a second datasource
 			// @TODO: Set up other entities for the alternate datasource.
@@ -170,22 +156,40 @@ public class BaseORMTest {
 			    "connectionString", "jdbc:derby:memory:" + "dsn2" + ";create=true"
 			) );
 		}
+		// make sure to register the alternate datasource BEFORE orm app startup.
 		connectionManager.register( alternateDataSource );
 
-		if ( alternateBuilder == null ) {
-			// Construct a new session factory for the second datasource
-			ORMConfig						config				= new ORMConfig( Struct.of(
-			    "datasource", "dsn2"
+		// and start up the ORM service
+		if ( ormApp == null ) {
+			ORMConfig config = new ORMConfig( Struct.of(
+			    "datasource", "TestDB",
+			    "entityPaths", Array.of( "models" ),
+			    "saveMapping", "true",
+			    "logSQL", "true",
+			    "dialect", "DerbyTenSevenDialect"
 			) );
-			// @TODO: Set up other entities for the alternate datasource.
-			Map<String, List<EntityRecord>>	entities			= ORMService.discoverEntities( context, config );
-			SessionFactoryBuilder			alternateBuilder	= new SessionFactoryBuilder(
-			    context,
-			    alternateDataSource,
-			    config,
-			    entities.get( "dsn2" )
-			);
-			ormService.setSessionFactoryForName( alternateBuilder.getUniqueName(), alternateBuilder.build() );
+			// Map<String, List<EntityRecord>> entities = MappingGenerator.discoverEntities( context, config );
+			// builder = new SessionFactoryBuilder( context, datasource, config, entities.get( datasource.getOriginalName() ) );
+			// ormService.setSessionFactoryForName( builder.getUniqueName(), builder.build() );
+			ORMService.getInstance().startupApp( context, config );
+			ormApp = ORMService.getInstance().getORMApp( context );
 		}
+
+		// @TODO: Set up other entities for the alternate datasource. Stop doing so much manual constructing of an ORM app, it's brittle and needs rewriting
+		// every time we alter the ORM startup.
+		// if ( alternateBuilder == null ) {
+		// // Construct a new session factory for the second datasource
+		// ORMConfig config = new ORMConfig( Struct.of(
+		// "datasource", "dsn2"
+		// ) );
+		// Map<String, List<EntityRecord>> entities = MappingGenerator.discoverEntities( context, config );
+		// SessionFactoryBuilder alternateBuilder = new SessionFactoryBuilder(
+		// context,
+		// alternateDataSource,
+		// config,
+		// entities.get( "dsn2" )
+		// );
+		// ormService.setSessionFactoryForName( alternateBuilder.getUniqueName(), alternateBuilder.build() );
+		// }
 	}
 }

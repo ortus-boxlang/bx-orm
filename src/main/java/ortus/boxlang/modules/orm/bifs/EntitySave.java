@@ -42,7 +42,7 @@ public class EntitySave extends BIF {
 	 * @return
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session		= ORMService.getInstance().getSessionForContext( context );
+		Session			session		= ORMService.getInstance().getORMApp( context ).getSession( context );
 		// @TODO: Implement forceinsert
 		IClassRunnable	entity		= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		// @TODO: Should we look up the EntityRecord and use that to grab the class name?

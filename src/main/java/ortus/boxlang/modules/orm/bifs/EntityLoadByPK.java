@@ -51,7 +51,7 @@ public class EntityLoadByPK extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session session = ORMService.getInstance().getSessionForContext( context );
+		Session session = ORMService.getInstance().getORMApp( context ).getSession( context );
 
 		// @TODO: Move this to a more sensible location.
 		if ( session.getTransaction() == null ) {

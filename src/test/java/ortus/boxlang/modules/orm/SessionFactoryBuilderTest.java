@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
@@ -48,7 +49,7 @@ public class SessionFactoryBuilderTest {
 		ORMConfig						config			= new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB"
 		) );
-		Map<String, List<EntityRecord>>	entities		= ORMService.discoverEntities( context, config );
+		Map<String, List<EntityRecord>>	entities		= MappingGenerator.discoverEntities( context, config );
 		SessionFactory					sessionFactory	= new SessionFactoryBuilder( context, datasource, config,
 		    entities.get( datasource.getOriginalName() ) ).build();
 
@@ -62,7 +63,7 @@ public class SessionFactoryBuilderTest {
 		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.dialect, "DerbyTenSeven"
 		) );
-		Map<String, List<EntityRecord>>	entities		= ORMService.discoverEntities( context, config );
+		Map<String, List<EntityRecord>>	entities		= MappingGenerator.discoverEntities( context, config );
 		SessionFactory					sessionFactory	= new SessionFactoryBuilder( context, datasource, config,
 		    entities.get( datasource.getOriginalName() ) ).build();
 
@@ -83,7 +84,7 @@ public class SessionFactoryBuilderTest {
 		    		};
 		    """, context );
 		ORMConfig						config		= new ORMConfig( Struct.of() );
-		Map<String, List<EntityRecord>>	entities	= ORMService.discoverEntities( context, config );
+		Map<String, List<EntityRecord>>	entities	= MappingGenerator.discoverEntities( context, config );
 		for ( String datasourceName : entities.keySet() ) {
 			DataSource		thisDataSource	= context.getConnectionManager().getDatasource( Key.of( datasourceName ) );
 
@@ -112,7 +113,7 @@ public class SessionFactoryBuilderTest {
 		ORMConfig						config			= new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB2"
 		) );
-		Map<String, List<EntityRecord>>	entities		= ORMService.discoverEntities( context, config );
+		Map<String, List<EntityRecord>>	entities		= MappingGenerator.discoverEntities( context, config );
 		SessionFactory					sessionFactory	= new SessionFactoryBuilder( context, datasource, config,
 		    entities.get( "TestDB2" ) ).build();
 
