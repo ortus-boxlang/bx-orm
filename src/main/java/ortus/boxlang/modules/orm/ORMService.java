@@ -77,8 +77,10 @@ public class ORMService implements IService {
 	 */
 	public void startupApp( RequestBoxContext context, ORMConfig config ) {
 		ORMApp newORMApp = new ORMApp( context, config );
-		logger.debug( "Starting ORMApp: " + newORMApp.getUniqueName() );
 		ormApps.put( newORMApp.getUniqueName(), newORMApp );
+
+		logger.debug( "Starting ORMApp {}", newORMApp.getUniqueName() );
+		newORMApp.startup();
 	}
 
 	/**

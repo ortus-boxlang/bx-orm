@@ -1,5 +1,6 @@
 package ortus.boxlang.modules.orm;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
-import ortus.boxlang.modules.orm.interceptors.SessionLifecycle;
+import ortus.boxlang.modules.orm.interceptors.SessionManager;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
@@ -20,6 +21,7 @@ import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 public class ORMApp {
@@ -37,7 +39,7 @@ public class ORMApp {
 	/**
 	 * The boxlang context used to create this ORM application.
 	 */
-	private IBoxContext						context;
+	private RequestBoxContext				context;
 
 	/**
 	 * The ORM configuration.
@@ -62,6 +64,11 @@ public class ORMApp {
 	private DataSource						defaultDatasource;
 
 	/**
+	 * Array of configured datasources for this ORM application.
+	 */
+	private List<DataSource>				datasources;
+
+	/**
 	 * A map of entities discovered for this ORM application, keyed by datasource name.
 	 */
 	private Map<String, List<EntityRecord>>	entityMap;
@@ -80,28 +87,31 @@ public class ORMApp {
 
 	public ORMApp( RequestBoxContext context, ORMConfig config ) {
 		// @TODO: Consider only storing the ApplicationBoxContext, as that's the parent, and the RequestBoxContext will obviously age out pretty quickly.
-		this.context			= context;
-		this.config				= config;
-		this.sessionFactories	= new ConcurrentHashMap<>();
-		this.name				= ORMApp.getUniqueAppName( context );
-		this.defaultDatasource	= context.getConnectionManager().getDatasourceOrThrow( Key.of( config.datasource ) );
+		this.context = context;
 
 		if ( context.getParentOfType( ApplicationBoxContext.class ) == null ) {
 			logger.error( "ORMApp created with a context that is not inside an application context; aborting." );
 			return;
 		}
 
-		logger.info( "ORMApp started" );
+		this.config				= config;
+		this.sessionFactories	= new ConcurrentHashMap<>();
+		this.name				= ORMApp.getUniqueAppName( context );
+		this.defaultDatasource	= context.getConnectionManager().getDatasourceOrThrow( Key.of( config.datasource ) );
+		this.datasources		= new ArrayList<DataSource>();
+	}
 
+	public void startup() {
 		this.entityMap = MappingGenerator.discoverEntities( context, config );
 		logger.debug( "Discovered entities on {} datasources:", this.entityMap.size() );
 
 		this.entityMap.forEach( ( datasourceName, entities ) -> {
 			logger.debug( "Creating session factory for datasource: {}", datasourceName );
-			DataSource				datasource	= context.getConnectionManager().getDatasourceOrThrow( Key.of( datasourceName ) );
+			DataSource datasource = context.getConnectionManager().getDatasourceOrThrow( Key.of( datasourceName ) );
+			this.datasources.add( datasource );
 
-			SessionFactoryBuilder	builder		= new SessionFactoryBuilder( context, datasource, config, entities );
-			SessionFactory			factory		= builder.build();
+			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, datasource, config, entities );
+			SessionFactory			factory	= builder.build();
 			logger.info( "Registering new Hibernate session factory for name: {}", builder.getUniqueName() );
 			this.sessionFactories.put( datasource.getUniqueName(), factory );
 
@@ -112,7 +122,17 @@ public class ORMApp {
 		} );
 
 		// Register our ORM Session Manager
-		context.getApplicationListener().getInterceptorPool().register( new SessionLifecycle( config ) );
+		logger.debug( "Constructing SessionManager for opening/closing ORM sessions on request start/end" );
+		SessionManager sessionManager = new SessionManager( config );
+		context.getApplicationListener().getInterceptorPool().register( sessionManager );
+
+		logger.debug( "Firing onRequestStart to initiate first ORM session" );
+		sessionManager.onRequestStart( Struct.of(
+		    "context", context,
+		    "args", null,
+		    "application", context.getApplicationListener().getApplication(),
+		    "listener", context.getApplicationListener()
+		) );
 	}
 
 	/**
@@ -194,7 +214,15 @@ public class ORMApp {
 	 * @return The Hibernate session.
 	 */
 	public Session getSession( IBoxContext context ) {
-		return getSession( context, null );
+		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
+		return getSession( context, connectionManager.getDefaultDatasourceOrThrow() );
+	}
+
+	/**
+	 * Get the list of datasources configured for this ORM application.
+	 */
+	public List<DataSource> getDatasources() {
+		return this.datasources;
 	}
 
 	/**
@@ -206,19 +234,35 @@ public class ORMApp {
 	 * @return The Hibernate session.
 	 */
 	public Session getSession( IBoxContext context, Key datasource ) {
-		IBoxContext	jdbcContext		= ( IBoxContext ) context.getParentOfType( IJDBCCapableContext.class );
-		DataSource	theDatasource	= getDatasourceForNameOrDefault( context, datasource );
-		Key			sessionKey		= Key.of( "session_" + theDatasource.getUniqueName().getName() );
+		return getSession( context, getDatasourceForNameOrDefault( context, datasource ) );
+	}
+
+	/**
+	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 *
+	 * @param context    The context for which to get a session.
+	 * @param datasource The datasource to get the session for.
+	 *
+	 * @return The Hibernate session.
+	 */
+	public Session getSession( IBoxContext context, DataSource datasource ) {
+		IBoxContext	jdbcContext	= ( IBoxContext ) context.getParentOfType( IJDBCCapableContext.class );
+		Key			sessionKey	= Key.of( "orm_session_" + datasource.getUniqueName().getName() );
 
 		if ( jdbcContext.hasAttachment( sessionKey ) ) {
 			return jdbcContext.getAttachment( sessionKey );
 		}
 
-		SessionFactory sessionFactory = getSessionFactoryOrThrow( theDatasource );
+		SessionFactory sessionFactory = getSessionFactoryOrThrow( datasource );
 		jdbcContext.putAttachment( sessionKey, sessionFactory.openSession() );
 		return jdbcContext.getAttachment( sessionKey );
 	}
 
+	/**
+	 * Get the datasource for a given name, falling back to the default datasource if the name is null.
+	 * 
+	 * Will throw a BoxRuntimeException if the datasource is not found.
+	 */
 	private DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {
 		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
 		return datasourceName != null ? connectionManager.getDatasourceOrThrow( datasourceName )

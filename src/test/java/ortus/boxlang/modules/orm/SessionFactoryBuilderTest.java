@@ -33,6 +33,7 @@ public class SessionFactoryBuilderTest {
 	static Key					result	= Key.of( "result" );
 	static DataSource			datasource;
 	static RequestBoxContext	context;
+	public static DataSource	alternateDataSource;
 
 	@BeforeAll
 	public static void setUp() {
@@ -41,6 +42,17 @@ public class SessionFactoryBuilderTest {
 
 		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
 		BaseORMTest.setupApplicationContext( context );
+
+		if ( alternateDataSource == null ) {
+			// construct a second datasource
+			alternateDataSource = DataSource.fromStruct( "dsn2", Struct.of(
+			    "database", "dsn2",
+			    "driver", "derby",
+			    "connectionString", "jdbc:derby:memory:" + "dsn2" + ";create=true"
+			) );
+		}
+		// make sure to register the alternate datasource BEFORE orm app startup.
+		context.getConnectionManager().register( alternateDataSource );
 	}
 
 	@DisplayName( "It can setup a session factory" )

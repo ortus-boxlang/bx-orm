@@ -148,8 +148,7 @@ public class BaseORMTest {
 		assertDoesNotThrow( () -> JDBCTestUtils.resetTables( datasource ) );
 
 		if ( alternateDataSource == null ) {
-			// constrct a second datasource
-			// @TODO: Set up other entities for the alternate datasource.
+			// construct a second datasource
 			alternateDataSource = DataSource.fromStruct( "dsn2", Struct.of(
 			    "database", "dsn2",
 			    "driver", "derby",

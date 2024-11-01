@@ -31,6 +31,7 @@ import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
@@ -109,7 +110,7 @@ public class MappingGenerator {
 	public MappingGenerator( IBoxContext context, ORMConfig config ) {
 		this.entities				= new ArrayList<>();
 		this.config					= config;
-		this.saveDirectory			= Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", String.valueOf( config.hashCode() ) ).toString();
+		this.saveDirectory			= null;
 		this.saveAlongsideEntity	= config.saveMapping;
 		this.entityPaths			= new java.util.ArrayList<>();
 		this.context				= ( IJDBCCapableContext ) context;
@@ -117,6 +118,7 @@ public class MappingGenerator {
 		// this.appDirectory = context.getParentOfType( ApplicationBoxContext.class ).getApplication().getApplicationDirectory();
 
 		if ( !this.saveAlongsideEntity ) {
+			this.saveDirectory = Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", String.valueOf( config.hashCode() ) ).toString();
 			new File( this.saveDirectory ).mkdirs();
 		}
 
@@ -273,6 +275,7 @@ public class MappingGenerator {
 	 */
 	private EntityRecord toEntityRecord( IStruct theEntity ) {
 		IStruct	meta		= theEntity.getAsStruct( Key.metadata );
+		IStruct	annotations	= meta.getAsStruct( Key.annotations );
 		String	entityName	= readEntityName( meta );
 		String	fqn			= new BoxFQN( Path.of( theEntity.getAsString( this.location ) ).getParent(), Path.of( meta.getAsString( Key.path ) ) )
 		    .toString();
@@ -281,9 +284,9 @@ public class MappingGenerator {
 		}
 
 		DataSource datasource = null;
-		if ( meta != null && meta.containsKey( Key.datasource ) ) {
-			String datasourceName = meta.getAsString( Key.datasource );
-			if ( datasourceName != null && !datasourceName.isBlank() ) {
+		if ( annotations.containsKey( Key.datasource ) ) {
+			String datasourceName = StringCaster.cast( annotations.getOrDefault( Key.datasource, "" ) ).trim();
+			if ( !datasourceName.isEmpty() ) {
 				datasource = context.getConnectionManager().getDatasource( Key.of( datasourceName ) );
 				if ( datasource == null ) {
 					// @TODO: check config.skipParseErrors before throwing...
