@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -20,14 +21,21 @@ import ortus.boxlang.runtime.validation.Validator;
 @BoxBIF
 public class EntitySave extends BIF {
 
-	Logger logger = LoggerFactory.getLogger( EntitySave.class );
+	/**
+	 * ORM Service, responsible for managing ORM applications.
+	 */
+	private ORMService	ormService;
+
+	Logger				logger	= LoggerFactory.getLogger( EntitySave.class );
 
 	/**
 	 * Constructor
 	 */
 	public EntitySave() {
+
 		super();
-		declaredArguments = new Argument[] {
+		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		declaredArguments	= new Argument[] {
 		    new Argument( true, "Any", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
 		    new Argument( false, "Boolean", ORMKeys.forceinsert )
 		};
@@ -42,7 +50,7 @@ public class EntitySave extends BIF {
 	 * @return
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session		= ORMService.getInstance().getORMApp( context ).getSession( context );
+		Session			session		= this.ormService.getORMApp( context ).getSession( context );
 		// @TODO: Implement forceinsert
 		IClassRunnable	entity		= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		// @TODO: Should we look up the EntityRecord and use that to grab the class name?

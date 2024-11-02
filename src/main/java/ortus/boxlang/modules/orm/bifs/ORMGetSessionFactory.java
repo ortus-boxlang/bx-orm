@@ -6,6 +6,7 @@ import org.hibernate.SessionFactory;
 
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -19,11 +20,18 @@ import ortus.boxlang.runtime.validation.Validator;
 public class ORMGetSessionFactory extends BIF {
 
 	/**
+	 * ORM Service, responsible for managing ORM applications.
+	 */
+	private ORMService ormService;
+
+	/**
 	 * Constructor
 	 */
 	public ORMGetSessionFactory() {
+
 		super();
-		declaredArguments = new Argument[] {
+		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		declaredArguments	= new Argument[] {
 		    new Argument( false, "String", ORMKeys.datasource, Set.of( Validator.NON_EMPTY ) )
 		};
 	}
@@ -39,9 +47,9 @@ public class ORMGetSessionFactory extends BIF {
 	public SessionFactory _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String datasourceName = StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 		if ( !datasourceName.isBlank() ) {
-			return ORMService.getInstance().getORMApp( context ).getSessionFactoryOrThrow( Key.of( datasourceName ) );
+			return this.ormService.getORMApp( context ).getSessionFactoryOrThrow( Key.of( datasourceName ) );
 		}
-		return ORMService.getInstance().getORMApp( context ).getDefaultSessionFactoryOrThrow();
+		return this.ormService.getORMApp( context ).getDefaultSessionFactoryOrThrow();
 	}
 
 }

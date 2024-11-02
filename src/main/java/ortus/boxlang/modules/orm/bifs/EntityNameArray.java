@@ -7,6 +7,7 @@ import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -23,11 +24,18 @@ import ortus.boxlang.runtime.validation.Validator;
 public class EntityNameArray extends BIF {
 
 	/**
+	 * ORM Service, responsible for managing ORM applications.
+	 */
+	private ORMService ormService;
+
+	/**
 	 * Constructor
 	 */
 	public EntityNameArray() {
+
 		super();
-		declaredArguments = new Argument[] {
+		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		declaredArguments	= new Argument[] {
 		    new Argument( false, "String", Key.delimiter, Set.of( Validator.NON_EMPTY ) ),
 		    new Argument( false, "String", Key.datasource, Set.of( Validator.NON_EMPTY ) ),
 		};
@@ -51,7 +59,7 @@ public class EntityNameArray extends BIF {
 		}
 		String				datasourceName	= ( String ) arguments.getAsString( Key.datasource );
 
-		ORMApp				ormApp			= ORMService.getInstance().getORMApp( context );
+		ORMApp				ormApp			= this.ormService.getORMApp( context );
 		List<EntityRecord>	entityList		= datasourceName != null
 		    ? ormApp.getEntityRecords( datasourceName )
 		    : ormApp.getEntityRecords();

@@ -9,6 +9,7 @@ import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.hibernate.BoxClassInstantiator;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
@@ -24,11 +25,18 @@ import ortus.boxlang.runtime.validation.Validator;
 public class EntityNew extends BIF {
 
 	/**
+	 * ORM Service, responsible for managing ORM applications.
+	 */
+	private ORMService ormService;
+
+	/**
 	 * Constructor
 	 */
 	public EntityNew() {
+
 		super();
-		declaredArguments = new Argument[] {
+		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		declaredArguments	= new Argument[] {
 		    new Argument( true, "String", ORMKeys.entityName, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
 		    new Argument( false, "Struct", Key.properties )
 		};
@@ -41,7 +49,7 @@ public class EntityNew extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session			= ORMService.getInstance().getORMApp( context ).getSession( context );
+		Session			session			= this.ormService.getORMApp( context ).getSession( context );
 		EntityRecord	entityRecord	= SessionFactoryBuilder.lookupEntity( session, arguments.getAsString( ORMKeys.entityName ) );
 		IStruct			properties		= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 

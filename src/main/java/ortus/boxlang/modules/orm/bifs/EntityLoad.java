@@ -2,6 +2,9 @@ package ortus.boxlang.modules.orm.bifs;
 
 import org.apache.commons.lang3.NotImplementedException;
 
+import ortus.boxlang.modules.orm.ORMService;
+import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -11,6 +14,11 @@ import ortus.boxlang.runtime.scopes.ArgumentsScope;
 public class EntityLoad extends BIF {
 
 	/**
+	 * ORM Service, responsible for managing ORM applications.
+	 */
+	private ORMService ormService;
+
+	/**
 	 * ExampleBIF
 	 *
 	 * @param context   The context in which the BIF is being invoked.
@@ -18,6 +26,7 @@ public class EntityLoad extends BIF {
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		// TODO implement BIF
+		this.ormService = ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
 		throw new NotImplementedException();
 	}
 

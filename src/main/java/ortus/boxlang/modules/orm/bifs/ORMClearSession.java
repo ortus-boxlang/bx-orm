@@ -6,6 +6,7 @@ import org.hibernate.Session;
 
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -19,11 +20,18 @@ import ortus.boxlang.runtime.validation.Validator;
 public class ORMClearSession extends BIF {
 
 	/**
+	 * ORM Service, responsible for managing ORM applications.
+	 */
+	private ORMService ormService;
+
+	/**
 	 * Constructor
 	 */
 	public ORMClearSession() {
+
 		super();
-		declaredArguments = new Argument[] {
+		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		declaredArguments	= new Argument[] {
 		    new Argument( false, "String", ORMKeys.datasource, Set.of( Validator.NON_EMPTY ) )
 		};
 	}
@@ -42,9 +50,9 @@ public class ORMClearSession extends BIF {
 		Session	session;
 		String	datasourceName	= StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 		if ( !datasourceName.isBlank() ) {
-			session = ORMService.getInstance().getORMApp( context ).getSession( context, Key.of( datasourceName ) );
+			session = this.ormService.getORMApp( context ).getSession( context, Key.of( datasourceName ) );
 		} else {
-			session = ORMService.getInstance().getORMApp( context ).getSession( context );
+			session = this.ormService.getORMApp( context ).getSession( context );
 		}
 		session.clear();
 

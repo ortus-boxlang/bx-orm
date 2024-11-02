@@ -1,9 +1,12 @@
 package ortus.boxlang.modules.orm.bifs;
 
 import org.hibernate.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -14,11 +17,20 @@ import ortus.boxlang.runtime.types.Argument;
 public class ORMFlush extends BIF {
 
 	/**
+	 * ORM Service, responsible for managing ORM applications.
+	 */
+	private ORMService			ormService;
+
+	private static final Logger	logger	= LoggerFactory.getLogger( ORMFlush.class );
+
+	/**
 	 * Constructor
 	 */
 	public ORMFlush() {
+
 		super();
-		declaredArguments = new Argument[] {
+		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		declaredArguments	= new Argument[] {
 		    new Argument( false, "String", ORMKeys.datasource )
 		};
 	}
@@ -32,7 +44,8 @@ public class ORMFlush extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session session = ORMService.getInstance().getORMApp( context ).getSession( context );
+		Session session = this.ormService.getORMApp( context ).getSession( context );
+		logger.debug( "Flushing session: {}", session );
 		session.flush();
 
 		return null;
