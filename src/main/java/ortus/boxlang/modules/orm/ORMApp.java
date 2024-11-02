@@ -249,9 +249,12 @@ public class ORMApp {
 		IBoxContext	jdbcContext	= ( IBoxContext ) context.getParentOfType( IJDBCCapableContext.class );
 		Key			sessionKey	= Key.of( "orm_session_" + datasource.getUniqueName().getName() );
 
+		logger.debug( "Getting session from context attachments with key: {}", sessionKey.getName() );
 		if ( jdbcContext.hasAttachment( sessionKey ) ) {
+			logger.debug( "key exists; returning session" );
 			return jdbcContext.getAttachment( sessionKey );
 		}
+		logger.debug( "key DOES NOT exist; opening NEW session" );
 
 		SessionFactory sessionFactory = getSessionFactoryOrThrow( datasource );
 		jdbcContext.putAttachment( sessionKey, sessionFactory.openSession() );

@@ -8,7 +8,6 @@ import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
@@ -49,9 +48,7 @@ public class TransactionManager extends BaseInterceptor {
 		this.context			= context;
 		this.config				= config;
 		this.ormApp				= ORMService.getInstance().getORMApp( context );
-		// @TODO: I am quite certain this is the WRONG interceptor pool to be using.
-		// This needs to be fixed in BoxLang Core, refactoring `ortus.boxlang.runtime.jdbc.Transaction` to use the application-level interceptor pool.
-		this.interceptorPool	= BoxRuntime.getInstance().getInterceptorService();
+		this.interceptorPool	= context.getApplicationListener().getInterceptorPool();
 	}
 
 	/**
@@ -85,19 +82,19 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionBegin( IStruct args ) {
-		logger.debug( "Starting ORM transaction" );
-		// @TODO: Wait... don't we have a Session per configured datasource?
-		// This is going to need to be refactored to handle multiple datasources.
-		Session ormSession = ormApp.getSession( context );
-		ormSession.beginTransaction();
+		ormApp.getDatasources().forEach( ( datasource ) -> {
+			Session ormSession = ormApp.getSession( context, datasource );
+			logger.debug( "Starting ORM transaction on session {}", ormSession );
+			ormSession.beginTransaction();
+		} );
 	}
 
 	@InterceptionPoint
 	public void onTransactionEnd( IStruct args ) {
-		logger.debug( "Ending ORM transaction" );
-		// @TODO: Wait... don't we have a Session per configured datasource?
-		// This is going to need to be refactored to handle multiple datasources.
-		Session ormSession = ormApp.getSession( context );
-		ormSession.getTransaction().commit();
+		ormApp.getDatasources().forEach( ( datasource ) -> {
+			Session ormSession = ormApp.getSession( context, datasource );
+			logger.debug( "Ending ORM transaction on session {}", ormSession );
+			ormSession.getTransaction().commit();
+		} );
 	}
 }

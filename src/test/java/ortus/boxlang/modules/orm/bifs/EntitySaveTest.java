@@ -15,6 +15,7 @@ import tools.BaseORMTest;
 @Disabled( "connection management issues when run in a full suite. Passes when run solo." )
 public class EntitySaveTest extends BaseORMTest {
 
+	@Disabled( "Not working until we have a better transaction management strategy." )
 	@DisplayName( "It can save new entities to the database" )
 	@Test
 	public void testEntitySave() {

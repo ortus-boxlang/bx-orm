@@ -19,6 +19,7 @@ import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -56,8 +57,11 @@ public class BaseORMTest {
 
 	@BeforeAll
 	public static void setUp() {
-		instance		= BoxRuntime.getInstance( true );
-		ormService		= ORMService.getInstance();
+		instance	= BoxRuntime.getInstance( true );
+		ormService	= ORMService.getInstance();
+		if ( !instance.hasGlobalService( ORMKeys.ORMService ) ) {
+			instance.putGlobalService( ORMKeys.ORMService, ormService );
+		}
 		startupContext	= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
 		datasource		= JDBCTestUtils.constructTestDataSource( "TestDB" );
 

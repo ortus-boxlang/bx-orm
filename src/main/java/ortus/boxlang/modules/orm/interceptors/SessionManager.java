@@ -45,7 +45,7 @@ public class SessionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onRequestStart( IStruct args ) {
-		logger.debug( "Starting ORM session" );
+		logger.debug( "onRequestStart - Starting ORM session" );
 		RequestBoxContext	context					= args.getAs( RequestBoxContext.class, Key.context );
 
 		TransactionManager	ORMTransactionManager	= new TransactionManager( context, config );
@@ -74,9 +74,9 @@ public class SessionManager extends BaseInterceptor {
 
 		// @TODO: if ormConfig.flushAtRequestEnd and ormConfig.autoManageSession, flush the current session.
 		// @TODO: end ORM session
-		logger.debug( "Ending ORM session" );
+		logger.debug( "onRequestEnd - closing ORM sessions" );
 		if ( config.flushAtRequestEnd ) {
-			logger.debug( "Flushing all ORM sessions for this request" );
+			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
 			// @TODO: Consider moving this into the ORMApp itself.
 			ormApp.getDatasources().forEach( datasource -> {
 				ormApp.getSession( context, datasource ).flush();

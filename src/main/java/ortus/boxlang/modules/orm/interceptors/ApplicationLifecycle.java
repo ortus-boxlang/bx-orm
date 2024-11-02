@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
@@ -39,6 +40,11 @@ public class ApplicationLifecycle extends BaseInterceptor {
 	 */
 	@InterceptionPoint
 	public void afterApplicationListenerLoad( IStruct args ) {
+		BoxRuntime instance = BoxRuntime.getInstance();
+		if ( !instance.hasGlobalService( ORMKeys.ORMService ) ) {
+			logger.info( "Adding ORMService to global services" );
+			instance.putGlobalService( ORMKeys.ORMService, ORMService.getInstance() );
+		}
 		logger.info(
 		    "afterApplicationListenerLoad fired; checking for ORM configuration in the application context config" );
 
@@ -58,7 +64,8 @@ public class ApplicationLifecycle extends BaseInterceptor {
 		ORMConfig config = getORMConfig( context );
 		if ( config != null ) {
 			logger.info( "ORMEnabled is true and ORM settings are specified - Firing ORM application startup." );
-			ORMService.getInstance().startupApp( context, config );
+			( ( ORMService ) instance.getGlobalService( ORMKeys.ORMService ) )
+			    .startupApp( context, config );
 		}
 	}
 

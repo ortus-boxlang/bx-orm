@@ -14,6 +14,7 @@ import tools.BaseORMTest;
 @Disabled( "Breaks the test suite." )
 public class ORMFlushTest extends BaseORMTest {
 
+	@Disabled( "Not working until we have a better transaction management strategy." )
 	@DisplayName( "It can flush the session" )
 	@Test
 	public void testORMFlush() {
