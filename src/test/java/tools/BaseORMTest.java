@@ -72,7 +72,7 @@ public class BaseORMTest {
 	public static void teardown() throws SQLException {
 		// BaseJDBCTest.teardown();
 		JDBCTestUtils.cleanupTables( datasource );
-		datasource.shutdown();
+		instance.getDataSourceService().remove( datasource.getUniqueName() );
 	}
 
 	/**

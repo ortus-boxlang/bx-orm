@@ -160,7 +160,8 @@ public class JDBCTestUtils {
 		    Struct.of(
 		        "database", datasourceName,
 		        "driver", "derby",
-		        "connectionString", "jdbc:derby:memory:" + datasourceName + ";create=true"
+		        "connectionString", "jdbc:derby:memory:" + datasourceName + ";create=true",
+		        "maxConnections", 50
 		    ) );
 		try {
 			datasource.execute( "CREATE TABLE manufacturers ( id INTEGER, name VARCHAR(155), address VARCHAR(155) )" );
