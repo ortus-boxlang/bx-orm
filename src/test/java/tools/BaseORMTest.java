@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
@@ -178,6 +179,9 @@ public class BaseORMTest {
 			ormApp = ORMService.getInstance().getORMApp( context );
 		}
 
+		logger.debug( "firing onRequestStart!" );
+		context.getApplicationListener().onRequestStart( context, new Object[] {} );
+
 		// @TODO: Set up other entities for the alternate datasource. Stop doing so much manual constructing of an ORM app, it's brittle and needs rewriting
 		// every time we alter the ORM startup.
 		// if ( alternateBuilder == null ) {
@@ -194,5 +198,11 @@ public class BaseORMTest {
 		// );
 		// ormService.setSessionFactoryForName( alternateBuilder.getUniqueName(), alternateBuilder.build() );
 		// }
+	}
+
+	@AfterEach
+	public void teardownEach() {
+		logger.debug( "firing onRequestEnd!" );
+		context.getApplicationListener().onRequestEnd( context, new Object[] {} );
 	}
 }

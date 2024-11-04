@@ -55,6 +55,11 @@ public class TransactionManager extends BaseInterceptor {
 	 * Register self with the context attachments, and register interception methods with the interceptor pool.
 	 */
 	public void selfRegister() {
+		// just in case of double registration
+		if ( this.context.hasAttachment( ORMKeys.TransactionManager ) ) {
+			logger.warn( "Transaction manager already registered" );
+			return;
+		}
 		logger.debug( "Registering ORM transaction manager" );
 		this.context.putAttachment( ORMKeys.TransactionManager, this );
 		this.interceptorPool.register( this );
@@ -82,6 +87,7 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionBegin( IStruct args ) {
+		logger.debug( "onTransactionBegin FIRED!" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormApp.getSession( context, datasource );
 			logger.debug( "Starting ORM transaction on session {}", ormSession );
@@ -91,6 +97,7 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionEnd( IStruct args ) {
+		logger.debug( "onTransactionEnd FIRED!" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormApp.getSession( context, datasource );
 			logger.debug( "Ending ORM transaction on session {}", ormSession );

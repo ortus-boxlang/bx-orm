@@ -246,6 +246,7 @@ public class ORMApp {
 	 * @return The Hibernate session.
 	 */
 	public Session getSession( IBoxContext context, DataSource datasource ) {
+		// @TODO: Ask Luis about synchronizing this method. We have multiple threads potentially trying to create a session on the same datasource.
 		IBoxContext	jdbcContext	= ( IBoxContext ) context.getParentOfType( IJDBCCapableContext.class );
 		Key			sessionKey	= Key.of( "orm_session_" + datasource.getUniqueName().getName() );
 
