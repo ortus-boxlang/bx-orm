@@ -24,6 +24,10 @@ class entityName="Vehicle" table="vehicles" persistent="true" {
         lazy="false";
 
     function onPreInsert(){
-        log.info( "Inserting new Vehicle: #getMake()# #getModel()#" );
+        writeOutput( "Inserting new Vehicle: #getMake()# #getModel()#" );
+    }
+
+    function onPreLoad(){
+        writeOutput( "Loading Vehicle #getVin()#" );
     }
 }

@@ -42,6 +42,9 @@ import org.hibernate.service.spi.SessionFactoryServiceRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -244,19 +247,31 @@ public class EventListener
 	}
 
 	private void announceGlobalEvent( Key eventType, AbstractEvent event, IStruct args ) {
-		if ( globalListener != null && globalListener.containsKey( ORMKeys.onPreLoad ) ) {
-			logger.debug( "Ready to invoke EventHandler.onPreLoad() with args {}", args.toString() );
+		if ( globalListener != null && globalListener.containsKey( eventType ) ) {
+			logger.debug( "Ready to invoke {} on global EventHandler with args {}", eventType.getName(), args.toString() );
 
 			// Fire the method on the global event handler
-			// this.globalListener.dereferenceAndInvoke( null, eventType, args, false );
+			this.globalListener.dereferenceAndInvoke( getCurrentContext(), eventType, args, false );
 		}
 	}
 
 	private void announceEntityEvent( Key eventType, IClassRunnable entity, IStruct args ) {
-		if ( entity.containsKey( ORMKeys.onPreLoad ) ) {
-			logger.debug( "Ready to invoke entity.onPreLoad() with args {}", args.toString() );
+		if ( entity.containsKey( eventType ) ) {
+			logger.debug( "Ready to invoke {} on entity with args {}", eventType.getName(), args.toString() );
+
 			// Fire the method on the entity itself
-			// this.globalListener.dereferenceAndInvoke( null, eventType, args, false );
+			entity.dereferenceAndInvoke( getCurrentContext(), eventType, args, false );
 		}
+	}
+
+	/**
+	 * Get the current RequestBoxContext, constructing one if necessary.
+	 */
+	private RequestBoxContext getCurrentContext() {
+		RequestBoxContext context = RequestBoxContext.getCurrent();
+		if ( context == null ) {
+			context = new ScriptingRequestBoxContext( BoxRuntime.getInstance().getRuntimeContext() );
+		}
+		return context;
 	}
 }
