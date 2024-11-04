@@ -13,6 +13,18 @@ For more details, see:
 
 * [Configuration Compatibility](./Configuration.md#compatibility)
 * [Entity Mapping Compatibility](./Mapping.md#compatibility)
+* [BIF Compatibility](./bifs/README.md#compatibility)
+
+## NEW Functionality
+
+`bx-orm` improves on traditional CFML engines with some additional functionality. Check out the list here:
+
+* [BIFs](#bifs)
+
+### BIFS
+
+* `entityNameArray()` supports an optional `datasource` argument to filter the result by datasource
+* `entityNameList()` supports an optional `datasource` argument to filter the result by datasource
 
 ## Entity Mapping CLI
 
