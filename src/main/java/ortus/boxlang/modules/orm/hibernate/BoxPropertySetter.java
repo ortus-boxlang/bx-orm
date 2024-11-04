@@ -35,7 +35,7 @@ public class BoxPropertySetter implements Setter {
 
 	@Override
 	public void set( Object target, Object value, SessionFactoryImplementor factory ) {
-		log.debug( "Setting property {} on entity {} to value {}", mappedProperty.getName(), mappedEntity.getEntityName(), value );
+		log.trace( "Setting property {} on entity {} to value {}", mappedProperty.getName(), mappedEntity.getEntityName(), value );
 		if ( target instanceof IClassRunnable instance ) {
 			VariablesScope variables = instance.getVariablesScope();
 			variables.put( mappedProperty.getName(), value );

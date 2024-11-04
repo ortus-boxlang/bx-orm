@@ -33,7 +33,7 @@ public class BoxPropertyGetter implements Getter {
 
 	@Override
 	public Object get( Object owner ) {
-		log.debug( "getting property {} on entity {}", mappedProperty.getName(), mappedEntity.getEntityName() );
+		log.trace( "getting property {} on entity {}", mappedProperty.getName(), mappedEntity.getEntityName() );
 		// @TODO: I think we should call the getter method on the BoxLang class, and not just return the property from the scope?
 		return ( ( IClassRunnable ) owner ).getVariablesScope().get( mappedProperty.getName() );
 	}
