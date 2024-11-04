@@ -46,10 +46,13 @@ public class SessionManager extends BaseInterceptor {
 	@InterceptionPoint
 	public void onRequestStart( IStruct args ) {
 		logger.debug( "onRequestStart - Starting ORM session" );
-		RequestBoxContext	context					= args.getAs( RequestBoxContext.class, Key.context );
+		RequestBoxContext	context				= args.getAs( RequestBoxContext.class, Key.context );
 
-		TransactionManager	ORMTransactionManager	= new TransactionManager( context, config );
-		ORMTransactionManager.selfRegister();
+		TransactionManager	transactionManager	= context.getAttachment( ORMKeys.TransactionManager );
+		if ( transactionManager == null ) {
+			transactionManager = new TransactionManager( context, config );
+			transactionManager.selfRegister();
+		}
 		// @TODO: begin ORM session
 		/**
 		 * @TODO: Plan out session management, datasource management, and connection management for ORM.

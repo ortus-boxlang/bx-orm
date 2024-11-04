@@ -12,8 +12,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.compiler.parser.BoxSourceType;
 import ortus.boxlang.modules.orm.ORMApp;
@@ -22,6 +20,7 @@ import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.application.BaseApplicationListener;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -40,21 +39,20 @@ import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 public class BaseORMTest {
 
-	public static BoxRuntime			instance;
-	public static RequestBoxContext		startupContext;
-	public RequestBoxContext			context;
-	public IScope						variables;
-	public static ORMService			ormService;
-	public static Key					appName	= Key.of( "BXORMTest" );
-	public static Key					result	= Key.of( "result" );
-	public static SessionFactoryBuilder	builder;
-	public static SessionFactoryBuilder	alternateBuilder;
-	public static DataSource			alternateDataSource;
-	public static ORMApp				ormApp;
+	public static BoxRuntime				instance;
+	public static RequestBoxContext			startupContext;
+	public RequestBoxContext				context;
+	public IScope							variables;
+	public static ORMService				ormService;
+	public static Key						appName	= Key.of( "BXORMTest" );
+	public static Key						result	= Key.of( "result" );
+	public static SessionFactoryBuilder		builder;
+	public static SessionFactoryBuilder		alternateBuilder;
+	public static DataSource				alternateDataSource;
+	public static ORMApp					ormApp;
+	public static BaseApplicationListener	listener;
 
-	static DataSource					datasource;
-
-	static final Logger					log		= LoggerFactory.getLogger( BaseORMTest.class );
+	static DataSource						datasource;
 
 	@BeforeAll
 	public static void setUp() {
@@ -67,6 +65,7 @@ public class BaseORMTest {
 		datasource		= JDBCTestUtils.constructTestDataSource( "TestDB" );
 
 		BaseORMTest.setupApplicationContext( startupContext );
+		listener = startupContext.getApplicationListener();
 	}
 
 	@AfterAll
@@ -142,7 +141,7 @@ public class BaseORMTest {
 
 	@BeforeEach
 	public void setupEach() {
-		context = new ScriptingRequestBoxContext( instance.getRuntimeContext() );
+		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), listener );
 		assertNotNull( startupContext.getParentOfType( ApplicationBoxContext.class ) );
 		context.injectParentContext( startupContext.getParentOfType( ApplicationBoxContext.class ) );
 
@@ -179,30 +178,13 @@ public class BaseORMTest {
 			ormApp = ORMService.getInstance().getORMApp( context );
 		}
 
-		logger.debug( "firing onRequestStart!" );
-		context.getApplicationListener().onRequestStart( context, new Object[] {} );
-
-		// @TODO: Set up other entities for the alternate datasource. Stop doing so much manual constructing of an ORM app, it's brittle and needs rewriting
-		// every time we alter the ORM startup.
-		// if ( alternateBuilder == null ) {
-		// // Construct a new session factory for the second datasource
-		// ORMConfig config = new ORMConfig( Struct.of(
-		// "datasource", "dsn2"
-		// ) );
-		// Map<String, List<EntityRecord>> entities = MappingGenerator.discoverEntities( context, config );
-		// SessionFactoryBuilder alternateBuilder = new SessionFactoryBuilder(
-		// context,
-		// alternateDataSource,
-		// config,
-		// entities.get( "dsn2" )
-		// );
-		// ormService.setSessionFactoryForName( alternateBuilder.getUniqueName(), alternateBuilder.build() );
-		// }
+		// Fire onRequestStart for session and transaction management startup
+		listener.onRequestStart( context, new Object[] {} );
 	}
 
 	@AfterEach
 	public void teardownEach() {
-		logger.debug( "firing onRequestEnd!" );
-		context.getApplicationListener().onRequestEnd( context, new Object[] {} );
+		// Fire onRequestEnd for session and transaction management cleanup
+		listener.onRequestEnd( context, new Object[] {} );
 	}
 }

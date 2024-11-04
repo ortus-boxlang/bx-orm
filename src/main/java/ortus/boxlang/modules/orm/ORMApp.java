@@ -122,7 +122,6 @@ public class ORMApp {
 		} );
 
 		// Register our ORM Session Manager
-		logger.debug( "Constructing SessionManager for opening/closing ORM sessions on request start/end" );
 		SessionManager sessionManager = new SessionManager( config );
 		context.getApplicationListener().getInterceptorPool().register( sessionManager );
 
@@ -250,12 +249,11 @@ public class ORMApp {
 		IBoxContext	jdbcContext	= ( IBoxContext ) context.getParentOfType( IJDBCCapableContext.class );
 		Key			sessionKey	= Key.of( "orm_session_" + datasource.getUniqueName().getName() );
 
-		logger.debug( "Getting session from context attachments with key: {}", sessionKey.getName() );
 		if ( jdbcContext.hasAttachment( sessionKey ) ) {
-			logger.debug( "key exists; returning session" );
+			logger.trace( "returning existing session for key: {}", sessionKey.getName() );
 			return jdbcContext.getAttachment( sessionKey );
 		}
-		logger.debug( "key DOES NOT exist; opening NEW session" );
+		logger.trace( "opening NEW session for key: {}", sessionKey.getName() );
 
 		SessionFactory sessionFactory = getSessionFactoryOrThrow( datasource );
 		jdbcContext.putAttachment( sessionKey, sessionFactory.openSession() );
