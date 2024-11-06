@@ -1,34 +1,29 @@
-class entityName="Vehicle" table="vehicles" persistent="true" {
-
-    property 
-        name="vin" 
-        type="string" 
-        fieldtype="id" 
-        ormtype="string" 
-        generator="assigned";
-        
-    property 
-        name="make" 
-        type="string";
-
-    property 
-        name="model" 
-        type="string";
-    
-
-    property 
-        name="manufacturer" 
-        fieldtype="one-to-one"
-        cfc="Manufacturer"
-        fkcolumn="FK_manufacturer"
-        lazy="false";
+class{
 
     property name="eventLog" type="array" persistent="false";
 
-    function init(){
+    funcion init(){
         eventLog = [];
-        return this;
     }
+
+    // these events will ONLY fire upon the global event handler
+    function onEvict(){
+        getEventLog().append( "onEvict" );
+    }
+    function onDirtyCheck(){
+        getEventLog().append( "onDirtyCheck" );
+    }
+    function onClear(){
+        getEventLog().append( "onClear" );
+    }
+    function onAutoFlush(){
+        getEventLog().append( "onAutoFlush" );
+    }
+    function onFlush(){
+        getEventLog().append( "onFlush" );
+    }
+
+    // These events will fire upon the entity as well
 
     function preLoad(){
         getEventLog().append( "preLoad" );

@@ -148,8 +148,8 @@ public class EventListener
 		    ORMKeys.event, event,
 		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
 		);
-		announceGlobalEvent( ORMKeys.onPostLoad, event, args );
-		announceEntityEvent( ORMKeys.onPostLoad, ( IClassRunnable ) event.getEntity(), args );
+		announceGlobalEvent( ORMKeys.postLoad, event, args );
+		announceEntityEvent( ORMKeys.postLoad, ( IClassRunnable ) event.getEntity(), args );
 	}
 
 	@Override
@@ -158,8 +158,8 @@ public class EventListener
 		    ORMKeys.event, event,
 		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
 		);
-		announceGlobalEvent( ORMKeys.onPreLoad, event, args );
-		announceEntityEvent( ORMKeys.onPreLoad, ( IClassRunnable ) event.getEntity(), args );
+		announceGlobalEvent( ORMKeys.preLoad, event, args );
+		announceEntityEvent( ORMKeys.preLoad, ( IClassRunnable ) event.getEntity(), args );
 	}
 
 	@Override
@@ -168,8 +168,8 @@ public class EventListener
 		    ORMKeys.event, event,
 		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
 		);
-		announceGlobalEvent( ORMKeys.onPostUpdate, event, args );
-		announceEntityEvent( ORMKeys.onPostUpdate, ( IClassRunnable ) event.getEntity(), args );
+		announceGlobalEvent( ORMKeys.postUpdate, event, args );
+		announceEntityEvent( ORMKeys.postUpdate, ( IClassRunnable ) event.getEntity(), args );
 	}
 
 	@Override
@@ -180,8 +180,8 @@ public class EventListener
 		    // @TODO: Convert the state data to a struct.
 		    ORMKeys.oldData, event.getOldState()
 		);
-		announceGlobalEvent( ORMKeys.onPreUpdate, event, args );
-		announceEntityEvent( ORMKeys.onPreUpdate, ( IClassRunnable ) event.getEntity(), args );
+		announceGlobalEvent( ORMKeys.preUpdate, event, args );
+		announceEntityEvent( ORMKeys.preUpdate, ( IClassRunnable ) event.getEntity(), args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		return false;
 	}
@@ -208,8 +208,8 @@ public class EventListener
 		    ORMKeys.event, event,
 		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
 		);
-		announceGlobalEvent( ORMKeys.onPostDelete, event, args );
-		announceEntityEvent( ORMKeys.onPostDelete, ( IClassRunnable ) event.getEntity(), args );
+		announceGlobalEvent( ORMKeys.postDelete, event, args );
+		announceEntityEvent( ORMKeys.postDelete, ( IClassRunnable ) event.getEntity(), args );
 	}
 
 	@Override
@@ -218,8 +218,8 @@ public class EventListener
 		    ORMKeys.event, event,
 		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
 		);
-		announceGlobalEvent( ORMKeys.onPreDelete, event, args );
-		announceEntityEvent( ORMKeys.onPreDelete, ( IClassRunnable ) event.getEntity(), args );
+		announceGlobalEvent( ORMKeys.preDelete, event, args );
+		announceEntityEvent( ORMKeys.preDelete, ( IClassRunnable ) event.getEntity(), args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		return false;
 	}
@@ -230,8 +230,8 @@ public class EventListener
 		    ORMKeys.event, event,
 		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
 		);
-		announceGlobalEvent( ORMKeys.onPostInsert, event, args );
-		announceEntityEvent( ORMKeys.onPostInsert, ( IClassRunnable ) event.getEntity(), args );
+		announceGlobalEvent( ORMKeys.postInsert, event, args );
+		announceEntityEvent( ORMKeys.postInsert, ( IClassRunnable ) event.getEntity(), args );
 	}
 
 	@Override
@@ -240,8 +240,8 @@ public class EventListener
 		    ORMKeys.event, event,
 		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
 		);
-		announceGlobalEvent( ORMKeys.onPreInsert, event, args );
-		announceEntityEvent( ORMKeys.onPreInsert, ( IClassRunnable ) event.getEntity(), args );
+		announceGlobalEvent( ORMKeys.preInsert, event, args );
+		announceEntityEvent( ORMKeys.preInsert, ( IClassRunnable ) event.getEntity(), args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		return false;
 	}
