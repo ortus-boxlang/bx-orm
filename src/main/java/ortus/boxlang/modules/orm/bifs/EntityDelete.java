@@ -1,14 +1,20 @@
 package ortus.boxlang.modules.orm.bifs;
 
-import org.apache.commons.lang3.NotImplementedException;
+import java.util.Set;
+
+import org.hibernate.Session;
 
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.util.EntityUtil;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
 public class EntityDelete extends BIF {
@@ -19,15 +25,26 @@ public class EntityDelete extends BIF {
 	private ORMService ormService;
 
 	/**
-	 * ExampleBIF
+	 * Constructor
+	 */
+	public EntityDelete() {
+		super();
+		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		declaredArguments	= new Argument[] {
+		    new Argument( true, "class", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		};
+	}
+
+	/**
+	 * Delete an entity from the database.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		// TODO implement BIF
-		this.ormService = ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
-		throw new NotImplementedException();
+		Session			session	= this.ormService.getORMApp( context ).getSession( context );
+		IClassRunnable	entity	= ( IClassRunnable ) arguments.get( ORMKeys.entity );
+		session.delete( EntityUtil.getEntityName( entity ), entity );
+		return null;
 	}
-
 }
