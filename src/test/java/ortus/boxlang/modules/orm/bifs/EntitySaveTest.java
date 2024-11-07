@@ -17,7 +17,6 @@ public class EntitySaveTest extends BaseORMTest {
 			"""
 			transaction{
 				entitySave( entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } ) );
-				ormFlush();
 			}
 			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Audi Corp'" );
 			""",
@@ -37,7 +36,6 @@ public class EntitySaveTest extends BaseORMTest {
 			transaction{
 				manufacturer = entityNew( "manufacturer", { name : "Toyota", address : "101 Toyota Way" } )
 				entitySave( manufacturer, true );
-				ormFlush();
 			}
 			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Toyota'" );
 			""",

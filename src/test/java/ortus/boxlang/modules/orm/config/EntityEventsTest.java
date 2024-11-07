@@ -43,9 +43,8 @@ public class EntityEventsTest extends BaseORMTest {
 					model : "Tacoma"
 				} );
 				entitySave( entity );
-				ormFlush();
-				result = entity.getEventLog();
 			}
+			result = entity.getEventLog();
 			""",
 			context
 		);
@@ -66,9 +65,8 @@ public class EntityEventsTest extends BaseORMTest {
 				entity = entityLoadByPK( "Vehicle", '1HGCM82633A123456' );
 				entity.setModel( "Civic" );
 				entitySave( entity );
-				ormFlush();
-				result = entity.getEventLog();
 			}
+			result = entity.getEventLog();
 			""",
 			context
 		);
@@ -88,9 +86,8 @@ public class EntityEventsTest extends BaseORMTest {
 			transaction {
 				entity = entityLoadByPK( "Vehicle", '1HGCM82633A123456' );
 				entityDelete( entity );
-				ormFlush();
-				result = entity.getEventLog();
 			}
+			result = entity.getEventLog();
 			""",
 			context
 		);

@@ -17,7 +17,6 @@ public class EntityDeleteTest extends BaseORMTest {
 			"""
 			transaction {
 				entityDelete( entityLoadByPK( "Vehicle", '1HGCM82633A123456' ) );
-				ormFlush();
 			}
 			result = queryExecute( "SELECT * FROM vehicles WHERE vin = '1HGCM82633A123456'" );
 			""",

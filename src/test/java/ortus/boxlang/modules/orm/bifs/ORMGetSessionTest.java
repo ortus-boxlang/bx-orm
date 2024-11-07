@@ -62,9 +62,8 @@ public class ORMGetSessionTest extends BaseORMTest {
 		    	ormGetSession();
 		    	dev1 = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
 		    	entitySave( dev1 );
-		    	ORMFlush();
-		    	result = queryExecute( "SELECT COUNT(*) FROM vehicles" );
 		    }
+		    result = queryExecute( "SELECT COUNT(*) FROM vehicles" );
 		    """, context );
 
 		assertNotNull( variables.get( result ) );
