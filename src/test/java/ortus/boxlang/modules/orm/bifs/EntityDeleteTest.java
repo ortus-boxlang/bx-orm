@@ -7,13 +7,9 @@ import org.junit.jupiter.api.Test;
 
 import tools.BaseORMTest;
 
-// @TODO: This is implemented, and working, but is a MAJOR hack
-// and needs revisiting to address connection management and transaction management concerns.
-// @Disabled( "connection management issues when run in a full suite. Passes when run solo." )
 public class EntityDeleteTest extends BaseORMTest {
 
-	// @Disabled( "Not working until we have a better transaction management strategy." )
-	@DisplayName( "It can save new entities to the database" )
+	@DisplayName( "It can delete existing entities from the database" )
 	@Test
 	public void testEntityDelete() {
 		// @formatter:off
