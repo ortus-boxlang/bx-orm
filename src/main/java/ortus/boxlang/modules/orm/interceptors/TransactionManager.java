@@ -87,20 +87,44 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionBegin( IStruct args ) {
-		logger.debug( "onTransactionBegin FIRED!" );
+		logger.debug( "onTransactionBegin fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormApp.getSession( context, datasource );
-			logger.debug( "Starting ORM transaction on session {}", ormSession );
+			logger.debug( "Starting ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+			ormSession.beginTransaction();
+		} );
+	}
+
+	@InterceptionPoint
+	public void onTransactionCommit( IStruct args ) {
+		logger.debug( "onTransactionCommit fired" );
+		ormApp.getDatasources().forEach( ( datasource ) -> {
+			Session ormSession = ormApp.getSession( context, datasource );
+			logger.debug( "Commiting ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+			ormSession.getTransaction().commit();
+			logger.debug( "Beginning new ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+			ormSession.beginTransaction();
+		} );
+	}
+
+	@InterceptionPoint
+	public void onTransactionRollback( IStruct args ) {
+		logger.debug( "onTransactionRollback fired" );
+		ormApp.getDatasources().forEach( ( datasource ) -> {
+			Session ormSession = ormApp.getSession( context, datasource );
+			logger.debug( "Rolling back ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+			ormSession.getTransaction().rollback();
+			logger.debug( "Beginning new ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
 			ormSession.beginTransaction();
 		} );
 	}
 
 	@InterceptionPoint
 	public void onTransactionEnd( IStruct args ) {
-		logger.debug( "onTransactionEnd FIRED!" );
+		logger.debug( "onTransactionEnd fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormApp.getSession( context, datasource );
-			logger.debug( "Ending ORM transaction on session {}", ormSession );
+			logger.debug( "Ending ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
 			ormSession.getTransaction().commit();
 		} );
 	}
