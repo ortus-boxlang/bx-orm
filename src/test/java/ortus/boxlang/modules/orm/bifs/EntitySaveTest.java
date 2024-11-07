@@ -1,8 +1,7 @@
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +9,6 @@ import tools.BaseORMTest;
 
 public class EntitySaveTest extends BaseORMTest {
 
-	@Disabled( "Not working until we have a better transaction management strategy." )
 	@DisplayName( "It can save new entities to the database" )
 	@Test
 	public void testEntitySave() {
@@ -18,9 +16,7 @@ public class EntitySaveTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			transaction{
-				dev1 = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
-				dev2 = entityNew( "manufacturer", { name : "Toyota", address : "101 Toyota Way" } );
-				entitySave( dev1 );
+				entitySave( entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } ) );
 				ormFlush();
 			}
 			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Audi Corp'" );
@@ -28,9 +24,28 @@ public class EntitySaveTest extends BaseORMTest {
 			context
 		);
 		// @formatter:on
-		// tx.commit();
-		assertEquals( 1, variables.getAsQuery( result ).size() );
-		assertEquals( "Audi Corp", variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) );
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Audi Corp" );
+	}
+
+	@DisplayName( "It can save new entities to the database with forceinsert:true" )
+	@Test
+	public void testEntitySaveWithForceInsert() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction{
+				manufacturer = entityNew( "manufacturer", { name : "Toyota", address : "101 Toyota Way" } )
+				entitySave( manufacturer, true );
+				ormFlush();
+			}
+			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Toyota'" );
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Toyota" );
 	}
 
 }

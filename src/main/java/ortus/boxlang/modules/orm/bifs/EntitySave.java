@@ -13,6 +13,7 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
@@ -49,10 +50,14 @@ public class EntitySave extends BIF {
 	 * @return
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session	= this.ormService.getORMApp( context ).getSession( context );
-		// @TODO: Implement forceinsert
-		IClassRunnable	entity	= ( IClassRunnable ) arguments.get( ORMKeys.entity );
-		session.save( EntityUtil.getEntityName( entity ), entity );
+		Session			session		= this.ormService.getORMApp( context ).getSession( context );
+		IClassRunnable	entity		= ( IClassRunnable ) arguments.get( ORMKeys.entity );
+		Boolean			forceInsert	= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
+		if ( forceInsert ) {
+			session.save( EntityUtil.getEntityName( entity ), entity );
+		} else {
+			session.saveOrUpdate( EntityUtil.getEntityName( entity ), entity );
+		}
 
 		return null;
 	}
