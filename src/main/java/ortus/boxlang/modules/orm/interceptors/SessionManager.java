@@ -7,6 +7,7 @@ import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
@@ -27,9 +28,15 @@ public class SessionManager extends BaseInterceptor {
 	 */
 	private ORMConfig			config;
 
+	/**
+	 * ORM service.
+	 */
+	private ORMService			ormService;
+
 	public SessionManager( ORMConfig config ) {
 		super();
-		this.config = config;
+		this.config		= config;
+		this.ormService	= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
 	}
 
 	/**
@@ -68,22 +75,23 @@ public class SessionManager extends BaseInterceptor {
 	@InterceptionPoint
 	public void onRequestEnd( IStruct args ) {
 		RequestBoxContext	context					= args.getAs( RequestBoxContext.class, Key.context );
-		ORMApp				ormApp					= ORMService.getInstance().getORMApp( context );
+		ORMApp				ormApp					= this.ormService.getORMApp( context );
 
 		TransactionManager	ORMTransactionManager	= context.getAttachment( ORMKeys.TransactionManager );
 		if ( ORMTransactionManager != null ) {
 			ORMTransactionManager.selfDestruct();
 		}
 
-		// @TODO: if ormConfig.flushAtRequestEnd and ormConfig.autoManageSession, flush the current session.
-		// @TODO: end ORM session
-		logger.debug( "onRequestEnd - closing ORM sessions" );
-		if ( config.flushAtRequestEnd ) {
+		if ( config.flushAtRequestEnd && config.autoManageSession ) {
 			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
-			// @TODO: Consider moving this into the ORMApp itself.
 			ormApp.getDatasources().forEach( datasource -> {
 				ormApp.getSession( context, datasource ).flush();
 			} );
 		}
+
+		logger.debug( "onRequestEnd - closing ORM sessions" );
+		ormApp.getDatasources().forEach( datasource -> {
+			ormApp.getSession( context, datasource ).close();
+		} );
 	}
 }

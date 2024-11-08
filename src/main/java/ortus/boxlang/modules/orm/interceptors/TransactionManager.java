@@ -8,6 +8,7 @@ import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
@@ -43,11 +44,17 @@ public class TransactionManager extends BaseInterceptor {
 	 */
 	private InterceptorPool		interceptorPool;
 
+	/**
+	 * ORM service.
+	 */
+	private ORMService			ormService;
+
 	public TransactionManager( RequestBoxContext context, ORMConfig config ) {
 		super();
 		this.context			= context;
 		this.config				= config;
-		this.ormApp				= ORMService.getInstance().getORMApp( context );
+		this.ormService			= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		this.ormApp				= ormService.getORMApp( context );
 		this.interceptorPool	= context.getApplicationListener().getInterceptorPool();
 	}
 
