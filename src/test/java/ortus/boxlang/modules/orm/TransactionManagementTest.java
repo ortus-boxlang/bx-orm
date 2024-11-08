@@ -2,12 +2,31 @@ package ortus.boxlang.modules.orm;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import tools.BaseORMTest;
 
 public class TransactionManagementTest extends BaseORMTest {
+
+	@Disabled( "Unimplemented." )
+	@DisplayName( "It automatically begins a Hibernate session and transaction when you call an ORM method" )
+	@Test
+	public void testAutomaticTransactions() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			entitySave( entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } ) );
+			ormFlush();
+			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Audi Corp'" );
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Audi Corp" );
+	}
 
 	@DisplayName( "It commits on transaction close" )
 	@Test
