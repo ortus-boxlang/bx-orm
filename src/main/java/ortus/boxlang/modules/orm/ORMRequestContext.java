@@ -104,9 +104,11 @@ public class ORMRequestContext {
 
 		logger.trace( "opening NEW session for key: {}", sessionKey.getName() );
 
-		SessionFactory sessionFactory = this.ormApp.getSessionFactoryOrThrow( datasource );
-		this.sessions.put( sessionKey, sessionFactory.openSession() );
-		return this.sessions.get( sessionKey );
+		SessionFactory	sessionFactory	= this.ormApp.getSessionFactoryOrThrow( datasource );
+		Session			newSession		= sessionFactory.openSession();
+		this.sessions.put( sessionKey, newSession );
+		newSession.beginTransaction();
+		return newSession;
 	}
 
 	/**

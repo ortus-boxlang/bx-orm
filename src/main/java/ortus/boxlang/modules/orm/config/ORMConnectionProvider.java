@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.runtime.jdbc.DataSource;
 
@@ -14,11 +16,13 @@ import ortus.boxlang.runtime.jdbc.DataSource;
  */
 public class ORMConnectionProvider implements ConnectionProvider {
 
+	private Logger		logger	= LoggerFactory.getLogger( ORMConnectionProvider.class );
+
 	/**
 	 * The BoxLang DataSource object which manages database connections and
 	 * especially connection pooling.
 	 */
-	private DataSource dataSource;
+	private DataSource	dataSource;
 
 	public ORMConnectionProvider( DataSource dataSource ) {
 		this.dataSource = dataSource;
@@ -32,7 +36,9 @@ public class ORMConnectionProvider implements ConnectionProvider {
 
 	@Override
 	public Connection getConnection() throws SQLException {
-		return dataSource.getConnection();
+		Connection connection = dataSource.getConnection();
+		logger.debug( "Getting connection {} for datasource: {}", connection, dataSource.getOriginalName() );
+		return connection;
 	}
 
 	@Override

@@ -90,7 +90,18 @@ public class TransactionManager extends BaseInterceptor {
 		logger.debug( "onTransactionBegin fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
+			if ( config.autoManageSession ) {
+				logger.debug( "'autoManageSession' is enabled; flushing ORM session {} for datasource prior to transaction begin.", ormSession,
+				    datasource.getUniqueName() );
+				ormSession.flush();
+			}
+
 			logger.debug( "Starting ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+			if ( ormSession.isJoinedToTransaction() ) {
+				// May want to put this behind some kind of compatibility flag...
+				logger.debug( "Session {} is already joined to a transaction, closing transaction and beginning anew", ormSession );
+				ormSession.getTransaction().commit();
+			}
 			ormSession.beginTransaction();
 		} );
 	}
@@ -100,7 +111,7 @@ public class TransactionManager extends BaseInterceptor {
 		logger.debug( "onTransactionCommit fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
-			logger.debug( "Commiting ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+			logger.debug( "Committing ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
 			ormSession.getTransaction().commit();
 			logger.debug( "Beginning new ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
 			ormSession.beginTransaction();

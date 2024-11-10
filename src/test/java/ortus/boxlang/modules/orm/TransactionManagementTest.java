@@ -10,10 +10,27 @@ import tools.BaseORMTest;
 
 public class TransactionManagementTest extends BaseORMTest {
 
-	@Disabled( "Unimplemented." )
+	// @Disabled( "Unimplemented." )
 	@DisplayName( "It automatically begins a Hibernate session and transaction when you call an ORM method" )
 	@Test
 	public void testAutomaticTransactions() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			entitySave( entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } ) );
+			ormFlush();
+			""",
+			context
+		);
+		// @formatter:on
+		// assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
+		// assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Audi Corp" );
+	}
+
+	@Disabled( "Broken. This HAS to be figured out for existing CFML apps to work." )
+	@DisplayName( "It wont cause table/connection locking when ORM and native JDBC queries coexist" )
+	@Test
+	public void testORMAndNativeQueryCoexistence() {
 		// @formatter:off
 		instance.executeSource(
 			"""
