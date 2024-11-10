@@ -16,13 +16,13 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
 /**
- * ORM session lifecycle management.
+ * BoxLang request listener used to construct and tear down ORM request contexts.
  * <p>
- * Listens to request events to manage the lifecycle of ORM sessions (mainly session startup and shutdown).
+ * Listens to request events (start and end) in order to construct and tear down ORM request contexts.
  */
-public class SessionManager extends BaseInterceptor {
+public class RequestListener extends BaseInterceptor {
 
-	private static final Logger	logger	= LoggerFactory.getLogger( SessionManager.class );
+	private static final Logger	logger	= LoggerFactory.getLogger( RequestListener.class );
 
 	/**
 	 * ORM configuration.
@@ -34,7 +34,7 @@ public class SessionManager extends BaseInterceptor {
 	 */
 	private InterceptorPool		interceptorPool;
 
-	public SessionManager( ORMConfig config, InterceptorPool interceptorPool ) {
+	public RequestListener( ORMConfig config, InterceptorPool interceptorPool ) {
 		super();
 		this.config				= config;
 		this.interceptorPool	= interceptorPool;
@@ -72,29 +72,29 @@ public class SessionManager extends BaseInterceptor {
 	}
 
 	/**
-	 * Initialize a new SessionManager, store it as a context attachment, and return it.
+	 * Initialize a new RequestListener, store it as a context attachment, and return it.
 	 * 
-	 * @param context The context to register the SessionManager with.
+	 * @param context The context to register the RequestListener with.
 	 * @param config  The ORM configuration to use.
 	 */
-	public static SessionManager selfRegister( IBoxContext context, ORMConfig config ) {
+	public static RequestListener selfRegister( IBoxContext context, ORMConfig config ) {
 		// just in case of double registration
-		if ( context.hasAttachment( ORMKeys.SessionManager ) ) {
+		if ( context.hasAttachment( ORMKeys.RequestListener ) ) {
 			logger.warn( "Session manager already registered" );
-			return context.getAttachment( ORMKeys.SessionManager );
+			return context.getAttachment( ORMKeys.RequestListener );
 		}
 
 		// Register our ORM Session Manager
 		// The application listener seems to get blown away on every request, so listening here is pretty dang fragile.
 		//
-		// return new SessionManager( config, context.getApplicationListener().getInterceptorPool() );
-		return new SessionManager( config, BoxRuntime.getInstance().getInterceptorService() );
+		// return new RequestListener( config, context.getApplicationListener().getInterceptorPool() );
+		return new RequestListener( config, BoxRuntime.getInstance().getInterceptorService() );
 	}
 
 	/**
-	 * Unregister this SessionManager from the interceptor pool.
+	 * Unregister this RequestListener from the interceptor pool.
 	 */
-	public SessionManager selfDestruct() {
+	public RequestListener selfDestruct() {
 		this.interceptorPool.unregister( this );
 		return this;
 	}

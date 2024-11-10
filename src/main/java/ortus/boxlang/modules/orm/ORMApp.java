@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
-import ortus.boxlang.modules.orm.interceptors.SessionManager;
+import ortus.boxlang.modules.orm.interceptors.RequestListener;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -81,7 +81,7 @@ public class ORMApp {
 	/**
 	 * The session manager for this ORM application.
 	 */
-	private SessionManager					sessionManager;
+	private RequestListener					requestListener;
 
 	/**
 	 * Get a unique name for this context's ORM Application.
@@ -131,10 +131,10 @@ public class ORMApp {
 			}
 		} );
 
-		this.sessionManager = SessionManager.selfRegister( context, config );
+		this.requestListener = RequestListener.selfRegister( context, config );
 
 		logger.debug( "Firing onRequestStart to initiate first ORM session" );
-		sessionManager.onRequestStart( Struct.of(
+		requestListener.onRequestStart( Struct.of(
 		    "context", context,
 		    "args", null,
 		    "application", context.getApplicationListener().getApplication(),
@@ -243,6 +243,6 @@ public class ORMApp {
 			sessionFactory.close();
 		}
 		this.sessionFactories.clear();
-		this.sessionManager.selfDestruct();
+		this.requestListener.selfDestruct();
 	}
 }

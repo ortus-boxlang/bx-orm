@@ -5,7 +5,7 @@ import ortus.boxlang.runtime.scopes.Key;
 public class ORMKeys {
 
 	public static final Key	ORMService				= Key.of( "ORMService" );
-	public static final Key	SessionManager			= Key.of( "SessionManager" );
+	public static final Key	RequestListener			= Key.of( "RequestListener" );
 	public static final Key	ORMRequestContext		= Key.of( "ORMRequestContext" );
 	public static final Key	TransactionManager		= Key.of( "TransactionManager" );
 	public static final Key	ORM						= Key.of( "ORM" );
