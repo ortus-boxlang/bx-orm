@@ -4,6 +4,7 @@ import java.util.Set;
 
 import org.hibernate.Session;
 
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -46,9 +47,9 @@ public class ORMGetSession extends BIF {
 	public Session _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String datasourceName = StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 		if ( !datasourceName.isBlank() ) {
-			return this.ormService.getORMApp( context ).getSession( context, Key.of( datasourceName ) );
+			return ORMRequestContext.getForContext( context ).getSession( Key.of( datasourceName ) );
 		}
-		return this.ormService.getORMApp( context ).getSession( context );
+		return ORMRequestContext.getForContext( context ).getSession();
 	}
 
 }

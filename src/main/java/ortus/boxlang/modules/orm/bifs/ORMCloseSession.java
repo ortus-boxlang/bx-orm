@@ -4,6 +4,7 @@ import java.util.Set;
 
 import org.hibernate.Session;
 
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -50,9 +51,9 @@ public class ORMCloseSession extends BIF {
 		Session	session;
 		String	datasourceName	= StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 		if ( !datasourceName.isBlank() ) {
-			session = this.ormService.getORMApp( context ).getSession( context, Key.of( datasourceName ) );
+			session = ORMRequestContext.getForContext( context ).getSession( Key.of( datasourceName ) );
 		} else {
-			session = this.ormService.getORMApp( context ).getSession( context );
+			session = ORMRequestContext.getForContext( context ).getSession();
 		}
 		session.close();
 

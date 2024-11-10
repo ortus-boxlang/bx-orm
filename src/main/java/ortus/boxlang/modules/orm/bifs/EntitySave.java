@@ -6,6 +6,7 @@ import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.util.EntityUtil;
@@ -50,7 +51,7 @@ public class EntitySave extends BIF {
 	 * @return
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session		= this.ormService.getORMApp( context ).getSession( context );
+		Session			session		= ORMRequestContext.getForContext( context ).getSession();
 		IClassRunnable	entity		= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		Boolean			forceInsert	= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
 		if ( forceInsert ) {

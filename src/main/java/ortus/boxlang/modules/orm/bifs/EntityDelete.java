@@ -4,6 +4,7 @@ import java.util.Set;
 
 import org.hibernate.Session;
 
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.util.EntityUtil;
@@ -42,7 +43,7 @@ public class EntityDelete extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session	= this.ormService.getORMApp( context ).getSession( context );
+		Session			session	= ORMRequestContext.getForContext( context ).getSession();
 		IClassRunnable	entity	= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		session.delete( EntityUtil.getEntityName( entity ), entity );
 		return null;

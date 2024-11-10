@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -215,15 +214,14 @@ public class ORMApp {
 	}
 
 	/**
-	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
-	 *
-	 * @param context The context for which to get a session.
-	 *
-	 * @return The Hibernate session.
+	 * Get the datasource for a given name, falling back to the default datasource if the name is null.
+	 * 
+	 * Will throw a BoxRuntimeException if the datasource is not found.
 	 */
-	public Session getSession( IBoxContext context ) {
+	public DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {
 		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
-		return getSession( context, connectionManager.getDefaultDatasourceOrThrow() );
+		return datasourceName != null ? connectionManager.getDatasourceOrThrow( datasourceName )
+		    : connectionManager.getDefaultDatasourceOrThrow();
 	}
 
 	/**
@@ -231,53 +229,6 @@ public class ORMApp {
 	 */
 	public List<DataSource> getDatasources() {
 		return this.datasources;
-	}
-
-	/**
-	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
-	 *
-	 * @param context    The context for which to get a session.
-	 * @param datasource The datasource to get the session for.
-	 *
-	 * @return The Hibernate session.
-	 */
-	public Session getSession( IBoxContext context, Key datasource ) {
-		return getSession( context, getDatasourceForNameOrDefault( context, datasource ) );
-	}
-
-	/**
-	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
-	 *
-	 * @param context    The context for which to get a session.
-	 * @param datasource The datasource to get the session for.
-	 *
-	 * @return The Hibernate session.
-	 */
-	public Session getSession( IBoxContext context, DataSource datasource ) {
-		// @TODO: Ask Luis about synchronizing this method. We have multiple threads potentially trying to create a session on the same datasource.
-		IBoxContext	jdbcContext	= ( IBoxContext ) context.getParentOfType( IJDBCCapableContext.class );
-		Key			sessionKey	= Key.of( "orm_session_" + datasource.getUniqueName().getName() );
-
-		if ( jdbcContext.hasAttachment( sessionKey ) ) {
-			logger.trace( "returning existing session for key: {}", sessionKey.getName() );
-			return jdbcContext.getAttachment( sessionKey );
-		}
-		logger.trace( "opening NEW session for key: {}", sessionKey.getName() );
-
-		SessionFactory sessionFactory = getSessionFactoryOrThrow( datasource );
-		jdbcContext.putAttachment( sessionKey, sessionFactory.openSession() );
-		return jdbcContext.getAttachment( sessionKey );
-	}
-
-	/**
-	 * Get the datasource for a given name, falling back to the default datasource if the name is null.
-	 * 
-	 * Will throw a BoxRuntimeException if the datasource is not found.
-	 */
-	private DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {
-		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
-		return datasourceName != null ? connectionManager.getDatasourceOrThrow( datasourceName )
-		    : connectionManager.getDefaultDatasourceOrThrow();
 	}
 
 	/**

@@ -5,6 +5,7 @@ import java.util.Set;
 import org.hibernate.Session;
 import org.hibernate.metadata.ClassMetadata;
 
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -59,7 +60,7 @@ public class EntityLoadByPK extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session	session		= this.ormService.getORMApp( context ).getSession( context );
+		Session	session		= ORMRequestContext.getForContext( context ).getSession();
 
 		// @TODO: Move this to a more sensible location.
 		// if ( session.getTransaction() == null ) {

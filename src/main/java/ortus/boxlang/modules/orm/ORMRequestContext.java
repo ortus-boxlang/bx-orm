@@ -1,5 +1,7 @@
 package ortus.boxlang.modules.orm;
 
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,7 +10,11 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.interceptors.TransactionManager;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.jdbc.ConnectionManager;
+import ortus.boxlang.runtime.jdbc.DataSource;
+import ortus.boxlang.runtime.scopes.Key;
 
 /**
  * Transient context for ORM requests.
@@ -50,7 +56,7 @@ public class ORMRequestContext {
 		this.ormApp		= this.ormService.getORMApp( context );
 
 		logger.debug( "Registering ORM transaction manager" );
-		this.transactionManager = new TransactionManager( context, this.config );
+		this.transactionManager = new TransactionManager( context, this, this.config );
 		this.context.putAttachment( ORMKeys.TransactionManager, this.transactionManager );
 		// @TODO: begin ORM session
 		/**
@@ -64,6 +70,57 @@ public class ORMRequestContext {
 		 */
 	}
 
+	/**
+	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 *
+	 * @return The Hibernate session.
+	 */
+	public Session getSession() {
+		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
+		return getSession( connectionManager.getDefaultDatasourceOrThrow() );
+	}
+
+	/**
+	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 *
+	 * @param context    The context for which to get a session.
+	 * @param datasource The datasource to get the session for.
+	 *
+	 * @return The Hibernate session.
+	 */
+	public Session getSession( Key datasource ) {
+		return getSession( this.ormApp.getDatasourceForNameOrDefault( context, datasource ) );
+	}
+
+	/**
+	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 *
+	 * @param context    The context for which to get a session.
+	 * @param datasource The datasource to get the session for.
+	 *
+	 * @return The Hibernate session.
+	 */
+	public Session getSession( DataSource datasource ) {
+		// @TODO: Ask Luis about synchronizing this method. We have multiple threads potentially trying to create a session on the same datasource.
+		IBoxContext	jdbcContext	= ( IBoxContext ) this.context.getParentOfType( IJDBCCapableContext.class );
+		Key			sessionKey	= Key.of( "orm_session_" + datasource.getUniqueName().getName() );
+
+		if ( jdbcContext.hasAttachment( sessionKey ) ) {
+			logger.trace( "returning existing session for key: {}", sessionKey.getName() );
+			return jdbcContext.getAttachment( sessionKey );
+		}
+		logger.trace( "opening NEW session for key: {}", sessionKey.getName() );
+
+		SessionFactory sessionFactory = this.ormApp.getSessionFactoryOrThrow( datasource );
+		jdbcContext.putAttachment( sessionKey, sessionFactory.openSession() );
+		return jdbcContext.getAttachment( sessionKey );
+	}
+
+	/**
+	 * Shut down this ORM request context.
+	 * <p>
+	 * Will close all Hibernate sessions and unregister the transaction manager.
+	 */
 	public ORMRequestContext shutdown() {
 		if ( this.transactionManager == null ) {
 			throw new IllegalStateException( "TransactionManager does not exist in context." );
@@ -75,13 +132,13 @@ public class ORMRequestContext {
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
 			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
 			this.ormApp.getDatasources().forEach( datasource -> {
-				this.ormApp.getSession( context, datasource ).flush();
+				getSession( datasource ).flush();
 			} );
 		}
 
 		logger.debug( "onRequestEnd - closing ORM sessions" );
 		this.ormApp.getDatasources().forEach( datasource -> {
-			this.ormApp.getSession( context, datasource ).close();
+			getSession( datasource ).close();
 		} );
 		return this;
 	}

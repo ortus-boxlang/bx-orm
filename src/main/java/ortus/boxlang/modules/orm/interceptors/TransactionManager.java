@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.ORMApp;
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -30,6 +31,11 @@ public class TransactionManager extends BaseInterceptor {
 	private RequestBoxContext	context;
 
 	/**
+	 * ORM request context.
+	 */
+	private ORMRequestContext	ormRequestContext;
+
+	/**
 	 * ORM application for this transaction manager.
 	 */
 	private ORMApp				ormApp;
@@ -49,12 +55,13 @@ public class TransactionManager extends BaseInterceptor {
 	 */
 	private ORMService			ormService;
 
-	public TransactionManager( RequestBoxContext context, ORMConfig config ) {
+	public TransactionManager( RequestBoxContext context, ORMRequestContext ormRequestContext, ORMConfig config ) {
 		super();
 		this.context			= context;
 		this.config				= config;
 		this.ormService			= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
 		this.ormApp				= ormService.getORMApp( context );
+		this.ormRequestContext	= ormRequestContext;
 		this.interceptorPool	= context.getApplicationListener().getInterceptorPool();
 		this.interceptorPool.register( this );
 	}
@@ -82,7 +89,7 @@ public class TransactionManager extends BaseInterceptor {
 	public void onTransactionBegin( IStruct args ) {
 		logger.debug( "onTransactionBegin fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session ormSession = ormApp.getSession( context, datasource );
+			Session ormSession = ormRequestContext.getSession( datasource );
 			logger.debug( "Starting ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
 			ormSession.beginTransaction();
 		} );
@@ -92,7 +99,7 @@ public class TransactionManager extends BaseInterceptor {
 	public void onTransactionCommit( IStruct args ) {
 		logger.debug( "onTransactionCommit fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session ormSession = ormApp.getSession( context, datasource );
+			Session ormSession = ormRequestContext.getSession( datasource );
 			logger.debug( "Commiting ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
 			ormSession.getTransaction().commit();
 			logger.debug( "Beginning new ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
@@ -104,7 +111,7 @@ public class TransactionManager extends BaseInterceptor {
 	public void onTransactionRollback( IStruct args ) {
 		logger.debug( "onTransactionRollback fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session ormSession = ormApp.getSession( context, datasource );
+			Session ormSession = ormRequestContext.getSession( datasource );
 			logger.debug( "Rolling back ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
 			ormSession.getTransaction().rollback();
 			logger.debug( "Beginning new ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
@@ -116,7 +123,7 @@ public class TransactionManager extends BaseInterceptor {
 	public void onTransactionEnd( IStruct args ) {
 		logger.debug( "onTransactionEnd fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session ormSession = ormApp.getSession( context, datasource );
+			Session ormSession = ormRequestContext.getSession( datasource );
 			logger.debug( "Ending ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
 			ormSession.getTransaction().commit();
 		} );

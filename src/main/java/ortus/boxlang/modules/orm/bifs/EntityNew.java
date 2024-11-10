@@ -4,6 +4,7 @@ import java.util.Set;
 
 import org.hibernate.Session;
 
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -49,7 +50,7 @@ public class EntityNew extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session			= this.ormService.getORMApp( context ).getSession( context );
+		Session			session			= ORMRequestContext.getForContext( context ).getSession();
 		EntityRecord	entityRecord	= SessionFactoryBuilder.lookupEntity( session, arguments.getAsString( ORMKeys.entityName ) );
 		IStruct			properties		= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 

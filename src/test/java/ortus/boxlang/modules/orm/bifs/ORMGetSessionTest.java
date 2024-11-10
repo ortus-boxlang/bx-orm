@@ -9,6 +9,7 @@ import org.hibernate.Session;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 import tools.BaseORMTest;
 
@@ -17,7 +18,8 @@ public class ORMGetSessionTest extends BaseORMTest {
 	@DisplayName( "It can get the current ORM session" )
 	@Test
 	public void testDefaultDatasource() {
-		Session session = ormService.getORMApp( context ).getSession( context );
+		Session session = ORMRequestContext.getForContext( context ).getSession();
+		;
 		assertNotNull( session );
 
 		instance.executeSource( "result = ormGetSession() ", context );
@@ -28,7 +30,8 @@ public class ORMGetSessionTest extends BaseORMTest {
 	@DisplayName( "It throws if the named datasource does not exist or is not configured for ORM" )
 	@Test
 	public void testBadDSN() {
-		Session session = ormService.getORMApp( context ).getSession( context );
+		Session session = ORMRequestContext.getForContext( context ).getSession();
+		;
 		assertNotNull( session );
 
 		assertThrows(
@@ -40,10 +43,11 @@ public class ORMGetSessionTest extends BaseORMTest {
 	@DisplayName( "It can get the ORM session from a named datasource" )
 	@Test
 	public void testNamedDatasource() {
-		Session defaultORMSession = ormService.getORMApp( context ).getSession( context );
+		Session defaultORMSession = ORMRequestContext.getForContext( context ).getSession();
+		;
 		assertNotNull( defaultORMSession );
 
-		Session secondDSNSession = ormService.getORMApp( context ).getSession( context, alternateDataSource.getConfiguration().name );
+		Session secondDSNSession = ORMRequestContext.getForContext( context ).getSession( alternateDataSource.getConfiguration().name );
 		assertNotNull( secondDSNSession );
 
 		instance.executeSource( "result = ormGetSession( 'dsn2' ) ", context );
