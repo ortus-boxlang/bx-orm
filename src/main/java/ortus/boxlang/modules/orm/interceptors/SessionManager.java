@@ -8,9 +8,11 @@ import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
+import ortus.boxlang.runtime.events.InterceptorPool;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
@@ -29,14 +31,21 @@ public class SessionManager extends BaseInterceptor {
 	private ORMConfig			config;
 
 	/**
+	 * The interceptor pool used to listen for request events.
+	 */
+	private InterceptorPool		interceptorPool;
+
+	/**
 	 * ORM service.
 	 */
 	private ORMService			ormService;
 
-	public SessionManager( ORMConfig config ) {
+	public SessionManager( ORMConfig config, InterceptorPool interceptorPool ) {
 		super();
-		this.config		= config;
-		this.ormService	= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		this.config				= config;
+		this.interceptorPool	= interceptorPool;
+		this.ormService			= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		this.interceptorPool.register( this );
 	}
 
 	/**
@@ -93,5 +102,26 @@ public class SessionManager extends BaseInterceptor {
 		ormApp.getDatasources().forEach( datasource -> {
 			ormApp.getSession( context, datasource ).close();
 		} );
+	}
+
+	public static SessionManager selfRegister( IBoxContext context, ORMConfig config ) {
+		// just in case of double registration
+		if ( context.hasAttachment( ORMKeys.SessionManager ) ) {
+			logger.warn( "Session manager already registered" );
+			return context.getAttachment( ORMKeys.SessionManager );
+		}
+
+		// Register our ORM Session Manager
+		// The application listener seems to get blown away on every request, so listening here is pretty dang fragile.
+		//
+		// return new SessionManager( config, context.getApplicationListener().getInterceptorPool() );
+		return new SessionManager( config, BoxRuntime.getInstance().getInterceptorService() );
+	}
+
+	public SessionManager selfDestruct() {
+		this.interceptorPool.unregister( this );
+
+		// @TODO: Consider if we need to (or HOW to) unregister/shutdown the TransactionManagers as well.
+		return this;
 	}
 }

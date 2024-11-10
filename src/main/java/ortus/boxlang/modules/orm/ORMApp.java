@@ -22,7 +22,6 @@ import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.services.InterceptorService;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
@@ -31,17 +30,12 @@ public class ORMApp {
 	/**
 	 * The logger for the ORM application.
 	 */
-	private static final Logger				logger				= LoggerFactory.getLogger( ORMApp.class );
+	private static final Logger				logger	= LoggerFactory.getLogger( ORMApp.class );
 
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime			runtime				= BoxRuntime.getInstance();
-
-	/**
-	 * Interceptor Service
-	 */
-	private static final InterceptorService	interceptorService	= runtime.getInterceptorService();
+	private static final BoxRuntime			runtime	= BoxRuntime.getInstance();
 
 	/**
 	 * A map of session factories, keyed by name.
@@ -84,6 +78,11 @@ public class ORMApp {
 	 * A map of entities discovered for this ORM application, keyed by datasource name.
 	 */
 	private Map<String, List<EntityRecord>>	entityMap;
+
+	/**
+	 * The session manager for this ORM application.
+	 */
+	private SessionManager					sessionManager;
 
 	/**
 	 * Get a unique name for this context's ORM Application.
@@ -133,13 +132,7 @@ public class ORMApp {
 			}
 		} );
 
-		// Register our ORM Session Manager
-		SessionManager sessionManager = new SessionManager( config );
-
-		// The application listener seems to get blown away on every request, so listening here is pretty dang fragile.
-		// context.getApplicationListener().getInterceptorPool().register( sessionManager );
-
-		interceptorService.register( sessionManager );
+		this.sessionManager = SessionManager.selfRegister( context, config );
 
 		logger.debug( "Firing onRequestStart to initiate first ORM session" );
 		sessionManager.onRequestStart( Struct.of(
@@ -295,9 +288,10 @@ public class ORMApp {
 		// @TODO: "It is the responsibility of the application to ensure that there are
 		// no open sessions before calling this method as the impact on those
 		// sessions is indeterminate."
-		for ( SessionFactory sessionFactory : sessionFactories.values() ) {
+		for ( SessionFactory sessionFactory : this.sessionFactories.values() ) {
 			sessionFactory.close();
 		}
-		sessionFactories.clear();
+		this.sessionFactories.clear();
+		this.sessionManager.selfDestruct();
 	}
 }
