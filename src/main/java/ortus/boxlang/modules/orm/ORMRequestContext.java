@@ -1,5 +1,7 @@
 package ortus.boxlang.modules.orm;
 
+import java.util.HashMap;
+
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
@@ -23,20 +25,25 @@ import ortus.boxlang.runtime.scopes.Key;
  */
 public class ORMRequestContext {
 
-	private static final Logger	logger	= LoggerFactory.getLogger( ORMRequestContext.class );
+	private static final Logger		logger		= LoggerFactory.getLogger( ORMRequestContext.class );
 
 	/**
 	 * ORM service.
 	 */
-	private ORMService			ormService;
+	private ORMService				ormService;
 
-	private ORMApp				ormApp;
+	private ORMApp					ormApp;
 
-	private TransactionManager	transactionManager;
+	private TransactionManager		transactionManager;
 
-	private RequestBoxContext	context;
+	private RequestBoxContext		context;
 
-	private ORMConfig			config;
+	private ORMConfig				config;
+
+	/**
+	 * Map of Hibernate sessions for this request, keyed by datasource name.
+	 */
+	private HashMap<Key, Session>	sessions	= new HashMap<>();
 
 	/**
 	 * Retrieve the ORMRequestContext for the given context.
@@ -58,20 +65,10 @@ public class ORMRequestContext {
 		logger.debug( "Registering ORM transaction manager" );
 		this.transactionManager = new TransactionManager( context, this, this.config );
 		this.context.putAttachment( ORMKeys.TransactionManager, this.transactionManager );
-		// @TODO: begin ORM session
-		/**
-		 * @TODO: Plan out session management, datasource management, and connection management for ORM.
-		 * 
-		 *        Lucee / Lucee Hibernate will create a new session, then preemptively create a datasource connection for
-		 *        each configured datasource.
-		 * 
-		 *        I don't love this approach. I would prefer to only create the connection at the time of first use, as
-		 *        Boxlang core does with JDBC queries.
-		 */
 	}
 
 	/**
-	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 * Get the default Hibernate session, opening one if it does not already exist.
 	 *
 	 * @return The Hibernate session.
 	 */
@@ -81,9 +78,8 @@ public class ORMRequestContext {
 	}
 
 	/**
-	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 * Get a Hibernate session for the given datasource, opening one if it does not already exist.
 	 *
-	 * @param context    The context for which to get a session.
 	 * @param datasource The datasource to get the session for.
 	 *
 	 * @return The Hibernate session.
@@ -93,27 +89,24 @@ public class ORMRequestContext {
 	}
 
 	/**
-	 * Get a Hibernate session for a given Boxlang context. Will open a new session if one does not already exist.
+	 * Get a Hibernate session for the given datasource, opening one if it does not already exist.
 	 *
-	 * @param context    The context for which to get a session.
 	 * @param datasource The datasource to get the session for.
 	 *
 	 * @return The Hibernate session.
 	 */
 	public Session getSession( DataSource datasource ) {
-		// @TODO: Ask Luis about synchronizing this method. We have multiple threads potentially trying to create a session on the same datasource.
-		IBoxContext	jdbcContext	= ( IBoxContext ) this.context.getParentOfType( IJDBCCapableContext.class );
-		Key			sessionKey	= Key.of( "orm_session_" + datasource.getUniqueName().getName() );
-
-		if ( jdbcContext.hasAttachment( sessionKey ) ) {
+		Key sessionKey = datasource.getUniqueName();
+		if ( this.sessions.containsKey( sessionKey ) ) {
 			logger.trace( "returning existing session for key: {}", sessionKey.getName() );
-			return jdbcContext.getAttachment( sessionKey );
+			return this.sessions.get( sessionKey );
 		}
+
 		logger.trace( "opening NEW session for key: {}", sessionKey.getName() );
 
 		SessionFactory sessionFactory = this.ormApp.getSessionFactoryOrThrow( datasource );
-		jdbcContext.putAttachment( sessionKey, sessionFactory.openSession() );
-		return jdbcContext.getAttachment( sessionKey );
+		this.sessions.put( sessionKey, sessionFactory.openSession() );
+		return this.sessions.get( sessionKey );
 	}
 
 	/**
@@ -131,14 +124,14 @@ public class ORMRequestContext {
 
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
 			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
-			this.ormApp.getDatasources().forEach( datasource -> {
-				getSession( datasource ).flush();
+			this.sessions.forEach( ( key, session ) -> {
+				session.flush();
 			} );
 		}
 
 		logger.debug( "onRequestEnd - closing ORM sessions" );
-		this.ormApp.getDatasources().forEach( datasource -> {
-			getSession( datasource ).close();
+		this.sessions.forEach( ( key, session ) -> {
+			session.close();
 		} );
 		return this;
 	}
