@@ -3,8 +3,7 @@ package ortus.boxlang.modules.orm.interceptors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ortus.boxlang.modules.orm.ORMApp;
-import ortus.boxlang.modules.orm.ORMService;
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -35,16 +34,10 @@ public class SessionManager extends BaseInterceptor {
 	 */
 	private InterceptorPool		interceptorPool;
 
-	/**
-	 * ORM service.
-	 */
-	private ORMService			ormService;
-
 	public SessionManager( ORMConfig config, InterceptorPool interceptorPool ) {
 		super();
 		this.config				= config;
 		this.interceptorPool	= interceptorPool;
-		this.ormService			= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
 		this.interceptorPool.register( this );
 	}
 
@@ -61,49 +54,29 @@ public class SessionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onRequestStart( IStruct args ) {
-		logger.debug( "onRequestStart - Starting ORM session" );
-		RequestBoxContext	context				= args.getAs( RequestBoxContext.class, Key.context );
-
-		TransactionManager	transactionManager	= context.getAttachment( ORMKeys.TransactionManager );
-		if ( transactionManager == null ) {
-			transactionManager = new TransactionManager( context, config );
-			transactionManager.selfRegister();
+		RequestBoxContext context = args.getAs( RequestBoxContext.class, Key.context );
+		if ( context.hasAttachment( ORMKeys.ORMRequestContext ) ) {
+			logger.warn( "ORM request already started." );
+			return;
 		}
-		// @TODO: begin ORM session
-		/**
-		 * @TODO: Plan out session management, datasource management, and connection management for ORM.
-		 * 
-		 *        Lucee / Lucee Hibernate will create a new session, then preemptively create a datasource connection for
-		 *        each configured datasource.
-		 * 
-		 *        I don't love this approach. I would prefer to only create the connection at the time of first use, as
-		 *        Boxlang core does with JDBC queries.
-		 */
+		logger.debug( "onRequestStart - Starting ORM request" );
+		context.putAttachment( ORMKeys.ORMRequestContext, new ORMRequestContext( context, this.config ) );
 	}
 
 	@InterceptionPoint
 	public void onRequestEnd( IStruct args ) {
-		RequestBoxContext	context					= args.getAs( RequestBoxContext.class, Key.context );
-		ORMApp				ormApp					= this.ormService.getORMApp( context );
-
-		TransactionManager	ORMTransactionManager	= context.getAttachment( ORMKeys.TransactionManager );
-		if ( ORMTransactionManager != null ) {
-			ORMTransactionManager.selfDestruct();
-		}
-
-		if ( config.flushAtRequestEnd && config.autoManageSession ) {
-			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
-			ormApp.getDatasources().forEach( datasource -> {
-				ormApp.getSession( context, datasource ).flush();
-			} );
-		}
-
-		logger.debug( "onRequestEnd - closing ORM sessions" );
-		ormApp.getDatasources().forEach( datasource -> {
-			ormApp.getSession( context, datasource ).close();
-		} );
+		RequestBoxContext	context				= args.getAs( RequestBoxContext.class, Key.context );
+		ORMRequestContext	ormRequestContext	= context.getAttachment( ORMKeys.ORMRequestContext );
+		ormRequestContext.shutdown();
+		context.removeAttachment( ORMKeys.ORMRequestContext );
 	}
 
+	/**
+	 * Initialize a new SessionManager, store it as a context attachment, and return it.
+	 * 
+	 * @param context The context to register the SessionManager with.
+	 * @param config  The ORM configuration to use.
+	 */
 	public static SessionManager selfRegister( IBoxContext context, ORMConfig config ) {
 		// just in case of double registration
 		if ( context.hasAttachment( ORMKeys.SessionManager ) ) {
@@ -118,10 +91,11 @@ public class SessionManager extends BaseInterceptor {
 		return new SessionManager( config, BoxRuntime.getInstance().getInterceptorService() );
 	}
 
+	/**
+	 * Unregister this SessionManager from the interceptor pool.
+	 */
 	public SessionManager selfDestruct() {
 		this.interceptorPool.unregister( this );
-
-		// @TODO: Consider if we need to (or HOW to) unregister/shutdown the TransactionManagers as well.
 		return this;
 	}
 }

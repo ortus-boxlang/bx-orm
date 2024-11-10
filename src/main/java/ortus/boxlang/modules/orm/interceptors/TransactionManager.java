@@ -56,29 +56,15 @@ public class TransactionManager extends BaseInterceptor {
 		this.ormService			= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
 		this.ormApp				= ormService.getORMApp( context );
 		this.interceptorPool	= context.getApplicationListener().getInterceptorPool();
-	}
-
-	/**
-	 * Register self with the context attachments, and register interception methods with the interceptor pool.
-	 */
-	public void selfRegister() {
-		// just in case of double registration
-		if ( this.context.hasAttachment( ORMKeys.TransactionManager ) ) {
-			logger.warn( "Transaction manager already registered" );
-			return;
-		}
-		logger.debug( "Registering ORM transaction manager" );
-		this.context.putAttachment( ORMKeys.TransactionManager, this );
 		this.interceptorPool.register( this );
 	}
 
 	/**
-	 * Delete self from the context attachments, and unregister from the interceptor pool.
+	 * Unregister from the interceptor pool.
 	 */
-	public void selfDestruct() {
-		logger.debug( "Unregistering ORM transaction manager" );
-		this.context.removeAttachment( ORMKeys.TransactionManager );
+	public TransactionManager shutdown() {
 		this.interceptorPool.unregister( this );
+		return this;
 	}
 
 	/**

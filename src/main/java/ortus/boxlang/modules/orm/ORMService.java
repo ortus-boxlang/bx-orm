@@ -94,7 +94,7 @@ public class ORMService implements IService {
 		Key		appName	= Key.of( ORMApp.getUniqueAppName( context ) );
 		ORMApp	app		= ormApps.get( appName );
 		if ( app != null ) {
-			app.onShutdown();
+			app.shutdown();
 			ormApps.remove( appName );
 		}
 	}
@@ -118,7 +118,7 @@ public class ORMService implements IService {
 	public void onShutdown( Boolean force ) {
 		logger.info( "ORMService shutdown" );
 		ormApps.forEach( ( key, ormApp ) -> {
-			ormApp.onShutdown();
+			ormApp.shutdown();
 		} );
 		ormApps.clear();
 	}
