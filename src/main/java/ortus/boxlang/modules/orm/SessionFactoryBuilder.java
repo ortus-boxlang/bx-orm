@@ -98,7 +98,7 @@ public class SessionFactoryBuilder {
 	 * @TODO: Move this into our SessionFactory wrapper class.
 	 * 
 	 * @param sessionFactory The Hibernate session factory
-	 * @param entityName     The entity name to look up
+	 * @param className      The class name to look up
 	 * 
 	 * @return The BoxLang entityRecord defining the entity name, filepath, FQN, and mapping xml file path
 	 */

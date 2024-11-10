@@ -130,7 +130,7 @@ public class ORMKeys {
 	public static final Key	singularName			= Key.of( "singularName" );
 
 	/**
-	 * OLD setting name. Deprecated. Use {@link Key._CLASS} instead.
+	 * OLD setting name. Deprecated. Use Key._CLASS instead.
 	 */
 	public static final Key	cfc						= Key.of( "cfc" );
 

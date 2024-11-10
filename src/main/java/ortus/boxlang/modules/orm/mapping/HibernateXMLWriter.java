@@ -433,11 +433,12 @@ public class HibernateXMLWriter {
 	formula="arbitrary sql expression"
 	/>
 	</code>
+	 * 
+	 * Returns nothing - document mutation is done in place
 	 *
 	 * @param classEl Parent &lt;class&gt; element to add the &lt;discriminator&gt; element to
 	 * @param data    Discriminator metadata in struct form. If this is empty, no amendments will be made.
 	 *
-	 * @return nothing - document mutation is done in place
 	 */
 	public void addDiscriminatorData( Element classEl, IStruct data ) {
 		if ( data.isEmpty() ) {
@@ -479,7 +480,7 @@ public class HibernateXMLWriter {
 	 * <li>generated</li>
 	 * </ul>
 	 *
-	 * @param prop Property metadata in struct form
+	 * @param generatorInfo Struct of fenerator metadata
 	 *
 	 * @return A &lt;generator /&gt; element ready to add to a Hibernate mapping document
 	 */
