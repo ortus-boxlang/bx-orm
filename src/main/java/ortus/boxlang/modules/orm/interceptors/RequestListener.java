@@ -9,7 +9,6 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
-import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
 import ortus.boxlang.runtime.events.InterceptorPool;
 import ortus.boxlang.runtime.scopes.Key;
@@ -20,24 +19,23 @@ import ortus.boxlang.runtime.types.IStruct;
  * <p>
  * Listens to request events (start and end) in order to construct and tear down ORM request contexts.
  */
-public class RequestListener extends BaseInterceptor {
+public class RequestListener extends BaseListener {
 
 	private static final Logger	logger	= LoggerFactory.getLogger( RequestListener.class );
-
-	/**
-	 * ORM configuration.
-	 */
-	private ORMConfig			config;
 
 	/**
 	 * The interceptor pool used to listen for request events.
 	 */
 	private InterceptorPool		interceptorPool;
 
-	public RequestListener( ORMConfig config, InterceptorPool interceptorPool ) {
+	// no-arg constructor for IInterceptor
+	public RequestListener() {
+		this( ( InterceptorPool ) BoxRuntime.getInstance().getInterceptorService() );
+	}
+
+	public RequestListener( InterceptorPool interceptorPool ) {
 		super();
-		this.config				= config;
-		this.interceptorPool	= interceptorPool;
+		this.interceptorPool = interceptorPool;
 		this.interceptorPool.register( this );
 	}
 
@@ -54,19 +52,33 @@ public class RequestListener extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onRequestStart( IStruct args ) {
-		RequestBoxContext context = args.getAs( RequestBoxContext.class, Key.context );
+		RequestBoxContext	context	= args.getAs( RequestBoxContext.class, Key.context );
+		ORMConfig			config	= getORMConfig( context );
+		if ( config == null ) {
+			logger.debug( "ORM not enabled for this request." );
+			return;
+		}
 		if ( context.hasAttachment( ORMKeys.ORMRequestContext ) ) {
 			logger.warn( "ORM request already started." );
 			return;
 		}
 		logger.debug( "onRequestStart - Starting ORM request" );
-		context.putAttachment( ORMKeys.ORMRequestContext, new ORMRequestContext( context, this.config ) );
+		context.putAttachment( ORMKeys.ORMRequestContext, new ORMRequestContext( context, config ) );
 	}
 
 	@InterceptionPoint
 	public void onRequestEnd( IStruct args ) {
-		RequestBoxContext	context				= args.getAs( RequestBoxContext.class, Key.context );
-		ORMRequestContext	ormRequestContext	= context.getAttachment( ORMKeys.ORMRequestContext );
+		RequestBoxContext	context	= args.getAs( RequestBoxContext.class, Key.context );
+		ORMConfig			config	= getORMConfig( context );
+		if ( config == null ) {
+			logger.debug( "ORM not enabled for this request." );
+			return;
+		}
+		if ( !context.hasAttachment( ORMKeys.ORMRequestContext ) ) {
+			logger.warn( "No ORM request context; did the request startup fail for some reason?" );
+			return;
+		}
+		ORMRequestContext ormRequestContext = context.getAttachment( ORMKeys.ORMRequestContext );
 		ormRequestContext.shutdown();
 		context.removeAttachment( ORMKeys.ORMRequestContext );
 	}
@@ -88,7 +100,7 @@ public class RequestListener extends BaseInterceptor {
 		// The application listener seems to get blown away on every request, so listening here is pretty dang fragile.
 		//
 		// return new RequestListener( config, context.getApplicationListener().getInterceptorPool() );
-		return new RequestListener( config, BoxRuntime.getInstance().getInterceptorService() );
+		return new RequestListener( BoxRuntime.getInstance().getInterceptorService() );
 	}
 
 	/**

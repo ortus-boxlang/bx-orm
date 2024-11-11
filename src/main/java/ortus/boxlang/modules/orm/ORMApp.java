@@ -14,6 +14,7 @@ import ortus.boxlang.modules.orm.interceptors.RequestListener;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.application.Application;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -21,6 +22,7 @@ import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
@@ -92,7 +94,18 @@ public class ORMApp {
 	 */
 	public static Key getUniqueAppName( IBoxContext context ) {
 		ApplicationBoxContext appContext = ( ApplicationBoxContext ) context.getParentOfType( ApplicationBoxContext.class );
-		return Key.of( appContext.getApplication().getName() + "_" + context.getConfig().hashCode() );
+		return getUniqueAppName( appContext.getApplication(), appContext.getApplication().getStartingListener().getSettings() );
+	}
+
+	/**
+	 * Get a unique name for this context's ORM Application.
+	 * 
+	 * Used to ensure we can tell the various ORM apps apart.
+	 * 
+	 * @return a unique key for the given context's application.
+	 */
+	public static Key getUniqueAppName( Application application, IStruct appConfig ) {
+		return Key.of( application.getName() + "_" + appConfig.hashCode() );
 	}
 
 	public ORMApp( RequestBoxContext context, ORMConfig config ) {
@@ -116,7 +129,9 @@ public class ORMApp {
 	}
 
 	public void startup() {
-		this.entityMap = MappingGenerator.discoverEntities( context, config );
+		this.requestListener	= RequestListener.selfRegister( context, config );
+
+		this.entityMap			= MappingGenerator.discoverEntities( context, config );
 		logger.debug( "Discovered entities on {} datasources:", this.entityMap.size() );
 
 		this.entityMap.forEach( ( datasourceName, entities ) -> {
@@ -134,8 +149,6 @@ public class ORMApp {
 				this.defaultSessionFactory = factory;
 			}
 		} );
-
-		this.requestListener = RequestListener.selfRegister( context, config );
 
 		logger.debug( "Firing onRequestStart to initiate first ORM session" );
 		requestListener.onRequestStart( Struct.of(
@@ -183,6 +196,13 @@ public class ORMApp {
 	 */
 	public Map<String, List<EntityRecord>> getEntityMap() {
 		return this.entityMap;
+	}
+
+	/**
+	 * Get the ORM configuration for this ORM application.
+	 */
+	public ORMConfig getConfig() {
+		return this.config;
 	}
 
 	/**

@@ -1,5 +1,9 @@
 package ortus.boxlang.modules.orm.interceptors;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.hibernate.Incubating;
 import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,9 +15,9 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
-import ortus.boxlang.runtime.events.BaseInterceptor;
-import ortus.boxlang.runtime.events.InterceptionPoint;
 import ortus.boxlang.runtime.events.InterceptorPool;
+import ortus.boxlang.runtime.interop.DynamicObject;
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
 /**
@@ -21,7 +25,7 @@ import ortus.boxlang.runtime.types.IStruct;
  * <p>
  * Listens to boxlang transaction events to manage the Hibernate transaction lifecycles (start,end,commit,rollback, etc.)
  */
-public class TransactionManager extends BaseInterceptor {
+public class TransactionManager {
 
 	private static final Logger	logger	= LoggerFactory.getLogger( TransactionManager.class );
 
@@ -63,29 +67,26 @@ public class TransactionManager extends BaseInterceptor {
 		this.ormApp				= ormService.getORMApp( context );
 		this.ormRequestContext	= ormRequestContext;
 		this.interceptorPool	= context.getApplicationListener().getInterceptorPool();
-		this.interceptorPool.register( this );
+
+		// custom registration.
+		// this.interceptorPool.register( DynamicObject.of( this ),
+		// Key.onTransactionBegin, Key.onTransactionCommit, Key.onTransactionRollback, Key.onTransactionEnd );
+		this.interceptorPool.register( DynamicObject.of( this ), getListenerMethods().toArray( new Key[ 0 ] ) );
 	}
 
-	/**
-	 * Unregister from the interceptor pool.
-	 */
-	public TransactionManager shutdown() {
-		this.interceptorPool.unregister( this );
-		return this;
+	private Set<Key> getListenerMethods() {
+		// Discover all @Incubating methods and build into an array of Keys to register
+		DynamicObject target = DynamicObject.of( this );
+		return target.getMethodsAsStream( true )
+		    // filter only the methods that have the @Incubating annotation
+		    .filter( method -> method.isAnnotationPresent( Incubating.class ) )
+		    // map it to the method name
+		    .map( method -> Key.of( method.getName() ) )
+		    // Collect to the states set to register
+		    .collect( Collectors.toSet() );
 	}
 
-	/**
-	 * This method is called by the BoxLang runtime to configure the interceptor
-	 * with a Struct of properties
-	 *
-	 * @param properties The properties to configure the interceptor with (if any)
-	 */
-	@Override
-	public void configure( IStruct properties ) {
-		this.properties = properties;
-	}
-
-	@InterceptionPoint
+	@Incubating
 	public void onTransactionBegin( IStruct args ) {
 		logger.debug( "onTransactionBegin fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
@@ -106,7 +107,7 @@ public class TransactionManager extends BaseInterceptor {
 		} );
 	}
 
-	@InterceptionPoint
+	@Incubating
 	public void onTransactionCommit( IStruct args ) {
 		logger.debug( "onTransactionCommit fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
@@ -118,7 +119,7 @@ public class TransactionManager extends BaseInterceptor {
 		} );
 	}
 
-	@InterceptionPoint
+	@Incubating
 	public void onTransactionRollback( IStruct args ) {
 		logger.debug( "onTransactionRollback fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
@@ -130,7 +131,7 @@ public class TransactionManager extends BaseInterceptor {
 		} );
 	}
 
-	@InterceptionPoint
+	@Incubating
 	public void onTransactionEnd( IStruct args ) {
 		logger.debug( "onTransactionEnd fired" );
 		ormApp.getDatasources().forEach( ( datasource ) -> {
