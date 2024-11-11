@@ -140,7 +140,10 @@ public class MappingGenerator {
 	public MappingGenerator generateMappings() {
 		final int			MAX_SYNCHRONOUS_ENTITIES	= 20;
 		ArrayList<IStruct>	classes						= discoverBLClasses( this.entityPaths );
-		if ( classes.size() > MAX_SYNCHRONOUS_ENTITIES ) {
+		boolean				doParallel					= false;
+		// boolean doParallel = classes.size() > MAX_SYNCHRONOUS_ENTITIES;
+
+		if ( doParallel ) {
 			logger.debug( "Parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
 			this.entities = classes.parallelStream()
 			    // Parse class metadata
@@ -150,8 +153,6 @@ public class MappingGenerator {
 			    // Convert to EntityRecord
 			    .map( ( IStruct entity ) -> toEntityRecord( entity ) )
 			    .collect( java.util.stream.Collectors.toList() );
-			// // Add to entity map
-			// .forEach( ( entityRecord ) -> entityMap.put( entityRecord.getEntityName(), entityRecord ) );
 		} else {
 			this.entities = classes.stream()
 			    // Parse class metadata
