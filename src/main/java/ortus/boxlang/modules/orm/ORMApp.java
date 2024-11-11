@@ -106,9 +106,13 @@ public class ORMApp {
 
 		this.config				= config;
 		this.sessionFactories	= new ConcurrentHashMap<>();
-		this.name				= ORMApp.getUniqueAppName( context );
-		this.defaultDatasource	= context.getConnectionManager().getDatasourceOrThrow( Key.of( config.datasource ) );
 		this.datasources		= new ArrayList<DataSource>();
+		this.name				= ORMApp.getUniqueAppName( context );
+
+		ConnectionManager connectionManager = context.getConnectionManager();
+		this.defaultDatasource = config.datasource == null
+		    ? connectionManager.getDefaultDatasourceOrThrow()
+		    : connectionManager.getDatasourceOrThrow( Key.of( config.datasource ) );
 	}
 
 	public void startup() {
