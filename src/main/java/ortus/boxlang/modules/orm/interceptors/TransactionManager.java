@@ -140,4 +140,12 @@ public class TransactionManager {
 			ormSession.getTransaction().commit();
 		} );
 	}
+
+	/**
+	 * Unregister from the interceptor pool.
+	 */
+	public TransactionManager shutdown() {
+		this.interceptorPool.unregister( DynamicObject.of( this ), getListenerMethods().toArray( new Key[ 0 ] ) );
+		return this;
+	}
 }

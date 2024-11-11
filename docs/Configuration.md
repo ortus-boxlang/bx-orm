@@ -52,3 +52,7 @@ The following ORM settings have been renamed:
 
 * `cfcLocation` -> `entityPaths`
 * `skipCFCWithError` -> `ignoreParseErrors`
+
+## CFIDE.orm.IEventHandler
+
+We expect this will be renamed to `BXORM.IEventHandler`. Stay tuned. 😁

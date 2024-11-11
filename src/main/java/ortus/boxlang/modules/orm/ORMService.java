@@ -40,7 +40,7 @@ public class ORMService implements IService {
 	 */
 	private ORMService() {
 		this.ormApps = new ConcurrentHashMap<>();
-		setupCustomLogLevels();
+		// setupCustomLogLevels();
 	}
 
 	/**
@@ -84,18 +84,28 @@ public class ORMService implements IService {
 	}
 
 	/**
-	 * Shut down a particular ORM application.
+	 * Shut down a particular ORM application by request context.
 	 * <p>
 	 * Will retrieve and close all session factories associated with the provided context.
 	 * 
 	 * @param context The IBoxContext for the application.
 	 */
 	public void shutdownApp( IBoxContext context ) {
-		Key		appName	= Key.of( ORMApp.getUniqueAppName( context ) );
-		ORMApp	app		= ormApps.get( appName );
+		this.shutdownApp( ORMApp.getUniqueAppName( context ) );
+	}
+
+	/**
+	 * Shut down an ORM application by unique name
+	 * <p>
+	 * Will retrieve and close all session factories associated with the provided context.
+	 * 
+	 * @param context The IBoxContext for the application.
+	 */
+	public void shutdownApp( Key uniqueAppName ) {
+		ORMApp app = ormApps.get( uniqueAppName );
 		if ( app != null ) {
 			app.shutdown();
-			ormApps.remove( appName );
+			ormApps.remove( uniqueAppName );
 		}
 	}
 

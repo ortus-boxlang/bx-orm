@@ -1,0 +1,47 @@
+/**
+ * Global event listener for Hibernate ORM events.
+ * 
+ * See docs for CFIDE.orm.IEventHandler
+ */
+interface {
+	/**
+	 * Event listener which fires before entity load.
+	 * i.e. After entity instantiation, but prior to property injection.
+	 */
+	public void function preLoad( any entity );
+	
+	/**
+	 * Event listener which fires after entity load
+	 */
+	public void function postLoad( any entity );
+
+	/**
+	 * Event listener which fires before entity INSERTions
+	 */
+	public void function preInsert( any entity );
+	
+	/**
+	 * Event listener which fires after the entity INSERTions
+	 */
+	public void function postInsert( any entity );
+	
+	/**
+	 * Event listener which fires before entity UPDATEs.
+	 */
+	public void function preUpdate( any entity, Struct oldData );
+	
+	/**
+	 * Event listener which fires after entity UPDATEs 
+	 */
+	public void function postUpdate( any entity );
+
+	/**
+	 * Event listener which fires before entity DELETions
+	 */
+	public void function preDelete( any entity );
+	
+	/**
+	 * Event listener which fires after entity DELETions
+	 */
+	public void function postDelete( any entity );
+}

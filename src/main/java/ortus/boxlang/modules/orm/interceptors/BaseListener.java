@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -24,7 +25,7 @@ public class BaseListener extends BaseInterceptor {
 	protected static ORMConfig getORMConfig( RequestBoxContext context ) {
 		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
 		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
-		    || Boolean.FALSE.equals( appSettings.getAsBoolean( ORMKeys.ORMEnabled ) ) ) {
+		    || BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
 			logger.info( "ORMEnabled is false or not specified;" );
 			return null;
 		}
