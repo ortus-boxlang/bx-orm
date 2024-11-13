@@ -14,9 +14,12 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Transient context for ORM requests.
@@ -53,6 +56,12 @@ public class ORMRequestContext {
 	 * @return The ORMRequestContext for the given context.
 	 */
 	public static ORMRequestContext getForContext( IBoxContext context ) {
+		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
+		logger.debug( "application settings: {}", appSettings );
+		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
+		    || !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
+			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
+		}
 		return context.getAttachment( ORMKeys.ORMRequestContext );
 	}
 

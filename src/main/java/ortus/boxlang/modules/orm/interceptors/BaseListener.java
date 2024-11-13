@@ -25,7 +25,7 @@ public class BaseListener extends BaseInterceptor {
 	protected static ORMConfig getORMConfig( RequestBoxContext context ) {
 		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
 		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
-		    || BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
+		    || !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
 			logger.info( "ORMEnabled is false or not specified;" );
 			return null;
 		}
