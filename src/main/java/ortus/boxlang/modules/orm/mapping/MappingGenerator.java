@@ -140,8 +140,7 @@ public class MappingGenerator {
 	public MappingGenerator generateMappings() {
 		final int			MAX_SYNCHRONOUS_ENTITIES	= 20;
 		ArrayList<IStruct>	classes						= discoverBLClasses( this.entityPaths );
-		boolean				doParallel					= false;
-		// boolean doParallel = classes.size() > MAX_SYNCHRONOUS_ENTITIES;
+		boolean				doParallel					= classes.size() > MAX_SYNCHRONOUS_ENTITIES;
 
 		if ( doParallel ) {
 			logger.debug( "Parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
@@ -286,14 +285,7 @@ public class MappingGenerator {
 
 		DataSource datasource = null;
 		if ( annotations.containsKey( Key.datasource ) ) {
-			String datasourceName = StringCaster.cast( annotations.getOrDefault( Key.datasource, "" ) ).trim();
-			if ( !datasourceName.isEmpty() ) {
-				datasource = context.getConnectionManager().getDatasource( Key.of( datasourceName ) );
-				if ( datasource == null ) {
-					// @TODO: check config.skipParseErrors before throwing...
-					throw new BoxRuntimeException( "Failed to find datasource: " + datasourceName );
-				}
-			}
+			datasource = lookupEntityDatasource( context.getConnectionManager(), StringCaster.cast( annotations.getOrDefault( Key.datasource, "" ) ) );
 		}
 		if ( datasource == null && this.defaultDatasource != null ) {
 			datasource = this.defaultDatasource;
@@ -304,6 +296,26 @@ public class MappingGenerator {
 		    meta,
 		    datasource.getOriginalName()
 		);
+	}
+
+	/**
+	 * Lookup the datasource by name from the connection manager.
+	 * <p>
+	 * Is synchronized to prevent multiple threads from registering the same datasource at the same time.
+	 * 
+	 * @param connectionManager The JDBC-capable context's connection manager.
+	 * @param datasourceName    String datasource name to find in application datasource configuration
+	 */
+	private synchronized DataSource lookupEntityDatasource( ConnectionManager connectionManager, String datasourceName ) {
+		if ( datasourceName.isEmpty() ) {
+			return null;
+		}
+		var datasource = connectionManager.getDatasource( Key.of( datasourceName.trim() ) );
+		if ( datasource == null ) {
+			// @TODO: check config.skipParseErrors before throwing...
+			throw new BoxRuntimeException( "Failed to find datasource: " + datasourceName.trim() );
+		}
+		return datasource;
 	}
 
 	/**
