@@ -3,10 +3,12 @@ package ortus.boxlang.modules.orm.interceptors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.application.Application;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.InterceptionPoint;
 import ortus.boxlang.runtime.types.IStruct;
@@ -60,9 +62,9 @@ public class ApplicationListener extends BaseListener {
 	 */
 	@InterceptionPoint
 	public void onApplicationEnd( IStruct args ) {
-		logger.info( "onApplicationEnd fired; cleaning up ORM resources for this application context" );
-		RequestBoxContext context = ( RequestBoxContext ) args.get( "context" );
-		ORMService.getInstance().shutdownApp( context );
+		logger.info( "onApplicationEnd fired; Shutting down ORM application" );
+		Application application = ( Application ) args.get( "application" );
+		ORMService.getInstance().shutdownApp( ORMApp.getUniqueAppName( application, application.getStartingListener().getSettings() ) );
 	}
 
 	/**
