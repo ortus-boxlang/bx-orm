@@ -300,13 +300,11 @@ public class MappingGenerator {
 
 	/**
 	 * Lookup the datasource by name from the connection manager.
-	 * <p>
-	 * Is synchronized to prevent multiple threads from registering the same datasource at the same time.
 	 * 
 	 * @param connectionManager The JDBC-capable context's connection manager.
 	 * @param datasourceName    String datasource name to find in application datasource configuration
 	 */
-	private synchronized DataSource lookupEntityDatasource( ConnectionManager connectionManager, String datasourceName ) {
+	private DataSource lookupEntityDatasource( ConnectionManager connectionManager, String datasourceName ) {
 		if ( datasourceName.isEmpty() ) {
 			return null;
 		}
@@ -348,6 +346,7 @@ public class MappingGenerator {
 	 * @return The entity metadata struct.
 	 */
 	private IStruct getClassMeta( Path clazzPath ) {
+		logger.debug( "Parsing class file: [{}]", clazzPath );
 		ParsingResult result = new Parser().parse( new File( clazzPath.toString() ) );
 		if ( !result.isCorrect() ) {
 			throw new ParseException( result.getIssues(), "" );
