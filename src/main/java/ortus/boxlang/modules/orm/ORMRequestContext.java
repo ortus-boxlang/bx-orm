@@ -57,12 +57,16 @@ public class ORMRequestContext {
 	 */
 	public static ORMRequestContext getForContext( IBoxContext context ) {
 		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
-		logger.debug( "application settings: {}", appSettings );
 		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
 		    || !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
 		}
-		return context.getAttachment( ORMKeys.ORMRequestContext );
+		if ( context.hasAttachment( ORMKeys.ORMRequestContext ) ) {
+			return context.getAttachment( ORMKeys.ORMRequestContext );
+		}
+		logger.debug( "Initializing ORM context" );
+		IStruct ormConfig = ( IStruct ) appSettings.get( ORMKeys.ORMSettings );
+		return context.putAttachment( ORMKeys.ORMRequestContext, new ORMRequestContext( ( RequestBoxContext ) context, new ORMConfig( ormConfig ) ) );
 	}
 
 	public ORMRequestContext( RequestBoxContext context, ORMConfig config ) {

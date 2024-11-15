@@ -19,6 +19,7 @@ import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.interceptors.RequestListener;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.BaseApplicationListener;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
@@ -171,10 +172,14 @@ public class BaseORMTest {
 			    "logSQL", "true",
 			    "dialect", "DerbyTenSevenDialect"
 			) );
-			// Map<String, List<EntityRecord>> entities = MappingGenerator.discoverEntities( context, config );
-			// builder = new SessionFactoryBuilder( context, datasource, config, entities.get( datasource.getOriginalName() ) );
-			// ormService.setSessionFactoryForName( builder.getUniqueName(), builder.build() );
+
+			// start up the application
 			ORMService.getInstance().startupApp( context, config );
+
+			// Set up the ORM request listener
+			RequestListener requestEventListener = new RequestListener();
+			BoxRuntime.getInstance().getInterceptorService().register( requestEventListener );
+
 			ormApp = ORMService.getInstance().getORMApp( context );
 		}
 

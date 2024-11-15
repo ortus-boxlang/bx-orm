@@ -23,7 +23,6 @@ import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
-import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 public class ORMApp {
@@ -129,9 +128,7 @@ public class ORMApp {
 	}
 
 	public void startup() {
-		this.requestListener	= RequestListener.selfRegister( context, config );
-
-		this.entityMap			= MappingGenerator.discoverEntities( context, config );
+		this.entityMap = MappingGenerator.discoverEntities( context, config );
 		logger.debug( "Discovered entities on {} datasources:", this.entityMap.size() );
 
 		this.entityMap.forEach( ( datasourceName, entities ) -> {
@@ -149,14 +146,6 @@ public class ORMApp {
 				this.defaultSessionFactory = factory;
 			}
 		} );
-
-		logger.debug( "Firing onRequestStart to initiate first ORM session" );
-		requestListener.onRequestStart( Struct.of(
-		    "context", context,
-		    "args", null,
-		    "application", context.getApplicationListener().getApplication(),
-		    "listener", context.getApplicationListener()
-		) );
 	}
 
 	/**
@@ -267,6 +256,5 @@ public class ORMApp {
 			sessionFactory.close();
 		}
 		this.sessionFactories.clear();
-		this.requestListener.selfDestruct();
 	}
 }
