@@ -197,9 +197,12 @@ public class SessionFactoryBuilder {
 	 * @return a Hibernate session factory ready for use.
 	 */
 	public SessionFactory build() {
+		ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
+		Thread.currentThread().setContextClassLoader( Configuration.class.getClassLoader() );
 		Configuration	configuration	= buildConfiguration();
 
 		SessionFactory	factory			= configuration.buildSessionFactory();
+		Thread.currentThread().setContextClassLoader( oldClassLoader );
 
 		factory.getProperties().put( BOXLANG_APPLICATION_CONTEXT, configuration.getProperties().get( BOXLANG_APPLICATION_CONTEXT ) );
 		factory.getProperties().put( BOXLANG_CONTEXT, configuration.getProperties().get( BOXLANG_CONTEXT ) );
