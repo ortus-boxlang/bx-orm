@@ -201,6 +201,48 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "the_id" );
 	}
 
+	// @formatter:off
+	@DisplayName( "It can generate a composite id" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+		class persistent{
+			property name="id1" fieldtype="id";
+			property name="id2" fieldtype="id" sqltype="varchar(50)";
+		}
+		"""
+	    , """
+		class{
+			@Id property name="id1"; 
+			@Id property name="id2" sqltype="varchar(50)";
+		}
+		"""
+	} )
+	// @formatter:on
+	public void testCompositeID( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		String		xml			= xmlToString( doc );
+
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
+		assertThat( classEl.getNodeName() ).isEqualTo( "class" );
+		Node compositeNode = classEl.getFirstChild();
+
+		assertThat( compositeNode.getNodeName() ).isEqualTo( "composite-id" );
+		Node	firstIDNode	= compositeNode.getFirstChild();
+		Node	lastIDNode	= compositeNode.getLastChild();
+
+		assertThat( firstIDNode.getNodeName() ).isEqualTo( "key-property" );
+		assertThat( lastIDNode.getNodeName() ).isEqualTo( "key-property" );
+		assertThat( firstIDNode.getAttributes().getNamedItem( "name" ).getTextContent() )
+		    .isEqualTo( "id1" );
+		assertThat( lastIDNode.getAttributes().getNamedItem( "name" ).getTextContent() )
+		    .isEqualTo( "id2" );
+	}
+
 	@DisplayName( "It sets the type of the id property via an annotation" )
 	@ParameterizedTest
 	@ValueSource( strings = {

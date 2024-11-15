@@ -374,7 +374,7 @@ public class HibernateXMLWriter {
 	}
 
 	/**
-	 * Generate a &lt;id /&gt; element for the given property metadata.
+	 * Generate a &lt;id /&gt; OR &lt;key-property /&gt; element for the given property metadata.
 	 * <p>
 	 * Uses these annotations:
 	 * <ul>
@@ -389,10 +389,10 @@ public class HibernateXMLWriter {
 	 *
 	 * @param prop Property metadata in struct form
 	 *
-	 * @return A &lt;id /&gt; element ready to add to a Hibernate mapping document
+	 * @return An id or key-property XML node ready to add to a Hibernate mapping class or composite-id element
 	 */
-	public Element generateIdElement( IPropertyMeta prop ) {
-		Element theNode = this.document.createElement( "id" );
+	public Element generateIdElement( String elementName, IPropertyMeta prop ) {
+		Element theNode = this.document.createElement( elementName );
 
 		// compute defaults - move to ORMAnnotationInspector?
 		// prop.getAsStruct( Key.annotations ).computeIfAbsent( ORMKeys.ORMType, ( key ) -> "string" );
@@ -576,11 +576,16 @@ public class HibernateXMLWriter {
 		}
 
 		// generate keys, aka <id> elements
-		entity.getIdProperties().stream().forEach( ( propertyMeta ) ->
-
-		{
-			classElement.appendChild( generateIdElement( propertyMeta ) );
-		} );
+		List<IPropertyMeta> idProperties = entity.getIdProperties();
+		if ( idProperties.size() == 1 ) {
+			classElement.appendChild( generateIdElement( "id", idProperties.get( 0 ) ) );
+		} else {
+			Element compositeIdNode = this.document.createElement( "composite-id" );
+			idProperties.stream().forEach( ( prop ) -> {
+				compositeIdNode.appendChild( generateIdElement( "key-property", prop ) );
+			} );
+			classElement.appendChild( compositeIdNode );
+		}
 
 		addDiscriminatorData( classElement, entity.getDiscriminator() );
 
