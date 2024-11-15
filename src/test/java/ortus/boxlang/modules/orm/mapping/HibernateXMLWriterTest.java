@@ -264,6 +264,35 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
+	@DisplayName( "It aliases ORM types to their proper counterpart" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+		    property name="the_name" ormtype="varchar(50)";
+		    property name="foo" ormtype="java.sql.Timestamp";
+	    }
+	    """
+	} )
+	// @formatter:on
+	public void testFunkyORMTypes( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta ).generateXML();
+
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
+		Node		nameNode	= classEl.getFirstChild();
+		Node		fooNode		= classEl.getChildNodes().item( 1 );
+
+		assertThat( nameNode.getAttributes().getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
+
+		assertThat( fooNode.getAttributes().getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "timestamp" );
+	}
+
+	// @formatter:off
 	@DisplayName( "It can set an id generator" )
 	@ValueSource( strings = {
 

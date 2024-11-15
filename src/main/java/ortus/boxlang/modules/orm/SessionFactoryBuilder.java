@@ -197,6 +197,8 @@ public class SessionFactoryBuilder {
 	 * @return a Hibernate session factory ready for use.
 	 */
 	public SessionFactory build() {
+		// Sadly, JAXB hardcodes the context classloader, so we have to temporarily set the context classloader to whatever classloader is used to load this
+		// module's dependencies.
 		ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
 		Thread.currentThread().setContextClassLoader( Configuration.class.getClassLoader() );
 		Configuration	configuration	= buildConfiguration();

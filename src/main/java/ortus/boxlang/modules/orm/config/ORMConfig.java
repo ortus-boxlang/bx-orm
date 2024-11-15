@@ -424,6 +424,8 @@ public class ORMConfig {
 			// @TODO: Once we migrate to Hibernate 6+, we should drop dialect configuration entirely.
 			// https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/cfg/JdbcSettings.html#DIALECT
 			// configuration.setProperty(AvailableSettings.DIALECT, dialect);
+
+			// @TODO: Fix - mapped dialects are not working currently.
 			// configuration.setProperty( AvailableSettings.DIALECT, toFullHibernateDialectName( dialect ) );
 		}
 

@@ -145,7 +145,7 @@ public class HibernateXMLWriter {
 
 		Element	theNode		= this.document.createElement( "property" );
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", prop.getORMType() );
+		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
 
 		if ( prop.getFormula() != null ) {
 			theNode.setAttribute( "formula", "( " + prop.getFormula() + " )" );
@@ -399,7 +399,7 @@ public class HibernateXMLWriter {
 
 		// set common attributes
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", prop.getORMType() );
+		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
 		if ( prop.getUnsavedValue() != null ) {
 			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );
 		}
@@ -657,7 +657,7 @@ public class HibernateXMLWriter {
 
 		// PROPERTY name
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", prop.getORMType() );
+		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
 		// COLUMN name
 		if ( columnInfo.containsKey( Key._NAME ) ) {
 			theNode.setAttribute( "column", columnInfo.getAsString( Key._NAME ) );
@@ -749,5 +749,37 @@ public class HibernateXMLWriter {
 			default :
 				return name;
 		}
+	}
+
+	/**
+	 * Caster to convert a property `ormType` field value to a Hibernate type.
+	 * 
+	 * @param propertyType Property type, like `datetime` or `string`
+	 * 
+	 * @return The Hibernate-safe type, like `timestamp` or `string`
+	 */
+	public static String toHibernateType( String propertyType ) {
+		// basic normalization
+		propertyType	= propertyType.trim().toLowerCase();
+		// grab "varchar" from "varchar(50)"
+		propertyType	= propertyType.replaceAll( "\\(.+\\)", "" );
+		// grab "biginteger" from "java.math.biginteger", etc.
+		propertyType	= propertyType.substring( propertyType.lastIndexOf( "." ) + 1 );
+
+		return switch ( propertyType ) {
+			case "blob", "byte[]" -> "binary";
+			case "bit", "bool" -> "boolean";
+			case "yes-no", "yesno", "yes_no" -> "yes_no";
+			case "true-false", "truefalse", "true_false" -> "true_false";
+			case "big-decimal", "bigdecimal" -> "big_decimal";
+			case "big-integer", "bigint", "biginteger" -> "big_integer";
+			case "int" -> "integer";
+			case "numeric", "number", "decimal" -> "double";
+			case "datetime", "eurodate", "usdate" -> "timestamp";
+			case "char", "nchar" -> "character";
+			case "varchar", "nvarchar" -> "string";
+			case "clob" -> "text";
+			default -> propertyType;
+		};
 	}
 }
