@@ -39,8 +39,8 @@ import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.types.exceptions.ParseException;
-import ortus.boxlang.runtime.util.BoxFQN;
 import ortus.boxlang.runtime.util.FileSystemUtil;
+import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 public class MappingGenerator {
 
@@ -95,7 +95,7 @@ public class MappingGenerator {
 	 * 
 	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
 	 */
-	public static Map<String, List<EntityRecord>> discoverEntities( IBoxContext context, ORMConfig ormConfig ) {
+	public static Map<String, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
 		if ( !ormConfig.autoGenMap ) {
 			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
 			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
@@ -107,13 +107,13 @@ public class MappingGenerator {
 		}
 	}
 
-	public MappingGenerator( IBoxContext context, ORMConfig config ) {
+	public MappingGenerator( IJDBCCapableContext context, ORMConfig config ) {
 		this.entities				= new ArrayList<>();
 		this.config					= config;
 		this.saveDirectory			= null;
 		this.saveAlongsideEntity	= config.saveMapping;
 		this.entityPaths			= new java.util.ArrayList<>();
-		this.context				= ( IJDBCCapableContext ) context;
+		this.context				= context;
 		this.defaultDatasource		= getDefaultDatasource();
 		// this.appDirectory = context.getParentOfType( ApplicationBoxContext.class ).getApplication().getApplicationDirectory();
 
@@ -123,10 +123,10 @@ public class MappingGenerator {
 		}
 
 		for ( String entityPath : config.entityPaths ) {
-			this.entityPaths.add( FileSystemUtil.expandPath( context, entityPath ).absolutePath() );
+			this.entityPaths.add( FileSystemUtil.expandPath( ( IBoxContext ) context, entityPath ).absolutePath() );
 		}
 		if ( this.entityPaths.isEmpty() ) {
-			this.entityPaths.add( FileSystemUtil.expandPath( context, "." ).absolutePath() );
+			this.entityPaths.add( FileSystemUtil.expandPath( ( IBoxContext ) context, "." ).absolutePath() );
 			logger.warn(
 			    "No entity paths found in ORM configuration; defaulting to app root. (You should STRONGLY consider setting an 'entityPaths' array in your ORM settings.)" );
 		}
@@ -140,7 +140,7 @@ public class MappingGenerator {
 	public MappingGenerator generateMappings() {
 		final int			MAX_SYNCHRONOUS_ENTITIES	= 20;
 		ArrayList<IStruct>	classes						= discoverBLClasses( this.entityPaths );
-		boolean				doParallel					= classes.size() > MAX_SYNCHRONOUS_ENTITIES;
+		boolean				doParallel					= false;
 
 		if ( doParallel ) {
 			logger.debug( "Parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );

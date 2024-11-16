@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.logging.LoggingConfigurator;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.Struct;
@@ -108,7 +109,7 @@ public class MappingGenerator {
 			// log.info( "Using ORM Config: {}", ormConfig );
 
 			ortus.boxlang.modules.orm.mapping.MappingGenerator	generator	= new ortus.boxlang.modules.orm.mapping.MappingGenerator(
-			    runtime.getRuntimeContext(),
+			    new ScriptingRequestBoxContext( runtime.getRuntimeContext() ),
 			    ormConfig
 			);
 
