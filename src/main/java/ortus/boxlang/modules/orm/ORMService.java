@@ -77,11 +77,14 @@ public class ORMService implements IService {
 	 * @param config  The ORM configuration - parsed from the application settings.
 	 */
 	public void startupApp( RequestBoxContext context, ORMConfig config ) {
-		ORMApp newORMApp = new ORMApp( context, config );
-		ormApps.put( newORMApp.getUniqueName(), newORMApp );
+		context.getApplicationContext().computeAttachmentIfAbsent( ORMKeys.ORMApp, ( key ) -> {
+			ORMApp newORMApp = new ORMApp( context, config );
+			logger.debug( "Starting ORMApp {}", newORMApp.getUniqueName() );
+			ormApps.put( newORMApp.getUniqueName(), newORMApp );
 
-		logger.debug( "Starting ORMApp {}", newORMApp.getUniqueName() );
-		newORMApp.startup();
+			newORMApp.startup();
+			return newORMApp;
+		} );
 	}
 
 	/**
