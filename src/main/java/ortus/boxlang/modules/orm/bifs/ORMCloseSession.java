@@ -51,9 +51,9 @@ public class ORMCloseSession extends BIF {
 		Session	session;
 		String	datasourceName	= StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 		if ( !datasourceName.isBlank() ) {
-			session = ORMRequestContext.getForContext( context ).getSession( Key.of( datasourceName ) );
+			session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( Key.of( datasourceName ) );
 		} else {
-			session = ORMRequestContext.getForContext( context ).getSession();
+			session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
 		}
 		session.close();
 

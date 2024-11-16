@@ -18,7 +18,7 @@ public class ORMGetSessionTest extends BaseORMTest {
 	@DisplayName( "It can get the current ORM session" )
 	@Test
 	public void testDefaultDatasource() {
-		Session session = ORMRequestContext.getForContext( context ).getSession();
+		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
 		;
 		assertNotNull( session );
 
@@ -30,7 +30,7 @@ public class ORMGetSessionTest extends BaseORMTest {
 	@DisplayName( "It throws if the named datasource does not exist or is not configured for ORM" )
 	@Test
 	public void testBadDSN() {
-		Session session = ORMRequestContext.getForContext( context ).getSession();
+		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
 		;
 		assertNotNull( session );
 
@@ -43,11 +43,11 @@ public class ORMGetSessionTest extends BaseORMTest {
 	@DisplayName( "It can get the ORM session from a named datasource" )
 	@Test
 	public void testNamedDatasource() {
-		Session defaultORMSession = ORMRequestContext.getForContext( context ).getSession();
+		Session defaultORMSession = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
 		;
 		assertNotNull( defaultORMSession );
 
-		Session secondDSNSession = ORMRequestContext.getForContext( context ).getSession( alternateDataSource.getConfiguration().name );
+		Session secondDSNSession = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( alternateDataSource.getConfiguration().name );
 		assertNotNull( secondDSNSession );
 
 		instance.executeSource( "result = ormGetSession( 'dsn2' ) ", context );

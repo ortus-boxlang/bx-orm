@@ -43,7 +43,7 @@ public class EntityDelete extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session	= ORMRequestContext.getForContext( context ).getSession();
+		Session			session	= ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
 		IClassRunnable	entity	= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		session.delete( EntityUtil.getEntityName( entity ), entity );
 		return null;

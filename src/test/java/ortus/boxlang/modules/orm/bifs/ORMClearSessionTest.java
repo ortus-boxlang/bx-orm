@@ -17,7 +17,7 @@ public class ORMClearSessionTest extends BaseORMTest {
 	@DisplayName( "It can clear the session for the default datasource" )
 	@Test
 	public void testSessionClear() {
-		Session session = ORMRequestContext.getForContext( context ).getSession();
+		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
 		;
 
 		instance.executeSource(
@@ -38,7 +38,7 @@ public class ORMClearSessionTest extends BaseORMTest {
 	@DisplayName( "It can clear the session on a named (alternate) datasource" )
 	@Test
 	public void testSessionClearOnNamedDatasource() {
-		Session session = ORMRequestContext.getForContext( context ).getSession( alternateDataSource.getConfiguration().name );
+		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( alternateDataSource.getConfiguration().name );
 
 		instance.executeSource(
 		    """

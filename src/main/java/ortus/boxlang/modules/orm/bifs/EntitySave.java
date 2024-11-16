@@ -51,7 +51,7 @@ public class EntitySave extends BIF {
 	 * @return
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session		= ORMRequestContext.getForContext( context ).getSession();
+		Session			session		= ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
 		IClassRunnable	entity		= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		Boolean			forceInsert	= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
 		if ( forceInsert ) {
