@@ -11,7 +11,6 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.interceptors.TransactionManager;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
@@ -55,29 +54,29 @@ public class ORMRequestContext {
 	 * 
 	 * @return The ORMRequestContext for the given context.
 	 */
-	public static ORMRequestContext getForContext( IBoxContext context ) {
+	public static ORMRequestContext getForContext( RequestBoxContext context ) {
 		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
 		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
 		    || !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
 		}
-		if ( context.hasAttachment( ORMKeys.ORMRequestContext ) ) {
-			return context.getAttachment( ORMKeys.ORMRequestContext );
-		}
-		logger.debug( "Initializing ORM context" );
-		IStruct ormConfig = ( IStruct ) appSettings.get( ORMKeys.ORMSettings );
-		return context.putAttachment( ORMKeys.ORMRequestContext, new ORMRequestContext( ( RequestBoxContext ) context, new ORMConfig( ormConfig ) ) );
+		return context.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, ( key ) -> {
+			logger.debug( "Initializing ORM context" );
+			IStruct ormConfig = ( IStruct ) appSettings.get( ORMKeys.ORMSettings );
+			return new ORMRequestContext( context, new ORMConfig( ormConfig ) );
+		} );
 	}
 
 	public ORMRequestContext( RequestBoxContext context, ORMConfig config ) {
-		this.context	= context;
-		this.config		= config;
-		this.ormService	= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
-		this.ormApp		= this.ormService.getORMApp( context );
+		this.context			= context;
+		this.config				= config;
+		this.ormService			= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		this.ormApp				= this.ormService.getORMApp( context );
 
-		logger.debug( "Registering ORM transaction manager" );
-		this.transactionManager = new TransactionManager( context, this, this.config );
-		this.context.putAttachment( ORMKeys.TransactionManager, this.transactionManager );
+		this.transactionManager	= this.context.computeAttachmentIfAbsent( ORMKeys.TransactionManager, ( key ) -> {
+									logger.debug( "Registering ORM transaction manager" );
+									return new TransactionManager( context, this, this.config );
+								} );
 	}
 
 	/**
