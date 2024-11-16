@@ -274,14 +274,15 @@ public class MappingGenerator {
 	 * @return EntityRecord instance.
 	 */
 	private EntityRecord toEntityRecord( IStruct theEntity ) {
-		IStruct	meta		= theEntity.getAsStruct( Key.metadata );
-		IStruct	annotations	= meta.getAsStruct( Key.annotations );
-		String	entityName	= readEntityName( meta );
-		String	fqn			= new BoxFQN( Path.of( theEntity.getAsString( this.location ) ).getParent(), Path.of( meta.getAsString( Key.path ) ) )
-		    .toString();
+		IStruct				meta			= theEntity.getAsStruct( Key.metadata );
+		IStruct				annotations		= meta.getAsStruct( Key.annotations );
+		String				entityName		= readEntityName( meta );
+		ResolvedFilePath	entityRootPath	= FileSystemUtil.contractPath( ( ( IBoxContext ) context ).getApplicationContext(), meta.getAsString( Key.path ) );
+		String				fqn				= entityRootPath.getBoxFQN().toString();
 		if ( fqn == null || fqn.isBlank() ) {
 			throw new BoxRuntimeException( "Failed to generate FQN for entity: " + entityName );
 		}
+		logger.debug( "Generated FQN for entity [{}]: [{}]", entityName, fqn );
 
 		DataSource datasource = null;
 		if ( annotations.containsKey( Key.datasource ) ) {
