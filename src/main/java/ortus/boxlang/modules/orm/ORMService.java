@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ch.qos.logback.classic.Level;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -40,7 +41,7 @@ public class ORMService implements IService {
 	 */
 	private ORMService() {
 		this.ormApps = new ConcurrentHashMap<>();
-		// setupCustomLogLevels();
+		setupCustomLogLevels();
 	}
 
 	/**
@@ -139,10 +140,18 @@ public class ORMService implements IService {
 	 * @TODO: use this method or similar to adjust Hibernate logging levels and pipe them to a destination (log file) of choice.
 	 */
 	private void setupCustomLogLevels() {
-		ch.qos.logback.classic.Level ORMModuleLevel = ch.qos.logback.classic.Level.DEBUG;
+		Logger ormLogger = LoggerFactory.getLogger( "ortus.boxlang.modules.orm" );
+
+		if ( ! ( ormLogger instanceof ch.qos.logback.classic.Logger ) ) {
+			logger.warn( "Could not adjust log levels; logger is not a LogBack instance." );
+			return;
+		}
+
+		Level	ORMModuleLevel	= Level.DEBUG;
+		Level	customLogLevel	= Level.WARN;
+
 		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "ortus.boxlang.modules.orm" ) ).setLevel( ORMModuleLevel );
 
-		ch.qos.logback.classic.Level customLogLevel = ch.qos.logback.classic.Level.WARN;
 		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "com.zaxxer.hikari" ) ).setLevel( customLogLevel );
 		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "org.hibernate" ) ).setLevel( customLogLevel );
 		// How can we put this graciously: the class loader logs are just too much.
