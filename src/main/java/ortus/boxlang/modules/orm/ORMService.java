@@ -9,11 +9,12 @@ import org.slf4j.LoggerFactory;
 import ch.qos.logback.classic.Level;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.loader.DynamicClassLoader;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.services.IService;
+import ortus.boxlang.runtime.services.BaseService;
 
 /**
  * Java class responsible for constructing and managing the Hibernate ORM
@@ -21,26 +22,22 @@ import ortus.boxlang.runtime.services.IService;
  *
  * Constructs and stores Hibernate session factories.
  */
-public class ORMService implements IService {
-
-	/**
-	 * The singleton instance of the ORMEngine.
-	 */
-	private static ORMService	instance;
+public class ORMService extends BaseService {
 
 	/**
 	 * The logger for the ORMEngine.
 	 */
 	private static final Logger	logger	= LoggerFactory.getLogger( ORMService.class );
 
-	private Map<Key, ORMApp>	ormApps;
+	private Map<Key, ORMApp>	ormApps	= new ConcurrentHashMap<>();
 
 	/**
-	 * Private constructor for the ORMEngine. Use the getInstance method to get an
-	 * instance of the ORMEngine.
+	 * Constructor
+	 *
+	 * @param runtime The BoxRuntime
 	 */
-	private ORMService() {
-		this.ormApps = new ConcurrentHashMap<>();
+	public ORMService( BoxRuntime runtime ) {
+		super( runtime, ORMKeys.ORMService );
 		setupCustomLogLevels();
 	}
 
@@ -56,18 +53,6 @@ public class ORMService implements IService {
 	 */
 	public void onStartup() {
 		logger.info( "ORMService started" );
-	}
-
-	/**
-	 * Get an instance of the ORMEngine.
-	 *
-	 * @return An instance of the ORMEngine.
-	 */
-	public static synchronized ORMService getInstance() {
-		if ( instance == null ) {
-			instance = new ORMService();
-		}
-		return instance;
 	}
 
 	/**

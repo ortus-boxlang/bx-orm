@@ -57,11 +57,11 @@ public class BaseORMTest {
 
 	@BeforeAll
 	public static void setUp() {
-		instance	= BoxRuntime.getInstance( true );
-		ormService	= ORMService.getInstance();
+		instance = BoxRuntime.getInstance( true );
 		if ( !instance.hasGlobalService( ORMKeys.ORMService ) ) {
-			instance.putGlobalService( ORMKeys.ORMService, ormService );
+			instance.putGlobalService( ORMKeys.ORMService, new ORMService( instance ) );
 		}
+		ormService		= ( ORMService ) instance.getGlobalService( ORMKeys.ORMService );
 		startupContext	= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
 		datasource		= JDBCTestUtils.constructTestDataSource( "TestDB" );
 
@@ -174,13 +174,13 @@ public class BaseORMTest {
 			) );
 
 			// start up the application
-			ORMService.getInstance().startupApp( context, config );
+			ormService.startupApp( context, config );
 
 			// Set up the ORM request listener
 			RequestListener requestEventListener = new RequestListener();
-			BoxRuntime.getInstance().getInterceptorService().register( requestEventListener );
+			instance.getInterceptorService().register( requestEventListener );
 
-			ormApp = ORMService.getInstance().getORMApp( context );
+			ormApp = ormService.getORMApp( context );
 		}
 
 		// Fire onRequestStart for session and transaction management startup

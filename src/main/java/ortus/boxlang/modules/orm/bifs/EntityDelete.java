@@ -5,10 +5,8 @@ import java.util.Set;
 import org.hibernate.Session;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
-import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.util.EntityUtil;
-import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -23,15 +21,15 @@ public class EntityDelete extends BIF {
 	/**
 	 * ORM Service, responsible for managing ORM applications.
 	 */
-	private ORMService ormService;
+	// private ORMService ormService;
 
 	/**
 	 * Constructor
 	 */
 	public EntityDelete() {
 		super();
-		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
-		declaredArguments	= new Argument[] {
+		// this.ormService = ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		declaredArguments = new Argument[] {
 		    new Argument( true, "class", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
 		};
 	}

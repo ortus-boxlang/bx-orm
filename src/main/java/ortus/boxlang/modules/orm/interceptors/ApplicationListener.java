@@ -43,7 +43,7 @@ public class ApplicationListener extends BaseListener {
 		BoxRuntime instance = BoxRuntime.getInstance();
 		if ( !instance.hasGlobalService( ORMKeys.ORMService ) ) {
 			logger.info( "Adding ORMService to global services" );
-			instance.putGlobalService( ORMKeys.ORMService, ORMService.getInstance() );
+			instance.putGlobalService( ORMKeys.ORMService, new ORMService( instance ) );
 		}
 		logger.info(
 		    "afterApplicationListenerLoad fired; checking for ORM configuration in the application context config" );
@@ -52,8 +52,8 @@ public class ApplicationListener extends BaseListener {
 		ORMConfig			config	= getORMConfig( context );
 		if ( config != null ) {
 			logger.info( "ORMEnabled is true and ORM settings are specified - Firing ORM application startup." );
-			( ( ORMService ) instance.getGlobalService( ORMKeys.ORMService ) )
-			    .startupApp( context, config );
+			ORMService ormService = ( ( ORMService ) instance.getGlobalService( ORMKeys.ORMService ) );
+			ormService.startupApp( context, config );
 		}
 	}
 
@@ -62,9 +62,14 @@ public class ApplicationListener extends BaseListener {
 	 */
 	@InterceptionPoint
 	public void onApplicationEnd( IStruct args ) {
+		BoxRuntime instance = BoxRuntime.getInstance();
+		if ( !instance.hasGlobalService( ORMKeys.ORMService ) ) {
+			logger.error( "No global service found for ORMService; unable to shut down ORM application" );
+		}
 		logger.info( "onApplicationEnd fired; Shutting down ORM application" );
-		Application application = ( Application ) args.get( "application" );
-		ORMService.getInstance().shutdownApp( ORMApp.getUniqueAppName( application, application.getStartingListener().getSettings() ) );
+		Application	application	= ( Application ) args.get( "application" );
+		ORMService	ormService	= ( ORMService ) instance.getGlobalService( ORMKeys.ORMService );
+		ormService.shutdownApp( ORMApp.getUniqueAppName( application, application.getStartingListener().getSettings() ) );
 	}
 
 	/**

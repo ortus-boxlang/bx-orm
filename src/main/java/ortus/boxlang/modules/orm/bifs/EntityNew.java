@@ -5,12 +5,10 @@ import java.util.Set;
 import org.hibernate.Session;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
-import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.hibernate.BoxClassInstantiator;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
-import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
@@ -26,18 +24,12 @@ import ortus.boxlang.runtime.validation.Validator;
 public class EntityNew extends BIF {
 
 	/**
-	 * ORM Service, responsible for managing ORM applications.
-	 */
-	private ORMService ormService;
-
-	/**
 	 * Constructor
 	 */
 	public EntityNew() {
 
 		super();
-		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
-		declaredArguments	= new Argument[] {
+		declaredArguments = new Argument[] {
 		    new Argument( true, "String", ORMKeys.entityName, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
 		    new Argument( false, "Struct", Key.properties )
 		};
