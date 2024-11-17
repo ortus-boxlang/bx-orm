@@ -73,8 +73,9 @@ public class HibernateXMLWriter {
 		// Validation
 		if ( entity.getIdProperties().isEmpty() ) {
 			logger.error( "Entity {} has no ID properties. Hibernate requires at least one.", entity.getEntityName() );
-			// @TODO: Check ORMConfig.ignoreParseErrors and throw if false.
-			// throw new BoxRuntimeException( "Entity %s has no ID properties. Hibernate requires at least one.".formatted( entity.getEntityName() ) );
+			if ( throwOnErrors ) {
+				throw new BoxRuntimeException( "Entity %s has no ID properties. Hibernate requires at least one.".formatted( entity.getEntityName() ) );
+			}
 		}
 
 		this.document = createDocument();
@@ -577,7 +578,9 @@ public class HibernateXMLWriter {
 
 		// generate keys, aka <id> elements
 		List<IPropertyMeta> idProperties = entity.getIdProperties();
-		if ( idProperties.size() == 1 ) {
+		if ( idProperties.size() == 0 ) {
+			// we've already logged an error in the constructor.
+		} else if ( idProperties.size() == 1 ) {
 			classElement.appendChild( generateIdElement( "id", idProperties.get( 0 ) ) );
 		} else {
 			Element compositeIdNode = this.document.createElement( "composite-id" );
