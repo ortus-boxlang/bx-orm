@@ -94,7 +94,7 @@ public class ORMService extends BaseService {
 	 * <p>
 	 * Will retrieve and close all session factories associated with the provided context.
 	 * 
-	 * @param context The IBoxContext for the application.
+	 * @param uniqueAppName The unique name of the ORM application to shut down.
 	 */
 	public void shutdownApp( Key uniqueAppName ) {
 		ORMApp app = ormApps.get( uniqueAppName );

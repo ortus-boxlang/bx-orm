@@ -10,6 +10,8 @@ import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.modules.orm.ORMService;
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 import tools.BaseORMTest;
 
@@ -18,7 +20,9 @@ public class ORMGetSessionFactoryTest extends BaseORMTest {
 	@DisplayName( "It can get the default ORM session factory" )
 	@Test
 	public void testORMGetSessionFactory() {
-		SessionFactory defaultSessionFactory = ormService.getORMApp( context ).getDefaultSessionFactoryOrThrow();
+		SessionFactory defaultSessionFactory = ( ( ORMService ) instance.getGlobalService( ORMKeys.ORMService ) )
+		    .getORMApp( context )
+		    .getDefaultSessionFactoryOrThrow();
 		assertNotNull( defaultSessionFactory );
 
 		instance.executeSource( "result = ormGetSessionFactory()", context );
@@ -38,7 +42,8 @@ public class ORMGetSessionFactoryTest extends BaseORMTest {
 	@DisplayName( "It can get the session factory from a named datasource" )
 	@Test
 	public void testNamedDatasource() {
-		SessionFactory defaultSessionFactory = ormService.getORMApp( context ).getDefaultSessionFactoryOrThrow();
+		SessionFactory defaultSessionFactory = ( ( ORMService ) instance.getGlobalService( ORMKeys.ORMService ) ).getORMApp( context )
+		    .getDefaultSessionFactoryOrThrow();
 		assertNotNull( defaultSessionFactory );
 
 		instance.executeSource( "result = ormGetSessionFactory( 'dsn2' )", context );

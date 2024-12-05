@@ -5,9 +5,7 @@ import java.util.Set;
 import org.hibernate.Session;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
-import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -21,17 +19,11 @@ import ortus.boxlang.runtime.validation.Validator;
 public class ORMGetSession extends BIF {
 
 	/**
-	 * ORM Service, responsible for managing ORM applications.
-	 */
-	private ORMService ormService;
-
-	/**
 	 * Constructor
 	 */
 	public ORMGetSession() {
 		super();
-		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
-		declaredArguments	= new Argument[] {
+		declaredArguments = new Argument[] {
 		    new Argument( false, "String", ORMKeys.datasource, Set.of( Validator.NON_EMPTY ) )
 		};
 	}

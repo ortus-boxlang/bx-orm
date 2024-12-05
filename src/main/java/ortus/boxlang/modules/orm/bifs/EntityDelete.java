@@ -19,16 +19,10 @@ import ortus.boxlang.runtime.validation.Validator;
 public class EntityDelete extends BIF {
 
 	/**
-	 * ORM Service, responsible for managing ORM applications.
-	 */
-	// private ORMService ormService;
-
-	/**
 	 * Constructor
 	 */
 	public EntityDelete() {
 		super();
-		// this.ormService = ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
 		declaredArguments = new Argument[] {
 		    new Argument( true, "class", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
 		};

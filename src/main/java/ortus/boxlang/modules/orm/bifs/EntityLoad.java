@@ -11,11 +11,6 @@ import ortus.boxlang.runtime.scopes.ArgumentsScope;
 public class EntityLoad extends BIF {
 
 	/**
-	 * ORM Service, responsible for managing ORM applications.
-	 */
-	// private ORMService ormService;
-
-	/**
 	 * ExampleBIF
 	 *
 	 * @param context   The context in which the BIF is being invoked.
