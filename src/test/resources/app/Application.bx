@@ -1,3 +1,51 @@
 class{
-	this.name = "MyAppName";
+	this.name = "BXORMTest";
+
+	this.datasources={
+		"TestDB" = {
+			driver = "derby",
+			database = "test",
+			connectionString = "jdbc:derby:memory:TestDB;create=true"
+		},
+		"dsn2": {
+			driver = "derby",
+			database = "dsn2",
+			connectionString = "jdbc:derby:memory:dsn2;create=true"
+		}
+	};
+	this.datasource = "TestDB";
+	this.ormSettings={
+		"datasource" : "TestDB",
+		"entityPaths": [ "src/test/resources/app/models" ],
+		"saveMapping": "true",
+		"logSQL"     : "true",
+		"dialect"    : "DerbyTenSevenDialect"
+	}
+	this.ormEnabled = "true";
+	// /home/michael/repos/boxlang/modules/bx-orm
+
+	function onApplicationStart(){
+		try {
+			queryExecute( "CREATE TABLE manufacturers ( id INTEGER, name VARCHAR(155), address VARCHAR(155) )" );
+			queryExecute( "CREATE TABLE vehicles ( vin VARCHAR(17), make VARCHAR(155), model VARCHAR(155), FK_manufacturer INTEGER )" );
+		} catch ( DatabaseException e ) {
+			// Ignore the exception if the table already exists
+		}
+		queryExecute( "TRUNCATE TABLE manufacturers" );
+		queryExecute(
+		    "INSERT INTO manufacturers ( id, name, address ) VALUES ( 1, 'Ford Motor Company', '202 Ford Way, Dearborn MI' )" );
+		queryExecute( "INSERT INTO manufacturers ( id, name, address ) VALUES ( 77, 'General Moters Corporation', 'P.O. BOX 33170, Detroit, MI 48232-5170' )" );
+		queryExecute(
+		    "INSERT INTO manufacturers ( id, name, address ) VALUES ( 42, 'Honda Motor Co.', 'CHI-5, 1919 Torrance Blvd., Torrance, CA 90501 - 2746 ' )" );
+		queryExecute( "TRUNCATE TABLE vehicles;INSERT INTO vehicles (vin,make,model,FK_manufacturer) VALUES('1HGCM82633A123456','Honda', 'Accord', 42 );" );
+	}
+
+	function onApplicationEnd(){
+		try {
+			queryExecute( "DROP TABLE manufacturers" );
+			queryExecute( "DROP TABLE vehicles" );
+		} catch ( DatabaseException e ) {
+			// Ignore the exception if the table doesn't exists
+		}
+	}
 }
