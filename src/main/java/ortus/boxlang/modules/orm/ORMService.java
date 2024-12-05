@@ -6,13 +6,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ch.qos.logback.classic.Level;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
-import ortus.boxlang.runtime.loader.DynamicClassLoader;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.BaseService;
 
@@ -32,13 +30,21 @@ public class ORMService extends BaseService {
 	private Map<Key, ORMApp>	ormApps	= new ConcurrentHashMap<>();
 
 	/**
+	 * public no-arg constructor for the ServiceProvider
+	 */
+	public ORMService() {
+		super( BoxRuntime.getInstance(), ORMKeys.ORMService );
+		// setupCustomLogLevels();
+	}
+
+	/**
 	 * Constructor
 	 *
 	 * @param runtime The BoxRuntime
 	 */
 	public ORMService( BoxRuntime runtime ) {
 		super( runtime, ORMKeys.ORMService );
-		setupCustomLogLevels();
+		// setupCustomLogLevels();
 	}
 
 	/**
@@ -122,27 +128,27 @@ public class ORMService extends BaseService {
 		ormApps.clear();
 	}
 
-	/**
-	 * Set up custom log levels for the ORM engine.
-	 *
-	 * @TODO: use this method or similar to adjust Hibernate logging levels and pipe them to a destination (log file) of choice.
-	 */
-	private void setupCustomLogLevels() {
-		Logger ormLogger = LoggerFactory.getLogger( "ortus.boxlang.modules.orm" );
+	// /**
+	// * Set up custom log levels for the ORM engine.
+	// *
+	// * @TODO: use this method or similar to adjust Hibernate logging levels and pipe them to a destination (log file) of choice.
+	// */
+	// private void setupCustomLogLevels() {
+	// Logger ormLogger = LoggerFactory.getLogger( "ortus.boxlang.modules.orm" );
 
-		if ( ! ( ormLogger instanceof ch.qos.logback.classic.Logger ) ) {
-			logger.warn( "Could not adjust log levels; logger is not a LogBack instance." );
-			return;
-		}
+	// if ( ! ( ormLogger instanceof ch.qos.logback.classic.Logger ) ) {
+	// logger.warn( "Could not adjust log levels; logger is not a LogBack instance." );
+	// return;
+	// }
 
-		Level	ORMModuleLevel	= Level.DEBUG;
-		Level	customLogLevel	= Level.WARN;
+	// Level ORMModuleLevel = Level.DEBUG;
+	// Level customLogLevel = Level.WARN;
 
-		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "ortus.boxlang.modules.orm" ) ).setLevel( ORMModuleLevel );
+	// ( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "ortus.boxlang.modules.orm" ) ).setLevel( ORMModuleLevel );
 
-		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "com.zaxxer.hikari" ) ).setLevel( customLogLevel );
-		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "org.hibernate" ) ).setLevel( customLogLevel );
-		// How can we put this graciously: the class loader logs are just too much.
-		( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( DynamicClassLoader.class ) ).setLevel( customLogLevel );
-	}
+	// ( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "com.zaxxer.hikari" ) ).setLevel( customLogLevel );
+	// ( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "org.hibernate" ) ).setLevel( customLogLevel );
+	// // How can we put this graciously: the class loader logs are just too much.
+	// ( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( DynamicClassLoader.class ) ).setLevel( customLogLevel );
+	// }
 }

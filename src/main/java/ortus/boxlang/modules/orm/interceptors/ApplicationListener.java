@@ -41,10 +41,6 @@ public class ApplicationListener extends BaseListener {
 	@InterceptionPoint
 	public void afterApplicationListenerLoad( IStruct args ) {
 		BoxRuntime instance = BoxRuntime.getInstance();
-		if ( !instance.hasGlobalService( ORMKeys.ORMService ) ) {
-			logger.info( "Adding ORMService to global services" );
-			instance.putGlobalService( ORMKeys.ORMService, new ORMService( instance ) );
-		}
 		logger.info(
 		    "afterApplicationListenerLoad fired; checking for ORM configuration in the application context config" );
 

@@ -27,7 +27,7 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
-import ortus.boxlang.runtime.logging.LoggingConfigurator;
+// import ortus.boxlang.runtime.logging.LoggingConfigurator;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
@@ -86,9 +86,9 @@ public class MappingGenerator {
 				}
 			}
 			// Note that none of our logging will print out until we set the debug mode.
-			if ( debugMode ) {
-				LoggingConfigurator.reconfigureDebugMode( debugMode );
-			}
+			// if ( debugMode ) {
+			// LoggingConfigurator.reconfigureDebugMode( debugMode );
+			// }
 
 			if ( mappings.size() > 0 ) {
 				for ( String key : mappings.keySet() ) {

@@ -21,6 +21,7 @@ import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 
 public class ORMConfig {
 
@@ -208,6 +209,9 @@ public class ORMConfig {
 	 * Constructor
 	 */
 	public ORMConfig( IStruct properties ) {
+		if ( properties == null ) {
+			properties = new Struct();
+		}
 		this.appContext = BoxRuntime.getInstance().getRuntimeContext();
 		implementBackwardsCompatibility( properties );
 		process( properties );
