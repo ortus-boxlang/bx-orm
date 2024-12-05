@@ -19,7 +19,6 @@ import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
-import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
@@ -35,16 +34,12 @@ public class BaseORMTest {
 	public RequestBoxContext				context;
 	public IScope							variables;
 	public static ORMService				ormService;
-	public static DataSource				alternateDataSource;
 	public static ORMApp					ormApp;
 	public static BaseApplicationListener	listener;
-
-	static DataSource						datasource;
 
 	@BeforeAll
 	public static void setUp() {
 		instance		= BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
-		datasource		= JDBCTestUtils.constructTestDataSource( "TestDB" );
 
 		// Load the module
 		startupContext	= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
@@ -53,8 +48,6 @@ public class BaseORMTest {
 
 	@AfterAll
 	public static void teardown() throws SQLException {
-		JDBCTestUtils.cleanupTables( datasource );
-		instance.getDataSourceService().remove( datasource.getUniqueName() );
 	}
 
 	@BeforeEach

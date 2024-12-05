@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
 public class ORMCloseSessionTest extends BaseORMTest {
@@ -31,7 +32,7 @@ public class ORMCloseSessionTest extends BaseORMTest {
 	@DisplayName( "It can close the session on a named (alternate) datasource" )
 	@Test
 	public void testSessionCloseOnNamedDatasource() {
-		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( alternateDataSource.getConfiguration().name );
+		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( Key.of( "dsn2" ) );
 		// @formatter:off
 		instance.executeSource(
 			"""

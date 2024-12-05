@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 import tools.BaseORMTest;
 
@@ -47,7 +48,7 @@ public class ORMGetSessionTest extends BaseORMTest {
 		;
 		assertNotNull( defaultORMSession );
 
-		Session secondDSNSession = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( alternateDataSource.getConfiguration().name );
+		Session secondDSNSession = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( Key.of( "dsn2" ) );
 		assertNotNull( secondDSNSession );
 
 		instance.executeSource( "result = ormGetSession( 'dsn2' ) ", context );

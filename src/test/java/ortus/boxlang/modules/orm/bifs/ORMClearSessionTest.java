@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
 public class ORMClearSessionTest extends BaseORMTest {
@@ -38,7 +39,7 @@ public class ORMClearSessionTest extends BaseORMTest {
 	@DisplayName( "It can clear the session on a named (alternate) datasource" )
 	@Test
 	public void testSessionClearOnNamedDatasource() {
-		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( alternateDataSource.getConfiguration().name );
+		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( Key.of( "dsn2" ) );
 
 		instance.executeSource(
 		    """
