@@ -1,4 +1,4 @@
-name: bx-orm Snapshots
+name: Snapshots
 
 on:
   push:
@@ -9,6 +9,10 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+
+env:
+  MODULE_ID: ${{ github.event.repository.name }}
+  JDK_VERSION: 21
 
 jobs:
   #############################################
@@ -39,10 +43,11 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: 21
+          java-version: ${{ env.JDK_VERSION }}
 
       - name: Format Java Source
-        run: ./gradlew spotlessApply --stacktrace
+        run: |
+          ./gradlew spotlessApply --stacktrace
 
       - name: Commit Format Changes
         uses: stefanzweifel/git-auto-commit-action@v5

@@ -17,10 +17,10 @@ jobs:
     uses: ./.github/workflows/tests.yml
     secrets: inherit
 
-
+  # Format PR
   format_check:
     name: Checks Source Code Formatting
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -30,6 +30,10 @@ jobs:
         with:
           distribution: "temurin"
           java-version: 21
+
+      - uses: Ortus-Solutions/commandbox-action@v1.0.2
+        with:
+          cmd: run-script format:check
 
       - name: Verify Code Formatting
         run: ./gradlew spotlessCheck
