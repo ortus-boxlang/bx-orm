@@ -1,3 +1,20 @@
+/**
+ * [BoxLang]
+ *
+ * Copyright [2023] [Ortus Solutions, Corp]
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package tools;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -23,9 +40,11 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 public class BaseORMTest {
 
 	public static BoxRuntime		instance;
-	protected static ModuleRecord	moduleRecord;
-	protected static Key			moduleName	= new Key( "bxorm" );
-	public static Key				result		= Key.of( "result" );
+	public static ModuleRecord		moduleRecord;
+	public static Key				moduleName				= new Key( "orm" );
+	public static Key				derbyModule				= new Key( "bx-derby" );
+	public static String			moduleDependenciesPath	= Paths.get( "./src/test/resources/modules" ).toAbsolutePath().toString();
+	public static Key				result					= Key.of( "result" );
 	public static RequestBoxContext	context;
 	public IScope					variables;
 
@@ -51,6 +70,17 @@ public class BaseORMTest {
 	}
 
 	protected static void loadModule( IBoxContext context ) {
+		// Is Derby module loaded?
+		if ( !instance.getModuleService().hasModule( derbyModule ) ) {
+			ModuleRecord derbyRecord = new ModuleRecord( moduleDependenciesPath + "/bx-derby" );
+			instance.getModuleService().getRegistry().put( derbyModule, derbyRecord );
+			derbyRecord
+			    .loadDescriptor( context )
+			    .register( context )
+			    .activate( context );
+		}
+
+		// Is ORM module loaded?
 		if ( !instance.getModuleService().hasModule( moduleName ) ) {
 			System.out.println( "Loading module" );
 			String physicalPath = Paths.get( "./build/module" ).toAbsolutePath().toString();

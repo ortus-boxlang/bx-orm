@@ -21,7 +21,6 @@ targetCompatibility = jdkVersion
 ext {
 	buildID = System.getenv( 'BUILD_ID' ) ?: '0'
 	branch = System.getenv( 'BRANCH' ) ?: 'development'
-	derbyModuleVersion = '1.1.0-snapshot';
 	testResourceDirectory = 'src/test/resources';
 }
 
@@ -208,29 +207,21 @@ task downloadBoxLang( type: Download ) {
 		file( "src/test/resources/libs" ).mkdirs()
 	}
     // Configure the URL of the file to download
-    src "https://downloads.ortussolutions.com/ortussolutions/boxlang/${boxlangVersion}/boxlang-${boxlangVersion}-all.jar"
-    // Specify the destination directory for the downloaded file
-    dest "src/test/resources/libs/boxlang-${boxlangVersion}-all.jar"
+	src([
+		"https://downloads.ortussolutions.com/ortussolutions/boxlang/${boxlangVersion}/boxlang-${boxlangVersion}-all.jar",
+		"https://downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-derby/${derbyVersion}/bx-derby-${derbyVersion}.zip"
+	])
+    // Specify the destination directory for the downloaded files
+    dest "src/test/resources/libs/"
     overwrite true
     onlyIfModified false
 }
 
 /**
- * TEMPORARY until we publish to maven
- * Download the zip file from https://s3.amazonaws.com/downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-derby/${derbyModuleVersion}/bx-derby-${derbyModuleVersion}.zip
+ * Install any dependencies the module needs
  */
-task downloadDerbyModule( type: Download ) {
-    // Configure the URL of the file to download
-    src "https://s3.amazonaws.com/downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-derby/${derbyModuleVersion}/bx-derby-${derbyModuleVersion}.zip"
-    dest new File(buildDir, "bx-derby-${derbyModuleVersion}.zip")
-}
-
-/**
- * TEMPORARY until we publish to maven
- * Task to install the latest derby jar from https://s3.amazonaws.com/downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-derby/${derbyModuleVersion}/bx-derby-${derbyModuleVersion}.zip
- */
-task installDerbyModule(dependsOn: downloadDerbyModule, type: Copy) {
-	from zipTree(downloadDerbyModule.dest)
+task installModuleDependencies( dependsOn: downloadBoxLang, type: Copy ) {
+	from zipTree( file( "${testResourceDirectory}/libs/bx-derby-${derbyVersion}.zip" ) )
 	into "${testResourceDirectory}/modules/bx-derby"
 }
 
