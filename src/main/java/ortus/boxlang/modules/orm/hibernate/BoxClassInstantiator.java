@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import org.hibernate.collection.internal.PersistentBag;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.tuple.Instantiator;
 import org.hibernate.tuple.entity.EntityMetamodel;
@@ -175,10 +176,18 @@ public class BoxClassInstantiator implements Instantiator {
 		return new DynamicFunction(
 		    methodName,
 		    ( context, function ) -> {
-			    VariablesScope scope = context.getThisClass().getVariablesScope();
-			    return scope.get( collectionKey ) != null && ( collectionType == "bag"
-			        ? scope.getAsArray( collectionKey ).size() > 0
-			        : scope.getAsStruct( collectionKey ).size() > 0 );
+			    VariablesScope scope	= context.getThisClass().getVariablesScope();
+			    Object		collection	= scope.get( collectionKey );
+			    if ( collection == null ) {
+				    return false;
+			    }
+			    if ( collectionType == "bag" ) {
+				    if ( collection instanceof PersistentBag bagCollection ) {
+					    return bagCollection.size() > 0;
+				    }
+				    return ( ( Array ) collection ).size() > 0;
+			    }
+			    return scope.getAsStruct( collectionKey ).size() > 0;
 		    },
 		    new Argument[] {},
 		    "boolean",
@@ -220,7 +229,12 @@ public class BoxClassInstantiator implements Instantiator {
 			    }
 
 			    if ( isArrayCollection ) {
-				    variablesScope.getAsArray( collectionKey ).append( itemToAdd );
+				    Object bag = variablesScope.get( collectionKey );
+				    if ( bag instanceof PersistentBag bagCollection ) {
+					    bagCollection.add( itemToAdd );
+				    } else {
+					    ( ( Array ) bag ).append( itemToAdd );
+				    }
 			    } else {
 				    // @TODO: implement/test this
 				    String structKey = StringCaster.cast( context.getArgumentsScope().get( Key.key ) );
@@ -284,24 +298,29 @@ public class BoxClassInstantiator implements Instantiator {
 			    }
 
 			    if ( isArrayCollection ) {
-				    Array collection = variablesScope.getAsArray( collectionKey );
-				    collection.stream()
-				        .map( item -> ( IClassRunnable ) item )
-				        .filter( item -> {
-					        VariablesScope itemVariablesScope	= item.getVariablesScope();
-					        VariablesScope itemToRemoveVariablesScope = itemToRemove.getVariablesScope();
-					        for ( Key key : keys ) {
-						        if ( !itemVariablesScope.containsKey( key ) || !itemToRemoveVariablesScope.containsKey( key ) ) {
-							        return false;
+				    Object collection = variablesScope.get( collectionKey );
+				    if ( collection instanceof PersistentBag bagCollection ) {
+					    bagCollection.remove( itemToRemove );
+				    } else {
+					    Array arrayCollection = ( Array ) collection;
+					    arrayCollection.stream()
+					        .map( item -> ( IClassRunnable ) item )
+					        .filter( item -> {
+						        VariablesScope itemVariablesScope	= item.getVariablesScope();
+						        VariablesScope itemToRemoveVariablesScope = itemToRemove.getVariablesScope();
+						        for ( Key key : keys ) {
+							        if ( !itemVariablesScope.containsKey( key ) || !itemToRemoveVariablesScope.containsKey( key ) ) {
+								        return false;
+							        }
+							        if ( !itemVariablesScope.get( key ).equals( itemToRemoveVariablesScope.get( key ) ) ) {
+								        return false;
+							        }
 						        }
-						        if ( !itemVariablesScope.get( key ).equals( itemToRemoveVariablesScope.get( key ) ) ) {
-							        return false;
-						        }
-					        }
-					        return true;
-				        } )
-				        .findFirst()
-				        .ifPresent( collection::remove );
+						        return true;
+					        } )
+					        .findFirst()
+					        .ifPresent( arrayCollection::remove );
+				    }
 			    } else {
 				    // @TODO: test this!
 				    String structKey = StringCaster.cast( context.getArgumentsScope().get( Key.key ) );
