@@ -18,10 +18,9 @@
 package tools;
 
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.config.segments.DatasourceConfig;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 
@@ -93,109 +92,12 @@ public class JDBCTestUtils {
 	}
 
 	/**
-	 * Build out a structure of datasource configuration for testing. This is to inflate the state of a DatasourceConfig object
-	 *
-	 * @param databaseName String database name; must be unique for each test. In the future, we can change this to use either reflection or a stack trace
-	 * @param properties   The properties to merge in
-	 */
-	public static IStruct getDatasourceConfig( String databaseName, IStruct properties ) {
-		properties.computeIfAbsent( Key.of( "connectionString" ), key -> "jdbc:derby:memory:" + databaseName + ";create=true" );
-
-		return Struct.of(
-		    "name", databaseName,
-		    "properties", properties
-		);
-	}
-
-	/**
-	 * Build out a structure of datasource configuration for testing. This is to inflate the state of a DatasourceConfig object
-	 *
-	 * @param databaseName String database name; must be unique for each test. In the future, we can change this to use either reflection or a stack trace
-	 */
-	public static IStruct getDatasourceConfig( String databaseName ) {
-		return getDatasourceConfig( databaseName, new Struct() );
-	}
-
-	/**
-	 * Build out a DatasourceConfig object for testing.
-	 *
-	 * @param databaseName String database name; must be unique for each test. In the future, we can change this to use either reflection or a stack trace
-	 */
-	public static DatasourceConfig buildDatasourceConfig( String databaseName ) {
-		return new DatasourceConfig(
-		    Key.of( databaseName ),
-		    Struct.of(
-		        "database", databaseName,
-		        "driver", "derby",
-		        "connectionString", "jdbc:derby:memory:" + databaseName + ";create=true"
-		    )
-		);
-	}
-
-	/**
-	 * Build out a DataSource for testing. This doesn't register it, just creates a mock datasource for testing.
-	 * The driver will be derby
-	 *
-	 * @param databaseName String database name; must be unique for each test. In the future, we can change this to use either reflection or a stack trace
-	 *                     to grab the caller class name and thus ensure uniqueness.
-	 * @param properties   The properties to merge in
-	 */
-	public static DataSource buildDatasource( String databaseName, IStruct properties ) {
-		return DataSource.fromStruct(
-		    databaseName,
-		    Struct.of(
-		        "database", databaseName,
-		        "driver", "derby",
-		        "connectionString", "jdbc:derby:memory:" + databaseName + ";create=true"
-		    ) );
-	}
-
-	/**
-	 * Build out a DataSource for testing. This doesn't register it, just creates a mock datasource for testing.
-	 * The driver will be derby
-	 *
-	 * @param databaseName String database name; must be unique for each test. In the future, we can change this to use either reflection or a stack trace
-	 *                     to grab the caller class name and thus ensure uniqueness.
-	 */
-	public static DataSource buildDatasource( String databaseName ) {
-		return buildDatasource( databaseName, new Struct() );
-	}
-
-	/**
-	 * Construct a test DataSource for use in testing.
-	 * <p>
-	 * This method is useful for creating a DataSource for use in testing, and is especially useful for in-memory databases like Apache Derby.
-	 *
-	 * @param datasourceName String database name; must be unique for each test. In the future, we can change this to use either reflection or a stack
-	 *                       trace to grab the caller class name and thus ensure uniqueness.
-	 *
-	 * @return A DataSource instance with a consistent `manufacturers` table created.
-	 */
-	public static DataSource constructTestDataSource( String datasourceName ) {
-		DataSource datasource = DataSource.fromStruct(
-		    datasourceName,
-		    Struct.of(
-		        "database", datasourceName,
-		        "driver", "derby",
-		        "connectionString", "jdbc:derby:memory:" + datasourceName + ";create=true",
-		        "maxConnections", 50
-		    ) );
-		try {
-			datasource.execute( "CREATE TABLE manufacturers ( id INTEGER, name VARCHAR(155), address VARCHAR(155) )" );
-			datasource.execute( "CREATE TABLE vehicles ( vin VARCHAR(17), make VARCHAR(155), model VARCHAR(155), FK_manufacturer INTEGER )" );
-		} catch ( DatabaseException e ) {
-			// Ignore the exception if the table already exists
-		}
-		return datasource;
-	}
-
-	/**
 	 * Remove the manufacturers table from the database.
 	 *
 	 * @param datasource
 	 */
-	public static void cleanupTables( DataSource datasource ) {
-		datasource.execute( "DROP TABLE manufacturers" );
+	public static void cleanupTables( DataSource datasource, IBoxContext context ) {
+		datasource.execute( "DROP TABLE manufacturers", context );
 	}
 
 	/**
@@ -203,16 +105,25 @@ public class JDBCTestUtils {
 	 *
 	 * @param datasource
 	 */
-	public static void resetTables( DataSource datasource ) {
-		datasource.execute( "TRUNCATE TABLE manufacturers" );
+	public static void resetTables( DataSource datasource, IBoxContext context ) {
+		try {
+			datasource.execute( "CREATE TABLE manufacturers ( id INTEGER, name VARCHAR(155), address VARCHAR(155) )", context );
+			datasource.execute( "CREATE TABLE vehicles ( vin VARCHAR(17), make VARCHAR(155), model VARCHAR(155), FK_manufacturer INTEGER )", context );
+		} catch ( DatabaseException e ) {
+			// Ignore the exception if the table already exists
+		}
+		datasource.execute( "TRUNCATE TABLE manufacturers", context );
 		datasource.execute(
-		    "INSERT INTO manufacturers ( id, name, address ) VALUES ( 1, 'Ford Motor Company', '202 Ford Way, Dearborn MI' )" );
+		    "INSERT INTO manufacturers ( id, name, address ) VALUES ( 1, 'Ford Motor Company', '202 Ford Way, Dearborn MI' )", context );
 		datasource
-		    .execute( "INSERT INTO manufacturers ( id, name, address ) VALUES ( 77, 'General Moters Corporation', 'P.O. BOX 33170, Detroit, MI 48232-5170' )" );
+		    .execute( "INSERT INTO manufacturers ( id, name, address ) VALUES ( 77, 'General Moters Corporation', 'P.O. BOX 33170, Detroit, MI 48232-5170' )",
+		        context );
 		datasource.execute(
-		    "INSERT INTO manufacturers ( id, name, address ) VALUES ( 42, 'Honda Motor Co.', 'CHI-5, 1919 Torrance Blvd., Torrance, CA 90501 - 2746 ' )" );
+		    "INSERT INTO manufacturers ( id, name, address ) VALUES ( 42, 'Honda Motor Co.', 'CHI-5, 1919 Torrance Blvd., Torrance, CA 90501 - 2746 ' )",
+		    context );
 
 		datasource
-		    .execute( "TRUNCATE TABLE vehicles;INSERT INTO vehicles (vin,make,model,FK_manufacturer) VALUES('1HGCM82633A123456','Honda', 'Accord', 42 );" );
+		    .execute( "TRUNCATE TABLE vehicles;INSERT INTO vehicles (vin,make,model,FK_manufacturer) VALUES('1HGCM82633A123456','Honda', 'Accord', 42 );",
+		        context );
 	}
 }

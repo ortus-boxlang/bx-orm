@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
-import ortus.boxlang.modules.orm.interceptors.RequestListener;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -95,11 +94,6 @@ public class ORMApp {
 	 * A map of entities discovered for this ORM application, keyed by datasource name.
 	 */
 	private Map<String, List<EntityRecord>>	entityMap;
-
-	/**
-	 * The session manager for this ORM application.
-	 */
-	private RequestListener					requestListener;
 
 	/**
 	 * Get a unique name for this context's ORM Application.
