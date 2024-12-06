@@ -25,17 +25,6 @@ public class RequestListener extends BaseListener {
 		super();
 	}
 
-	/**
-	 * This method is called by the BoxLang runtime to configure the interceptor
-	 * with a Struct of properties
-	 *
-	 * @param properties The properties to configure the interceptor with (if any)
-	 */
-	@Override
-	public void configure( IStruct properties ) {
-		this.properties = properties;
-	}
-
 	@InterceptionPoint
 	public void onRequestStart( IStruct args ) {
 		logger.debug( "onRequestEnd - Starting up ORM request" );

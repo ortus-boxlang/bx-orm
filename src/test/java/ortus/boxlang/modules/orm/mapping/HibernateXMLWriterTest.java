@@ -7,7 +7,6 @@ import static org.junit.Assert.assertNotNull;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.nio.file.Path;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -53,7 +52,7 @@ public class HibernateXMLWriterTest {
 
 	@BeforeAll
 	public static void setUp() {
-		instance = BoxRuntime.getInstance( true, Path.of( "src/test/resources/boxlang.json" ).toString() );
+		instance = BoxRuntime.getInstance( true );
 	}
 
 	@BeforeEach

@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.modules.orm.interceptors.TransactionManager;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
@@ -35,8 +34,6 @@ public class ORMRequestContext {
 	private ORMService				ormService;
 
 	private ORMApp					ormApp;
-
-	private TransactionManager		transactionManager;
 
 	private RequestBoxContext		context;
 
@@ -68,15 +65,10 @@ public class ORMRequestContext {
 	}
 
 	public ORMRequestContext( RequestBoxContext context, ORMConfig config ) {
-		this.context			= context;
-		this.config				= config;
-		this.ormService			= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
-		this.ormApp				= this.ormService.getORMApp( context );
-
-		this.transactionManager	= this.context.computeAttachmentIfAbsent( ORMKeys.TransactionManager, ( key ) -> {
-									logger.debug( "Registering ORM transaction manager" );
-									return new TransactionManager( context, this, this.config );
-								} );
+		this.context	= context;
+		this.config		= config;
+		this.ormService	= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		this.ormApp		= this.ormService.getORMApp( context );
 	}
 
 	/**
@@ -124,18 +116,20 @@ public class ORMRequestContext {
 	}
 
 	/**
+	 * Getter for this ORM request context's ORM configuration.
+	 * 
+	 * @return
+	 */
+	public ORMConfig getConfig() {
+		return this.config;
+	}
+
+	/**
 	 * Shut down this ORM request context.
 	 * <p>
 	 * Will close all Hibernate sessions and unregister the transaction manager.
 	 */
 	public ORMRequestContext shutdown() {
-		if ( this.transactionManager == null ) {
-			throw new IllegalStateException( "TransactionManager does not exist in context." );
-		}
-		this.transactionManager.shutdown();
-		logger.debug( "Unregistering ORM transaction manager" );
-		this.context.removeAttachment( ORMKeys.TransactionManager );
-
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
 			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
 			this.sessions.forEach( ( key, session ) -> {

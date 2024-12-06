@@ -20,7 +20,7 @@ public class EntityReload extends BIF {
 	public EntityReload() {
 		super();
 		declaredArguments = new Argument[] {
-		    new Argument( true, "String", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		    new Argument( true, "Any", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
 		};
 	}
 
@@ -31,6 +31,15 @@ public class EntityReload extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		Object entity = arguments.get( ORMKeys.entity );
+		if ( entity instanceof String ) {
+			// @TODO: Get this working.
+			// ScopeSearchResult entityLookup = context.scopeFindNearby( Key.of( ( String ) entity ), null, true );
+			// if ( entityLookup == null ) {
+			// throw new IllegalArgumentException( "Entity variable not found: " + arguments.get( ORMKeys.entity ) );
+			// }
+			// entity = entityLookup.value();
+		}
 		ORMRequestContext.getForContext( context.getRequestContext() ).getSession().refresh( arguments.get( ORMKeys.entity ) );
 		return null;
 	}

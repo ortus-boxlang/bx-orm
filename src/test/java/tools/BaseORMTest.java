@@ -10,7 +10,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 
-import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -33,7 +32,6 @@ public class BaseORMTest {
 
 	@BeforeAll
 	public static void setUp() {
-		System.out.println( "Running @BeforeAll" );
 		instance	= BoxRuntime.getInstance( true );
 
 		// Load the module
@@ -45,21 +43,17 @@ public class BaseORMTest {
 	@AfterAll
 	public static void teardown() throws SQLException {
 		instance.getApplicationService().shutdownApplication( Key.of( "BXORMTest" ) );
-		instance.removeGlobalService( ORMKeys.ORMService );
-		instance.getModuleService().unload( moduleName );
 	}
 
 	@BeforeEach
 	public void setupEach() {
-		System.out.println( "Running @BeforeEach" );
-		// context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
 		variables = context.getScopeNearby( VariablesScope.name );
 		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
 	}
 
 	protected static void loadModule( IBoxContext context ) {
-		System.out.println( "Loading module" );
 		if ( !instance.getModuleService().hasModule( moduleName ) ) {
+			System.out.println( "Loading module" );
 			String physicalPath = Paths.get( "./build/module" ).toAbsolutePath().toString();
 			moduleRecord = new ModuleRecord( physicalPath );
 
