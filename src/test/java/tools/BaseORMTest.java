@@ -72,17 +72,20 @@ public class BaseORMTest {
 	protected static void loadModule( IBoxContext context ) {
 		// Is Derby module loaded?
 		if ( !instance.getModuleService().hasModule( derbyModule ) ) {
+			System.out.println( "Loading Derby module..." );
 			ModuleRecord derbyRecord = new ModuleRecord( moduleDependenciesPath + "/bx-derby" );
 			instance.getModuleService().getRegistry().put( derbyModule, derbyRecord );
 			derbyRecord
 			    .loadDescriptor( context )
 			    .register( context )
 			    .activate( context );
+		} else {
+			System.out.println( "Derby module already loaded, skipping..." );
 		}
 
 		// Is ORM module loaded?
 		if ( !instance.getModuleService().hasModule( moduleName ) ) {
-			System.out.println( "Loading module" );
+			System.out.println( "Loading ORM module..." );
 			String physicalPath = Paths.get( "./build/module" ).toAbsolutePath().toString();
 			moduleRecord = new ModuleRecord( physicalPath );
 
@@ -92,6 +95,8 @@ public class BaseORMTest {
 			    .loadDescriptor( context )
 			    .register( context )
 			    .activate( context );
+		} else {
+			System.out.println( "ORM module already loaded, skipping..." );
 		}
 	}
 }
