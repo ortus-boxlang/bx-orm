@@ -17,6 +17,7 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import java.io.Serializable;
 import java.util.Set;
 
 import org.hibernate.Session;
@@ -69,15 +70,17 @@ public class EntityLoadByPK extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session	session		= ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
+		Session			session		= ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
 
-		String	entityName	= arguments.getAsString( ORMKeys.entity );
-		Object	keyValue	= arguments.get( Key.id );
-		String	keyType		= getKeyJavaType( session, entityName ).getSimpleName();
+		String			entityName	= arguments.getAsString( ORMKeys.entity );
+		Object			keyValue	= arguments.get( Key.id );
+		String			keyType		= getKeyJavaType( session, entityName ).getSimpleName();
 
 		// @TODO: Support composite keys.
-		return session.get( entityName,
-		    ( java.io.Serializable ) GenericCaster.cast( context, keyValue, keyType ) );
+		Serializable	id			= ( Serializable ) GenericCaster.cast( context, keyValue, keyType );
+		var				entity		= session.get( entityName, id );
+
+		return entity;
 	}
 
 	/**

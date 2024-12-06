@@ -48,7 +48,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 
 		// @formatter:off
 		instance.executeSource( """
-			Manufacturer = entityLoadByPK( 'Manufacturer', 42 );
+			Manufacturer = entityLoadByPK( 'Manufacturer', 1 );
 			Manufacturer.addVehicle( entityLoadByPK( 'Vehicle', '1HGCM82633A123456' ) );
 			result = Manufacturer.hasVehicle();
 			""", context );
@@ -65,7 +65,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 
 		// @formatter:off
 		instance.executeSource( """
-			honda = entityLoadByPK( 'Manufacturer', 42 );
+			honda = entityLoadByPK( 'Manufacturer', 1 );
 
 			myVehicle = entityLoadByPK( 'Vehicle', '1HGCM82633A123456' );
 			honda.addVehicle( myVehicle );
