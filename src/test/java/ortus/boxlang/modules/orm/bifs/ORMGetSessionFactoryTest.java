@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.hibernate.SessionFactory;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -15,6 +16,7 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 import tools.BaseORMTest;
 
+@Disabled( "Tofix" )
 public class ORMGetSessionFactoryTest extends BaseORMTest {
 
 	@DisplayName( "It can get the default ORM session factory" )

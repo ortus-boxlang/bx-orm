@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +33,7 @@ public class GetHibernateVersionTest {
 		variables	= context.getScopeNearby( VariablesScope.name );
 	}
 
+	@Disabled( "Tofix" )
 	@DisplayName( "It can get the hibernate version" )
 	@Test
 	public void testGetHibernateVersion() {

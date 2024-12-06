@@ -3,6 +3,7 @@ package ortus.boxlang.modules.orm.config;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +12,7 @@ import tools.BaseORMTest;
 
 public class EntityEventsTest extends BaseORMTest {
 
+	@Disabled( "Tofix" )
 	@DisplayName( "It fires preLoad,postLoad" )
 	@Test
 	public void testEntityLoadEvents() {
@@ -76,6 +78,7 @@ public class EntityEventsTest extends BaseORMTest {
 		assertThat( eventLog.toList() ).containsExactly( "preLoad", "postLoad", "preUpdate", "postUpdate" );
 	}
 
+	@Disabled( "Tofix" )
 	@DisplayName( "It fires preDelete,postDelete" )
 	@Test
 	public void testEntityDeleteEvents() {

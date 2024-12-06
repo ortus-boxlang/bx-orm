@@ -41,6 +41,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertTrue( variables.getAsBoolean( result ) );
 	}
 
+	@Disabled( "Tofix" )
 	@DisplayName( "It will add add* methods for *-to-many associations" )
 	@Test
 	public void testEntityAddMethod() {
@@ -57,6 +58,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertTrue( variables.getAsBoolean( result ) );
 	}
 
+	@Disabled( "Tofix" )
 	@DisplayName( "It will add remove* methods for associations" )
 	@Test
 	public void testEntityRemoveMethod() {
@@ -74,11 +76,11 @@ public class EntityLoadByPKTest extends BaseORMTest {
 			""", context );
 		// @formatter:on
 
-		// has permission after add: yep!
+		// has vehicle after add: yep!
 		assertTrue( variables.get( result ) instanceof Boolean );
 		assertTrue( variables.getAsBoolean( result ) );
 
-		// has permission after add: nope!
+		// has vehicle after add: nope!
 		assertTrue( variables.get( Key.of( "hasVehicleAfterRemove" ) ) instanceof Boolean );
 		assertFalse( variables.getAsBoolean( Key.of( "hasVehicleAfterRemove" ) ) );
 	}

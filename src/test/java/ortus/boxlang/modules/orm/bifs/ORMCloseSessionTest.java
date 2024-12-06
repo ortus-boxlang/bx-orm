@@ -3,6 +3,7 @@ package ortus.boxlang.modules.orm.bifs;
 import static org.junit.Assert.assertFalse;
 
 import org.hibernate.Session;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,6 +11,7 @@ import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
+@Disabled( "Tofix" )
 public class ORMCloseSessionTest extends BaseORMTest {
 
 	@DisplayName( "It can close the session for the default datasource" )

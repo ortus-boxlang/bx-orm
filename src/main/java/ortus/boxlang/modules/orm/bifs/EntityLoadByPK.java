@@ -54,17 +54,11 @@ public class EntityLoadByPK extends BIF {
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		Session	session		= ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
 
-		// @TODO: Move this to a more sensible location.
-		// if ( session.getTransaction() == null ) {
-		// session.beginTransaction();
-		// }
-
 		String	entityName	= arguments.getAsString( ORMKeys.entity );
 		Object	keyValue	= arguments.get( Key.id );
 		String	keyType		= getKeyJavaType( session, entityName ).getSimpleName();
 
 		// @TODO: Support composite keys.
-
 		return session.get( entityName,
 		    ( java.io.Serializable ) GenericCaster.cast( context, keyValue, keyType ) );
 	}

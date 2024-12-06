@@ -22,7 +22,6 @@ class{
 		"dialect"    : "DerbyTenSevenDialect"
 	}
 	this.ormEnabled = "true";
-	// /home/michael/repos/boxlang/modules/bx-orm
 
 	function onApplicationStart(){
 		try {

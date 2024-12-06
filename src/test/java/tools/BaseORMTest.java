@@ -26,7 +26,6 @@ public class BaseORMTest {
 	protected static ModuleRecord	moduleRecord;
 	protected static Key			moduleName	= new Key( "bxorm" );
 	public static Key				result		= Key.of( "result" );
-	public static RequestBoxContext	startupContext;
 	public static RequestBoxContext	context;
 	public IScope					variables;
 
