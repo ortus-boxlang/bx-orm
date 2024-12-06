@@ -8,7 +8,7 @@ plugins {
 	// For building shadow jars with jdk 17 ONLY
     //id 'com.github.johnrengelman.shadow' version '8.1.1'
     // For building shadow jars using JDK 21 +, they had to fork
-    id "io.github.goooler.shadow" version "8.1.7"
+    id "io.github.goooler.shadow" version "8.1.8"
     // Download task
     id "de.undercouch.download" version "5.6.0"
 }
@@ -43,25 +43,23 @@ dependencies {
 	compileOnly files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '-all.jar' )
     compileOnly files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '-all.jar' )
 
-    // Testing Dependencies
-	testImplementation files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '-all.jar' )
-	testImplementation files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '-all.jar' )
-    testImplementation "org.junit.jupiter:junit-jupiter:5.+"
-	testImplementation "org.mockito:mockito-core:5.+"
-	testImplementation "com.google.truth:truth:1.+"
-
-	// Actual Hibernate dependencies
+	// Implementation Dependencies
 	// https://mvnrepository.com/artifact/org.hibernate.orm/hibernate-core
 	implementation 'org.hibernate:hibernate-core:5.6.15.Final'
 	// https://mvnrepository.com/artifact/org.hibernate/hibernate-jcache
 	implementation 'org.hibernate:hibernate-jcache:5.6.15.Final'
 	// https://mvnrepository.com/artifact/org.ehcache/ehcache
 	implementation 'org.ehcache:ehcache:3.10.8'
+
+    // Testing Dependencies
+	testImplementation files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '-all.jar' )
+	testImplementation files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '-all.jar' )
+    testImplementation "org.junit.jupiter:junit-jupiter:5.+"
+	testImplementation "org.mockito:mockito-core:5.+"
+	testImplementation "com.google.truth:truth:1.+"
 	// @TODO: Figure out why we need this for running tests - they should be included in the boxlang dep.
 	// https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
 	testImplementation 'ch.qos.logback:logback-classic:1.5.7'
-	// https://mvnrepository.com/artifact/org.apache.derby/derby
-	testImplementation 'org.apache.derby:derby:10.17.1.0'
 	// https://mvnrepository.com/artifact/com.zaxxer/HikariCP
 	testImplementation 'com.zaxxer:HikariCP:5.1.0'
 }
@@ -81,6 +79,21 @@ compileJava {
 compileTestJava{
 	// Make sure the service loaders are created before testing
 	dependsOn compileJava, serviceLoaderBuild
+}
+compileTestJava.finalizedBy( shadowJar )
+
+/**
+ * Clean up
+ */
+clean {
+	doLast{
+		var userDir = file( "${System.getProperty('user.home')}/.boxlang/classes" )
+		if ( userDir.exists() ) {
+			userDir.deleteDir()
+			println "+ Cleared user home classes " + userDir.toString()
+		}
+		println "+ Clean finalized!"
+	}
 }
 
 javadoc {
