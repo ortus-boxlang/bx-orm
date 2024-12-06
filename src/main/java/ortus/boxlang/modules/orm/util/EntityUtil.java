@@ -14,7 +14,7 @@ public class EntityUtil {
 		} else if ( annotations.containsKey( ORMKeys.entityName ) && !annotations.getAsString( ORMKeys.entityName ).isBlank() ) {
 			return annotations.getAsString( ORMKeys.entityName );
 		} else {
-			return getClassNameFromFQN( entity.getName().getName() );
+			return getClassNameFromFQN( entity.bxGetName().getName() );
 		}
 	}
 
