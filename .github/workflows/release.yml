@@ -94,8 +94,7 @@ jobs:
         run: |
           npm install -g markdownlint-cli
           markdownlint changelog.md --fix
-          gradle downloadBoxLang
-          gradle installDerbyModule
+          gradle installModuleDependencies --stacktrace --console=plain
           gradle build -x test --stacktrace --console=plain
 
       - name: Commit Changelog [unreleased] with latest version

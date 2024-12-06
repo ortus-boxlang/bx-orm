@@ -74,8 +74,7 @@ jobs:
 
       - name: Test Module
         run: |
-          gradle downloadBoxLang
-          gradle installDerbyModule
+          gradle installModuleDependencies --stacktrace --console=plain
           # this is done in order to build the module structure before testing
           gradle shadowJar test --stacktrace --console=plain
 
