@@ -73,31 +73,28 @@ public class BoxClassInstantiator implements Instantiator {
 
 		entityRecord.getEntityMeta().getAssociations().stream()
 		    .forEach( prop -> {
-			    IStruct association	= prop.getAssociation();
-			    String methodName	= association.getAsString( Key._NAME );
-			    String collectionType = association.getAsString( ORMKeys.collectionType );
-			    if ( association.containsKey( ORMKeys.singularName ) ) {
-				    methodName = association.getAsString( ORMKeys.singularName );
-			    }
-			    methodName = methodName.substring( 0, 1 ).toUpperCase() + methodName.substring( 1 );
-			    BoxClassInstantiator.logger.trace( "Adding 'has{}' methods for property '{}' on entity '{}", methodName, prop.getName(),
-			        entityRecord.getEntityName() );
+			    IStruct		association		= prop.getAssociation();
+			    String		collectionType	= association.getAsString( ORMKeys.collectionType );
 
 			    // add has to THIS scope
-			    DynamicFunction hasUDF = BoxClassInstantiator.getHasMethod( methodName, collectionType, association );
+			    DynamicFunction hasUDF		= BoxClassInstantiator.getHasMethod( collectionType, association );
+			    BoxClassInstantiator.logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
+			        prop.getName(),
+			        entityRecord.getEntityName() );
 			    theEntity.put( hasUDF.getName(), hasUDF );
 
 			    if ( association.containsKey( ORMKeys.collectionType ) ) {
-				    BoxClassInstantiator.logger.trace( "Adding 'add{}' method for property '{}' on entity '{}", methodName, prop.getName(),
-				        entityRecord.getEntityName() );
 				    // add add (for to-many associations)
-				    DynamicFunction addUDF = BoxClassInstantiator.getAddMethod( methodName, collectionType, association );
+				    DynamicFunction addUDF = BoxClassInstantiator.getAddMethod( collectionType, association );
+				    BoxClassInstantiator.logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getName(),
+				        entityRecord.getEntityName() );
 				    theEntity.put( addUDF.getName(), addUDF );
 
 				    // add remove (for to-many associations)
-				    BoxClassInstantiator.logger.trace( "Adding 'remove{}' method for property '{}' on entity '{}", methodName, prop.getName(),
+				    DynamicFunction removeUDF = BoxClassInstantiator.getRemoveMethod( collectionType, association );
+				    BoxClassInstantiator.logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
+				        prop.getName(),
 				        entityRecord.getEntityName() );
-				    DynamicFunction removeUDF = BoxClassInstantiator.getRemoveMethod( methodName, collectionType, association );
 				    theEntity.put( removeUDF.getName(), removeUDF );
 			    }
 		    } );
@@ -107,6 +104,14 @@ public class BoxClassInstantiator implements Instantiator {
 		}
 
 		return theEntity;
+	}
+
+	private static String getMethodName( IStruct associationMeta ) {
+		String methodName = associationMeta.getAsString( Key._NAME );
+		if ( associationMeta.containsKey( ORMKeys.singularName ) ) {
+			methodName = associationMeta.getAsString( ORMKeys.singularName );
+		}
+		return methodName.substring( 0, 1 ).toUpperCase() + methodName.substring( 1 );
 	}
 
 	public BoxClassInstantiator( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
@@ -157,24 +162,27 @@ public class BoxClassInstantiator implements Instantiator {
 	 * Create a `has*` method for the entity association, like `hasManufacturer()`, which returns a boolean indicating whether the entity has a value (one
 	 * or more ) for the given association.
 	 * 
-	 * @param associationName The name of the association, like 'manufacturer' or 'vehicles'. Used to construct the method name.
 	 * @param collectionType  The type of collection, like 'bag' or 'map'.
 	 * @param associationMeta The metadata for the association.
 	 * 
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	public static DynamicFunction getHasMethod( String associationName, String collectionType, IStruct associationMeta ) {
+	public static DynamicFunction getHasMethod( String collectionType, IStruct associationMeta ) {
+		// uses the singular name, if it exists
+		Key	methodName		= Key.of( "has" + BoxClassInstantiator.getMethodName( associationMeta ) );
+		// uses the property name
+		Key	collectionKey	= Key.of( associationMeta.getAsString( Key._NAME ) );
 		return new DynamicFunction(
-		    Key.of( "has" + associationName ),
+		    methodName,
 		    ( context, function ) -> {
 			    VariablesScope scope = context.getThisClass().getVariablesScope();
-			    return scope.get( associationName ) != null && ( collectionType == "bag"
-			        ? scope.getAsArray( Key.of( associationName ) ).size() > 0
-			        : scope.getAsStruct( Key.of( associationName ) ).size() > 0 );
+			    return scope.get( collectionKey ) != null && ( collectionType == "bag"
+			        ? scope.getAsArray( collectionKey ).size() > 0
+			        : scope.getAsStruct( collectionKey ).size() > 0 );
 		    },
 		    new Argument[] {},
 		    "boolean",
-		    "Returns true if the entity has a value for the association " + associationName,
+		    "Returns true if the entity has a value for the association " + collectionKey.getName(),
 		    Struct.EMPTY
 		);
 	}
@@ -184,16 +192,18 @@ public class BoxClassInstantiator implements Instantiator {
 	 * <p>
 	 * Supports both array and struct associations, or, in the Hibernate vernacular, "bag" and "map" collections.
 	 * 
-	 * @param associationName The name of the association, like 'manufacturer' or 'vehicles'. Used to construct the method name.
 	 * @param collectionType  The type of collection, like 'bag' or 'map'.
 	 * @param associationMeta The metadata for the association.
 	 * 
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	public static DynamicFunction getAddMethod( String associationName, String collectionType, IStruct associationMeta ) {
-		Key collectionKey = Key.of( associationName );
+	public static DynamicFunction getAddMethod( String collectionType, IStruct associationMeta ) {
+		// uses the singular name, if it exists
+		Key	methodName		= Key.of( "add" + BoxClassInstantiator.getMethodName( associationMeta ) );
+		// uses the property name
+		Key	collectionKey	= Key.of( associationMeta.getAsString( Key._NAME ) );
 		return new DynamicFunction(
-		    Key.of( "add" + associationName ),
+		    methodName,
 		    ( context, function ) -> {
 			    boolean		isArrayCollection	= collectionType == "bag";
 
@@ -224,7 +234,7 @@ public class BoxClassInstantiator implements Instantiator {
 		        new Argument( true, "any", collectionKey, Set.of( Validator.REQUIRED ) ),
 		    },
 		    "class",
-		    String.format( "Append the provided entity to the {} collection, creating it if it does not exist.", associationName ),
+		    String.format( "Append the provided entity to the {} collection, creating it if it does not exist.", collectionKey.getName() ),
 		    Struct.EMPTY
 		);
 	}
@@ -235,16 +245,18 @@ public class BoxClassInstantiator implements Instantiator {
 	 * <p>
 	 * Supports both array and struct associations, or, in the Hibernate vernacular, "bag" and "map" collections.
 	 * 
-	 * @param associationName The name of the association, like 'manufacturer' or 'vehicles'. Used to construct the method name.
 	 * @param collectionType  The type of collection, like 'bag' or 'map'.
 	 * @param associationMeta The metadata for the association.
 	 * 
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	public static DynamicFunction getRemoveMethod( String associationName, String collectionType, IStruct associationMeta ) {
-		Key collectionKey = Key.of( associationName );
+	public static DynamicFunction getRemoveMethod( String collectionType, IStruct associationMeta ) {
+		// uses the singular name, if it exists
+		Key	methodName		= Key.of( "remove" + BoxClassInstantiator.getMethodName( associationMeta ) );
+		// uses the property name
+		Key	collectionKey	= Key.of( associationMeta.getAsString( Key._NAME ) );
 		return new DynamicFunction(
-		    Key.of( "remove" + associationName ),
+		    methodName,
 		    ( context, function ) -> {
 			    boolean		isArrayCollection	= collectionType == "bag";
 
@@ -303,7 +315,7 @@ public class BoxClassInstantiator implements Instantiator {
 		        new Argument( true, "any", collectionKey, Set.of( Validator.REQUIRED ) ),
 		    },
 		    "class",
-		    String.format( "Remove the provided entity from the {} collection.", associationName ),
+		    String.format( "Remove the provided entity from the {} collection.", collectionKey.getName() ),
 		    Struct.EMPTY
 		);
 	}
