@@ -29,7 +29,6 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 import tools.BaseORMTest;
 
-// @Disabled( "Tofix" )
 public class ORMGetSessionTest extends BaseORMTest {
 
 	@DisplayName( "It can get the current ORM session" )

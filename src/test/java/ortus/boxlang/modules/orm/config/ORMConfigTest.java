@@ -31,7 +31,7 @@ import ortus.boxlang.runtime.types.Struct;
 
 public class ORMConfigTest {
 
-	@Disabled( "Tofix" )
+	@Disabled( "Dialect mapping is broken and disabled; must fix!" )
 	@Test
 	public void testDialectTranslation() {
 		Configuration config = new ORMConfig( Struct.of(
@@ -42,7 +42,7 @@ public class ORMConfigTest {
 		assertEquals( "org.hibernate.dialect.DerbyTenSevenDialect", config.getProperty( AvailableSettings.DIALECT ) );
 	}
 
-	@Disabled( "Tofix" )
+	@Disabled( "Dialect mapping is broken and disabled; must fix!" )
 	@Test
 	public void testDialectNormalization() {
 		Configuration config = new ORMConfig( Struct.of(
