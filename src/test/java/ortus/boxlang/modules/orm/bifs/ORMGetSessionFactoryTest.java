@@ -32,7 +32,12 @@ public class ORMGetSessionFactoryTest extends BaseORMTest {
 	@DisplayName( "It can get the default ORM session factory" )
 	@Test
 	public void testORMGetSessionFactory() {
-		instance.executeSource( "result = ormGetSessionFactory()", context );
+		// @formatter:off
+		instance.executeSource( """
+			result = ormGetSessionFactory();
+		""", context );
+		// @formatter:on
+
 		assertThat( variables.get( result ) ).isNotNull();
 
 		// Classloader hell means we can't compare the two factories directly
@@ -51,11 +56,13 @@ public class ORMGetSessionFactoryTest extends BaseORMTest {
 	@DisplayName( "It can get the session factory from a named datasource" )
 	@Test
 	public void testNamedDatasource() {
+		// @formatter:off
 		instance.executeSource( """
-		                        defaultFactory       = ormGetSessionFactory();
-		                        namedFactory         = ormGetSessionFactory( 'dsn2' );
-		                        isSameSessionFactory = defaultFactory == namedFactory;
-		                        """, context );
+			defaultFactory       = ormGetSessionFactory();
+			namedFactory         = ormGetSessionFactory( 'dsn2' );
+			isSameSessionFactory = defaultFactory == namedFactory;
+		""", context );
+		// @formatter:on
 
 		instance.executeSource( "result = ormGetSessionFactory( 'dsn2' )", context );
 

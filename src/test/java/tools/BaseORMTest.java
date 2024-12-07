@@ -28,7 +28,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
@@ -67,7 +66,7 @@ public class BaseORMTest {
 	@BeforeEach
 	public void setupEach() {
 		variables = context.getScopeNearby( VariablesScope.name );
-		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
+		assertNotNull( context.getApplicationContext() );
 
 		JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
 	}

@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import tools.BaseORMTest;
 
@@ -37,15 +38,16 @@ public class EntityEventsTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				entity = entityLoadByPK( "Vehicle", '1HGCM82633A123456' );
-				result = entity.getEventLog();
+				loadEntity = entityLoadByPK( "Vehicle", '1HGCM82633A123456' );
+				entityReload( loadEntity );
+				loadEvents = loadEntity.getEventLog();
 			""",
 			context
 		);
 		// @formatter:on
-		assertInstanceOf( Array.class, variables.get( "result" ) );
-		Array eventLog = variables.getAsArray( result );
-		assertThat( eventLog.toList() ).containsExactly( "preLoad", "postLoad" );
+		assertInstanceOf( Array.class, variables.get( "loadEvents" ) );
+		Array eventLog = variables.getAsArray( Key.of( "loadEvents" ) );
+		assertThat( eventLog.toList() ).containsExactly( "preLoad", "postLoad", "preLoad", "postLoad" );
 	}
 
 	@DisplayName( "It fires preInsert,postInsert" )
@@ -56,14 +58,14 @@ public class EntityEventsTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			transaction {
-				entity = entityNew( "Vehicle", {
+				insertEntity = entityNew( "Vehicle", {
 					vin : "1HGCM82633A654321",
 					make : "Toyota",
 					model : "Tacoma"
 				} );
-				entitySave( entity );
+				entitySave( insertEntity );
 			}
-			result = entity.getEventLog();
+			result = insertEntity.getEventLog();
 			""",
 			context
 		);
@@ -81,11 +83,11 @@ public class EntityEventsTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			transaction {
-				entity = entityLoadByPK( "Vehicle", '1HGCM82633A123456' );
-				entity.setModel( "Civic" );
-				entitySave( entity );
+				updateEntity = entityLoadByPK( "Vehicle", '1HGCM82633A123456' );
+				updateEntity.setModel( "Civic" );
+				entitySave( updateEntity );
 			}
-			result = entity.getEventLog();
+			result = updateEntity.getEventLog();
 			""",
 			context
 		);
@@ -104,10 +106,10 @@ public class EntityEventsTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			transaction {
-				entity = entityLoadByPK( "Vehicle", '1HGCM82633A123456' );
-				entityDelete( entity );
+				deleteEntity = entityLoadByPK( "Vehicle", '1HGCM82633A123456' );
+				entityDelete( deleteEntity );
 			}
-			result = entity.getEventLog();
+			result = deleteEntity.getEventLog();
 			""",
 			context
 		);
