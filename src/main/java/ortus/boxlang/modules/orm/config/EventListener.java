@@ -17,6 +17,7 @@
  */
 package ortus.boxlang.modules.orm.config;
 
+import java.util.Arrays;
 import java.util.Set;
 
 import org.hibernate.HibernateException;
@@ -56,6 +57,7 @@ import org.hibernate.event.spi.PreUpdateEventListener;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.service.spi.SessionFactoryServiceRegistry;
+import org.hibernate.tuple.entity.EntityMetamodel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -191,11 +193,15 @@ public class EventListener
 
 	@Override
 	public boolean onPreUpdate( PreUpdateEvent event ) {
+		IStruct			oldData			= new Struct();
+		EntityMetamodel	entityMetamodel	= event.getPersister().getEntityMetamodel();
+		Arrays.stream( entityMetamodel.getPropertyNames() ).forEach( propertyName -> {
+			oldData.put( propertyName, event.getOldState()[ entityMetamodel.getPropertyIndex( propertyName ) ] );
+		} );
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
 		    ORMKeys.entity, ( IClassRunnable ) event.getEntity(),
-		    // @TODO: Convert the state data to a struct.
-		    ORMKeys.oldData, event.getOldState()
+		    ORMKeys.oldData, oldData
 		);
 		announceGlobalEvent( ORMKeys.preUpdate, event, args );
 		announceEntityEvent( ORMKeys.preUpdate, ( IClassRunnable ) event.getEntity(), args );
