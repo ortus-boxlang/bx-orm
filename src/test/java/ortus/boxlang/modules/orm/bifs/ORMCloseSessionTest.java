@@ -18,50 +18,48 @@
 package ortus.boxlang.modules.orm.bifs;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.hibernate.Session;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
-@Disabled( "Tofix" )
 public class ORMCloseSessionTest extends BaseORMTest {
 
 	@DisplayName( "It can close the session for the default datasource" )
 	@Test
 	public void testSessionClose() {
-		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
-		;
-		// @formatter:off
 		instance.executeSource(
-			"""
-				ormCloseSession();
-			""",
-			context
+		    """
+		    	mySession = ormGetSession();
+		    	result = mySession.isOpen();
+		    	ormCloseSession();
+		    	result2 = mySession.isOpen();
+		    """,
+		    context
 		);
-		// @formatter:on
 
-		assertFalse( session.isOpen() );
+		assertTrue( variables.getAsBoolean( result ) );
+		assertFalse( variables.getAsBoolean( Key.of( "result2" ) ) );
 	}
 
 	@DisplayName( "It can close the session on a named (alternate) datasource" )
 	@Test
 	public void testSessionCloseOnNamedDatasource() {
-		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( Key.of( "dsn2" ) );
-		// @formatter:off
 		instance.executeSource(
-			"""
-				ormCloseSession( "dsn2" );
-			""",
-			context
+		    """
+		    	mySession = ormGetSession( "dsn2" );
+		    	result = mySession.isOpen();
+		    	ormCloseSession( "dsn2" );
+		    	result2 = mySession.isOpen();
+		    """,
+		    context
 		);
-		// @formatter:on
 
-		assertFalse( session.isOpen() );
+		assertTrue( variables.getAsBoolean( result ) );
+		assertFalse( variables.getAsBoolean( Key.of( "result2" ) ) );
 	}
 
 }
