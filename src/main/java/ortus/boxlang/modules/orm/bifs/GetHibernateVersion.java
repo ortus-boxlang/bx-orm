@@ -26,13 +26,24 @@ import ortus.boxlang.runtime.scopes.ArgumentsScope;
 public class GetHibernateVersion extends BIF {
 
 	/**
+	 * Giant code smell, but Hibernate tends to return "[WORKING]" as the version string in test builds and other instances.
+	 * 
+	 * @TODO: Consider embedding a .properties file into the built module to set this dynamically from the gradle build.
+	 */
+	private static final String fallback = "5.6.15.Final";
+
+	/**
 	 * Retrieve the installed Hibernate version.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		return org.hibernate.Version.getVersionString();
+		String version = org.hibernate.Version.getVersionString();
+		if ( version != "[WORKING]" ) {
+			return version;
+		}
+		return fallback;
 	}
 
 }

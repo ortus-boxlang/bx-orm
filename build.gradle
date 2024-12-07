@@ -44,6 +44,7 @@ dependencies {
     compileOnly files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '-all.jar' )
 
 	// Implementation Dependencies
+	// IMPORTANT: If updating Hibernate, please change the static version number in `src/main/java/ortus/boxlang/modules/orm/bifs/GetHibernateVersion.java` to match.
 	// https://mvnrepository.com/artifact/org.hibernate.orm/hibernate-core
 	implementation 'org.hibernate:hibernate-core:5.6.15.Final'
 	// https://mvnrepository.com/artifact/org.hibernate/hibernate-jcache
