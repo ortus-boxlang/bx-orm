@@ -109,7 +109,7 @@ public class MappingGenerator {
 
 	/**
 	 * Retrieve the entity map for this session factory, constructing them if necessary.
-	 * 
+	 *
 	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
 	 */
 	public static Map<String, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
@@ -196,7 +196,7 @@ public class MappingGenerator {
 	 * Get the ORM datasource from the ORM configuration.
 	 * We currently throw a BoxRuntimeException if no datasource is found in the ORM
 	 * configuration, but eventually we will support a default datasource.
-	 * 
+	 *
 	 */
 	private DataSource getDefaultDatasource() {
 		ConnectionManager	connectionManager	= this.context.getConnectionManager();
@@ -215,9 +215,9 @@ public class MappingGenerator {
 	 * Discover all classes in the given entity paths.
 	 * <p>
 	 * Does NOT determine if the classes are persistent, nor does it load metadata. This method is a simple file walk, nothing more.
-	 * 
+	 *
 	 * @param entityPaths The list of paths to search for entities.
-	 * 
+	 *
 	 * @return A list of structs containing the location and file name of each discovered entity.
 	 */
 	private ArrayList<IStruct> discoverBLClasses( List<Path> entityPaths ) {
@@ -230,7 +230,7 @@ public class MappingGenerator {
 				        // only files
 				        .filter( Files::isRegularFile )
 				        // Only .bx or .cfc class files
-				        .filter( ( file ) -> StringUtils.endsWithAny( file.toString(), ".bx", ".cfc" ) )
+				        .filter( file -> StringUtils.endsWithAny( file.toString(), ".bx", ".cfc" ) )
 				        // map to a struct instance containing the location and file name. We need both to generate the FQN.
 				        .map( file -> Struct.of( this.location, path.toString(), Key.file, file.toString() ) );
 			    } catch ( IOException e ) {
@@ -250,9 +250,9 @@ public class MappingGenerator {
 	/**
 	 * Determine if the given entity metadata is marked as a persistent entity using either the classic (`persistent=true`) or modern (`@Entity`) metadata
 	 * syntax.
-	 * 
+	 *
 	 * @param entityMeta The entity metadata struct.
-	 * 
+	 *
 	 * @return True if the entity is marked as persistent.
 	 */
 	private boolean isPersistentEntity( IStruct entityMeta ) {
@@ -272,9 +272,9 @@ public class MappingGenerator {
 
 	/**
 	 * Parse the given class file and load metadata for the entity.
-	 * 
+	 *
 	 * @param possibleEntity The entity struct to read metadata for.
-	 * 
+	 *
 	 * @return The entity struct with the metadata added.
 	 */
 	private IStruct readMeta( IStruct possibleEntity ) {
@@ -285,9 +285,9 @@ public class MappingGenerator {
 
 	/**
 	 * Convert the given entity struct to an EntityRecord instance.
-	 * 
+	 *
 	 * @param theEntity Struct containing `location`, `path`, and `metadata` keys.
-	 * 
+	 *
 	 * @return EntityRecord instance.
 	 */
 	private EntityRecord toEntityRecord( IStruct theEntity ) {
@@ -318,7 +318,7 @@ public class MappingGenerator {
 
 	/**
 	 * Lookup the datasource by name from the connection manager.
-	 * 
+	 *
 	 * @param connectionManager The JDBC-capable context's connection manager.
 	 * @param datasourceName    String datasource name to find in application datasource configuration
 	 */
@@ -336,9 +336,9 @@ public class MappingGenerator {
 
 	/**
 	 * Determine the entity name from the given entity metadata.
-	 * 
+	 *
 	 * @param meta The entity metadata.
-	 * 
+	 *
 	 * @return The defined entity name, or the class name if no entity name is defined.
 	 */
 	private String readEntityName( IStruct meta ) {
@@ -358,9 +358,9 @@ public class MappingGenerator {
 
 	/**
 	 * Parse the given class file and load metadata for the entity using BoxLang's `ClassMetadataVisitor` for speedy metadata parsing.
-	 * 
+	 *
 	 * @param clazzPath Full path to the class file.
-	 * 
+	 *
 	 * @return The entity metadata struct.
 	 */
 	private IStruct getClassMeta( Path clazzPath ) {
@@ -376,7 +376,7 @@ public class MappingGenerator {
 
 	/**
 	 * Get a list of discovered entities by datasource name. Obviously, this is only useful once `generateMappings` has been called.
-	 * 
+	 *
 	 * @return The map of discovered entities, where the key is the datasource name and the value is a List of EntityRecord instances for that datasource.
 	 */
 	public Map<String, List<EntityRecord>> getEntityDatasourceMap() {
@@ -385,9 +385,9 @@ public class MappingGenerator {
 
 	/**
 	 * Write the XML mapping file for the given entity metadata.
-	 * 
+	 *
 	 * @param entity EntityRecord containing the entity metadata.
-	 * 
+	 *
 	 * @return The path to the generated XML mapping file If `saveMappingAlongsideEntity` is true, the path will be the same as the entity file, but with
 	 *         a `.hbm.xml` extension.
 	 */
@@ -437,9 +437,9 @@ public class MappingGenerator {
 	 * Generate the XML mapping for the given entity metadata.
 	 * <p>
 	 * Calls the HibernateXMLWriter to generate the XML mapping, then wraps it with a bit of pre and post XML to close out the file.
-	 * 
+	 *
 	 * @param entity The EntityRecord instance.
-	 * 
+	 *
 	 * @return The full XML mapping for the entity as a string. If an exception was encountered and {@link ORMConfig#ignoreParseErrors} is true, an empty
 	 *         string will be returned.
 	 */
@@ -480,10 +480,10 @@ public class MappingGenerator {
 	 * Lookup an entity by class name and (optionally) datasource name.
 	 * <p>
 	 * Useful for determining relationship entity names based off the provided class name.
-	 * 
+	 *
 	 * @param className  The class name to lookup.
 	 * @param datasource The datasource name to match on, if any.
-	 * 
+	 *
 	 * @return EntityRecord instance or null.
 	 */
 	public EntityRecord entityLookup( String className, String datasource ) {

@@ -20,14 +20,12 @@ package ortus.boxlang.modules.orm;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.BaseService;
 
@@ -42,16 +40,24 @@ public class ORMService extends BaseService {
 	/**
 	 * The logger for the ORMEngine.
 	 */
-	private static final Logger	logger	= LoggerFactory.getLogger( ORMService.class );
+	private BoxLangLogger		logger;
 
+	/**
+	 * A map of ORM applications, keyed by the unique name of the ORM application.
+	 */
 	private Map<Key, ORMApp>	ormApps	= new ConcurrentHashMap<>();
+
+	/**
+	 * --------------------------------------------------------------------------
+	 * Constructors
+	 * --------------------------------------------------------------------------
+	 */
 
 	/**
 	 * public no-arg constructor for the ServiceProvider
 	 */
 	public ORMService() {
-		super( BoxRuntime.getInstance(), ORMKeys.ORMService );
-		// setupCustomLogLevels();
+		this( BoxRuntime.getInstance() );
 	}
 
 	/**
@@ -61,35 +67,60 @@ public class ORMService extends BaseService {
 	 */
 	public ORMService( BoxRuntime runtime ) {
 		super( runtime, ORMKeys.ORMService );
-		// setupCustomLogLevels();
 	}
 
 	/**
-	 * Retrieve the keyed name of this service.
+	 * --------------------------------------------------------------------------
+	 * Runtime Service Event Methods
+	 * --------------------------------------------------------------------------
 	 */
-	public Key getName() {
-		return ORMKeys.ORMService;
+
+	/**
+	 * The configuration load event is fired when the runtime loads the configuration
+	 */
+	@Override
+	public void onConfigurationLoad() {
+		// Not used by the service, since those are only for core services
 	}
 
 	/**
 	 * Start up the ORM service. Unless and until ORM is supported at the runtime level, this method is essentially a no-op.
 	 */
+	@Override
 	public void onStartup() {
-		logger.info( "ORMService started" );
+		getLogger().info( "ORMService started" );
 	}
 
 	/**
+	 * Shut down the ORM service, including all ORM applications.
+	 */
+	@Override
+	public void onShutdown( Boolean force ) {
+		getLogger().info( "ORMService shutdown" );
+		this.ormApps.forEach( ( key, ormApp ) -> ormApp.shutdown() );
+		this.ormApps.clear();
+	}
+
+	/**
+	 * --------------------------------------------------------------------------
+	 * Service Methods
+	 * --------------------------------------------------------------------------
+	 */
+
+	/**
 	 * Start up a new ORM application with the given context and ORM configuration.
-	 * 
+	 *
 	 * @param context The IBoxContext for the application.
 	 * @param config  The ORM configuration - parsed from the application settings.
 	 */
 	public void startupApp( RequestBoxContext context, ORMConfig config ) {
-		context.getApplicationContext().computeAttachmentIfAbsent( ORMKeys.ORMApp, ( key ) -> {
+		context.getApplicationContext().computeAttachmentIfAbsent( ORMKeys.ORMApp, key -> {
 			ORMApp newORMApp = new ORMApp( context, config );
-			logger.debug( "Starting ORMApp {}", newORMApp.getUniqueName() );
-			ormApps.put( newORMApp.getUniqueName(), newORMApp );
 
+			if ( getLogger().isDebugEnabled() )
+				getLogger().debug( "Starting ORMApp {}", newORMApp.getUniqueName() );
+
+			this.ormApps.put( newORMApp.getUniqueName(), newORMApp );
 			newORMApp.startup();
 			return newORMApp;
 		} );
@@ -99,7 +130,7 @@ public class ORMService extends BaseService {
 	 * Shut down a particular ORM application by request context.
 	 * <p>
 	 * Will retrieve and close all session factories associated with the provided context.
-	 * 
+	 *
 	 * @param context The IBoxContext for the application.
 	 */
 	public void shutdownApp( IBoxContext context ) {
@@ -110,39 +141,42 @@ public class ORMService extends BaseService {
 	 * Shut down an ORM application by unique name
 	 * <p>
 	 * Will retrieve and close all session factories associated with the provided context.
-	 * 
+	 *
 	 * @param uniqueAppName The unique name of the ORM application to shut down.
 	 */
 	public void shutdownApp( Key uniqueAppName ) {
 		ORMApp app = ormApps.get( uniqueAppName );
 		if ( app != null ) {
 			app.shutdown();
-			ormApps.remove( uniqueAppName );
+			this.ormApps.remove( uniqueAppName );
 		}
 	}
 
 	/**
 	 * Retrieve the ORM application configured for the given context.
-	 * 
+	 *
 	 * @param context The IBoxContext for the current request. The parent application context is used for the ORM application lookup.
 	 */
 	public ORMApp getORMApp( IBoxContext context ) {
 		Key name = Key.of( ORMApp.getUniqueAppName( context ) );
-		if ( !ormApps.containsKey( name ) ) {
+		if ( !this.ormApps.containsKey( name ) ) {
 			throw new RuntimeException( "ORMApp not found for context: " + name );
 		}
-		return ormApps.get( name );
+		return this.ormApps.get( name );
 	}
 
 	/**
-	 * Shut down the ORM service, including all ORM applications.
+	 * Lazy getter for the logger.
 	 */
-	public void onShutdown( Boolean force ) {
-		logger.info( "ORMService shutdown" );
-		ormApps.forEach( ( key, ormApp ) -> {
-			ormApp.shutdown();
-		} );
-		ormApps.clear();
+	private BoxLangLogger getLogger() {
+		if ( this.logger == null ) {
+			synchronized ( ORMService.class ) {
+				if ( this.logger == null ) {
+					this.logger = runtime.getLoggingService().getLogger( "orm" );
+				}
+			}
+		}
+		return this.logger;
 	}
 
 	// /**
