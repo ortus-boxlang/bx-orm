@@ -28,6 +28,7 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -37,7 +38,7 @@ import ortus.boxlang.runtime.types.IStruct;
  * <p>
  * Listens to boxlang transaction events to manage the Hibernate transaction lifecycles (start,end,commit,rollback, etc.)
  */
-public class TransactionManager extends BaseListener {
+public class TransactionManager extends BaseInterceptor {
 
 	private static final Logger	logger	= LoggerFactory.getLogger( TransactionManager.class );
 

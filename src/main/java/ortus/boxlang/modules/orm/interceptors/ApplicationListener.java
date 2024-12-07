@@ -27,6 +27,7 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.Application;
 import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
 import ortus.boxlang.runtime.types.IStruct;
 
@@ -36,7 +37,7 @@ import ortus.boxlang.runtime.types.IStruct;
  * This interceptor uses application startup and shutdown events to construct and destroy the ORM service. (Which is itself responsible for
  * constructing the ORM session factories, etc.)
  */
-public class ApplicationListener extends BaseListener {
+public class ApplicationListener extends BaseInterceptor {
 
 	private static final Logger	logger		= LoggerFactory.getLogger( ApplicationListener.class );
 
@@ -63,7 +64,7 @@ public class ApplicationListener extends BaseListener {
 		    "afterApplicationListenerLoad fired; checking for ORM configuration in the application context config" );
 
 		RequestBoxContext	context	= ( RequestBoxContext ) args.get( "context" );
-		ORMConfig			config	= getORMConfig( context );
+		ORMConfig			config	= ORMConfig.loadFromContext( context );
 		if ( config != null ) {
 			logger.info( "ORMEnabled is true and ORM settings are specified - Firing ORM application startup." );
 			System.out.println( "ORMService is registered:" + instance.hasGlobalService( ORMKeys.ORMService ) );

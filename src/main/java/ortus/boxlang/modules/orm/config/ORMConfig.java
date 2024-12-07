@@ -34,8 +34,10 @@ import ortus.boxlang.modules.orm.config.naming.MacroCaseNamingStrategy;
 import ortus.boxlang.modules.orm.hibernate.BoxClassInstantiator;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
@@ -232,6 +234,28 @@ public class ORMConfig {
 		this.appContext = BoxRuntime.getInstance().getRuntimeContext();
 		implementBackwardsCompatibility( properties );
 		process( properties );
+	}
+
+	/**
+	 * Construct an ORMConfig object from the application settings.
+	 * 
+	 * @param context The IBoxContext object for the current request.
+	 * 
+	 * @return ORMConfig object or null if ORM is not enabled or no ORM settings are present in the application settings.
+	 */
+	public static ORMConfig loadFromContext( RequestBoxContext context ) {
+		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
+		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
+		    || !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
+			logger.info( "ORMEnabled is false or not specified;" );
+			return null;
+		}
+		if ( !appSettings.containsKey( ORMKeys.ORMSettings )
+		    || appSettings.get( ORMKeys.ORMSettings ) == null ) {
+			logger.info( "No ORM configuration found in application configuration;" );
+			return null;
+		}
+		return new ORMConfig( ( IStruct ) appSettings.get( ORMKeys.ORMSettings ) );
 	}
 
 	/**

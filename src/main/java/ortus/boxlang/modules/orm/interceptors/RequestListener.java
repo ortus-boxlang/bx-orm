@@ -24,6 +24,7 @@ import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -33,7 +34,7 @@ import ortus.boxlang.runtime.types.IStruct;
  * <p>
  * Listens to request events (start and end) in order to construct and tear down ORM request contexts.
  */
-public class RequestListener extends BaseListener {
+public class RequestListener extends BaseInterceptor {
 
 	private static final Logger logger = LoggerFactory.getLogger( RequestListener.class );
 
@@ -46,7 +47,7 @@ public class RequestListener extends BaseListener {
 	public void onRequestStart( IStruct args ) {
 		logger.debug( "onRequestEnd - Starting up ORM request" );
 		// RequestBoxContext context = args.getAs( RequestBoxContext.class, Key.context );
-		// ORMConfig config = getORMConfig( context );
+		// ORMConfig config = ORMConfig.loadFromContext( context );
 		// if ( config == null ) {
 		// logger.debug( "ORM not enabled for this request." );
 		// return;
@@ -63,7 +64,7 @@ public class RequestListener extends BaseListener {
 	public void onRequestEnd( IStruct args ) {
 		logger.debug( "onRequestEnd - Shutting down ORM request" );
 		RequestBoxContext	context	= args.getAs( RequestBoxContext.class, Key.context );
-		ORMConfig			config	= getORMConfig( context );
+		ORMConfig			config	= ORMConfig.loadFromContext( context );
 		if ( config == null ) {
 			logger.debug( "ORM not enabled for this request." );
 			return;
