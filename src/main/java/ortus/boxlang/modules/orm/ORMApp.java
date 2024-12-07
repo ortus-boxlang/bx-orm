@@ -97,13 +97,13 @@ public class ORMApp {
 
 	/**
 	 * Get a unique name for this context's ORM Application.
-	 * 
+	 *
 	 * Used to ensure we can tell the various ORM apps apart.
-	 * 
+	 *
 	 * @return a unique key for the given context's application.
 	 */
 	public static Key getUniqueAppName( IBoxContext context ) {
-		ApplicationBoxContext appContext = ( ApplicationBoxContext ) context.getParentOfType( ApplicationBoxContext.class );
+		ApplicationBoxContext appContext = context.getApplicationContext();
 		/**
 		 * [BoxLang]
 		 *
@@ -126,9 +126,9 @@ public class ORMApp {
 
 	/**
 	 * Get a unique name for this context's ORM Application.
-	 * 
+	 *
 	 * Used to ensure we can tell the various ORM apps apart.
-	 * 
+	 *
 	 * @return a unique key for the given context's application.
 	 */
 	public static Key getUniqueAppName( Application application, IStruct appConfig ) {
@@ -146,7 +146,7 @@ public class ORMApp {
 
 		this.config				= config;
 		this.sessionFactories	= new ConcurrentHashMap<>();
-		this.datasources		= new ArrayList<DataSource>();
+		this.datasources		= new ArrayList<>();
 		this.name				= ORMApp.getUniqueAppName( context );
 
 		ConnectionManager connectionManager = context.getConnectionManager();
@@ -155,22 +155,33 @@ public class ORMApp {
 		    : connectionManager.getDatasourceOrThrow( Key.of( config.datasource ) );
 	}
 
+	/**
+	 * Start up the ORM application, creating session factories for all discovered entities.
+	 */
 	public void startup() {
 		this.entityMap = MappingGenerator.discoverEntities( context, config );
-		logger.debug( "Discovered entities on {} datasources:", this.entityMap.size() );
+
+		if ( logger.isDebugEnabled() )
+			logger.debug( "Discovered entities on {} datasources:", this.entityMap.size() );
 
 		this.entityMap.forEach( ( datasourceName, entities ) -> {
-			logger.debug( "Creating session factory for datasource: {}", datasourceName );
+			if ( logger.isDebugEnabled() )
+				logger.debug( "Creating session factory for datasource: {}", datasourceName );
+
 			DataSource datasource = context.getConnectionManager().getDatasourceOrThrow( Key.of( datasourceName ) );
 			this.datasources.add( datasource );
 
 			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, datasource, config, entities );
 			SessionFactory			factory	= builder.build();
+
 			logger.info( "Registering new Hibernate session factory for name: {}", builder.getUniqueName() );
+
 			this.sessionFactories.put( datasource.getUniqueName(), factory );
 
 			if ( datasource.equals( this.defaultDatasource ) ) {
-				logger.debug( "Setting the default datasource", datasource );
+				if ( logger.isDebugEnabled() )
+					logger.debug( "Setting the default datasource: {}", datasource );
+
 				this.defaultSessionFactory = factory;
 			}
 		} );
@@ -178,9 +189,9 @@ public class ORMApp {
 
 	/**
 	 * Get a unique name for this context's ORM Application.
-	 * 
+	 *
 	 * Used to ensure we can tell the various ORM apps apart.
-	 * 
+	 *
 	 * @return a unique key for the given context's application.
 	 */
 	public Key getUniqueName() {
@@ -195,9 +206,9 @@ public class ORMApp {
 	}
 
 	/**
-	 * 
+	 *
 	 * Get ALL discovered entities/entity meta for this ORM application which are associated with the given datasource.
-	 * 
+	 *
 	 * @param datasourceName The datasource for which to get entities. Will filter the result to entities with a `datasource="myDatasourceName"`
 	 *                       annotation.
 	 */
@@ -224,7 +235,7 @@ public class ORMApp {
 
 	/**
 	 * Get the SessionFactory instantiated for this particular datasource.
-	 * 
+	 *
 	 * @param datasourceName Datasource name to look up the session factory for.
 	 */
 	public SessionFactory getSessionFactoryOrThrow( Key datasourceName ) {
@@ -233,7 +244,7 @@ public class ORMApp {
 
 	/**
 	 * Get the SessionFactory instantiated for this particular datasource.
-	 * 
+	 *
 	 * @param datasource The datasource for which to get the session factory.
 	 */
 	public SessionFactory getSessionFactoryOrThrow( DataSource datasource ) {
@@ -256,7 +267,7 @@ public class ORMApp {
 
 	/**
 	 * Get the datasource for a given name, falling back to the default datasource if the name is null.
-	 * 
+	 *
 	 * Will throw a BoxRuntimeException if the datasource is not found.
 	 */
 	public DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {

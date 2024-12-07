@@ -108,22 +108,11 @@ public class MappingGenerator {
 	private IJDBCCapableContext	context;
 
 	/**
-	 * Retrieve the entity map for this session factory, constructing them if necessary.
+	 * Construct a new MappingGenerator instance.
 	 *
-	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
+	 * @param context The JDBC-capable context.
+	 * @param config  The ORM configuration.
 	 */
-	public static Map<String, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
-		if ( !ormConfig.autoGenMap ) {
-			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
-			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
-		} else {
-			// generate xml mappings on the fly, saving them either to a temp directory or alongside the entity class files if `ormConfig.saveMapping` is true.
-			return new MappingGenerator( context, ormConfig )
-			    .generateMappings()
-			    .getEntityDatasourceMap();
-		}
-	}
-
 	public MappingGenerator( IJDBCCapableContext context, ORMConfig config ) {
 		this.entities				= new ArrayList<>();
 		this.config					= config;
@@ -150,6 +139,23 @@ public class MappingGenerator {
 	}
 
 	/**
+	 * Retrieve the entity map for this session factory, constructing them if necessary.
+	 *
+	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
+	 */
+	public static Map<String, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
+		if ( !ormConfig.autoGenMap ) {
+			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
+			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
+		} else {
+			// generate xml mappings on the fly, saving them either to a temp directory or alongside the entity class files if `ormConfig.saveMapping` is true.
+			return new MappingGenerator( context, ormConfig )
+			    .generateMappings()
+			    .getEntityDatasourceMap();
+		}
+	}
+
+	/**
 	 * Generate the mappings for all classes discovered in the entity paths which are marked as persistent entities.
 	 * <p>
 	 * This method will generate the XML mapping files for all discovered entities and store them in the entity map.
@@ -160,10 +166,12 @@ public class MappingGenerator {
 		boolean				doParallel					= false;
 
 		if ( doParallel ) {
-			logger.debug( "Parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
+			if ( logger.isDebugEnabled() )
+				logger.debug( "Parallelizing metadata introspection {}", MAX_SYNCHRONOUS_ENTITIES );
+
 			this.entities = classes.parallelStream()
 			    // Parse class metadata
-			    .map( ( IStruct possibleEntity ) -> readMeta( possibleEntity ) )
+			    .map( this::readMeta )
 			    // Filter out non-persistent entities
 			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
 			    // Convert to EntityRecord
@@ -257,15 +265,23 @@ public class MappingGenerator {
 	 */
 	private boolean isPersistentEntity( IStruct entityMeta ) {
 		IStruct annotations = entityMeta.getAsStruct( Key.annotations );
-		if ( annotations.containsKey( ORMKeys.entity )
-		    || ( annotations.containsKey( ORMKeys.persistent ) && BooleanCaster.cast( annotations.getOrDefault( ORMKeys.persistent, "false" ) ) ) ) {
-			logger.debug(
-			    "Class is 'persistent'; generating XML: [{}] ",
-			    entityMeta.getAsString( Key.path ) );
+		if ( annotations.containsKey( ORMKeys.entity ) ||
+		    ( annotations.containsKey( ORMKeys.persistent ) &&
+		        BooleanCaster.cast( annotations.getOrDefault( ORMKeys.persistent, "false" ) ) ) ) {
+			if ( logger.isDebugEnabled() )
+				logger.debug(
+				    "Class is 'persistent'; generating XML: [{}] ",
+				    entityMeta.getAsString( Key.path )
+				);
 			return true;
 		} else {
-			logger.debug( "Class is unmarked or marked as as non-persistent; skipping: [{}]",
-			    entityMeta.getAsString( Key.path ) );
+
+			if ( logger.isDebugEnabled() )
+				logger.debug(
+				    "Class is unmarked or marked as as non-persistent; skipping: [{}]",
+				    entityMeta.getAsString( Key.path )
+				);
+
 			return false;
 		}
 	}
@@ -278,7 +294,9 @@ public class MappingGenerator {
 	 * @return The entity struct with the metadata added.
 	 */
 	private IStruct readMeta( IStruct possibleEntity ) {
-		logger.debug( "Loading metadata for class {}", possibleEntity.getAsString( Key.file ) );
+		if ( logger.isDebugEnabled() )
+			logger.debug( "Loading metadata for class {}", possibleEntity.getAsString( Key.file ) );
+
 		possibleEntity.put( Key.metadata, getClassMeta( Path.of( possibleEntity.getAsString( Key.file ) ) ) );
 		return possibleEntity;
 	}
@@ -294,12 +312,14 @@ public class MappingGenerator {
 		IStruct				meta			= theEntity.getAsStruct( Key.metadata );
 		IStruct				annotations		= meta.getAsStruct( Key.annotations );
 		String				entityName		= readEntityName( meta );
-		ResolvedFilePath	entityRootPath	= FileSystemUtil.contractPath( ( ( IBoxContext ) context ).getApplicationContext(), meta.getAsString( Key.path ) );
+		ResolvedFilePath	entityRootPath	= FileSystemUtil.contractPath( context.getApplicationContext(), meta.getAsString( Key.path ) );
 		String				fqn				= entityRootPath.getBoxFQN().toString();
 		if ( fqn == null || fqn.isBlank() ) {
 			throw new BoxRuntimeException( "Failed to generate FQN for entity: " + entityName );
 		}
-		logger.debug( "Generated FQN for entity [{}]: [{}]", entityName, fqn );
+
+		if ( logger.isDebugEnabled() )
+			logger.debug( "Generated FQN for entity [{}]: [{}]", entityName, fqn );
 
 		DataSource datasource = null;
 		if ( annotations.containsKey( Key.datasource ) ) {
@@ -364,12 +384,14 @@ public class MappingGenerator {
 	 * @return The entity metadata struct.
 	 */
 	private IStruct getClassMeta( Path clazzPath ) {
-		logger.debug( "Parsing class file: [{}]", clazzPath );
+		if ( logger.isDebugEnabled() )
+			logger.debug( "Parsing class file: [{}]", clazzPath );
+
 		ParsingResult result = new Parser().parse( new File( clazzPath.toString() ) );
 		if ( !result.isCorrect() ) {
 			throw new ParseException( result.getIssues(), "" );
 		}
-		ClassMetadataVisitor visitor = new ClassMetadataVisitor();
+		ClassMetadataVisitor visitor = new ClassMetadataVisitor( this.context );
 		result.getRoot().accept( visitor );
 		return visitor.getMetadata();
 	}
@@ -400,7 +422,9 @@ public class MappingGenerator {
 		    ? Path.of( path.replace( fileExt, ".hbm.xml" ) )
 		    : Path.of( this.saveDirectory, name + ".hbm.xml" );
 		try {
-			logger.debug( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
+			if ( logger.isDebugEnabled() )
+				logger.debug( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
+
 			String finalXML = generateXML( entity );
 			Files.write( xmlPath, !finalXML.isEmpty() ? finalXML.getBytes() : new byte[ 0 ] );
 
