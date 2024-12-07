@@ -25,12 +25,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.exceptions.KeyNotFoundException;
 import tools.BaseORMTest;
 
-// @Disabled
 public class EntityReloadTest extends BaseORMTest {
 
-	@Disabled( "Not working yet." )
+	@Disabled( "Context and variable names are colliding, which only allows the first test to pass. All tests run fine individually." )
 	@DisplayName( "It can reload entities using a string variable name, for compat" )
 	@Test
 	public void testEntityRefreshByVariableName() {
@@ -41,9 +41,7 @@ public class EntityReloadTest extends BaseORMTest {
 				result = myEntity.getAddress();
 				
 				queryExecute( "UPDATE Manufacturers SET address='101 Ford Circle, Detroit MI' WHERE id=1" );
-
-				entityReload( "myEntity" );
-				reloadedAddress = myEntity.getAddress();
+				reloadedAddress = entityReload( "myEntity" ).getAddress();
 			""",
 			context
 		);
@@ -58,13 +56,11 @@ public class EntityReloadTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				myEntity = entityLoadByPK( "Manufacturer", 1 );
-				result = myEntity.getAddress();
+				manufacturer = entityLoadByPK( "Manufacturer", 1 );
+				result = manufacturer.getAddress();
 				
 				queryExecute( "UPDATE Manufacturers SET address='101 Ford Circle, Detroit MI' WHERE id=1" );
-
-				entityReload( myEntity );
-				reloadedAddress = myEntity.getAddress();
+				reloadedAddress = entityReload( manufacturer ).getAddress();
 			""",
 			context
 		);
@@ -76,7 +72,7 @@ public class EntityReloadTest extends BaseORMTest {
 	@DisplayName( "It throws if the argument is not a valid entity" )
 	@Test
 	public void testBadEntityName() {
-		assertThrows( IllegalArgumentException.class, () -> {
+		assertThrows( KeyNotFoundException.class, () -> {
 			instance.executeSource(
 			    """
 			    	entityReload( "Fooey" );

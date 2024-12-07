@@ -24,7 +24,9 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IBoxContext.ScopeSearchResult;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.validation.Validator;
 
@@ -49,16 +51,18 @@ public class EntityReload extends BIF {
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		Object entity = arguments.get( ORMKeys.entity );
-		if ( entity instanceof String ) {
-			// @TODO: Get this working.
-			// ScopeSearchResult entityLookup = context.scopeFindNearby( Key.of( ( String ) entity ), null, true );
-			// if ( entityLookup == null ) {
-			// throw new IllegalArgumentException( "Entity variable not found: " + arguments.get( ORMKeys.entity ) );
-			// }
-			// entity = entityLookup.value();
+		if ( entity instanceof String variableName ) {
+			ScopeSearchResult entityLookup = context.scopeFindNearby( Key.of( ( String ) variableName ), null, true );
+			if ( entityLookup == null ) {
+				throw new IllegalArgumentException( "Entity variable not found: " + variableName );
+			}
+			entity = entityLookup.value();
 		}
-		ORMRequestContext.getForContext( context.getRequestContext() ).getSession().refresh( arguments.get( ORMKeys.entity ) );
-		return null;
+		ORMRequestContext
+		    .getForContext( context.getRequestContext() )
+		    .getSession()
+		    .refresh( entity );
+		return entity;
 	}
 
 }
