@@ -113,8 +113,8 @@ public class ORMService extends BaseService {
 	 * @param context The IBoxContext for the application.
 	 * @param config  The ORM configuration - parsed from the application settings.
 	 */
-	public void startupApp( RequestBoxContext context, ORMConfig config ) {
-		context.getApplicationContext().computeAttachmentIfAbsent( ORMKeys.ORMApp, key -> {
+	public ORMApp startupApp( RequestBoxContext context, ORMConfig config ) {
+		return context.getApplicationContext().computeAttachmentIfAbsent( ORMKeys.ORMApp, key -> {
 			ORMApp newORMApp = new ORMApp( context, config );
 
 			if ( getLogger().isDebugEnabled() )
@@ -134,7 +134,9 @@ public class ORMService extends BaseService {
 	 * @param context The IBoxContext for the application.
 	 */
 	public void shutdownApp( IBoxContext context ) {
-		this.shutdownApp( ORMApp.getUniqueAppName( context ) );
+		Key appName = ORMApp.getUniqueAppName( context );
+		this.shutdownApp( appName );
+		context.getApplicationContext().removeAttachment( appName );
 	}
 
 	/**
@@ -150,6 +152,11 @@ public class ORMService extends BaseService {
 			app.shutdown();
 			this.ormApps.remove( uniqueAppName );
 		}
+	}
+
+	public ORMApp reloadApp( IBoxContext context ) {
+		this.shutdownApp( context );
+		return this.startupApp( context.getRequestContext(), ORMConfig.loadFromContext( context.getRequestContext() ) );
 	}
 
 	/**

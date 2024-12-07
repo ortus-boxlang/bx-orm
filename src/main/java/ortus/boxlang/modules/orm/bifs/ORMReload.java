@@ -17,8 +17,10 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import org.apache.commons.lang3.NotImplementedException;
+import org.hibernate.SessionFactory;
 
+import ortus.boxlang.modules.orm.ORMService;
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -28,14 +30,14 @@ import ortus.boxlang.runtime.scopes.ArgumentsScope;
 public class ORMReload extends BIF {
 
 	/**
-	 * ExampleBIF
+	 * Reload the ORM application.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
-	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		// TODO implement BIF
-		throw new NotImplementedException();
+	public SessionFactory _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		ORMService ormService = ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
+		return ormService.reloadApp( context ).getDefaultSessionFactoryOrThrow();
 	}
 
 }

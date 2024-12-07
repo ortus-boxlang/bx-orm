@@ -34,23 +34,20 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
 public class ORMReloadTest extends BaseORMTest {
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can reload the ORM application" )
 	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testORMReload() {
+		instance.executeSource( "result = ormReload()", context );
+		assertThat( variables.get( result ).getClass().getName() ).isEqualTo( "org.hibernate.internal.SessionFactoryImpl" );
 	}
 
 }
