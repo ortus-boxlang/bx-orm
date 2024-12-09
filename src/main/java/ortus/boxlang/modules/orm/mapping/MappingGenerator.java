@@ -325,8 +325,12 @@ public class MappingGenerator {
 		if ( annotations.containsKey( Key.datasource ) ) {
 			datasource = lookupEntityDatasource( context.getConnectionManager(), StringCaster.cast( annotations.getOrDefault( Key.datasource, "" ) ) );
 		}
-		if ( datasource == null && this.defaultDatasource != null ) {
-			datasource = this.defaultDatasource;
+		if ( datasource == null ) {
+			if ( this.defaultDatasource != null ) {
+				datasource = this.defaultDatasource;
+			} else {
+				throw new BoxRuntimeException( "Failed to find datasource for entity: " + entityName );
+			}
 		}
 		return new EntityRecord(
 		    entityName,
