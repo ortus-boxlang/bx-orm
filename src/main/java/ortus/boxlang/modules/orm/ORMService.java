@@ -158,9 +158,9 @@ public class ORMService extends BaseService {
 
 	/**
 	 * Reload the ORM application for the given context.
-	 * 
+	 *
 	 * @param context The IBoxContext for the application.
-	 * 
+	 *
 	 * @return The reloaded ORM application.
 	 */
 	public ORMApp reloadApp( IBoxContext context ) {

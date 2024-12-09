@@ -18,8 +18,6 @@
 package ortus.boxlang.modules.orm.interceptors;
 
 import org.hibernate.Session;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMRequestContext;
@@ -40,20 +38,21 @@ import ortus.boxlang.runtime.types.IStruct;
  */
 public class TransactionManager extends BaseInterceptor {
 
-	private static final Logger	logger	= LoggerFactory.getLogger( TransactionManager.class );
-
-	/**
-	 * The ORM service.
-	 */
+	// The properties to configure the interceptor with
+	private static BoxRuntime	runtime	= BoxRuntime.getInstance();
 	private ORMService			ormService;
 
 	/**
-	 * Constructor, used when initializing the interceptor at module load time.
+	 * This method is called by the BoxLang runtime to configure the interceptor
+	 * with a Struct of properties
+	 *
+	 * @param properties The properties to configure the interceptor with (if any)
 	 */
-	public TransactionManager() {
-		super();
-
-		this.ormService = ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+	@Override
+	public void configure( IStruct properties ) {
+		this.properties	= properties;
+		this.logger		= runtime.getLoggingService().getLogger( "orm" );
+		this.ormService	= ( ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService ) );
 	}
 
 	@InterceptionPoint
@@ -68,15 +67,28 @@ public class TransactionManager extends BaseInterceptor {
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
 			if ( config.autoManageSession ) {
-				logger.debug( "'autoManageSession' is enabled; flushing ORM session {} for datasource prior to transaction begin.", ormSession,
-				    datasource.getUniqueName() );
+
+				logger.debug(
+				    "'autoManageSession' is enabled; flushing ORM session [{}] for datasource [{}] prior to transaction begin.",
+				    ormSession,
+				    datasource.getUniqueName()
+				);
+
 				ormSession.flush();
 			}
 
-			logger.debug( "Starting ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+			logger.debug(
+			    "Starting ORM transaction on session [{}] for datasource: [{}]",
+			    ormSession,
+			    datasource.getUniqueName()
+			);
+
 			if ( ormSession.isJoinedToTransaction() ) {
 				// May want to put this behind some kind of compatibility flag...
-				logger.debug( "Session {} is already joined to a transaction, closing transaction and beginning anew", ormSession );
+				logger.debug(
+				    "Session [{}] is already joined to a transaction, closing transaction and beginning anew",
+				    ormSession
+				);
 				ormSession.getTransaction().commit();
 			}
 			ormSession.beginTransaction();
@@ -92,11 +104,23 @@ public class TransactionManager extends BaseInterceptor {
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
 		ORMConfig			config				= ormRequestContext.getConfig();
 
-		ormApp.getDatasources().forEach( ( datasource ) -> {
+		ormApp.getDatasources().forEach( datasource -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
-			logger.debug( "Committing ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+
+			logger.debug(
+			    "Committing ORM transaction on session [{}] for datasource [{}]",
+			    ormSession,
+			    datasource.getUniqueName()
+			);
+
 			ormSession.getTransaction().commit();
-			logger.debug( "Beginning new ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+
+			logger.debug(
+			    "Beginning new ORM transaction on session [{}] for datasource [{}]",
+			    ormSession,
+			    datasource.getUniqueName()
+			);
+
 			ormSession.beginTransaction();
 		} );
 	}
@@ -113,16 +137,31 @@ public class TransactionManager extends BaseInterceptor {
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			// FYI: Lucee's implementation actually waits until transaction END to rollback and clear the session.
 			Session ormSession = ormRequestContext.getSession( datasource );
-			logger.debug( "Rolling back ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+
+			logger.debug(
+			    "Rolling back ORM transaction on session [{}] for datasource [{}]",
+			    ormSession,
+			    datasource.getUniqueName()
+			);
+
 			ormSession.getTransaction().rollback();
 			if ( config.autoManageSession ) {
 				if ( logger.isDebugEnabled() ) {
-					logger.debug( "'autoManageSession' is enabled; clearing ORM session {} for datasource {} after transaction rollback.", ormSession,
+
+					logger.debug(
+					    "'autoManageSession' is enabled; clearing ORM session [{}] for datasource [{}] after transaction rollback.",
+					    ormSession,
 					    datasource.getOriginalName() );
 				}
 				ormSession.clear();
 			}
-			logger.debug( "Beginning new ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+
+			logger.debug(
+			    "Beginning new ORM transaction on session [{}] for datasource [{}]",
+			    ormSession,
+			    datasource.getUniqueName()
+			);
+
 			ormSession.beginTransaction();
 		} );
 	}
@@ -138,7 +177,13 @@ public class TransactionManager extends BaseInterceptor {
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
-			logger.debug( "Ending ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
+
+			logger.debug(
+			    "Ending ORM transaction on session [{}] for datasource [{}]",
+			    ormSession,
+			    datasource.getUniqueName()
+			);
+
 			ormSession.getTransaction().commit();
 		} );
 	}
