@@ -17,7 +17,7 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,20 +33,23 @@ public class ORMFlushTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-			transaction{
-				manufacturer = entityNew( "Manufacturer" );
-				manufacturer.setAddress( "101 Dodge Circle" ).setName( "Dodge" );
-				entitySave( manufacturer );
-				result = queryExecute( "SELECT * FROM manufacturers WHERE name='Dodge'" );
-			}
+			manufacturer = entityNew( "Manufacturer" );
+			manufacturer.setAddress( "101 Dodge Circle" ).setName( "Dodge" );
+			entitySave( manufacturer );
+			result = queryExecute( "SELECT * FROM manufacturers WHERE name='Dodge'" );
+			ORMFlush();
 			result2 = queryExecute( "SELECT * FROM manufacturers WHERE name='Dodge'" );
 			""",
 			context
 		);
 		// @formatter:on
-		assertEquals( 0, variables.getAsQuery( result ).size() );
-		assertEquals( 1, variables.getAsQuery( Key.of( "result2" ) ).size() );
-		assertEquals( "101 Dodge Circle", variables.getAsQuery( Key.of( "result2" ) ).getRowAsStruct( 0 ).get( "address" ) );
+
+		assertThat( variables.getAsQuery( result ).size() )
+		    .isEqualTo( 0 );
+		assertThat( variables.getAsQuery( Key.of( "result2" ) ).size() )
+		    .isEqualTo( 1 );
+		assertThat( variables.getAsQuery( Key.of( "result2" ) ).getRowAsStruct( 0 ).get( "address" ) )
+		    .isEqualTo( "101 Dodge Circle" );
 	}
 
 }

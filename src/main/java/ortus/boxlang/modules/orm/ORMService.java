@@ -186,28 +186,4 @@ public class ORMService extends BaseService {
 		}
 		return this.logger;
 	}
-
-	// /**
-	// * Set up custom log levels for the ORM engine.
-	// *
-	// * @TODO: use this method or similar to adjust Hibernate logging levels and pipe them to a destination (log file) of choice.
-	// */
-	// private void setupCustomLogLevels() {
-	// Logger ormLogger = LoggerFactory.getLogger( "ortus.boxlang.modules.orm" );
-
-	// if ( ! ( ormLogger instanceof ch.qos.logback.classic.Logger ) ) {
-	// logger.warn( "Could not adjust log levels; logger is not a LogBack instance." );
-	// return;
-	// }
-
-	// Level ORMModuleLevel = Level.DEBUG;
-	// Level customLogLevel = Level.WARN;
-
-	// ( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "ortus.boxlang.modules.orm" ) ).setLevel( ORMModuleLevel );
-
-	// ( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "com.zaxxer.hikari" ) ).setLevel( customLogLevel );
-	// ( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( "org.hibernate" ) ).setLevel( customLogLevel );
-	// // How can we put this graciously: the class loader logs are just too much.
-	// ( ( ch.qos.logback.classic.Logger ) LoggerFactory.getLogger( DynamicClassLoader.class ) ).setLevel( customLogLevel );
-	// }
 }
