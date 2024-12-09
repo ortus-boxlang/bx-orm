@@ -90,6 +90,13 @@ public class ORMRequestContext {
 	}
 
 	/**
+	 * Retrieve the initialized ORM application for this request context.
+	 */
+	public ORMApp getORMApp() {
+		return this.ormApp;
+	}
+
+	/**
 	 * Get the default Hibernate session, opening one if it does not already exist.
 	 *
 	 * @return The Hibernate session.

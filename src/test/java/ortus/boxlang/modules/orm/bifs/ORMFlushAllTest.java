@@ -17,19 +17,19 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
 public class ORMFlushAllTest extends BaseORMTest {
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@Disabled( "Unimplemented" )
+	@DisplayName( "It can flush ALL sessions" )
 	@Test
 	public void testORMFlushAll() {
 		// @formatter:off

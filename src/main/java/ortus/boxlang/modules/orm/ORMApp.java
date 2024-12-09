@@ -203,6 +203,37 @@ public class ORMApp {
 	}
 
 	/**
+	 * Lookup the BoxLang EntityRecord object containing known entity information for a given entity name.
+	 * 
+	 * @param session    The Hibernate session
+	 * @param entityName The entity name to look up
+	 * 
+	 * @return
+	 */
+	public EntityRecord lookupEntity( String entityName, Boolean fail ) {
+		var entityFromDefault = getEntityRecords( this.defaultDatasource.getOriginalName() ).stream()
+		    .filter( ( entity ) -> entity.getEntityName().equalsIgnoreCase( entityName ) )
+		    .findFirst();
+
+		if ( entityFromDefault.isPresent() ) {
+			return entityFromDefault.get();
+		}
+
+		for ( DataSource datasource : this.datasources ) {
+			if ( !datasource.equals( this.defaultDatasource ) ) {
+				var entityFromDatasource = getEntityRecords( datasource.getOriginalName() ).stream()
+				    .filter( ( entity ) -> entity.getEntityName().equalsIgnoreCase( entityName ) )
+				    .findFirst();
+
+				if ( entityFromDatasource.isPresent() ) {
+					return entityFromDatasource.get();
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Get the entity map for this ORM application, where the key is the configured datasource name and the value is a list of EntityRecords.
 	 */
 	public Map<String, List<EntityRecord>> getEntityMap() {

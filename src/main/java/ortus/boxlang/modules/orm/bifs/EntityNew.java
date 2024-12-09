@@ -19,10 +19,8 @@ package ortus.boxlang.modules.orm.bifs;
 
 import java.util.Set;
 
-import org.hibernate.Session;
-
+import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMRequestContext;
-import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.hibernate.BoxClassInstantiator;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
@@ -30,6 +28,7 @@ import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
@@ -60,11 +59,15 @@ public class EntityNew extends BIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
-		EntityRecord	entityRecord	= SessionFactoryBuilder.lookupEntity( session, arguments.getAsString( ORMKeys.entityName ), true );
+		ORMApp			app				= ORMRequestContext.getForContext( context.getRequestContext() ).getORMApp();
+		EntityRecord	entityRecord	= app.lookupEntity( arguments.getAsString( ORMKeys.entityName ), true );
 		IStruct			properties		= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 
-		return BoxClassInstantiator.instantiate( context.getParentOfType( ApplicationBoxContext.class ), entityRecord, properties );
+		IClassRunnable	entity			= BoxClassInstantiator.instantiate( context.getParentOfType( ApplicationBoxContext.class ), entityRecord, properties );
+
+		// @TODO: Announce 'postNew' event
+
+		return entity;
 	}
 
 }

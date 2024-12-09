@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.hibernate.EntityMode;
-import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
@@ -39,7 +38,6 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 public class SessionFactoryBuilder {
 
@@ -72,81 +70,23 @@ public class SessionFactoryBuilder {
 	private IJDBCCapableContext		context;
 	private ApplicationBoxContext	applicationContext;
 
-	/**
-	 * Lookup the BoxLang EntityRecord object containing known entity information for a given entity name.
-	 * 
-	 * @TODO: Move this into our Session wrapper class.
-	 * 
-	 * @param session    The Hibernate session
-	 * @param entityName The entity name to look up
-	 * 
-	 * @return
-	 */
-	public static EntityRecord lookupEntity( Session session, String entityName, Boolean fail ) {
-		return lookupEntity( session.getSessionFactory(), entityName, fail );
-	}
+	// public static EntityRecord lookupEntity( IBoxContext context, String entityName, Boolean fail ) {
+	// EntityRecord entityRecord;
+	// if ( entityRecord == null ) {
+	// // walk configured datasources and look up the entity on each
+	// ormRequestContext.getORMApp().getDatasources().forEach( ( datasource ) -> {
+	// if ( entityRecord == null ) {
+	// entityRecord = SessionFactoryBuilder.lookupEntity( ormRequestContext.getSession( datasource ), entityName,
+	// false );
+	// }
+	// } );
+	// }
+	// if ( entityRecord == null ) {
 
-	/**
-	 * Lookup the BoxLang EntityRecord object containing known entity information for a given entity name.
-	 * 
-	 * @TODO: Move this into our SessionFactory wrapper class.
-	 * 
-	 * @param sessionFactory The Hibernate session factory
-	 * @param entityName     The entity name to look up
-	 * @param fail           Whether to throw an exception if the entity is not found
-	 * 
-	 * @return The BoxLang entityRecord defining the entity name, filepath, FQN, and mapping xml file path
-	 */
-	public static EntityRecord lookupEntity( SessionFactory sessionFactory, String entityName, Boolean fail ) {
-		String						lookup		= entityName.trim().toLowerCase();
-		@SuppressWarnings( "unchecked" )
-		Map<String, EntityRecord>	entityMap	= ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
-		if ( !entityMap.containsKey( lookup ) ) {
-			logger.warn( "Entity {} not found in entity map.", entityName );
-			if ( fail ) {
-				// @TODO: Catch this in calling code and silence if ormConfig.skipParseErrors is true.
-				throw new BoxRuntimeException( "Entity " + entityName + " not found in entity map." );
-			}
-		}
-
-		return entityMap.get( lookup );
-	}
-
-	/**
-	 * Lookup the BoxLang EntityRecord object containing known entity information for a given CLASS name.
-	 * 
-	 * @TODO: Move this into our SessionFactory wrapper class.
-	 * 
-	 * @param sessionFactory The Hibernate session factory
-	 * @param className      The class name to look up
-	 * 
-	 * @return The BoxLang entityRecord defining the entity name, filepath, FQN, and mapping xml file path
-	 */
-	@SuppressWarnings( "unchecked" )
-	public static EntityRecord lookupEntityByClassName( SessionFactory sessionFactory, String className ) {
-		String						lookup		= className.trim().toLowerCase();
-		Map<String, EntityRecord>	entityMap	= ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
-
-		return entityMap.values().stream()
-		    .filter( ( entity ) -> entity.getClassName().equalsIgnoreCase( className ) )
-		    .findFirst()
-		    .orElseThrow( () -> {
-			    String message = String.format( "Entity '%s' not found in entity map.", lookup );
-			    logger.warn( message );
-			    // @TODO: Catch this in calling code and silence if ormConfig.skipParseErrors is true.
-			    return new BoxRuntimeException( message );
-		    } );
-	}
-
-	/**
-	 * Get the entity map for this Hibernate session factory.
-	 * 
-	 * @param sessionFactory The Hibernate session factory
-	 */
-	@SuppressWarnings( "unchecked" )
-	public static Map<String, EntityRecord> getEntityMap( SessionFactory sessionFactory ) {
-		return ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
-	}
+	// throw new RuntimeException( "Entity not found: " + entityName );
+	// }
+	// return entityRecord;
+	// }
 
 	/**
 	 * Get the application context tied to this Hibernate session factory.

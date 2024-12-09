@@ -30,10 +30,14 @@ import org.hibernate.tuple.entity.EntityMetamodel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ortus.boxlang.modules.orm.ORMApp;
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
@@ -55,22 +59,41 @@ import ortus.boxlang.runtime.validation.Validator;
  */
 public class BoxClassInstantiator implements Instantiator {
 
-	public static final Logger	logger				= LoggerFactory.getLogger( BoxClassInstantiator.class );
+	public static final Logger			logger				= LoggerFactory.getLogger( BoxClassInstantiator.class );
 
-	private EntityMetamodel		entityMetamodel;
-	private PersistentClass		mappingInfo;
-	private String				entityName;
-	private EntityRecord		entityRecord;
-	private List<String>		subclassClassNames	= new ArrayList<>();
+	private ORMApp						ormApp;
+	private EntityMetamodel				entityMetamodel;
+	private PersistentClass				mappingInfo;
+	private String						entityName;
+	private EntityRecord				entityRecord;
+	private List<String>				subclassClassNames	= new ArrayList<>();
+
+	private static final ClassLocator	CLASS_LOCATOR		= BoxRuntime.getInstance().getClassLocator();
 
 	public static IClassRunnable instantiateByFQN( IBoxContext context, String fqn ) {
-		return ( IClassRunnable ) ClassLocator.getInstance().load( context, fqn, "bx" )
+		return ( IClassRunnable ) CLASS_LOCATOR.load(
+		    context,
+		    fqn,
+		    context.getCurrentImports()
+		)
+		    .invokeConstructor( context )
+		    .unWrapBoxLangClass();
+	}
+
+	public static IClassRunnable instantiateByFQN( IBoxContext context, String fqn, String resolverPrefix ) {
+		return ( IClassRunnable ) CLASS_LOCATOR.load(
+		    context,
+		    fqn,
+		    ClassLocator.BX_PREFIX,
+		    true,
+		    context.getCurrentImports()
+		)
 		    .invokeConstructor( context )
 		    .unWrapBoxLangClass();
 	}
 
 	public static IClassRunnable instantiate( IBoxContext context, EntityRecord entityRecord, IStruct properties ) {
-		IClassRunnable theEntity = instantiateByFQN( context, entityRecord.getClassFQN() );
+		IClassRunnable theEntity = instantiateByFQN( context, entityRecord.getClassFQN(), entityRecord.getResolverPrefix() );
 
 		entityRecord.getEntityMeta().getAssociations().stream()
 		    .forEach( prop -> {
@@ -118,9 +141,8 @@ public class BoxClassInstantiator implements Instantiator {
 	public BoxClassInstantiator( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
 		this.entityMetamodel	= entityMetamodel;
 		this.mappingInfo		= mappingInfo;
-		this.entityRecord		= SessionFactoryBuilder.lookupEntity( entityMetamodel.getSessionFactory(),
-		    entityMetamodel.getName(), true );
 		this.entityName			= mappingInfo.getEntityName();
+
 		if ( mappingInfo.hasSubclasses() ) {
 			@SuppressWarnings( "unchecked" )
 			Iterator<PersistentClass> itr = mappingInfo.getSubclassClosureIterator();
@@ -133,6 +155,8 @@ public class BoxClassInstantiator implements Instantiator {
 
 	@Override
 	public Object instantiate( Serializable id ) {
+		ORMApp			ormApp			= ORMRequestContext.getForContext( RequestBoxContext.getCurrent() ).getORMApp();
+		EntityRecord	entityRecord	= ormApp.lookupEntity( this.entityName, true );
 		return BoxClassInstantiator.instantiate( SessionFactoryBuilder
 		    .getApplicationContext( entityMetamodel.getSessionFactory() ), entityRecord, null );
 	}
