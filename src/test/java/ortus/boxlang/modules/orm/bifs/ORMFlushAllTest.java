@@ -31,9 +31,33 @@ public class ORMFlushAllTest extends BaseORMTest {
 
 	@DisplayName( "It can test the ExampleBIF" )
 	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testORMFlushAll() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			entitySave( entityNew( "Manufacturer", { name : "Dodge", address : "101 Dodge Circle" } ) );
+			entitySave( entityNew( "MappingFromAnotherMother", { name : "test" } ) );
+			
+			defaultDS1 = queryExecute( "SELECT * FROM manufacturers WHERE name='Dodge'" );
+			alternateDS1 = queryExecute( "SELECT * FROM MappingFromAnotherMother WHERE name='test'" );
+			
+			ORMFlushAll();
+
+			defaultDS2 = queryExecute( "SELECT * FROM manufacturers WHERE name='Dodge'" );
+			alternateDS2 = queryExecute( "SELECT * FROM MappingFromAnotherMother WHERE name='test'" );
+			""",
+			context
+		);
+		// @formatter:on
+
+		assertThat( variables.getAsQuery( Key.of( "defaultDS1" ) ).size() )
+		    .isEqualTo( 0 );
+		assertThat( variables.getAsQuery( Key.of( "alternateDS1" ) ).size() )
+		    .isEqualTo( 0 );
+		assertThat( variables.getAsQuery( Key.of( "defaultDS2" ) ).size() )
+		    .isEqualTo( 1 );
+		assertThat( variables.getAsQuery( Key.of( "alternateDS2" ) ).size() )
+		    .isEqualTo( 1 );
 	}
 
 }
