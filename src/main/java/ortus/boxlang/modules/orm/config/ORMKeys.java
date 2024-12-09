@@ -58,6 +58,8 @@ public class ORMKeys {
 	public static final Key	table					= Key.of( "table" );
 	public static final Key	useDBForMapping			= Key.of( "useDBForMapping" );
 	public static final Key	ignoreParseErrors		= Key.of( "ignoreParseErrors" );
+	public static final Key	ignoreExtras			= Key.of( "ignoreExtras" );
+
 	/**
 	 * OLD setting name. Deprecated. Use {@link ignoreParseErrors} instead.
 	 */
