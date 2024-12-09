@@ -67,6 +67,7 @@ public class ORMService extends BaseService {
 	 */
 	public ORMService( BoxRuntime runtime ) {
 		super( runtime, ORMKeys.ORMService );
+		getLogger().debug( "ORMService built" );
 	}
 
 	/**
@@ -88,7 +89,7 @@ public class ORMService extends BaseService {
 	 */
 	@Override
 	public void onStartup() {
-		getLogger().info( "ORMService started" );
+		getLogger().info( "+ ORMService started" );
 	}
 
 	/**
@@ -96,7 +97,7 @@ public class ORMService extends BaseService {
 	 */
 	@Override
 	public void onShutdown( Boolean force ) {
-		getLogger().info( "ORMService shutdown" );
+		getLogger().info( "+ ORMService shutdown requested" );
 		this.ormApps.forEach( ( key, ormApp ) -> ormApp.shutdown() );
 		this.ormApps.clear();
 	}
@@ -155,6 +156,13 @@ public class ORMService extends BaseService {
 		}
 	}
 
+	/**
+	 * Reload the ORM application for the given context.
+	 * 
+	 * @param context The IBoxContext for the application.
+	 * 
+	 * @return The reloaded ORM application.
+	 */
 	public ORMApp reloadApp( IBoxContext context ) {
 		this.shutdownApp( context );
 		return this.startupApp( context.getRequestContext(), ORMConfig.loadFromContext( context.getRequestContext() ) );
@@ -174,9 +182,9 @@ public class ORMService extends BaseService {
 	}
 
 	/**
-	 * Lazy getter for the logger.
+	 * Get the ORM logger that logs to the "orm" category.
 	 */
-	private BoxLangLogger getLogger() {
+	public BoxLangLogger getLogger() {
 		if ( this.logger == null ) {
 			synchronized ( ORMService.class ) {
 				if ( this.logger == null ) {
