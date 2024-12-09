@@ -57,8 +57,6 @@ public class ORMFlush extends BIF {
 		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
 		logger.debug( "Flushing session: {}", session );
 		session.flush();
-		// session.getTransaction()
-
 		return null;
 	}
 

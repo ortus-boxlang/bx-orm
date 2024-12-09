@@ -136,6 +136,7 @@ public class ORMService extends BaseService {
 	public void shutdownApp( IBoxContext context ) {
 		Key appName = ORMApp.getUniqueAppName( context );
 		this.shutdownApp( appName );
+		context.getRequestContext().removeAttachment( ORMKeys.ORMRequestContext );
 		context.getApplicationContext().removeAttachment( appName );
 	}
 

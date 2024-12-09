@@ -513,6 +513,11 @@ public class ORMConfig {
 		// - useDBForMapping
 		// - saveMapping
 
+		// Session and transaction management settings:
+		configuration.setProperty( AvailableSettings.FLUSH_BEFORE_COMPLETION, "false" )
+		    .setProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION, "true" )
+		    .setProperty( AvailableSettings.AUTO_CLOSE_SESSION, "false" );
+
 		return configuration;
 	}
 

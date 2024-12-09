@@ -17,7 +17,8 @@
  */
 package ortus.boxlang.modules.orm;
 
-import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -43,23 +44,23 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  */
 public class ORMRequestContext {
 
-	private static final Logger		logger		= LoggerFactory.getLogger( ORMRequestContext.class );
+	private static final Logger	logger		= LoggerFactory.getLogger( ORMRequestContext.class );
 
 	/**
 	 * ORM service.
 	 */
-	private ORMService				ormService;
+	private ORMService			ormService;
 
-	private ORMApp					ormApp;
+	private ORMApp				ormApp;
 
-	private RequestBoxContext		context;
+	private RequestBoxContext	context;
 
-	private ORMConfig				config;
+	private ORMConfig			config;
 
 	/**
 	 * Map of Hibernate sessions for this request, keyed by datasource name.
 	 */
-	private HashMap<Key, Session>	sessions	= new HashMap<>();
+	private Map<Key, Session>	sessions	= new ConcurrentHashMap<Key, Session>();
 
 	/**
 	 * Retrieve the ORMRequestContext for the given context.
@@ -118,18 +119,12 @@ public class ORMRequestContext {
 	 */
 	public Session getSession( DataSource datasource ) {
 		Key sessionKey = datasource.getUniqueName();
-		if ( this.sessions.containsKey( sessionKey ) ) {
-			logger.trace( "returning existing session for key: {}", sessionKey.getName() );
-			return this.sessions.get( sessionKey );
-		}
+		return this.sessions.computeIfAbsent( sessionKey, ( key ) -> {
+			logger.trace( "opening NEW session for key: {}", sessionKey.getName() );
 
-		logger.trace( "opening NEW session for key: {}", sessionKey.getName() );
-
-		SessionFactory	sessionFactory	= this.ormApp.getSessionFactoryOrThrow( datasource );
-		Session			newSession		= sessionFactory.openSession();
-		this.sessions.put( sessionKey, newSession );
-		newSession.beginTransaction();
-		return newSession;
+			SessionFactory sessionFactory = this.ormApp.getSessionFactoryOrThrow( datasource );
+			return sessionFactory.openSession();
+		} );
 	}
 
 	/**

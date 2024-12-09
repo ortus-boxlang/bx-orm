@@ -46,18 +46,6 @@ public class RequestListener extends BaseInterceptor {
 	@InterceptionPoint
 	public void onRequestStart( IStruct args ) {
 		logger.debug( "onRequestEnd - Starting up ORM request" );
-		// RequestBoxContext context = args.getAs( RequestBoxContext.class, Key.context );
-		// ORMConfig config = ORMConfig.loadFromContext( context );
-		// if ( config == null ) {
-		// logger.debug( "ORM not enabled for this request." );
-		// return;
-		// }
-		// if ( context.hasAttachment( ORMKeys.ORMRequestContext ) ) {
-		// logger.warn( "ORM request already started." );
-		// return;
-		// }
-		// logger.debug( "onRequestStart - Starting ORM request" );
-		// context.putAttachment( ORMKeys.ORMRequestContext, new ORMRequestContext( context, config ) );
 	}
 
 	@InterceptionPoint

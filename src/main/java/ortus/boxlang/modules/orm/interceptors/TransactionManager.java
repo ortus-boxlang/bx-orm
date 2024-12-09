@@ -111,9 +111,17 @@ public class TransactionManager extends BaseInterceptor {
 		ORMConfig			config				= ormRequestContext.getConfig();
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
+			// FYI: Lucee's implementation actually waits until transaction END to rollback and clear the session.
 			Session ormSession = ormRequestContext.getSession( datasource );
 			logger.debug( "Rolling back ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
 			ormSession.getTransaction().rollback();
+			if ( config.autoManageSession ) {
+				if ( logger.isDebugEnabled() ) {
+					logger.debug( "'autoManageSession' is enabled; clearing ORM session {} for datasource {} after transaction rollback.", ormSession,
+					    datasource.getOriginalName() );
+				}
+				ormSession.clear();
+			}
 			logger.debug( "Beginning new ORM transaction on session {} for datasource", ormSession, datasource.getUniqueName() );
 			ormSession.beginTransaction();
 		} );
