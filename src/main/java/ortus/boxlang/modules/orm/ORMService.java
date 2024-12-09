@@ -20,6 +20,9 @@ package ortus.boxlang.modules.orm;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.LoggerContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -68,6 +71,26 @@ public class ORMService extends BaseService {
 	public ORMService( BoxRuntime runtime ) {
 		super( runtime, ORMKeys.ORMService );
 		getLogger().debug( "ORMService built" );
+
+		// Attach appender to Hibernate logging categories
+		String[]		hibernateCategories	= {
+		    "org.hibernate.SQL",
+		    "org.hibernate.type.descriptor.sql",
+		    "org.hibernate.event",
+		    "org.hibernate.cache",
+		    "org.hibernate.stat"
+		};
+
+		// TODO: Make this configurable. For now, log debug so it can assist us in debugging.
+		LoggerContext	loggerContext		= runtime.getLoggingService().getLoggerContext();
+		for ( String category : hibernateCategories ) {
+			Logger hibernateLogger = loggerContext.getLogger( category );
+			// hibernateLogger.addAppender( consoleAppender );
+			hibernateLogger.addAppender( getLogger().getAppender( "orm" ) );
+			// Add a console appender to the Hibernate logger
+			hibernateLogger.setLevel( Level.DEBUG );
+			hibernateLogger.setAdditive( false ); // Prevent messages from going to parent loggers
+		}
 	}
 
 	/**

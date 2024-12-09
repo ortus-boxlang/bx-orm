@@ -60,7 +60,7 @@ dependencies {
 	testImplementation "com.google.truth:truth:1.+"
 	// @TODO: Figure out why we need this for running tests - they should be included in the boxlang dep.
 	// https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
-	testImplementation 'ch.qos.logback:logback-classic:1.5.7'
+	//testImplementation 'ch.qos.logback:logback-classic:1.5.7'
 	// https://mvnrepository.com/artifact/com.zaxxer/HikariCP
 	testImplementation 'com.zaxxer:HikariCP:5.1.0'
 }
