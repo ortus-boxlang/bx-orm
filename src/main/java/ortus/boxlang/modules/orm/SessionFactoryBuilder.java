@@ -82,8 +82,8 @@ public class SessionFactoryBuilder {
 	 * 
 	 * @return
 	 */
-	public static EntityRecord lookupEntity( Session session, String entityName ) {
-		return lookupEntity( session.getSessionFactory(), entityName );
+	public static EntityRecord lookupEntity( Session session, String entityName, Boolean fail ) {
+		return lookupEntity( session.getSessionFactory(), entityName, fail );
 	}
 
 	/**
@@ -93,17 +93,20 @@ public class SessionFactoryBuilder {
 	 * 
 	 * @param sessionFactory The Hibernate session factory
 	 * @param entityName     The entity name to look up
+	 * @param fail           Whether to throw an exception if the entity is not found
 	 * 
 	 * @return The BoxLang entityRecord defining the entity name, filepath, FQN, and mapping xml file path
 	 */
-	public static EntityRecord lookupEntity( SessionFactory sessionFactory, String entityName ) {
+	public static EntityRecord lookupEntity( SessionFactory sessionFactory, String entityName, Boolean fail ) {
 		String						lookup		= entityName.trim().toLowerCase();
 		@SuppressWarnings( "unchecked" )
 		Map<String, EntityRecord>	entityMap	= ( Map<String, EntityRecord> ) sessionFactory.getProperties().get( BOXLANG_ENTITY_MAP );
 		if ( !entityMap.containsKey( lookup ) ) {
 			logger.warn( "Entity {} not found in entity map.", entityName );
-			// @TODO: Catch this in calling code and silence if ormConfig.skipParseErrors is true.
-			throw new BoxRuntimeException( "Entity " + entityName + " not found in entity map." );
+			if ( fail ) {
+				// @TODO: Catch this in calling code and silence if ormConfig.skipParseErrors is true.
+				throw new BoxRuntimeException( "Entity " + entityName + " not found in entity map." );
+			}
 		}
 
 		return entityMap.get( lookup );
@@ -137,8 +140,6 @@ public class SessionFactoryBuilder {
 
 	/**
 	 * Get the entity map for this Hibernate session factory.
-	 * 
-	 * @TODO: Move this into our SessionFactory wrapper class.
 	 * 
 	 * @param sessionFactory The Hibernate session factory
 	 */

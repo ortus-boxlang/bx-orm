@@ -61,7 +61,7 @@ public class EntityNew extends BIF {
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
-		EntityRecord	entityRecord	= SessionFactoryBuilder.lookupEntity( session, arguments.getAsString( ORMKeys.entityName ) );
+		EntityRecord	entityRecord	= SessionFactoryBuilder.lookupEntity( session, arguments.getAsString( ORMKeys.entityName ), true );
 		IStruct			properties		= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 
 		return BoxClassInstantiator.instantiate( context.getParentOfType( ApplicationBoxContext.class ), entityRecord, properties );

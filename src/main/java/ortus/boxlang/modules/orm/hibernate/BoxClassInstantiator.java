@@ -119,7 +119,7 @@ public class BoxClassInstantiator implements Instantiator {
 		this.entityMetamodel	= entityMetamodel;
 		this.mappingInfo		= mappingInfo;
 		this.entityRecord		= SessionFactoryBuilder.lookupEntity( entityMetamodel.getSessionFactory(),
-		    entityMetamodel.getName() );
+		    entityMetamodel.getName(), true );
 		this.entityName			= mappingInfo.getEntityName();
 		if ( mappingInfo.hasSubclasses() ) {
 			@SuppressWarnings( "unchecked" )
