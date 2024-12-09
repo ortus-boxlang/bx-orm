@@ -20,7 +20,10 @@ package ortus.boxlang.modules.orm.mapping;
 import java.nio.file.Path;
 
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
+import ortus.boxlang.runtime.loader.ClassLocator;
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 
 public class EntityRecord {
 
@@ -31,6 +34,7 @@ public class EntityRecord {
 	private IStruct		metadata;
 	private Path		xmlFilePath;
 	private IEntityMeta	entityMeta;
+	private String		resolverPrefix;
 
 	public EntityRecord( String entityName, String classFQN ) {
 		this( entityName, classFQN, null );
@@ -41,10 +45,11 @@ public class EntityRecord {
 	}
 
 	public EntityRecord( String entityName, String classFQN, IStruct metadata, String onDatasource ) {
-		this.entityName	= entityName;
-		this.classFQN	= classFQN;
-		this.metadata	= metadata;
-		this.datasource	= onDatasource;
+		this.entityName		= entityName;
+		this.classFQN		= classFQN;
+		this.datasource		= onDatasource;
+		this.metadata		= metadata == null ? Struct.EMPTY : metadata;
+		this.resolverPrefix	= parseResolverPrefix( ( String ) this.metadata.getOrDefault( Key.path, ClassLocator.BX_PREFIX ) );
 
 		String[] fqn = this.classFQN.split( "\\." );
 		this.className = fqn[ fqn.length - 1 ];
@@ -91,5 +96,13 @@ public class EntityRecord {
 
 	public Path getXmlFilePath() {
 		return xmlFilePath;
+	}
+
+	public String getResolverPrefix() {
+		return resolverPrefix;
+	}
+
+	private String parseResolverPrefix( String filePath ) {
+		return filePath.endsWith( "cfc" ) ? "cfc" : ClassLocator.BX_PREFIX;
 	}
 }
