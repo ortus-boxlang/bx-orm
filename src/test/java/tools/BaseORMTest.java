@@ -19,6 +19,7 @@ package tools;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLException;
@@ -75,7 +76,15 @@ public class BaseORMTest {
 		// Is Derby module loaded?
 		if ( !instance.getModuleService().hasModule( derbyModule ) ) {
 			System.out.println( "Loading Derby module..." );
-			ModuleRecord derbyRecord = new ModuleRecord( moduleDependenciesPath + "/bx-derby" );
+			String derbyPath = moduleDependenciesPath + "/bx-derby";
+
+			if ( !Files.exists( Paths.get( derbyPath ) ) ) {
+				System.out.println( "Derby module not found at " + derbyPath );
+				System.out.println( "Please run 'gradle installModuleDependencies' to install the required modules." );
+				System.exit( 1 );
+			}
+
+			ModuleRecord derbyRecord = new ModuleRecord( derbyPath );
 			instance.getModuleService().getRegistry().put( derbyModule, derbyRecord );
 			derbyRecord
 			    .loadDescriptor( context )
