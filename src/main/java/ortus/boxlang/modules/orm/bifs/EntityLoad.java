@@ -17,24 +17,50 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import org.apache.commons.lang3.NotImplementedException;
-
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 @BoxBIF
 public class EntityLoad extends BaseORMBIF {
 
 	/**
-	 * ExampleBIF
+	 * Constructor
+	 */
+	public EntityLoad() {
+		super();
+		declaredArguments = new Argument[] {
+		    new Argument( true, "String", ORMKeys.entityName ),
+		    new Argument( true, "Any", ORMKeys.idOrFilter ),
+		    new Argument( false, "String", ORMKeys.uniqueOrOrder ),
+		    new Argument( false, "String", ORMKeys.options )
+		};
+	}
+
+	/**
+	 * Load an entity or array of entities from the database.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
-	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		// TODO implement BIF
-		throw new NotImplementedException();
+	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		if ( arguments.get( ORMKeys.idOrFilter ) instanceof String ) {
+			return loadEntityById( context, arguments );
+		}
+		return loadEntitiesByFilter( context, arguments );
 	}
 
+	private Object loadEntityById( IBoxContext context, ArgumentsScope arguments ) {
+		// if( BooleanCaster.cast( arguments.get( ORMKeys.uniqueOrOrder ) ) ) {
+		// return loadEntityByIdUnique( context, arguments );
+		// }
+		throw new BoxRuntimeException( "Unimplemented" );
+	}
+
+	private Object loadEntitiesByFilter( IBoxContext context, ArgumentsScope arguments ) {
+		throw new BoxRuntimeException( "Unimplemented" );
+	}
 }
