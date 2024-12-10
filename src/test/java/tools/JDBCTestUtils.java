@@ -112,18 +112,21 @@ public class JDBCTestUtils {
 		} catch ( DatabaseException e ) {
 			// Ignore the exception if the table already exists
 		}
-		datasource.execute( "TRUNCATE TABLE manufacturers", context );
 		datasource.execute(
-		    "INSERT INTO manufacturers ( id, name, address ) VALUES ( 1, 'Ford Motor Company', '202 Ford Way, Dearborn MI' )", context );
-		datasource
-		    .execute( "INSERT INTO manufacturers ( id, name, address ) VALUES ( 77, 'General Moters Corporation', 'P.O. BOX 33170, Detroit, MI 48232-5170' )",
-		        context );
-		datasource.execute(
-		    "INSERT INTO manufacturers ( id, name, address ) VALUES ( 42, 'Honda Motor Co.', 'CHI-5, 1919 Torrance Blvd., Torrance, CA 90501 - 2746 ' )",
-		    context );
+		    """
+		    TRUNCATE TABLE manufacturers;
+		    INSERT INTO manufacturers ( id, name, address ) VALUES
+		    ( 1, 'Ford Motor Company', '202 Ford Way, Dearborn MI' ),
+		    ( 77, 'General Moters Corporation', 'P.O. BOX 33170, Detroit, MI 48232-5170' ),
+		    ( 42, 'Honda Motor Co.', 'CHI-5, 1919 Torrance Blvd., Torrance, CA 90501 - 2746 ' );
+		    """, context );
 
-		datasource
-		    .execute( "TRUNCATE TABLE vehicles;INSERT INTO vehicles (vin,make,model,FK_manufacturer) VALUES('1HGCM82633A123456','Honda', 'Accord', 42 );",
-		        context );
+		datasource.execute(
+		    """
+		    TRUNCATE TABLE vehicles;
+		    INSERT INTO vehicles (vin,make,model,FK_manufacturer) VALUES
+		    ('1HGCM82633A123456','Honda', 'Accord', 42 ),
+		    ('2HGCM82633A654321','Honda', 'Civic', 42 );
+		    """, context );
 	}
 }
