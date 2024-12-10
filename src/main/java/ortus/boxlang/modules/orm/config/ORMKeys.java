@@ -170,6 +170,9 @@ public class ORMKeys {
 	 */
 	public static final Key	forceinsert				= Key.of( "forceinsert" );
 	public static final Key	entityNameList			= Key.of( "entityNameList" );
+	public static final Key	idOrFilter				= Key.of( "idOrFilter" );
+	public static final Key	uniqueOrOrder			= Key.of( "uniqueOrOrder" );
+	public static final Key	options					= Key.of( "options" );
 
 	/**
 	 * ORM event keys

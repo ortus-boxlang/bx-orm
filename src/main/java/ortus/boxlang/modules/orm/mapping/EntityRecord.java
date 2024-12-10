@@ -20,6 +20,7 @@ package ortus.boxlang.modules.orm.mapping;
 import java.nio.file.Path;
 
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
+import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -30,7 +31,7 @@ public class EntityRecord {
 	private String		entityName;
 	private String		classFQN;
 	private String		className;
-	private String		datasource;
+	private DataSource	datasource;
 	private IStruct		metadata;
 	private Path		xmlFilePath;
 	private IEntityMeta	entityMeta;
@@ -44,7 +45,7 @@ public class EntityRecord {
 		this( entityName, classFQN, metadata, null );
 	}
 
-	public EntityRecord( String entityName, String classFQN, IStruct metadata, String onDatasource ) {
+	public EntityRecord( String entityName, String classFQN, IStruct metadata, DataSource onDatasource ) {
 		this.entityName		= entityName;
 		this.classFQN		= classFQN;
 		this.datasource		= onDatasource;
@@ -90,7 +91,7 @@ public class EntityRecord {
 		return classFQN;
 	}
 
-	public String getDatasource() {
+	public DataSource getDatasource() {
 		return datasource;
 	}
 

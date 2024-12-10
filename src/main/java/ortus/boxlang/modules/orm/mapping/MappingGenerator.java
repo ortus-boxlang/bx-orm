@@ -155,7 +155,7 @@ public class MappingGenerator {
 	 *
 	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
 	 */
-	public static Map<String, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
+	public static Map<DataSource, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
 		if ( !ormConfig.autoGenMap ) {
 			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
 			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
@@ -348,7 +348,7 @@ public class MappingGenerator {
 		    entityName,
 		    fqn,
 		    meta,
-		    datasource.getOriginalName()
+		    datasource
 		);
 	}
 
@@ -417,7 +417,7 @@ public class MappingGenerator {
 	 *
 	 * @return The map of discovered entities, where the key is the datasource name and the value is a List of EntityRecord instances for that datasource.
 	 */
-	public Map<String, List<EntityRecord>> getEntityDatasourceMap() {
+	public Map<DataSource, List<EntityRecord>> getEntityDatasourceMap() {
 		return this.entities.stream().collect( java.util.stream.Collectors.groupingBy( EntityRecord::getDatasource ) );
 	}
 

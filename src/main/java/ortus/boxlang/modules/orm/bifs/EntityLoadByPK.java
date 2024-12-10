@@ -25,6 +25,7 @@ import org.hibernate.metadata.ClassMetadata;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
@@ -68,15 +69,16 @@ public class EntityLoadByPK extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session		= ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
+		String			entityName		= arguments.getAsString( ORMKeys.entity );
+		Object			keyValue		= arguments.get( Key.id );
 
-		String			entityName	= arguments.getAsString( ORMKeys.entity );
-		Object			keyValue	= arguments.get( Key.id );
-		String			keyType		= getKeyJavaType( session, entityName ).getSimpleName();
+		EntityRecord	entityRecord	= this.ormApp.lookupEntity( entityName, true );
+		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
 
 		// @TODO: Support composite keys.
-		Serializable	id			= ( Serializable ) GenericCaster.cast( context, keyValue, keyType );
-		var				entity		= session.get( entityName, id );
+		String			keyType			= getKeyJavaType( session, entityName ).getSimpleName();
+		Serializable	id				= ( Serializable ) GenericCaster.cast( context, keyValue, keyType );
+		var				entity			= session.get( entityName, id );
 
 		return entity;
 	}

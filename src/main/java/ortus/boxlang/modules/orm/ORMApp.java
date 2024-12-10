@@ -45,54 +45,54 @@ public class ORMApp {
 	/**
 	 * The logger for the ORM application.
 	 */
-	private BoxLangLogger					logger;
+	private BoxLangLogger						logger;
 
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime			runtime	= BoxRuntime.getInstance();
+	private static final BoxRuntime				runtime	= BoxRuntime.getInstance();
 
 	/**
 	 * A map of session factories, keyed by name.
 	 */
-	private Map<Key, SessionFactory>		sessionFactories;
+	private Map<Key, SessionFactory>			sessionFactories;
 
 	/**
 	 * The boxlang context used to create this ORM application.
 	 */
-	private RequestBoxContext				context;
+	private RequestBoxContext					context;
 
 	/**
 	 * The ORM configuration.
 	 */
-	private ORMConfig						config;
+	private ORMConfig							config;
 
 	/**
 	 * A unique name for this ORM application.
 	 */
-	private Key								name;
+	private Key									name;
 
 	/**
 	 * The default session factory for this ORM application.
 	 * <p>
 	 * In other words, the session factory for the default datasource.
 	 */
-	private SessionFactory					defaultSessionFactory;
+	private SessionFactory						defaultSessionFactory;
 
 	/**
 	 * The default datasource for this ORM application - created from the datasource named in the ORM configuration.
 	 */
-	private DataSource						defaultDatasource;
+	private DataSource							defaultDatasource;
 
 	/**
 	 * Array of configured datasources for this ORM application.
 	 */
-	private List<DataSource>				datasources;
+	private List<DataSource>					datasources;
 
 	/**
 	 * A map of entities discovered for this ORM application, keyed by datasource name.
 	 */
-	private Map<String, List<EntityRecord>>	entityMap;
+	private Map<DataSource, List<EntityRecord>>	entityMap;
 
 	/**
 	 * Get a unique name for this context's ORM Application.
@@ -147,11 +147,10 @@ public class ORMApp {
 		if ( logger.isDebugEnabled() )
 			logger.debug( "Discovered [{}] entities", this.entityMap.size() );
 
-		this.entityMap.forEach( ( datasourceName, entities ) -> {
+		this.entityMap.forEach( ( datasource, entities ) -> {
 			if ( logger.isDebugEnabled() )
-				logger.debug( "Creating session factory for datasource: {}", datasourceName );
+				logger.debug( "Creating session factory for datasource: {}", datasource.getOriginalName() );
 
-			DataSource datasource = context.getConnectionManager().getDatasourceOrThrow( Key.of( datasourceName ) );
 			this.datasources.add( datasource );
 
 			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, datasource, config, entities );
@@ -195,11 +194,11 @@ public class ORMApp {
 	 * @param datasourceName The datasource for which to get entities. Will filter the result to entities with a `datasource="myDatasourceName"`
 	 *                       annotation.
 	 */
-	public List<EntityRecord> getEntityRecords( String datasourceName ) {
-		if ( !this.entityMap.containsKey( datasourceName ) ) {
-			throw new BoxRuntimeException( "No entities found for datasource: " + datasourceName );
+	public List<EntityRecord> getEntityRecords( DataSource datasource ) {
+		if ( !this.entityMap.containsKey( datasource ) ) {
+			throw new BoxRuntimeException( "No entities found for datasource: " + datasource );
 		}
-		return this.entityMap.get( datasourceName );
+		return this.entityMap.get( datasource );
 	}
 
 	/**
@@ -211,7 +210,7 @@ public class ORMApp {
 	 * @return
 	 */
 	public EntityRecord lookupEntity( String entityName, Boolean fail ) {
-		var entityFromDefault = getEntityRecords( this.defaultDatasource.getOriginalName() ).stream()
+		var entityFromDefault = getEntityRecords( this.defaultDatasource ).stream()
 		    .filter( ( entity ) -> entity.getEntityName().equalsIgnoreCase( entityName ) )
 		    .findFirst();
 
@@ -221,7 +220,7 @@ public class ORMApp {
 
 		for ( DataSource datasource : this.datasources ) {
 			if ( !datasource.equals( this.defaultDatasource ) ) {
-				var entityFromDatasource = getEntityRecords( datasource.getOriginalName() ).stream()
+				var entityFromDatasource = getEntityRecords( datasource ).stream()
 				    .filter( ( entity ) -> entity.getEntityName().equalsIgnoreCase( entityName ) )
 				    .findFirst();
 
@@ -236,7 +235,7 @@ public class ORMApp {
 	/**
 	 * Get the entity map for this ORM application, where the key is the configured datasource name and the value is a list of EntityRecords.
 	 */
-	public Map<String, List<EntityRecord>> getEntityMap() {
+	public Map<DataSource, List<EntityRecord>> getEntityMap() {
 		return this.entityMap;
 	}
 

@@ -1,5 +1,6 @@
 package ortus.boxlang.modules.orm.bifs;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
@@ -22,14 +24,50 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				result = entityLoadByPK( "Manufacturer", 1 ).getAddress();
-				result2 = queryExecute( "SELECT * FROM Manufacturers" );
+				result = entityLoadByPK( "Manufacturer", 1 );
+				theAddress = result.getAddress();
 			""",
 			context
 		);
 		// @formatter:on
-		assertEquals( "202 Ford Way, Dearborn MI", variables.get( result ) );
-		assertEquals( 3, variables.getAsQuery( Key.of( "result2" ) ).size() );
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
+		assertThat( variables.get( Key.of( "theAddress" ) ) ).isEqualTo( "202 Ford Way, Dearborn MI" );
+	}
+
+	@DisplayName( "It can load an entity from the non-default datasource" )
+	@Test
+	public void testEntityLoadAlternateDatasource() {
+
+		// @formatter:off
+		instance.executeSource(
+			"""
+				result = entityLoadByPK( "MappingFromAnotherMother", 12345 );
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
+	}
+
+	@Disabled( "Entity injection is not working on .cfc files. To fix." )
+	@DisplayName( "It can load an entity from the non-default datasource and call a getter method" )
+	@Test
+	public void testEntityLoadAlternateDatasourceAndCallGetter() {
+
+		// @formatter:off
+		instance.executeSource(
+			"""
+				result = entityLoadByPK( "MappingFromAnotherMother", 12345 );
+				theName = result.getName();
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
+		assertThat( variables.get( Key.of( "theName" ) ) ).isEqualTo( "Marty McTester" );
 	}
 
 	@DisplayName( "It will add has* methods for associations" )

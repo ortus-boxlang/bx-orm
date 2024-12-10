@@ -28,6 +28,8 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
@@ -69,18 +71,20 @@ public class EntityNameArray extends BaseORMBIF {
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		Key		bifMethodKey	= arguments.getAsKey( BIF.__functionName );
+		String	datasourceName	= ( String ) arguments.getAsString( Key.datasource );
 		String	delimiter		= ( String ) arguments.getOrDefault( Key.delimiter, "," );
+
 		if ( delimiter == null ) {
 			delimiter = ",";
 		}
-		String				datasourceName	= ( String ) arguments.getAsString( Key.datasource );
 
-		ORMApp				ormApp			= this.ormService.getORMApp( context );
-		List<EntityRecord>	entityList		= datasourceName != null
-		    ? ormApp.getEntityRecords( datasourceName )
+		ConnectionManager	connectionManager	= context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
+		ORMApp				ormApp				= this.ormService.getORMApp( context );
+		List<EntityRecord>	entityList			= datasourceName != null
+		    ? ormApp.getEntityRecords( connectionManager.getDatasourceOrThrow( Key.of( datasourceName ) ) )
 		    : ormApp.getEntityRecords();
 
-		Array				entityNames		= Array.fromList(
+		Array				entityNames			= Array.fromList(
 		    entityList
 		        .stream()
 		        .map( entity -> entity.getEntityName() )
