@@ -19,6 +19,7 @@ package ortus.boxlang.modules.orm.mapping;
 
 import java.nio.file.Path;
 
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.loader.ClassLocator;
@@ -26,15 +27,50 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 
+/**
+ * Stores all entity metadata for a given entity.
+ */
 public class EntityRecord {
 
+	/**
+	 * The name of the entity. NOT necessarily the class name, but the entity name as defined by the entity annotations.
+	 */
 	private String		entityName;
+
+	/**
+	 * The fully qualified class name of the entity, like `models.User`.
+	 */
 	private String		classFQN;
+
+	/**
+	 * The simple class name of the entity, like `User`.
+	 */
 	private String		className;
+
+	/**
+	 * The configured datasource for this entity.
+	 */
 	private DataSource	datasource;
+
+	/**
+	 * Struct of metadata for the entity. Includes annotations, file path, etc.
+	 */
 	private IStruct		metadata;
+
+	/**
+	 * The path to the generated XML file for this entity.
+	 */
 	private Path		xmlFilePath;
+	/**
+	 * Stores all generated entity metadata for a given entity.
+	 * 
+	 * Used to construct the hibernate mapping XML.
+	 */
 	private IEntityMeta	entityMeta;
+
+	/**
+	 * Box class resolver prefix, either `cfc` or `bx`, used when instantiating the entity.
+	 */
 	private String		resolverPrefix;
 
 	public EntityRecord( String entityName, String classFQN ) {
@@ -105,5 +141,19 @@ public class EntityRecord {
 
 	private String parseResolverPrefix( String filePath ) {
 		return filePath.endsWith( "cfc" ) ? "cfc" : ClassLocator.BX_PREFIX;
+	}
+
+	public IStruct asStruct() {
+		return Struct.of(
+		    ORMKeys.entityName, entityName,
+		    "classFQN", classFQN,
+		    "className", className,
+		    Key.metadata, metadata,
+		    "xmlFilePath", xmlFilePath,
+		    "resolverPrefix", resolverPrefix,
+		    // @TODO: Write a better serializer for these two:
+		    ORMKeys.datasource, datasource.getUniqueName()
+		// ORMKeys.entityMeta, entityMeta.toString(),
+		);
 	}
 }
