@@ -145,7 +145,7 @@ public class ORMApp {
 		this.entityMap = MappingGenerator.discoverEntities( context, config );
 
 		if ( logger.isDebugEnabled() )
-			logger.debug( "Discovered entities on {} datasources:", this.entityMap.size() );
+			logger.debug( "Discovered [{}] entities", this.entityMap.size() );
 
 		this.entityMap.forEach( ( datasourceName, entities ) -> {
 			if ( logger.isDebugEnabled() )
@@ -204,10 +204,10 @@ public class ORMApp {
 
 	/**
 	 * Lookup the BoxLang EntityRecord object containing known entity information for a given entity name.
-	 * 
+	 *
 	 * @param session    The Hibernate session
 	 * @param entityName The entity name to look up
-	 * 
+	 *
 	 * @return
 	 */
 	public EntityRecord lookupEntity( String entityName, Boolean fail ) {

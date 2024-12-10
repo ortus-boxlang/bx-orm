@@ -70,6 +70,39 @@ public class BoxClassInstantiator implements Instantiator {
 
 	private static final ClassLocator	CLASS_LOCATOR		= BoxRuntime.getInstance().getClassLocator();
 
+	/**
+	 * --------------------------------------------------------------------------
+	 * Constructor
+	 * --------------------------------------------------------------------------
+	 */
+
+	/**
+	 * Constructor
+	 *
+	 * @param entityMetamodel The entity metamodel
+	 * @param mappingInfo
+	 */
+	public BoxClassInstantiator( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
+		this.entityMetamodel	= entityMetamodel;
+		this.mappingInfo		= mappingInfo;
+		this.entityName			= mappingInfo.getEntityName();
+
+		if ( mappingInfo.hasSubclasses() ) {
+			@SuppressWarnings( "unchecked" )
+			Iterator<PersistentClass> itr = mappingInfo.getSubclassClosureIterator();
+			while ( itr.hasNext() ) {
+				final PersistentClass subclassInfo = itr.next();
+				subclassClassNames.add( subclassInfo.getClassName() );
+			}
+		}
+	}
+
+	/**
+	 * --------------------------------------------------------------------------
+	 * All Methods
+	 * --------------------------------------------------------------------------
+	 */
+
 	public static IClassRunnable instantiateByFQN( IBoxContext context, String fqn ) {
 		return ( IClassRunnable ) CLASS_LOCATOR.load(
 		    context,
@@ -138,21 +171,6 @@ public class BoxClassInstantiator implements Instantiator {
 		return methodName.substring( 0, 1 ).toUpperCase() + methodName.substring( 1 );
 	}
 
-	public BoxClassInstantiator( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
-		this.entityMetamodel	= entityMetamodel;
-		this.mappingInfo		= mappingInfo;
-		this.entityName			= mappingInfo.getEntityName();
-
-		if ( mappingInfo.hasSubclasses() ) {
-			@SuppressWarnings( "unchecked" )
-			Iterator<PersistentClass> itr = mappingInfo.getSubclassClosureIterator();
-			while ( itr.hasNext() ) {
-				final PersistentClass subclassInfo = itr.next();
-				subclassClassNames.add( subclassInfo.getClassName() );
-			}
-		}
-	}
-
 	@Override
 	public Object instantiate( Serializable id ) {
 		ORMApp			ormApp			= ORMRequestContext.getForContext( RequestBoxContext.getCurrent() ).getORMApp();
@@ -186,10 +204,10 @@ public class BoxClassInstantiator implements Instantiator {
 	/**
 	 * Create a `has*` method for the entity association, like `hasManufacturer()`, which returns a boolean indicating whether the entity has a value (one
 	 * or more ) for the given association.
-	 * 
+	 *
 	 * @param collectionType  The type of collection, like 'bag' or 'map'.
 	 * @param associationMeta The metadata for the association.
-	 * 
+	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
 	public static DynamicFunction getHasMethod( String collectionType, IStruct associationMeta ) {
@@ -224,10 +242,10 @@ public class BoxClassInstantiator implements Instantiator {
 	 * Create an `add*` method for the entity association, like `addManufacturer()`, which appends the provided entity to the association.
 	 * <p>
 	 * Supports both array and struct associations, or, in the Hibernate vernacular, "bag" and "map" collections.
-	 * 
+	 *
 	 * @param collectionType  The type of collection, like 'bag' or 'map'.
 	 * @param associationMeta The metadata for the association.
-	 * 
+	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
 	public static DynamicFunction getAddMethod( String collectionType, IStruct associationMeta ) {
@@ -282,10 +300,10 @@ public class BoxClassInstantiator implements Instantiator {
 	 * found.
 	 * <p>
 	 * Supports both array and struct associations, or, in the Hibernate vernacular, "bag" and "map" collections.
-	 * 
+	 *
 	 * @param collectionType  The type of collection, like 'bag' or 'map'.
 	 * @param associationMeta The metadata for the association.
-	 * 
+	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
 	public static DynamicFunction getRemoveMethod( String collectionType, IStruct associationMeta ) {

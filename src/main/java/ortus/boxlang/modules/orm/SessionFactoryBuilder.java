@@ -90,9 +90,9 @@ public class SessionFactoryBuilder {
 
 	/**
 	 * Get the application context tied to this Hibernate session factory.
-	 * 
+	 *
 	 * @TODO: Move this into our SessionFactory wrapper class.
-	 * 
+	 *
 	 * @param sessionFactory The Hibernate session factory
 	 */
 	public static ApplicationBoxContext getApplicationContext( SessionFactory sessionFactory ) {
@@ -101,7 +101,7 @@ public class SessionFactoryBuilder {
 
 	/**
 	 * Get the BoxLang context tied to this Hibernate session factory.
-	 * 
+	 *
 	 * @param sessionFactory The Hibernate session factory
 	 */
 	public static IBoxContext getContext( SessionFactory sessionFactory ) {
@@ -110,9 +110,9 @@ public class SessionFactoryBuilder {
 
 	/**
 	 * Get a unique name for this context's ORM Application.
-	 * 
+	 *
 	 * Used to ensure we can tell the various ORM apps apart.
-	 * 
+	 *
 	 * @return a unique key for the given context's application.
 	 */
 	public static String getUniqueAppName( IBoxContext context ) {
@@ -122,7 +122,7 @@ public class SessionFactoryBuilder {
 
 	/**
 	 * Get a unique key for the given context/datasource combination.
-	 * 
+	 *
 	 * @return a unique key for the given context/datasource combination.
 	 */
 	public static Key getUniqueName( IBoxContext context, DataSource datasource ) {
@@ -139,7 +139,7 @@ public class SessionFactoryBuilder {
 
 	/**
 	 * Get a unique name for this session factory.
-	 * 
+	 *
 	 * @return a unique name for this session factory, based on the application name and datasource name.
 	 */
 	public Key getUniqueName() {
@@ -151,7 +151,7 @@ public class SessionFactoryBuilder {
 	 * <p>
 	 * This method will generate entity mappings if `ormConfig.autoGenMap` is true, as well as parse the ORM configuration and set up the Hibernate
 	 * configuration.
-	 * 
+	 *
 	 * @return a Hibernate session factory ready for use.
 	 */
 	public SessionFactory build() {
@@ -174,13 +174,13 @@ public class SessionFactoryBuilder {
 
 	/**
 	 * Configure the Hibernate session factory with the ORM configuration, entity mappings, etc.
-	 * 
+	 *
 	 * @return a populated Hibernate configuration object
 	 */
 	private Configuration buildConfiguration() {
 		Configuration	configuration	= ormConfig.toHibernateConfig();
-
 		Properties		properties		= new Properties();
+
 		// @TODO: Any configuration which needs a specific java type (such as the
 		// connection provider instance) goes here
 		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasource ) );
@@ -203,9 +203,7 @@ public class SessionFactoryBuilder {
 		    .stream()
 		    .map( EntityRecord::getXmlFilePath )
 		    .map( Path::toString )
-		    .forEach( ( path ) -> {
-			    configuration.addFile( path );
-		    } );
+		    .forEach( configuration::addFile );
 
 		configuration.addProperties( properties );
 
