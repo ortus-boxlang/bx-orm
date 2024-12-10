@@ -67,28 +67,38 @@ public class ORMRequestContext {
 	/**
 	 * Map of Hibernate sessions for this request, keyed by datasource name.
 	 */
-	private Map<Key, Session>		sessions	= new ConcurrentHashMap<Key, Session>();
+	private Map<Key, Session>		sessions	= new ConcurrentHashMap<>();
 
 	/**
 	 * Retrieve the ORMRequestContext for the given context.
 	 *
 	 * @param context The context to retrieve the ORMRequestContext for.
-	 * 
+	 *
 	 * @return The ORMRequestContext for the given context.
 	 */
 	public static ORMRequestContext getForContext( RequestBoxContext context ) {
 		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
+
 		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
 		    || !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
 		}
-		return context.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, ( key ) -> {
+
+		return context.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, key -> {
 			// logger.debug( "Initializing ORM context" );
-			IStruct ormConfig = ( IStruct ) appSettings.get( ORMKeys.ORMSettings );
-			return new ORMRequestContext( context, new ORMConfig( ormConfig ) );
+			return new ORMRequestContext(
+			    context,
+			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), context )
+			);
 		} );
 	}
 
+	/**
+	 * Constructor.
+	 *
+	 * @param context The request context.
+	 * @param config  The ORM configuration.
+	 */
 	public ORMRequestContext( RequestBoxContext context, ORMConfig config ) {
 		this.context	= context;
 		this.config		= config;
@@ -144,7 +154,7 @@ public class ORMRequestContext {
 
 	/**
 	 * Getter for this ORM request context's ORM configuration.
-	 * 
+	 *
 	 * @return
 	 */
 	public ORMConfig getConfig() {

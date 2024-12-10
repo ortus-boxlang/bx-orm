@@ -72,8 +72,21 @@ public class SessionFactoryBuilder {
 	 */
 	private List<EntityRecord>		entities;
 
+	/**
+	 * The BoxLang context for this session factory.
+	 */
 	private IJDBCCapableContext		context;
+
+	/**
+	 * The application context for this session factory.
+	 */
 	private ApplicationBoxContext	applicationContext;
+
+	/**
+	 * ------------------------------------------------------------------------------------------------------------
+	 * Static Helpers
+	 * ------------------------------------------------------------------------------------------------------------
+	 */
 
 	/**
 	 * Get the application context tied to this Hibernate session factory.
@@ -116,12 +129,26 @@ public class SessionFactoryBuilder {
 		return Key.of( SessionFactoryBuilder.getUniqueAppName( context ) + "_" + datasource.getUniqueName().getName() );
 	}
 
+	/**
+	 * ------------------------------------------------------------------------------------------------------------
+	 * Constructor(s)
+	 * ------------------------------------------------------------------------------------------------------------
+	 */
+
+	/**
+	 * Constructor
+	 *
+	 * @param context    The BoxLang context for this session factory.
+	 * @param datasource The ORM datasource for this session factory.
+	 * @param ormConfig  The ORM configuration for this session factory.
+	 * @param entities   The discovered entities for this session factory.
+	 */
 	public SessionFactoryBuilder( IJDBCCapableContext context, DataSource datasource, ORMConfig ormConfig, List<EntityRecord> entities ) {
 		this.ormConfig			= ormConfig;
 		this.context			= context;
+		this.applicationContext	= context.getApplicationContext();
 		this.datasource			= datasource;
 		this.entities			= entities;
-		this.applicationContext	= ( ( IBoxContext ) context ).getParentOfType( ApplicationBoxContext.class );
 		this.logger				= runtime.getLoggingService().getLogger( "orm" );
 	}
 
@@ -131,7 +158,7 @@ public class SessionFactoryBuilder {
 	 * @return a unique name for this session factory, based on the application name and datasource name.
 	 */
 	public Key getUniqueName() {
-		return SessionFactoryBuilder.getUniqueName( ( IBoxContext ) this.context, datasource );
+		return SessionFactoryBuilder.getUniqueName( this.context, datasource );
 	}
 
 	/**
@@ -147,10 +174,16 @@ public class SessionFactoryBuilder {
 		// module's dependencies.
 		ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
 		Thread.currentThread().setContextClassLoader( Configuration.class.getClassLoader() );
-		Configuration	configuration	= buildConfiguration();
 
-		SessionFactory	factory			= configuration.buildSessionFactory();
-		Thread.currentThread().setContextClassLoader( oldClassLoader );
+		// Make sure we clean up the classloader when we're done.
+		SessionFactory	factory;
+		Configuration	configuration;
+		try {
+			configuration	= buildConfiguration();
+			factory			= configuration.buildSessionFactory();
+		} finally {
+			Thread.currentThread().setContextClassLoader( oldClassLoader );
+		}
 
 		factory.getProperties().put( BOXLANG_APPLICATION_CONTEXT, configuration.getProperties().get( BOXLANG_APPLICATION_CONTEXT ) );
 		factory.getProperties().put( BOXLANG_CONTEXT, configuration.getProperties().get( BOXLANG_CONTEXT ) );
@@ -183,8 +216,9 @@ public class SessionFactoryBuilder {
 		// Don't pretend our BL entities are POJOs.
 		configuration.setProperty( AvailableSettings.DEFAULT_ENTITY_MODE, "dynamic-map" );
 
-		Map<String, EntityRecord> entityMap = this.entities.stream()
-		    .collect( java.util.stream.Collectors.toMap( ( entity ) -> entity.getEntityName().toLowerCase().trim(), ( entity ) -> entity ) );
+		Map<String, EntityRecord> entityMap = this.entities
+		    .stream()
+		    .collect( java.util.stream.Collectors.toMap( entity -> entity.getEntityName().toLowerCase().trim(), entity -> entity ) );
 		properties.put( BOXLANG_ENTITY_MAP, entityMap );
 
 		entityMap.values()

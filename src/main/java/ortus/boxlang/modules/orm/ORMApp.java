@@ -95,6 +95,12 @@ public class ORMApp {
 	private Map<DataSource, List<EntityRecord>>	entityMap;
 
 	/**
+	 * ------------------------------------------------------------------------------------------------------------
+	 * Static Helpers
+	 * ------------------------------------------------------------------------------------------------------------
+	 */
+
+	/**
 	 * Get a unique name for this context's ORM Application.
 	 *
 	 * Used to ensure we can tell the various ORM apps apart.
@@ -117,6 +123,18 @@ public class ORMApp {
 		return Key.of( application.getName() + "_" + appConfig.hashCode() );
 	}
 
+	/**
+	 * ------------------------------------------------------------------------------------------------------------
+	 * Constructor(s)
+	 * ------------------------------------------------------------------------------------------------------------
+	 */
+
+	/**
+	 * Constructor for ORMApp.
+	 *
+	 * @param context The BoxLang Request context for the application.
+	 * @param config  The ORM configuration for the application.
+	 */
 	public ORMApp( RequestBoxContext context, ORMConfig config ) {
 		// @TODO: Consider only storing the ApplicationBoxContext, as that's the parent, and the RequestBoxContext will obviously age out pretty quickly.
 		this.context	= context;
@@ -139,7 +157,7 @@ public class ORMApp {
 	}
 
 	/**
-	 * Start up the ORM application, creating session factories for all discovered entities.
+	 * Start up the ORM application, creating session factories for all discovered entities and their datasources.
 	 */
 	public void startup() {
 		this.entityMap = MappingGenerator.discoverEntities( context, config );

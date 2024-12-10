@@ -136,8 +136,12 @@ public class ORMService extends BaseService {
 	 *
 	 * @param context The IBoxContext for the application.
 	 * @param config  The ORM configuration - parsed from the application settings.
+	 *
+	 * @return The ORM application that was started.
 	 */
 	public ORMApp startupApp( RequestBoxContext context, ORMConfig config ) {
+		// We store the new ORM application in the application context, so we can retrieve it later.
+		// The BoxLang application can have 0-n ORM applications, so we need to store them in the application context.
 		return context.getApplicationContext().computeAttachmentIfAbsent( ORMKeys.ORMApp, key -> {
 			ORMApp newORMApp = new ORMApp( context, config );
 

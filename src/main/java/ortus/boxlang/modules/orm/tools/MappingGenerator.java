@@ -23,6 +23,7 @@ import java.util.HashMap;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.types.Array;
@@ -32,15 +33,19 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 /**
  * I am a CLI tool for testing the Hibernate mapping generator.
  * <p>
- * I must be executed with the boxlang.jar in the classpath, as well as the bx-orm jar itself (duh, no duh).
+ * I must be executed with the boxlang.jar in the classpath, as well as the
+ * bx-orm jar itself (duh, no duh).
  * <p>
  * You can pass any of the following options:
  * <ul>
- * <li><code>--path MY_PATH</code> - Required. Relative path to the ORM entity files.</li>
- * <li><code>--failFast</code> - Inverse of the legacy CFML configuration `skipCFCWithError`. If `--failFast` is passed, the .xml generation will
+ * <li><code>--path MY_PATH</code> - Required. Relative path to the ORM entity
+ * files.</li>
+ * <li><code>--failFast</code> - Inverse of the legacy CFML configuration
+ * `skipCFCWithError`. If `--failFast` is passed, the .xml generation will
  * abort if
  * any entity class files fail to parse.</li>
- * <li><code>--debug</code> - Spit out debug logging. Not necessary for your first run, but this may be helpful in debugging mapping errors.</li>
+ * <li><code>--debug</code> - Spit out debug logging. Not necessary for your
+ * first run, but this may be helpful in debugging mapping errors.</li>
  * </ul>
  */
 public class MappingGenerator {
@@ -88,26 +93,30 @@ public class MappingGenerator {
 
 			if ( mappings.size() > 0 ) {
 				for ( String key : mappings.keySet() ) {
-					logger.info( "Mapping: " + key + " -> " + mappings.get( key ) );
+					if ( logger.isInfoEnabled() ) {
+						logger.info( "Mapping: [{}] -> [{}]", key, mappings.get( key ) );
+					}
 					runtime.getConfiguration().registerMapping( key, Path.of( mappings.get( key ) ).toAbsolutePath().toString() );
 				}
 			}
-			ORMConfig											ormConfig	= new ORMConfig( Struct.of(
-			    // required that the user pass the correct path to their entity locations.
-			    ORMKeys.entityPaths, entityPaths,
-			    // Don't "fail fast" by default, aka let the user opt-in to fail at parse error.
-			    ORMKeys.ignoreParseErrors, !failFast,
-			    // by default, save the generated hbm.xml files to the same directory.
-			    ORMKeys.saveMapping, true
-			) );
+			ORMConfig											ormConfig	= new ORMConfig(
+			    Struct.of(
+			        // required that the user pass the correct path to their entity locations.
+			        ORMKeys.entityPaths, entityPaths,
+			        // Don't "fail fast" by default, aka let the user opt-in to fail at parse error.
+			        ORMKeys.ignoreParseErrors, !failFast,
+			        // by default, save the generated hbm.xml files to the same directory.
+			        ORMKeys.saveMapping, true
+			    ),
+			    ( RequestBoxContext ) runtime.getRuntimeContext()
+			);
 
 			// @TODO: Add a custom toString() to ORMConfig for logging purposes.
 			// log.info( "Using ORM Config: {}", ormConfig );
 
 			ortus.boxlang.modules.orm.mapping.MappingGenerator	generator	= new ortus.boxlang.modules.orm.mapping.MappingGenerator(
 			    new ScriptingRequestBoxContext( runtime.getRuntimeContext() ),
-			    ormConfig
-			);
+			    ormConfig );
 
 			logger.info( "========= Generating XML mappings! " );
 			generator.generateMappings();

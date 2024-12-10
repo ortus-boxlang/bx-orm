@@ -31,7 +31,6 @@ import ortus.boxlang.modules.orm.config.naming.BoxLangClassNamingStrategy;
 import ortus.boxlang.modules.orm.config.naming.MacroCaseNamingStrategy;
 import ortus.boxlang.modules.orm.hibernate.BoxClassInstantiator;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
@@ -225,41 +224,46 @@ public class ORMConfig {
 	/**
 	 * Application context used for class lookups in naming strategies, event handlers, etc.
 	 */
-	private IBoxContext				appContext;
+	private RequestBoxContext		requestContext;
 
 	/**
 	 * Constructor
+	 *
+	 * @param properties Struct of ORM configuration properties.
 	 */
-	public ORMConfig( IStruct properties ) {
+	public ORMConfig( IStruct properties, RequestBoxContext context ) {
 		this.logger = runtime.getLoggingService().getLogger( "orm" );
 		if ( properties == null ) {
 			properties = new Struct();
 		}
-		this.appContext = runtime.getRuntimeContext();
+		this.requestContext = context;
 		implementBackwardsCompatibility( properties );
 		process( properties );
 	}
 
 	/**
 	 * Construct an ORMConfig object from the application settings.
-	 * 
+	 *
 	 * @param context The IBoxContext object for the current request.
-	 * 
+	 *
 	 * @return ORMConfig object or null if ORM is not enabled or no ORM settings are present in the application settings.
 	 */
 	public static ORMConfig loadFromContext( RequestBoxContext context ) {
 		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
+
 		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
 		    || !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
 			// logger.info( "ORMEnabled is false or not specified;" );
 			return null;
 		}
+
 		if ( !appSettings.containsKey( ORMKeys.ORMSettings )
 		    || appSettings.get( ORMKeys.ORMSettings ) == null ) {
 			// logger.info( "No ORM configuration found in application configuration;" );
 			return null;
 		}
-		return new ORMConfig( ( IStruct ) appSettings.get( ORMKeys.ORMSettings ) );
+
+		return new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), context );
 	}
 
 	/**
@@ -270,7 +274,7 @@ public class ORMConfig {
 	 * <li><code>skipCFCWithError</code> -> <code>ignoreParseErrors</code></li>
 	 * <li><code>cfclocation</code> -> <code>entityPaths</code></li>
 	 * </ul>
-	 * 
+	 *
 	 * @param properties Struct of ORM configuration properties.
 	 */
 	public void implementBackwardsCompatibility( IStruct properties ) {
@@ -297,7 +301,7 @@ public class ORMConfig {
 	/**
 	 * Process the ORM configuration properties and set the private config fields
 	 * accordingly.
-	 * 
+	 *
 	 * @param properties Struct of ORM configuration properties.
 	 */
 	private void process( IStruct properties ) {
@@ -404,7 +408,7 @@ public class ORMConfig {
 
 	/**
 	 * Encapsulates the logic for setting the `entityPaths` configuration setting based on a string, list of strings, array, or null value.
-	 * 
+	 *
 	 * @param entityPaths The value of the `entityPaths` or (deprecated) `cfcLocation` configuration setting.
 	 */
 	private void setEntityPaths( Object entityPaths ) {
@@ -420,12 +424,13 @@ public class ORMConfig {
 	}
 
 	/**
-	 * Populate and return a Hibernate configuration object using the constructed
-	 * properties.
+	 * Populate and return a Hibernate configuration object using the constructed properties in this ORMConfig object.
+	 *
+	 * @return Hibernate Configuration object.
 	 */
 	public Configuration toHibernateConfig() {
 		IClassRunnable				eventHandlerClass	= this.eventHandler != null
-		    ? BoxClassInstantiator.instantiateByFQN( this.appContext, this.eventHandler )
+		    ? BoxClassInstantiator.instantiateByFQN( this.requestContext, this.eventHandler )
 		    : null;
 		BootstrapServiceRegistry	bootstrapRegistry	= new BootstrapServiceRegistryBuilder()
 		    .applyIntegrator( new EventListener( eventHandlerClass ) )
@@ -543,7 +548,7 @@ public class ORMConfig {
 			 * The "cfc" naming strategy allows apps to define their own naming strategy by
 			 * providing a full CFC path.
 			 */
-			default -> new BoxLangClassNamingStrategy( BoxClassInstantiator.instantiateByFQN( this.appContext, name ) );
+			default -> new BoxLangClassNamingStrategy( BoxClassInstantiator.instantiateByFQN( this.requestContext, name ) );
 		};
 	}
 
@@ -585,9 +590,9 @@ public class ORMConfig {
 	 * Translate a short dialect name like 'MYSQL' to the full Hibernate dialect class name like 'org.hibernate.dialect.MySQLDialect'.
 	 * <p>
 	 * Note that this method should be removed once we migrate to Hibernate 6+.
-	 * 
+	 *
 	 * @param dialectName Hibernate dialect name, either full like 'org.hibernate.dialect.MySQLDialect' or short like 'MYSQL'.
-	 * 
+	 *
 	 * @return If the dialect passed is recognized as a dialect alias, the full Hibernate dialect class name is returned. Otherwise, the original dialect
 	 *         name is returned unmodified.
 	 */

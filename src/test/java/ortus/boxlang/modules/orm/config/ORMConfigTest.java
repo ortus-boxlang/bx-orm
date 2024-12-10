@@ -26,10 +26,13 @@ import org.hibernate.cfg.Configuration;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.Struct;
 
 public class ORMConfigTest {
+
+	BoxRuntime instance = BoxRuntime.getInstance( true );
 
 	@Disabled( "Dialect mapping is broken and disabled; must fix!" )
 	@Test
@@ -37,7 +40,7 @@ public class ORMConfigTest {
 		Configuration config = new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.dialect, "DerbyTenSeven"
-		) ).toHibernateConfig();
+		), instance.getRuntimeContext().getRequestContext() ).toHibernateConfig();
 
 		assertEquals( "org.hibernate.dialect.DerbyTenSevenDialect", config.getProperty( AvailableSettings.DIALECT ) );
 	}
@@ -48,18 +51,19 @@ public class ORMConfigTest {
 		Configuration config = new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.dialect, "DerbyTenSevenDialect"
-		) ).toHibernateConfig();
+		), instance.getRuntimeContext().getRequestContext() ).toHibernateConfig();
 
 		assertEquals( "org.hibernate.dialect.DerbyTenSevenDialect", config.getProperty( AvailableSettings.DIALECT ) );
 	}
 
 	@Test
 	public void testGenericSettings() {
+		System.out.println( instance.getRuntimeContext().getClass() );
 		Configuration config = new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.catalog, "foobar",
 		    ORMKeys.schema, "dbo"
-		) ).toHibernateConfig();
+		), instance.getRuntimeContext().getRequestContext() ).toHibernateConfig();
 
 		assertEquals( "foobar", config.getProperty( AvailableSettings.DEFAULT_CATALOG ) );
 		assertEquals( "dbo", config.getProperty( AvailableSettings.DEFAULT_SCHEMA ) );
@@ -67,7 +71,7 @@ public class ORMConfigTest {
 
 	@Test
 	public void testDefaultConfig() {
-		ORMConfig config = new ORMConfig( Struct.of() );
+		ORMConfig config = new ORMConfig( Struct.of(), instance.getRuntimeContext().getRequestContext() );
 		assertFalse( config.secondaryCacheEnabled );
 		assertFalse( config.logSQL );
 		assertFalse( config.eventHandling );
@@ -110,7 +114,7 @@ public class ORMConfigTest {
 		    ORMKeys.saveMapping, true,
 		    ORMKeys.autoGenMap, false,
 		    ORMKeys.skipCFCWithError, true
-		) );
+		), instance.getRuntimeContext().getRequestContext() );
 
 		// common settings
 		assertEquals( "/foo/models", String.join( "", config.entityPaths ) );
