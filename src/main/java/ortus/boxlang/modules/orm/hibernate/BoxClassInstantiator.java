@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMRequestContext;
-import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -176,9 +175,7 @@ public class BoxClassInstantiator implements Instantiator {
 		ORMApp			ormApp			= ORMRequestContext.getForContext( RequestBoxContext.getCurrent() ).getORMApp();
 		EntityRecord	entityRecord	= ormApp.lookupEntity( this.entityName, true );
 		return BoxClassInstantiator.instantiate(
-		    SessionFactoryBuilder
-		        .getApplicationContext( entityMetamodel.getSessionFactory() )
-		        .getRequestContext(),
+		    RequestBoxContext.getCurrent(),
 		    entityRecord,
 		    null
 		);
