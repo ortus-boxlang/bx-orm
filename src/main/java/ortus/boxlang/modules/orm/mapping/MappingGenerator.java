@@ -141,6 +141,9 @@ public class MappingGenerator {
 	/**
 	 * Retrieve the entity map for this session factory, constructing them if necessary.
 	 *
+	 * @param context   The JDBC-capable context.
+	 * @param ormConfig The ORM configuration.
+	 *
 	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
 	 */
 	public static Map<String, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {

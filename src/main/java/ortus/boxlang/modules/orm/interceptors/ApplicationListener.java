@@ -17,9 +17,6 @@
  */
 package ortus.boxlang.modules.orm.interceptors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
@@ -39,9 +36,9 @@ import ortus.boxlang.runtime.types.IStruct;
  */
 public class ApplicationListener extends BaseInterceptor {
 
-	private static final Logger	logger		= LoggerFactory.getLogger( ApplicationListener.class );
-
-	private static BoxRuntime	instance	= BoxRuntime.getInstance();
+	// The properties to configure the interceptor with
+	private static BoxRuntime	runtime	= BoxRuntime.getInstance();
+	private ORMService			ormService;
 
 	/**
 	 * This method is called by the BoxLang runtime to configure the interceptor
@@ -51,7 +48,9 @@ public class ApplicationListener extends BaseInterceptor {
 	 */
 	@Override
 	public void configure( IStruct properties ) {
-		this.properties = properties;
+		this.properties	= properties;
+		this.logger		= runtime.getLoggingService().getLogger( "orm" );
+		this.ormService	= ( ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService ) );
 	}
 
 	/**
@@ -60,16 +59,17 @@ public class ApplicationListener extends BaseInterceptor {
 	 */
 	@InterceptionPoint
 	public void afterApplicationListenerLoad( IStruct args ) {
-		logger.info(
-		    "afterApplicationListenerLoad fired; checking for ORM configuration in the application context config" );
+		this.logger.debug(
+		    "afterApplicationListenerLoad fired; checking for ORM configuration in the application context config"
+		);
 
 		RequestBoxContext	context	= ( RequestBoxContext ) args.get( "context" );
 		ORMConfig			config	= ORMConfig.loadFromContext( context );
 		if ( config != null ) {
-			logger.info( "ORMEnabled is true and ORM settings are specified - Firing ORM application startup." );
-			System.out.println( "ORMService is registered:" + instance.hasGlobalService( ORMKeys.ORMService ) );
-			ORMService ormService = ( ( ORMService ) instance.getGlobalService( ORMKeys.ORMService ) );
-			ormService.startupApp( context, config );
+			this.logger.info( "ORMEnabled is true and ORM settings are specified - Firing ORM application startup." );
+			// System.out.println( "ORMService is registered:" + runtime.hasGlobalService( ORMKeys.ORMService ) );
+
+			this.ormService.startupApp( context, config );
 		}
 	}
 
@@ -78,13 +78,15 @@ public class ApplicationListener extends BaseInterceptor {
 	 */
 	@InterceptionPoint
 	public void onApplicationEnd( IStruct args ) {
-		if ( !instance.hasGlobalService( ORMKeys.ORMService ) ) {
-			logger.error( "No global service found for ORMService; unable to shut down ORM application" );
+
+		if ( !runtime.hasGlobalService( ORMKeys.ORMService ) ) {
+			this.logger.error( "No global service found for ORMService; unable to shut down ORM application" );
 		}
-		logger.info( "onApplicationEnd fired; Shutting down ORM application" );
-		Application	application	= ( Application ) args.get( "application" );
-		ORMService	ormService	= ( ORMService ) instance.getGlobalService( ORMKeys.ORMService );
-		ormService.shutdownApp( ORMApp.getUniqueAppName( application, application.getStartingListener().getSettings() ) );
+
+		this.logger.info( "onApplicationEnd fired; Shutting down ORM application" );
+
+		Application application = ( Application ) args.get( "application" );
+		this.ormService.shutdownApp( ORMApp.getUniqueAppName( application, application.getStartingListener().getSettings() ) );
 	}
 
 	/**
@@ -92,7 +94,7 @@ public class ApplicationListener extends BaseInterceptor {
 	 */
 	@InterceptionPoint
 	public void onApplicationRestart( IStruct args ) {
-		logger.info( "onApplicationRestart fired; cleaning up ORM resources for this application context" );
+		this.logger.info( "onApplicationRestart fired; cleaning up ORM resources for this application context" );
 		// @TODO: clean up Hibernate resources
 	}
 }
