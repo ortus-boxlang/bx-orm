@@ -100,6 +100,20 @@ public class JDBCTestUtils {
 		datasource.execute( "DROP TABLE manufacturers", context );
 	}
 
+	public static void resetAlternateTables( DataSource datasource, IBoxContext context ) {
+		try {
+			datasource.execute( "CREATE TABLE alternate_ds ( id INTEGER, name VARCHAR(155) )", context );
+		} catch ( DatabaseException e ) {
+			// Ignore the exception if the table already exists
+		}
+		datasource.execute(
+		    """
+		    TRUNCATE TABLE alternate_ds;
+		    INSERT INTO alternate_ds (id,name) VALUES
+		    (12345, 'Marty McTester' );
+		    """, context );
+	}
+
 	/**
 	 * Reset the `manufacturers` table to a known, consistent state for testing.
 	 *
@@ -117,8 +131,8 @@ public class JDBCTestUtils {
 		    TRUNCATE TABLE manufacturers;
 		    INSERT INTO manufacturers ( id, name, address ) VALUES
 		    ( 1, 'Ford Motor Company', '202 Ford Way, Dearborn MI' ),
-		    ( 77, 'General Moters Corporation', 'P.O. BOX 33170, Detroit, MI 48232-5170' ),
-		    ( 42, 'Honda Motor Co.', 'CHI-5, 1919 Torrance Blvd., Torrance, CA 90501 - 2746 ' );
+		    ( 42, 'Honda Motor Co.', 'CHI-5, 1919 Torrance Blvd., Torrance, CA 90501 - 2746 ' ),
+		    ( 77, 'General Moters Corporation', 'P.O. BOX 33170, Detroit, MI 48232-5170' );
 		    """, context );
 
 		datasource.execute(
@@ -126,7 +140,8 @@ public class JDBCTestUtils {
 		    TRUNCATE TABLE vehicles;
 		    INSERT INTO vehicles (vin,make,model,FK_manufacturer) VALUES
 		    ('1HGCM82633A123456','Honda', 'Accord', 42 ),
-		    ('2HGCM82633A654321','Honda', 'Civic', 42 );
+		    ('2HGCM82633A654321','Honda', 'Civic', 42 ),
+		    ('1HGCM82633A789012','Honda', 'Ridgeline', 42 );
 		    """, context );
 	}
 }

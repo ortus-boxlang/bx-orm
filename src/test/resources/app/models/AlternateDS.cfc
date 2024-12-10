@@ -1,4 +1,4 @@
-component entityName="MappingFromAnotherMother" datasource="dsn2"  persistent="true" {
+component entityName="MappingFromAnotherMother" table="alternate_ds" datasource="dsn2"  persistent="true" {
 
     property 
         name="id" 

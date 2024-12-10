@@ -70,6 +70,7 @@ public class BaseORMTest {
 		assertNotNull( context.getApplicationContext() );
 
 		JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
+		JDBCTestUtils.resetAlternateTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDatasourceOrThrow( Key.of( "dsn2" ) ), context );
 	}
 
 	protected static void loadModule( IBoxContext context ) {
