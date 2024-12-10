@@ -25,7 +25,6 @@ import org.hibernate.metadata.ClassMetadata;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
@@ -35,13 +34,12 @@ import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
-public class EntityLoadByPK extends BIF {
+public class EntityLoadByPK extends BaseORMBIF {
 
 	/**
 	 * Constructor
 	 */
 	public EntityLoadByPK() {
-
 		super();
 		declaredArguments = new Argument[] {
 		    new Argument( true, "String", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),

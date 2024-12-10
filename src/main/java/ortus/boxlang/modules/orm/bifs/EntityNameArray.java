@@ -38,7 +38,7 @@ import ortus.boxlang.runtime.validation.Validator;
 @BoxBIF
 // @TODO: Consider deprecating entityNameList, since we can just use entityNameArray.toList().
 @BoxBIF( alias = "EntityNameList" )
-public class EntityNameArray extends BIF {
+public class EntityNameArray extends BaseORMBIF {
 
 	/**
 	 * ORM Service, responsible for managing ORM applications.
@@ -49,7 +49,6 @@ public class EntityNameArray extends BIF {
 	 * Constructor
 	 */
 	public EntityNameArray() {
-
 		super();
 		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
 		declaredArguments	= new Argument[] {

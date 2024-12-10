@@ -24,7 +24,6 @@ import org.hibernate.Session;
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.util.EntityUtil;
-import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
@@ -34,7 +33,7 @@ import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
-public class EntitySave extends BIF {
+public class EntitySave extends BaseORMBIF {
 
 	/**
 	 * Constructor

@@ -19,13 +19,12 @@ package ortus.boxlang.modules.orm.bifs;
 
 import org.apache.commons.lang3.NotImplementedException;
 
-import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 
 @BoxBIF
-public class EntityLoad extends BIF {
+public class EntityLoad extends BaseORMBIF {
 
 	/**
 	 * ExampleBIF

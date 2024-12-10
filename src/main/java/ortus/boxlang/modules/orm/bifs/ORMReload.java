@@ -21,13 +21,12 @@ import org.hibernate.SessionFactory;
 
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 
 @BoxBIF
-public class ORMReload extends BIF {
+public class ORMReload extends BaseORMBIF {
 
 	/**
 	 * Reload the ORM application.

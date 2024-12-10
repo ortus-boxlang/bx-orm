@@ -24,7 +24,6 @@ import org.hibernate.SessionFactory;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
@@ -34,7 +33,7 @@ import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
-public class ORMGetSessionFactory extends BIF {
+public class ORMGetSessionFactory extends BaseORMBIF {
 
 	/**
 	 * ORM Service, responsible for managing ORM applications.
@@ -45,7 +44,6 @@ public class ORMGetSessionFactory extends BIF {
 	 * Constructor
 	 */
 	public ORMGetSessionFactory() {
-
 		super();
 		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
 		declaredArguments	= new Argument[] {
