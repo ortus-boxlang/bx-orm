@@ -17,59 +17,56 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static com.google.common.truth.Truth.assertThat;
 
-import org.hibernate.Session;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
 public class ORMClearSessionTest extends BaseORMTest {
 
-	@Disabled( "Broken in suite; passes solo. Need to implement transaction/session management in the tests as well as the actual BIF/IBoxContext implementations." )
 	@DisplayName( "It can clear the session for the default datasource" )
 	@Test
 	public void testSessionClear() {
-		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
-		;
-
 		instance.executeSource(
 		    """
-		        result = entityNew( "Manufacturer", { name : "Bugatti Automobiles", address : "101 Bugatti Way" } );
-		        entitySave( result );
+		    theEntity = entityNew( "Manufacturer", { name : "Bugatti Automobiles", address : "101 Bugatti Way" } );
+		    entitySave( theEntity );
+
+		    beforeClear = ormGetSession().contains( theEntity );
+		    ormClearSession();
+		    afterClear = ormGetSession().contains( theEntity );
 		    """,
 		    context
 		);
-		assertTrue( session.contains( variables.get( result ) ) );
-
-		instance.executeSource( "ormClearSession();", context );
-
-		assertFalse( session.contains( variables.get( result ) ) );
+		assertThat( variables.get( Key.of( "beforeClear" ) ) )
+		    .isEqualTo( true );
+		assertThat( variables.get( Key.of( "afterClear" ) ) )
+		    .isEqualTo( false );
 	}
 
-	@Disabled( "Test fails due to a mismatch between the alternate datasource and the default datasource used in the entity save. We need to update our test entities to use alternate datasources, then also update the BIF methods to use the correct session for the entity datasource - not the default datasource" )
+	@Disabled( "EntityNew fails on alternate datasource entities OR on .cfc files. To fix." )
 	@DisplayName( "It can clear the session on a named (alternate) datasource" )
 	@Test
 	public void testSessionClearOnNamedDatasource() {
-		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( Key.of( "dsn2" ) );
-
 		instance.executeSource(
 		    """
-		    	result = entityNew( "Manufacturer", { name : "Bugatti Automobiles", address : "101 Bugatti Way" } );
-		        entitySave( result );
+		    theEntity = entityNew( "MappingFromAnotherMother", { name : "Testy McTesterson" } );
+		    entitySave( theEntity );
+
+		    beforeClear = ormGetSession().contains( theEntity );
+		    ormClearSession();
+		    afterClear = ormGetSession().contains( theEntity );
 		    """,
 		    context
 		);
-		assertTrue( session.contains( variables.get( result ) ) );
-
-		instance.executeSource( "ormClearSession( 'dsn2' );", context );
-
-		assertFalse( session.contains( variables.get( result ) ) );
+		assertThat( variables.get( Key.of( "beforeClear" ) ) )
+		    .isEqualTo( true );
+		assertThat( variables.get( Key.of( "afterClear" ) ) )
+		    .isEqualTo( false );
 	}
 
 }
