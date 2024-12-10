@@ -24,6 +24,7 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
@@ -35,7 +36,9 @@ import ortus.boxlang.runtime.types.IStruct;
 public class RequestListener extends BaseInterceptor {
 
 	// The properties to configure the interceptor with
-	private static BoxRuntime runtime = BoxRuntime.getInstance();
+	private static BoxRuntime	runtime	= BoxRuntime.getInstance();
+
+	private BoxLangLogger		logger;
 
 	/**
 	 * This method is called by the BoxLang runtime to configure the interceptor
