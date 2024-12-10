@@ -27,8 +27,6 @@ import org.hibernate.collection.internal.PersistentBag;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.tuple.Instantiator;
 import org.hibernate.tuple.entity.EntityMetamodel;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMRequestContext;
@@ -39,6 +37,7 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.loader.ClassLocator;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
@@ -58,7 +57,15 @@ import ortus.boxlang.runtime.validation.Validator;
  */
 public class BoxClassInstantiator implements Instantiator {
 
-	public static final Logger			logger				= LoggerFactory.getLogger( BoxClassInstantiator.class );
+	/**
+	 * Runtime
+	 */
+	private static final BoxRuntime		runtime				= BoxRuntime.getInstance();
+
+	/**
+	 * The logger for the ORM application.
+	 */
+	protected BoxLangLogger				logger;
 
 	private ORMApp						ormApp;
 	private EntityMetamodel				entityMetamodel;
@@ -82,6 +89,7 @@ public class BoxClassInstantiator implements Instantiator {
 	 * @param mappingInfo
 	 */
 	public BoxClassInstantiator( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
+		this.logger				= runtime.getLoggingService().getLogger( "orm" );
 		this.entityMetamodel	= entityMetamodel;
 		this.mappingInfo		= mappingInfo;
 		this.entityName			= mappingInfo.getEntityName();
@@ -134,23 +142,27 @@ public class BoxClassInstantiator implements Instantiator {
 
 			    // add has to THIS scope
 			    DynamicFunction hasUDF		= BoxClassInstantiator.getHasMethod( collectionType, association );
-			    BoxClassInstantiator.logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
-			        prop.getName(),
-			        entityRecord.getEntityName() );
+			    /*
+			     * logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
+			     * prop.getName(), entityRecord.getEntityName() );
+			     */
 			    theEntity.put( hasUDF.getName(), hasUDF );
 
 			    if ( association.containsKey( ORMKeys.collectionType ) ) {
 				    // add add (for to-many associations)
 				    DynamicFunction addUDF = BoxClassInstantiator.getAddMethod( collectionType, association );
-				    BoxClassInstantiator.logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getName(),
-				        entityRecord.getEntityName() );
+				    /*
+				     * logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getName(),
+				     * entityRecord.getEntityName() );
+				     */
 				    theEntity.put( addUDF.getName(), addUDF );
 
 				    // add remove (for to-many associations)
 				    DynamicFunction removeUDF = BoxClassInstantiator.getRemoveMethod( collectionType, association );
-				    BoxClassInstantiator.logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
-				        prop.getName(),
-				        entityRecord.getEntityName() );
+				    /*
+				     * logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
+				     * prop.getName(), entityRecord.getEntityName() );
+				     */
 				    theEntity.put( removeUDF.getName(), removeUDF );
 			    }
 		    } );

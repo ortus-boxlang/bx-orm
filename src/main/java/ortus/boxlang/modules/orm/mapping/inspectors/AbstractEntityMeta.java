@@ -20,11 +20,10 @@ package ortus.boxlang.modules.orm.mapping.inspectors;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
@@ -32,7 +31,15 @@ import ortus.boxlang.runtime.types.Struct;
 
 public abstract class AbstractEntityMeta implements IEntityMeta {
 
-	public final Logger				logger			= LoggerFactory.getLogger( AbstractEntityMeta.class );
+	/**
+	 * Runtime
+	 */
+	private static final BoxRuntime	runtime			= BoxRuntime.getInstance();
+
+	/**
+	 * The logger for the ORM application.
+	 */
+	protected BoxLangLogger			logger;
 
 	protected IStruct				meta;
 	protected IStruct				annotations;
@@ -89,6 +96,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	protected IStruct				cache			= Struct.EMPTY;
 
 	public AbstractEntityMeta( IStruct entityMeta ) {
+		this.logger					= runtime.getLoggingService().getLogger( "orm" );
 
 		// Setup the basic entity metadata
 		this.meta					= entityMeta;

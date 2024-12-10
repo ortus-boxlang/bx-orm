@@ -18,8 +18,6 @@
 package ortus.boxlang.modules.orm.bifs;
 
 import org.hibernate.Session;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -31,8 +29,6 @@ import ortus.boxlang.runtime.types.Argument;
 
 @BoxBIF
 public class ORMFlush extends BIF {
-
-	private static final Logger logger = LoggerFactory.getLogger( ORMFlush.class );
 
 	/**
 	 * Constructor
@@ -55,8 +51,8 @@ public class ORMFlush extends BIF {
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
-		logger.debug( "Flushing session: {}", session );
 		session.flush();
+		// @TODO: Announce 'onFlush' event
 		return null;
 	}
 

@@ -58,12 +58,11 @@ import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.service.spi.SessionFactoryServiceRegistry;
 import org.hibernate.tuple.entity.EntityMetamodel;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -74,15 +73,24 @@ public class EventListener
     DeleteEventListener, PreUpdateEventListener, PostUpdateEventListener, PreLoadEventListener, PostLoadEventListener,
     FlushEventListener, AutoFlushEventListener, ClearEventListener, DirtyCheckEventListener, EvictEventListener {
 
-	private Logger			logger	= LoggerFactory.getLogger( EventListener.class );
+	/**
+	 * Runtime
+	 */
+	private static final BoxRuntime	runtime	= BoxRuntime.getInstance();
+
+	/**
+	 * The logger for the ORM application.
+	 */
+	private BoxLangLogger			logger;
 
 	/**
 	 * Global listener for this event handler.
 	 */
-	private IClassRunnable	globalListener;
+	private IClassRunnable			globalListener;
 
 	EventListener( IClassRunnable globalListener ) {
-		this.globalListener = globalListener;
+		this.logger			= runtime.getLoggingService().getLogger( "orm" );
+		this.globalListener	= globalListener;
 	}
 
 	@Override

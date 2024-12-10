@@ -22,8 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -33,6 +31,7 @@ import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
@@ -44,23 +43,31 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  */
 public class ORMRequestContext {
 
-	private static final Logger	logger		= LoggerFactory.getLogger( ORMRequestContext.class );
+	/**
+	 * Runtime
+	 */
+	private static final BoxRuntime	runtime		= BoxRuntime.getInstance();
+
+	/**
+	 * The logger for the ORM application.
+	 */
+	private BoxLangLogger			logger;
 
 	/**
 	 * ORM service.
 	 */
-	private ORMService			ormService;
+	private ORMService				ormService;
 
-	private ORMApp				ormApp;
+	private ORMApp					ormApp;
 
-	private RequestBoxContext	context;
+	private RequestBoxContext		context;
 
-	private ORMConfig			config;
+	private ORMConfig				config;
 
 	/**
 	 * Map of Hibernate sessions for this request, keyed by datasource name.
 	 */
-	private Map<Key, Session>	sessions	= new ConcurrentHashMap<Key, Session>();
+	private Map<Key, Session>		sessions	= new ConcurrentHashMap<Key, Session>();
 
 	/**
 	 * Retrieve the ORMRequestContext for the given context.
@@ -76,7 +83,7 @@ public class ORMRequestContext {
 			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
 		}
 		return context.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, ( key ) -> {
-			logger.debug( "Initializing ORM context" );
+			// logger.debug( "Initializing ORM context" );
 			IStruct ormConfig = ( IStruct ) appSettings.get( ORMKeys.ORMSettings );
 			return new ORMRequestContext( context, new ORMConfig( ormConfig ) );
 		} );
@@ -85,8 +92,9 @@ public class ORMRequestContext {
 	public ORMRequestContext( RequestBoxContext context, ORMConfig config ) {
 		this.context	= context;
 		this.config		= config;
-		this.ormService	= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
+		this.ormService	= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
 		this.ormApp		= this.ormService.getORMApp( context );
+		this.logger		= runtime.getLoggingService().getLogger( "orm" );
 	}
 
 	/**

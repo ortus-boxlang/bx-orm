@@ -26,17 +26,17 @@ import org.hibernate.EntityMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMConnectionProvider;
 import ortus.boxlang.modules.orm.hibernate.EntityTuplizer;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 
 public class SessionFactoryBuilder {
@@ -47,10 +47,15 @@ public class SessionFactoryBuilder {
 	public static final String		BOXLANG_EVENT_LISTENER		= "BOXLANG_EVENT_LISTENER";
 
 	/**
+	 * Runtime
+	 */
+	private static final BoxRuntime	runtime						= BoxRuntime.getInstance();
+
+	/**
 	 * The logger for this class. We may log warnings or errors if we encounter
 	 * unsupported ORM configuration.
 	 */
-	private static final Logger		logger						= LoggerFactory.getLogger( SessionFactoryBuilder.class );
+	private BoxLangLogger			logger;
 
 	/**
 	 * The ORM datasource for this session factory.
@@ -69,24 +74,6 @@ public class SessionFactoryBuilder {
 
 	private IJDBCCapableContext		context;
 	private ApplicationBoxContext	applicationContext;
-
-	// public static EntityRecord lookupEntity( IBoxContext context, String entityName, Boolean fail ) {
-	// EntityRecord entityRecord;
-	// if ( entityRecord == null ) {
-	// // walk configured datasources and look up the entity on each
-	// ormRequestContext.getORMApp().getDatasources().forEach( ( datasource ) -> {
-	// if ( entityRecord == null ) {
-	// entityRecord = SessionFactoryBuilder.lookupEntity( ormRequestContext.getSession( datasource ), entityName,
-	// false );
-	// }
-	// } );
-	// }
-	// if ( entityRecord == null ) {
-
-	// throw new RuntimeException( "Entity not found: " + entityName );
-	// }
-	// return entityRecord;
-	// }
 
 	/**
 	 * Get the application context tied to this Hibernate session factory.
@@ -135,6 +122,7 @@ public class SessionFactoryBuilder {
 		this.datasource			= datasource;
 		this.entities			= entities;
 		this.applicationContext	= ( ( IBoxContext ) context ).getParentOfType( ApplicationBoxContext.class );
+		this.logger				= runtime.getLoggingService().getLogger( "orm" );
 	}
 
 	/**

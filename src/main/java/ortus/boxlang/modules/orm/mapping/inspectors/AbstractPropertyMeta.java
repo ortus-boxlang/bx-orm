@@ -19,14 +19,23 @@ package ortus.boxlang.modules.orm.mapping.inspectors;
 
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
 public abstract class AbstractPropertyMeta implements IPropertyMeta {
+
+	/**
+	 * Runtime
+	 */
+	private static final BoxRuntime	runtime				= BoxRuntime.getInstance();
+
+	/**
+	 * The logger for the ORM application.
+	 */
+	protected BoxLangLogger			logger;
 
 	protected IStruct				meta;
 	protected IEntityMeta			definingEntity;
@@ -50,9 +59,8 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
 	protected FIELDTYPE				fieldType;
 
-	protected final static Logger	logger				= LoggerFactory.getLogger( AbstractPropertyMeta.class );
-
 	public AbstractPropertyMeta( String entityName, IStruct meta, IEntityMeta definingEntity ) {
+		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 		this.entityName		= entityName;
 		this.meta			= meta;
 		this.definingEntity	= definingEntity;

@@ -25,10 +25,10 @@ import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.property.access.spi.Getter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 
 /**
@@ -36,13 +36,22 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
  */
 public class BoxPropertyGetter implements Getter {
 
-	private Property			mappedProperty;
-	private PersistentClass		mappedEntity;
-	private IBoxContext			context;
+	/**
+	 * Runtime
+	 */
+	private static final BoxRuntime	runtime	= BoxRuntime.getInstance();
 
-	private static final Logger	log	= LoggerFactory.getLogger( BoxPropertyGetter.class );
+	/**
+	 * The logger for the ORM application.
+	 */
+	private BoxLangLogger			logger;
+
+	private Property				mappedProperty;
+	private PersistentClass			mappedEntity;
+	private IBoxContext				context;
 
 	public BoxPropertyGetter( IBoxContext context, Property mappedProperty, PersistentClass mappedEntity ) {
+		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 		this.mappedProperty	= mappedProperty;
 		this.mappedEntity	= mappedEntity;
 		this.context		= context;
@@ -50,7 +59,7 @@ public class BoxPropertyGetter implements Getter {
 
 	@Override
 	public Object get( Object owner ) {
-		log.trace( "getting property {} on entity {}", mappedProperty.getName(), mappedEntity.getEntityName() );
+		logger.trace( "getting property {} on entity {}", mappedProperty.getName(), mappedEntity.getEntityName() );
 		// @TODO: I think we should call the getter method on the BoxLang class, and not just return the property from the scope?
 		return ( ( IClassRunnable ) owner ).getVariablesScope().get( mappedProperty.getName() );
 	}

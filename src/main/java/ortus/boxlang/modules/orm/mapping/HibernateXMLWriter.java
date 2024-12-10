@@ -24,8 +24,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
@@ -33,7 +31,9 @@ import org.w3c.dom.Element;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
@@ -45,7 +45,15 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  */
 public class HibernateXMLWriter {
 
-	private static final Logger					logger	= LoggerFactory.getLogger( HibernateXMLWriter.class );
+	/**
+	 * Runtime
+	 */
+	private static final BoxRuntime				runtime	= BoxRuntime.getInstance();
+
+	/**
+	 * The logger for the ORM application.
+	 */
+	private BoxLangLogger						logger;
 
 	/**
 	 * IEntityMeta instance which represents the parsed entity metadata in a normalized form.
@@ -83,6 +91,7 @@ public class HibernateXMLWriter {
 	}
 
 	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, String, EntityRecord> entityLookup, boolean throwOnErrors ) {
+		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 		this.entity			= entity;
 		this.entityLookup	= entityLookup;
 		this.throwOnErrors	= throwOnErrors;

@@ -34,8 +34,6 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
 import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
@@ -45,12 +43,14 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
@@ -61,16 +61,24 @@ import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 public class MappingGenerator {
 
-	private static final Logger	logger		= LoggerFactory.getLogger( MappingGenerator.class );
+	/**
+	 * Runtime
+	 */
+	private static final BoxRuntime	runtime		= BoxRuntime.getInstance();
 
-	private Key					location	= Key.of( "location" );
+	/**
+	 * The logger for the ORM application.
+	 */
+	protected BoxLangLogger			logger;
+
+	private Key						location	= Key.of( "location" );
 
 	/**
 	 * The location to save the generated XML mapping files.
 	 * <p>
 	 * This could be a temporary directory, or (when `savemapping` is enabled) the same as the entity directory.
 	 */
-	private String				saveDirectory;
+	private String					saveDirectory;
 
 	/**
 	 * Whether to save the mapping files alongside the entity files. (Default: false)
@@ -80,32 +88,32 @@ public class MappingGenerator {
 	 * <p>
 	 * If true, the mapping files will be saved in the same directory as the entity files and {@link #xmlMappingLocation} will be ignored.
 	 */
-	private boolean				saveAlongsideEntity;
+	private boolean					saveAlongsideEntity;
 
 	/**
 	 * List of paths to search for entities.
 	 */
-	private List<Path>			entityPaths;
+	private List<Path>				entityPaths;
 
 	/**
 	 * ALL ORM configuration.
 	 */
-	private ORMConfig			config;
+	private ORMConfig				config;
 
 	/**
 	 * List of discovered entities.
 	 */
-	private List<EntityRecord>	entities;
+	private List<EntityRecord>		entities;
 
 	/**
 	 * The default datasource to "discover" the entity under when an entity has none specified.
 	 */
-	private DataSource			defaultDatasource;
+	private DataSource				defaultDatasource;
 
 	/**
 	 * The JDBC-capable boxlang context, used to look up datasources referenced in the ORM config or on the entities themselves.
 	 */
-	private IJDBCCapableContext	context;
+	private IJDBCCapableContext		context;
 
 	/**
 	 * Construct a new MappingGenerator instance.
@@ -114,6 +122,7 @@ public class MappingGenerator {
 	 * @param config  The ORM configuration.
 	 */
 	public MappingGenerator( IJDBCCapableContext context, ORMConfig config ) {
+		this.logger					= runtime.getLoggingService().getLogger( "orm" );
 		this.entities				= new ArrayList<>();
 		this.config					= config;
 		this.saveDirectory			= null;

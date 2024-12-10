@@ -21,10 +21,10 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.jdbc.DataSource;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 
 /**
  * Java class responsible for providing datasource connections to Hibernate ORM.
@@ -33,16 +33,25 @@ import ortus.boxlang.runtime.jdbc.DataSource;
  */
 public class ORMConnectionProvider implements ConnectionProvider {
 
-	private Logger		logger	= LoggerFactory.getLogger( ORMConnectionProvider.class );
+	/**
+	 * Runtime
+	 */
+	private static final BoxRuntime	runtime	= BoxRuntime.getInstance();
+
+	/**
+	 * The logger for the ORM application.
+	 */
+	private BoxLangLogger			logger;
 
 	/**
 	 * The BoxLang DataSource object which manages database connections and
 	 * especially connection pooling.
 	 */
-	private DataSource	dataSource;
+	private DataSource				dataSource;
 
 	public ORMConnectionProvider( DataSource dataSource ) {
-		this.dataSource = dataSource;
+		this.logger		= runtime.getLoggingService().getLogger( "orm" );
+		this.dataSource	= dataSource;
 	}
 
 	@Override

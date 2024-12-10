@@ -20,14 +20,11 @@ package ortus.boxlang.modules.orm.tools;
 import java.nio.file.Path;
 import java.util.HashMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
-// import ortus.boxlang.runtime.logging.LoggingConfigurator;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
@@ -48,10 +45,9 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  */
 public class MappingGenerator {
 
-	private final static Logger log = LoggerFactory.getLogger( MappingGenerator.class );
-
 	public static void main( String[] args ) {
-		BoxRuntime runtime = BoxRuntime.getInstance();
+		BoxRuntime		runtime	= BoxRuntime.getInstance();
+		BoxLangLogger	logger	= runtime.getLoggingService().getLogger( "orm" );
 
 		try {
 			Boolean					debugMode	= false;
@@ -59,7 +55,7 @@ public class MappingGenerator {
 			Array					entityPaths	= new Array();
 			HashMap<String, String>	mappings	= new HashMap<>();
 
-			log.info( "Parsing arguments" );
+			logger.info( "Parsing arguments" );
 
 			for ( int i = 0; i < args.length; i++ ) {
 				if ( args[ i ].equalsIgnoreCase( "--path" ) ) {
@@ -92,7 +88,7 @@ public class MappingGenerator {
 
 			if ( mappings.size() > 0 ) {
 				for ( String key : mappings.keySet() ) {
-					log.info( "Mapping: " + key + " -> " + mappings.get( key ) );
+					logger.info( "Mapping: " + key + " -> " + mappings.get( key ) );
 					runtime.getConfiguration().registerMapping( key, Path.of( mappings.get( key ) ).toAbsolutePath().toString() );
 				}
 			}
@@ -113,9 +109,9 @@ public class MappingGenerator {
 			    ormConfig
 			);
 
-			log.info( "========= Generating XML mappings! " );
+			logger.info( "========= Generating XML mappings! " );
 			generator.generateMappings();
-			log.info( "========= Done! " );
+			logger.info( "========= Done! " );
 
 			System.exit( 0 );
 		} finally {

@@ -20,8 +20,6 @@ package ortus.boxlang.modules.orm.bifs;
 import java.util.Set;
 
 import org.hibernate.Session;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -37,8 +35,6 @@ import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
 public class EntitySave extends BIF {
-
-	Logger logger = LoggerFactory.getLogger( EntitySave.class );
 
 	/**
 	 * Constructor

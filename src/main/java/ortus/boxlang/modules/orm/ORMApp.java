@@ -23,8 +23,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.hibernate.SessionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
@@ -37,6 +35,7 @@ import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
@@ -46,7 +45,7 @@ public class ORMApp {
 	/**
 	 * The logger for the ORM application.
 	 */
-	private static final Logger				logger	= LoggerFactory.getLogger( ORMApp.class );
+	private BoxLangLogger					logger;
 
 	/**
 	 * Runtime
@@ -120,7 +119,8 @@ public class ORMApp {
 
 	public ORMApp( RequestBoxContext context, ORMConfig config ) {
 		// @TODO: Consider only storing the ApplicationBoxContext, as that's the parent, and the RequestBoxContext will obviously age out pretty quickly.
-		this.context = context;
+		this.context	= context;
+		this.logger		= runtime.getLoggingService().getLogger( "orm" );
 
 		if ( context.getParentOfType( ApplicationBoxContext.class ) == null ) {
 			logger.error( "ORMApp created with a context that is not inside an application context; aborting." );
