@@ -26,7 +26,6 @@ import ortus.boxlang.modules.orm.hibernate.BoxClassInstantiator;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
-import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
@@ -63,7 +62,7 @@ public class EntityNew extends BIF {
 		EntityRecord	entityRecord	= app.lookupEntity( arguments.getAsString( ORMKeys.entityName ), true );
 		IStruct			properties		= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 
-		IClassRunnable	entity			= BoxClassInstantiator.instantiate( context.getParentOfType( ApplicationBoxContext.class ), entityRecord, properties );
+		IClassRunnable	entity			= BoxClassInstantiator.instantiate( context.getRequestContext(), entityRecord, properties );
 
 		// @TODO: Announce 'postNew' event
 

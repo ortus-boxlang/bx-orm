@@ -175,8 +175,13 @@ public class BoxClassInstantiator implements Instantiator {
 	public Object instantiate( Serializable id ) {
 		ORMApp			ormApp			= ORMRequestContext.getForContext( RequestBoxContext.getCurrent() ).getORMApp();
 		EntityRecord	entityRecord	= ormApp.lookupEntity( this.entityName, true );
-		return BoxClassInstantiator.instantiate( SessionFactoryBuilder
-		    .getApplicationContext( entityMetamodel.getSessionFactory() ), entityRecord, null );
+		return BoxClassInstantiator.instantiate(
+		    SessionFactoryBuilder
+		        .getApplicationContext( entityMetamodel.getSessionFactory() )
+		        .getRequestContext(),
+		    entityRecord,
+		    null
+		);
 	}
 
 	@Override
