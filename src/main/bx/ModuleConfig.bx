@@ -105,7 +105,9 @@ class {
 	/**
 	 * Called by the ModuleService on module activation
 	 */
-	function onLoad(){}
+	function onLoad(){
+		createObject( "java", "java.lang.System" ).setProperty( "javax.xml.bind.JAXBContextFactory", "com.sun.xml.bind.v2.ContextFactory" );
+	}
 
 	/**
 	 * Called by the ModuleService on module deactivation
