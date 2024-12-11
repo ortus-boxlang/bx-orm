@@ -195,4 +195,10 @@ public class ORMKeys {
 	public static final Key	postUpdate				= Key.of( "postUpdate" );
 	public static final Key	postInsert				= Key.of( "postInsert" );
 	public static final Key	oldData					= Key.of( "oldData" );
+
+	/**
+	 * BoxLang ORM event names
+	 */
+	public static final Key	EVENT_POST_NEW			= Key.of( "post_new" );
+	public static final Key	EVENT_POST_LOAD			= Key.of( "post_load" );
 }

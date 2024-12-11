@@ -17,6 +17,7 @@
  */
 package ortus.boxlang.modules.orm;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -48,7 +49,15 @@ public class ORMService extends BaseService {
 	/**
 	 * A map of ORM applications, keyed by the unique name of the ORM application.
 	 */
-	private Map<Key, ORMApp>	ormApps	= new ConcurrentHashMap<>();
+	private Map<Key, ORMApp>	ormApps					= new ConcurrentHashMap<>();
+
+	/**
+	 * Interception points for the ORM service.
+	 */
+	private static final Key[]	ORM_INTERCEPTION_POINTS	= List.of(
+	    ORMKeys.EVENT_POST_NEW,
+	    ORMKeys.EVENT_POST_LOAD
+	).toArray( new Key[ 0 ] );
 
 	/**
 	 * --------------------------------------------------------------------------
@@ -91,6 +100,8 @@ public class ORMService extends BaseService {
 			hibernateLogger.setLevel( Level.DEBUG );
 			hibernateLogger.setAdditive( false ); // Prevent messages from going to parent loggers
 		}
+
+		runtime.getInterceptorService().registerInterceptionPoint( ORM_INTERCEPTION_POINTS );
 	}
 
 	/**

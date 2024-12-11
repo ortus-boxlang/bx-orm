@@ -62,7 +62,11 @@ public class EntityNew extends BaseORMBIF {
 
 		IClassRunnable	entity			= BoxClassInstantiator.instantiate( context.getRequestContext(), entityRecord, properties );
 
-		// @TODO: Announce 'postNew' event
+		interceptorService.announce( ORMKeys.EVENT_POST_NEW, Struct.of(
+		    ORMKeys.entityName, entityRecord.getEntityName(),
+		    ORMKeys.entity, entity,
+		    "context", context
+		) );
 
 		return entity;
 	}

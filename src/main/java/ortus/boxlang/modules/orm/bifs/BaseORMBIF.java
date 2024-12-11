@@ -6,20 +6,23 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.services.InterceptorService;
 
 public abstract class BaseORMBIF extends BIF {
 
 	/**
 	 * BoxLang runtime
 	 */
-	protected BoxRuntime	runtime		= BoxRuntime.getInstance();
+	protected BoxRuntime			runtime				= BoxRuntime.getInstance();
 
 	/**
 	 * ORM service
 	 */
-	protected ORMService	ormService	= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
+	protected ORMService			ormService			= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
 
-	protected ORMApp		ormApp;
+	protected InterceptorService	interceptorService	= runtime.getInterceptorService();
+
+	protected ORMApp				ormApp;
 
 	/**
 	 * Constructor

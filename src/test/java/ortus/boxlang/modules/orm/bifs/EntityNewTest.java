@@ -17,11 +17,13 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +45,32 @@ public class EntityNewTest extends BaseORMTest {
 			context
 		);
 		// @formatter:on
-		assertInstanceOf( IClassRunnable.class, variables.get( result ) );
+		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
+	}
+
+	@Disabled( "Can't get the test working." )
+	@DisplayName( "It emits events" )
+	@Test
+	public void testEntityNewEvent() {
+		variables.put( "post_new_fired", "false" );
+
+		// DynamicObject listener = DynamicObject.of( ( properties ) -> {
+		// variables.put( "post_new_fired", "true" );
+		// } );
+		// instance.getInterceptorService().register( listener, ORMKeys.EVENT_POST_NEW );
+
+		// @formatter:off
+		instance.executeSource(
+			"""
+				entityNew( "Manufacturer" );
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.get( "post_new_fired" ) ).isEqualTo( "true" );
+		;
+
+		variables.put( "post_new_fired", "false" );
 	}
 
 	@DisplayName( "It can populate new entities with data" )
