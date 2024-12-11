@@ -209,8 +209,8 @@ public class ORMApp {
 	 *
 	 * Get ALL discovered entities/entity meta for this ORM application which are associated with the given datasource.
 	 *
-	 * @param datasourceName The datasource for which to get entities. Will filter the result to entities with a `datasource="myDatasourceName"`
-	 *                       annotation.
+	 * @param datasource The datasource for which to get entities. Will filter the result to entities with a `datasource="myDatasourceName"`
+	 *                   annotation.
 	 */
 	public List<EntityRecord> getEntityRecords( DataSource datasource ) {
 		if ( !this.entityMap.containsKey( datasource ) ) {
@@ -222,8 +222,8 @@ public class ORMApp {
 	/**
 	 * Lookup the BoxLang EntityRecord object containing known entity information for a given entity name.
 	 *
-	 * @param session    The Hibernate session
 	 * @param entityName The entity name to look up
+	 * @param fail       Whether to throw an exception if the entity is not found.
 	 *
 	 * @return
 	 */
