@@ -255,6 +255,14 @@ public class ORMApp {
 		return null;
 	}
 
+	/**
+	 * Load an entity by its primary key.
+	 * 
+	 * @param context    Boxlang Request context
+	 * @param entityName The name of the entity to load
+	 * @param keyValue   The primary key value to load the entity by. This can be a single value such as a string or integer, or a struct for composite
+	 *                   keys.
+	 */
 	public IClassRunnable loadEntityById( RequestBoxContext context, String entityName, Object keyValue ) {
 		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
 		Session			session			= ORMRequestContext.getForContext( context ).getSession( entityRecord.getDatasource() );
@@ -268,7 +276,9 @@ public class ORMApp {
 	}
 
 	/**
-	 * TODO: Remove once we figure out how to get the JPA metamodel working.
+	 * Get the java type for the primary key of an entity.
+	 * 
+	 * TODO: We're using Hibernate's deprecated metamodel. Refactor to use JPA metamodel.
 	 */
 	private Class<?> getKeyJavaType( Session session, String entityName ) {
 		ClassMetadata metadata = session.getSessionFactory().getClassMetadata( entityName );

@@ -21,10 +21,11 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.Array;
-import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.types.IStruct;
 
 @BoxBIF
 public class EntityLoad extends BaseORMBIF {
@@ -49,12 +50,20 @@ public class EntityLoad extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		if ( arguments.get( ORMKeys.idOrFilter ) instanceof String ) {
+		boolean idIsSimpleValue = StringCaster.attempt( arguments.get( ORMKeys.idOrFilter ) ).wasSuccessful();
+		if ( idIsSimpleValue ) {
 			return loadEntityById( context, arguments );
 		}
+		// assume struct filter...
 		return loadEntitiesByFilter( context, arguments );
 	}
 
+	/**
+	 * Load an entity or array of entities by ID.
+	 * 
+	 * @param context   Context in which the BIF was invoked.
+	 * @param arguments Arguments scope of the BIF.
+	 */
 	private Object loadEntityById( IBoxContext context, ArgumentsScope arguments ) {
 		if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
 			return this.ormApp.loadEntityById( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ),
@@ -65,6 +74,12 @@ public class EntityLoad extends BaseORMBIF {
 		return entity == null ? Array.EMPTY : Array.of( entity );
 	}
 
+	/**
+	 * Load an array of entities by filter criteria.
+	 * 
+	 * @param context   Context in which the BIF was invoked.
+	 * @param arguments Arguments scope of the BIF.
+	 */
 	private Object loadEntitiesByFilter( IBoxContext context, ArgumentsScope arguments ) {
 		throw new BoxRuntimeException( "Unimplemented" );
 	}
