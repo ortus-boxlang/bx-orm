@@ -17,12 +17,15 @@
  */
 package ortus.boxlang.modules.orm;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.metadata.ClassMetadata;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
@@ -33,9 +36,11 @@ import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
@@ -249,6 +254,40 @@ public class ORMApp {
 		}
 		return null;
 	}
+
+	public IClassRunnable loadEntityById( RequestBoxContext context, String entityName, Object keyValue ) {
+		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
+		Session			session			= ORMRequestContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+
+		// @TODO: Support composite keys.
+		String			keyType			= getKeyJavaType( session, entityName ).getSimpleName();
+		Serializable	id				= ( Serializable ) GenericCaster.cast( context, keyValue, keyType );
+		var				entity			= session.get( entityName, id );
+		// @TODO: announce postLoad event
+		return ( IClassRunnable ) entity;
+	}
+
+	/**
+	 * TODO: Remove once we figure out how to get the JPA metamodel working.
+	 */
+	private Class<?> getKeyJavaType( Session session, String entityName ) {
+		ClassMetadata metadata = session.getSessionFactory().getClassMetadata( entityName );
+		return metadata.getIdentifierType().getReturnedClass();
+	}
+
+	/**
+	 * TODO: Get this JPA metamodel stuff working. We're currently unable to get the class name for dynamic boxlang classes; this may change in the
+	 * future.
+	 * private Class<?> getKeyJavaType( Session session, Class entityClassType ) {
+	 * Metamodel metamodel = session
+	 * .getEntityManagerFactory()
+	 * .getMetamodel();
+	 * 
+	 * EntityType<?> entityType = metamodel.entity( entityClassType );
+	 * SingularAttribute<?, ?> idAttribute = entityType.getId( entityType.getIdType().getJavaType() );
+	 * return idAttribute.getJavaType();
+	 * }
+	 */
 
 	/**
 	 * Get the entity map for this ORM application, where the key is the configured datasource name and the value is a list of EntityRecords.

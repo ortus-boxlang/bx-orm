@@ -29,7 +29,6 @@ import tools.BaseORMTest;
 
 public class EntityLoadTest extends BaseORMTest {
 
-	@Disabled( "Unimplemented" )
 	@DisplayName( "It can load array of entities by ID" )
 	@Test
 	public void testEntityLoadIDArray() {
@@ -41,6 +40,18 @@ public class EntityLoadTest extends BaseORMTest {
 		assertThat( variables.get( result ) ).isNotNull();
 		assertThat( variables.get( result ) ).isInstanceOf( Array.class );
 		assertThat( variables.getAsArray( result ).getFirst() ).isInstanceOf( IClassRunnable.class );
+	}
+
+	@DisplayName( "It can load UNIQUE entity by ID" )
+	@Test
+	public void testEntityLoadIDUnique() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityLoad( 'Vehicle', '1HGCM82633A123456', true );
+		""", context );
+		// @formatter:on
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
 	}
 
 	@Disabled( "Unimplemented" )
@@ -81,19 +92,6 @@ public class EntityLoadTest extends BaseORMTest {
 		assertThat( first.get( "model" ) ).isEqualTo( "Ridgeline" );
 		assertThat( second.get( "model" ) ).isEqualTo( "Civic" );
 		assertThat( third.get( "model" ) ).isEqualTo( "Accord" );
-	}
-
-	@Disabled( "Unimplemented" )
-	@DisplayName( "It can load UNIQUE entity by ID" )
-	@Test
-	public void testEntityLoadIDUnique() {
-		// @formatter:off
-		instance.executeSource( """
-			result = entityLoad( 'Vehicle', '1HGCM82633A123456', true );
-		""", context );
-		// @formatter:on
-		assertThat( variables.get( result ) ).isNotNull();
-		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
 	}
 
 }

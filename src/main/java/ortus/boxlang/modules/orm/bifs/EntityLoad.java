@@ -20,8 +20,10 @@ package ortus.boxlang.modules.orm.bifs;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 @BoxBIF
@@ -54,10 +56,13 @@ public class EntityLoad extends BaseORMBIF {
 	}
 
 	private Object loadEntityById( IBoxContext context, ArgumentsScope arguments ) {
-		// if( BooleanCaster.cast( arguments.get( ORMKeys.uniqueOrOrder ) ) ) {
-		// return loadEntityByIdUnique( context, arguments );
-		// }
-		throw new BoxRuntimeException( "Unimplemented" );
+		if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
+			return this.ormApp.loadEntityById( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ),
+			    arguments.get( ORMKeys.idOrFilter ) );
+		}
+		var entity = this.ormApp.loadEntityById( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ),
+		    arguments.get( ORMKeys.idOrFilter ) );
+		return entity == null ? Array.EMPTY : Array.of( entity );
 	}
 
 	private Object loadEntitiesByFilter( IBoxContext context, ArgumentsScope arguments ) {

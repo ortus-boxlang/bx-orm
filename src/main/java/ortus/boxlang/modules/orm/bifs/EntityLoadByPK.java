@@ -17,18 +17,11 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import java.io.Serializable;
 import java.util.Set;
 
-import org.hibernate.Session;
-import org.hibernate.metadata.ClassMetadata;
-
-import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
@@ -69,39 +62,9 @@ public class EntityLoadByPK extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		String			entityName		= arguments.getAsString( ORMKeys.entity );
-		Object			keyValue		= arguments.get( Key.id );
+		String	entityName	= arguments.getAsString( ORMKeys.entity );
+		Object	keyValue	= arguments.get( Key.id );
 
-		EntityRecord	entityRecord	= this.ormApp.lookupEntity( entityName, true );
-		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
-
-		// @TODO: Support composite keys.
-		String			keyType			= getKeyJavaType( session, entityName ).getSimpleName();
-		Serializable	id				= ( Serializable ) GenericCaster.cast( context, keyValue, keyType );
-		var				entity			= session.get( entityName, id );
-
-		return entity;
+		return this.ormApp.loadEntityById( context.getRequestContext(), entityName, keyValue );
 	}
-
-	/**
-	 * TODO: Remove once we figure out how to get the JPA metamodel working.
-	 */
-	private Class<?> getKeyJavaType( Session session, String entityName ) {
-		ClassMetadata metadata = session.getSessionFactory().getClassMetadata( entityName );
-		return metadata.getIdentifierType().getReturnedClass();
-	}
-
-	/**
-	 * TODO: Get this JPA metamodel stuff working. We're currently unable to get the class name for dynamic boxlang classes; this may change in the
-	 * future.
-	 * private Class<?> getKeyJavaType( Session session, Class entityClassType ) {
-	 * Metamodel metamodel = session
-	 * .getEntityManagerFactory()
-	 * .getMetamodel();
-	 * 
-	 * EntityType<?> entityType = metamodel.entity( entityClassType );
-	 * SingularAttribute<?, ?> idAttribute = entityType.getId( entityType.getIdType().getJavaType() );
-	 * return idAttribute.getJavaType();
-	 * }
-	 */
 }
