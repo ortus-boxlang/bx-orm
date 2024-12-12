@@ -111,7 +111,7 @@ public class BoxClassInstantiator implements Instantiator {
 	public IClassRunnable instantiate( IBoxContext context, EntityRecord entityRecord, IStruct properties ) {
 		RequestBoxContext	requestContext	= RequestBoxContext.getCurrent();
 		ORMApp				ormApp			= ORMRequestContext.getForContext( requestContext ).getORMApp();
-		IClassRunnable		theEntity		= loadBoxClass( requestContext, entityRecord.getClassFQN(), entityRecord.getResolverPrefix() );
+		IClassRunnable		theEntity		= loadBoxClass( requestContext, entityRecord.getClassFQN() );
 
 		entityRecord.getEntityMeta().getAssociations().stream()
 		    .forEach( prop -> {
@@ -378,15 +378,14 @@ public class BoxClassInstantiator implements Instantiator {
 	/**
 	 * Load a BoxLang class from the class locator.
 	 * 
-	 * @param context        The current BoxLang context.
-	 * @param fqn            The fully qualified name of the class to load, like "models.orm.Manufacturer".
-	 * @param resolverPrefix The prefix type of the class to load, like "bx" or "cfc".
+	 * @param context The current BoxLang context.
+	 * @param fqn     The fully qualified name of the class to load, like "models.orm.Manufacturer".
 	 */
-	private IClassRunnable loadBoxClass( IBoxContext context, String fqn, String resolverPrefix ) {
+	private IClassRunnable loadBoxClass( IBoxContext context, String fqn ) {
 		return ( IClassRunnable ) CLASS_LOCATOR.load(
 		    context,
 		    fqn,
-		    resolverPrefix,
+		    ClassLocator.BX_PREFIX,
 		    true,
 		    context.getCurrentImports()
 		)
