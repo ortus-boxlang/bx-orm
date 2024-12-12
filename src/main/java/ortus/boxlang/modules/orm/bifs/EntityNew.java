@@ -19,10 +19,11 @@ package ortus.boxlang.modules.orm.bifs;
 
 import java.util.Set;
 
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.modules.orm.hibernate.BoxClassInstantiator;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -56,11 +57,19 @@ public class EntityNew extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		ORMApp			app				= ORMRequestContext.getForContext( context.getRequestContext() ).getORMApp();
-		EntityRecord	entityRecord	= app.lookupEntity( arguments.getAsString( ORMKeys.entityName ), true );
-		IStruct			properties		= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
+		ORMApp						ormApp				= ORMRequestContext.getForContext( context.getRequestContext() ).getORMApp();
+		String						entityName			= arguments.getAsString( ORMKeys.entityName );
+		EntityRecord				entityRecord		= ormApp.lookupEntity( entityName, true );
+		IStruct						properties			= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 
-		IClassRunnable	entity			= BoxClassInstantiator.instantiate( context.getRequestContext(), entityRecord, properties );
+		SessionFactoryImplementor	sessionFactoryImpl	= ( SessionFactoryImplementor ) ormApp.getSessionFactoryOrThrow( entityRecord.getDatasource() );
+		IClassRunnable				entity				= ( IClassRunnable ) sessionFactoryImpl.getMetamodel().entityPersister( entityRecord.getEntityName() )
+		    .getEntityMetamodel().getTuplizer().instantiate();
+
+		// @TODO: Move to ... somewhere.
+		if ( properties != null && !properties.isEmpty() ) {
+			entity.getVariablesScope().putAll( properties );
+		}
 
 		interceptorService.announce( ORMKeys.EVENT_POST_NEW, Struct.of(
 		    ORMKeys.entityName, entityRecord.getEntityName(),

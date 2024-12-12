@@ -67,11 +67,9 @@ public class BoxClassInstantiator implements Instantiator {
 	 */
 	protected BoxLangLogger				logger;
 
-	private ORMApp						ormApp;
 	private EntityMetamodel				entityMetamodel;
 	private PersistentClass				mappingInfo;
 	private String						entityName;
-	private EntityRecord				entityRecord;
 	private List<String>				subclassClassNames	= new ArrayList<>();
 
 	private static final ClassLocator	CLASS_LOCATOR		= BoxRuntime.getInstance().getClassLocator();
@@ -110,59 +108,33 @@ public class BoxClassInstantiator implements Instantiator {
 	 * --------------------------------------------------------------------------
 	 */
 
-	public static IClassRunnable instantiateByFQN( IBoxContext context, String fqn ) {
-		return ( IClassRunnable ) CLASS_LOCATOR.load(
-		    context,
-		    fqn,
-		    context.getCurrentImports()
-		)
-		    .invokeConstructor( context )
-		    .unWrapBoxLangClass();
-	}
-
-	public static IClassRunnable instantiateByFQN( IBoxContext context, String fqn, String resolverPrefix ) {
-		return ( IClassRunnable ) CLASS_LOCATOR.load(
-		    context,
-		    fqn,
-		    ClassLocator.BX_PREFIX,
-		    true,
-		    context.getCurrentImports()
-		)
-		    .invokeConstructor( context )
-		    .unWrapBoxLangClass();
-	}
-
-	public static IClassRunnable instantiate( IBoxContext context, EntityRecord entityRecord, IStruct properties ) {
-		IClassRunnable theEntity = instantiateByFQN( context, entityRecord.getClassFQN(), entityRecord.getResolverPrefix() );
+	public IClassRunnable instantiate( IBoxContext context, EntityRecord entityRecord, IStruct properties ) {
+		RequestBoxContext	requestContext	= RequestBoxContext.getCurrent();
+		ORMApp				ormApp			= ORMRequestContext.getForContext( requestContext ).getORMApp();
+		IClassRunnable		theEntity		= loadBoxClass( requestContext, entityRecord.getClassFQN(), entityRecord.getResolverPrefix() );
 
 		entityRecord.getEntityMeta().getAssociations().stream()
 		    .forEach( prop -> {
 			    IStruct		association		= prop.getAssociation();
 			    String		collectionType	= association.getAsString( ORMKeys.collectionType );
 
-			    // add has to THIS scope
-			    DynamicFunction hasUDF		= BoxClassInstantiator.getHasMethod( collectionType, association );
-			    /*
-			     * logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
-			     * prop.getName(), entityRecord.getEntityName() );
-			     */
+			    // hasX(), used on all associations
+			    DynamicFunction hasUDF		= getHasMethod( collectionType, association );
+			    logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
+			        prop.getName(), entityRecord.getEntityName() );
 			    theEntity.put( hasUDF.getName(), hasUDF );
 
 			    if ( association.containsKey( ORMKeys.collectionType ) ) {
-				    // add add (for to-many associations)
-				    DynamicFunction addUDF = BoxClassInstantiator.getAddMethod( collectionType, association );
-				    /*
-				     * logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getName(),
-				     * entityRecord.getEntityName() );
-				     */
+				    // addX(), used on to-many associations
+				    DynamicFunction addUDF = getAddMethod( collectionType, association );
+				    logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getName(),
+				        entityRecord.getEntityName() );
 				    theEntity.put( addUDF.getName(), addUDF );
 
-				    // add remove (for to-many associations)
-				    DynamicFunction removeUDF = BoxClassInstantiator.getRemoveMethod( collectionType, association );
-				    /*
-				     * logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
-				     * prop.getName(), entityRecord.getEntityName() );
-				     */
+				    // removeX(), used on to-many associations
+				    DynamicFunction removeUDF = getRemoveMethod( collectionType, association );
+				    logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
+				        prop.getName(), entityRecord.getEntityName() );
 				    theEntity.put( removeUDF.getName(), removeUDF );
 			    }
 		    } );
@@ -174,19 +146,27 @@ public class BoxClassInstantiator implements Instantiator {
 		return theEntity;
 	}
 
-	private static String getMethodName( IStruct associationMeta ) {
+	/**
+	 * Assemble a method name for the association, like `addManufacturer` for the association `manufacturer`.
+	 * 
+	 * Will use the singular name, if it exists, otherwise it will use the property name.
+	 * 
+	 * @param operationPrefix Operation type as a string, like "has", "add", or "remove"
+	 * @param associationMeta The metadata for the association.
+	 */
+	private Key getMethodName( String operationPrefix, IStruct associationMeta ) {
 		String methodName = associationMeta.getAsString( Key._NAME );
 		if ( associationMeta.containsKey( ORMKeys.singularName ) ) {
 			methodName = associationMeta.getAsString( ORMKeys.singularName );
 		}
-		return methodName.substring( 0, 1 ).toUpperCase() + methodName.substring( 1 );
+		return Key.of( operationPrefix + methodName.substring( 0, 1 ).toUpperCase() + methodName.substring( 1 ) );
 	}
 
 	@Override
 	public Object instantiate( Serializable id ) {
 		ORMApp			ormApp			= ORMRequestContext.getForContext( RequestBoxContext.getCurrent() ).getORMApp();
 		EntityRecord	entityRecord	= ormApp.lookupEntity( this.entityName, true );
-		return BoxClassInstantiator.instantiate(
+		return instantiate(
 		    RequestBoxContext.getCurrent(),
 		    entityRecord,
 		    null
@@ -224,9 +204,9 @@ public class BoxClassInstantiator implements Instantiator {
 	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	public static DynamicFunction getHasMethod( String collectionType, IStruct associationMeta ) {
+	public DynamicFunction getHasMethod( String collectionType, IStruct associationMeta ) {
 		// uses the singular name, if it exists
-		Key	methodName		= Key.of( "has" + BoxClassInstantiator.getMethodName( associationMeta ) );
+		Key	methodName		= getMethodName( "has", associationMeta );
 		// uses the property name
 		Key	collectionKey	= Key.of( associationMeta.getAsString( Key._NAME ) );
 		return new DynamicFunction(
@@ -262,9 +242,9 @@ public class BoxClassInstantiator implements Instantiator {
 	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	public static DynamicFunction getAddMethod( String collectionType, IStruct associationMeta ) {
+	public DynamicFunction getAddMethod( String collectionType, IStruct associationMeta ) {
 		// uses the singular name, if it exists
-		Key	methodName		= Key.of( "add" + BoxClassInstantiator.getMethodName( associationMeta ) );
+		Key	methodName		= getMethodName( "add", associationMeta );
 		// uses the property name
 		Key	collectionKey	= Key.of( associationMeta.getAsString( Key._NAME ) );
 		return new DynamicFunction(
@@ -320,9 +300,9 @@ public class BoxClassInstantiator implements Instantiator {
 	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	public static DynamicFunction getRemoveMethod( String collectionType, IStruct associationMeta ) {
+	public DynamicFunction getRemoveMethod( String collectionType, IStruct associationMeta ) {
 		// uses the singular name, if it exists
-		Key	methodName		= Key.of( "remove" + BoxClassInstantiator.getMethodName( associationMeta ) );
+		Key	methodName		= getMethodName( "remove", associationMeta );
 		// uses the property name
 		Key	collectionKey	= Key.of( associationMeta.getAsString( Key._NAME ) );
 		return new DynamicFunction(
@@ -395,4 +375,22 @@ public class BoxClassInstantiator implements Instantiator {
 		);
 	}
 
+	/**
+	 * Load a BoxLang class from the class locator.
+	 * 
+	 * @param context        The current BoxLang context.
+	 * @param fqn            The fully qualified name of the class to load, like "models.orm.Manufacturer".
+	 * @param resolverPrefix The prefix type of the class to load, like "bx" or "cfc".
+	 */
+	private IClassRunnable loadBoxClass( IBoxContext context, String fqn, String resolverPrefix ) {
+		return ( IClassRunnable ) CLASS_LOCATOR.load(
+		    context,
+		    fqn,
+		    resolverPrefix,
+		    true,
+		    context.getCurrentImports()
+		)
+		    .invokeConstructor( context )
+		    .unWrapBoxLangClass();
+	}
 }

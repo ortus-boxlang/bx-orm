@@ -31,7 +31,6 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
-// @Disabled
 public class EntityNewTest extends BaseORMTest {
 
 	@DisplayName( "It can create new entities" )

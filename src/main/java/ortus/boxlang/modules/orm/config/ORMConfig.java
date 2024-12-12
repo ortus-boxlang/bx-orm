@@ -29,10 +29,10 @@ import org.hibernate.tool.schema.Action;
 
 import ortus.boxlang.modules.orm.config.naming.BoxLangClassNamingStrategy;
 import ortus.boxlang.modules.orm.config.naming.MacroCaseNamingStrategy;
-import ortus.boxlang.modules.orm.hibernate.BoxClassInstantiator;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
@@ -43,21 +43,26 @@ import ortus.boxlang.runtime.types.Struct;
 public class ORMConfig {
 
 	/**
+	 * Class locator for loading boxlang classes.
+	 */
+	private static final ClassLocator	CLASS_LOCATOR			= BoxRuntime.getInstance().getClassLocator();
+
+	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime					= BoxRuntime.getInstance();
+	private static final BoxRuntime		runtime					= BoxRuntime.getInstance();
 
 	/**
 	 * The logger for the ORM application.
 	 */
-	private BoxLangLogger			logger;
+	private BoxLangLogger				logger;
 
 	/**
 	 * Specifies whether ColdFusion should automatically generate entity mappings
 	 * for the persistent CFCs. If autogenmap=false, the mapping should be
 	 * provided in the form of <code>orm.xml</code> files.
 	 */
-	public boolean					autoGenMap				= true;
+	public boolean						autoGenMap				= true;
 
 	/**
 	 * Allows the engine to manage the Hibernate session. It is recommended not to
@@ -66,13 +71,13 @@ public class ORMConfig {
 	 * Use transaction blocks in order to demarcate your regions that should start,
 	 * flush and end a transaction.
 	 */
-	public boolean					autoManageSession		= false;
+	public boolean						autoManageSession		= false;
 
 	/**
 	 * Specify a string path to the secondary cache configuration file. This configuration file must be formatted to the specification of the jCache
 	 * provider specified in the `cacheProvider` setting.
 	 */
-	public String					cacheConfig;
+	public String						cacheConfig;
 
 	/**
 	 * Specify the alias name OR full class path of a jCache provider to use for the second-level cache. Must be one of the following:
@@ -81,7 +86,7 @@ public class ORMConfig {
 	 * <li><code>com.foo.MyJCacheProvider</code> - String path to a custom jCache provider loaded into your BoxLang application.</li>
 	 * </ul>
 	 */
-	public String					cacheProvider;
+	public String						cacheProvider;
 
 	/**
 	 * Specifies the directory (or array of directories) that should be used to
@@ -95,13 +100,13 @@ public class ORMConfig {
 	 * <p>
 	 * Aliased as `cfclocation` for Adobe and Lucee CFML compatibility.
 	 */
-	public String[]					entityPaths;
+	public String[]						entityPaths;
 
 	/**
 	 * Define the data source to be utilized by the ORM. If not used,
 	 * defaults to the this.datasource in the Application.cfc.
 	 */
-	public String					datasource;
+	public String						datasource;
 
 	/**
 	 * <ul>
@@ -121,7 +126,7 @@ public class ORMConfig {
 	 * BoxLang.</strong></li>
 	 * </ul>
 	 */
-	public String					dbcreate;
+	public String						dbcreate;
 
 	/**
 	 * The dialect to use for your database. By default Hibernate will introspect
@@ -129,30 +134,30 @@ public class ORMConfig {
 	 *
 	 * You can also use the fully Java qualified name of the class.
 	 */
-	public String					dialect;
+	public String						dialect;
 
 	/**
 	 * If true, then it enables the ORM event callbacks in entities and globally via
 	 * the `eventHandler` property.
 	 */
-	public boolean					eventHandling;
+	public boolean						eventHandling;
 
 	/**
 	 * The CFC path of the CFC that will manage the global ORM events.
 	 */
-	public String					eventHandler;
+	public String						eventHandler;
 
 	/**
 	 * Specifies if an orm flush should be called automatically at the end of a
 	 * request. In our opinion this SHOULD never be true. Database persistence
 	 * should be done via transaction tags and good transaction demarcation.
 	 */
-	public boolean					flushAtRequestEnd		= false;
+	public boolean						flushAtRequestEnd		= false;
 
 	/**
 	 * Specifies if the SQL queries should be logged to the console.
 	 */
-	public boolean					logSQL					= false;
+	public boolean						logSQL					= false;
 
 	/**
 	 * Defines the naming convention to use on table and column names.
@@ -162,7 +167,7 @@ public class ORMConfig {
 	 * uppercase.
 	 * - CFC PATH : Use your own CFC to determine naming
 	 */
-	public String					namingStrategy;
+	public String						namingStrategy;
 
 	/**
 	 * The path to a custom Hibernate configuration file:
@@ -170,7 +175,7 @@ public class ORMConfig {
 	 * - hibernate.properties
 	 * - hibernate.cfc.xml
 	 */
-	public String					ormConfig;
+	public String						ormConfig;
 
 	/**
 	 * If enabled, the ORM will create the Hibernate mapping XML (*.hbmxml) files
@@ -178,24 +183,24 @@ public class ORMConfig {
 	 * relationships.
 	 *
 	 */
-	public boolean					saveMapping				= false;
+	public boolean						saveMapping				= false;
 
 	/**
 	 * The default database schema to use for database connections. This can be
 	 * overriden at the datasource level, as well as on each entity.
 	 */
-	public String					schema;
+	public String						schema;
 
 	/**
 	 * Specifies the default Database Catalog that ORM should use. This can be
 	 * overriden at the datasource level, as well as on each entity.
 	 */
-	public String					catalog;
+	public String						catalog;
 
 	/**
 	 * Enable or disable the secondary cache.
 	 */
-	public boolean					secondaryCacheEnabled	= false;
+	public boolean						secondaryCacheEnabled	= false;
 
 	/**
 	 * If true, then the ORM startup will ignore CFCs that have compile time errors
@@ -204,13 +209,13 @@ public class ORMConfig {
 	 * <p>
 	 * Aliased as `skipCFCWithError` for Adobe and Lucee CFML compatibility.
 	 */
-	public boolean					ignoreParseErrors		= false;
+	public boolean						ignoreParseErrors		= false;
 
 	/**
 	 * Path to a SQL script file that will be executed after the ORM is initialized.
 	 * Only used if dbcreate is set to <code>dropcreate</code>.
 	 */
-	public String					sqlScript;
+	public String						sqlScript;
 
 	/**
 	 * Specifies whether the database has to be inspected to identify the missing
@@ -219,12 +224,12 @@ public class ORMConfig {
 	 * The database is inspected to get the column data type, primary key and
 	 * foreign key information.
 	 */
-	public boolean					useDBForMapping			= false;
+	public boolean						useDBForMapping			= false;
 
 	/**
 	 * Application context used for class lookups in naming strategies, event handlers, etc.
 	 */
-	private RequestBoxContext		requestContext;
+	private RequestBoxContext			requestContext;
 
 	/**
 	 * Constructor
@@ -430,7 +435,7 @@ public class ORMConfig {
 	 */
 	public Configuration toHibernateConfig() {
 		IClassRunnable				eventHandlerClass	= this.eventHandler != null
-		    ? BoxClassInstantiator.instantiateByFQN( this.requestContext, this.eventHandler )
+		    ? loadBoxLangClassByFQN( this.requestContext, this.eventHandler )
 		    : null;
 		BootstrapServiceRegistry	bootstrapRegistry	= new BootstrapServiceRegistryBuilder()
 		    .applyIntegrator( new EventListener( eventHandlerClass ) )
@@ -548,8 +553,18 @@ public class ORMConfig {
 			 * The "cfc" naming strategy allows apps to define their own naming strategy by
 			 * providing a full CFC path.
 			 */
-			default -> new BoxLangClassNamingStrategy( BoxClassInstantiator.instantiateByFQN( this.requestContext, name ) );
+			default -> new BoxLangClassNamingStrategy( loadBoxLangClassByFQN( this.requestContext, name ) );
 		};
+	}
+
+	private IClassRunnable loadBoxLangClassByFQN( RequestBoxContext context, String fqn ) {
+		return ( IClassRunnable ) CLASS_LOCATOR.load(
+		    context,
+		    fqn,
+		    context.getCurrentImports()
+		)
+		    .invokeConstructor( context )
+		    .unWrapBoxLangClass();
 	}
 
 	/**
