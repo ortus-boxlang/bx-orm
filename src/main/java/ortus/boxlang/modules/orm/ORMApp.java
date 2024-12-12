@@ -168,7 +168,7 @@ public class ORMApp {
 		this.entityMap = MappingGenerator.discoverEntities( context, config );
 
 		if ( logger.isDebugEnabled() )
-			logger.debug( "Discovered [{}] entities", this.entityMap.size() );
+			logger.debug( "Discovered entities on [{}] datasources", this.entityMap.size() );
 
 		this.entityMap.forEach( ( datasource, entities ) -> {
 			if ( logger.isDebugEnabled() )

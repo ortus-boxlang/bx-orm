@@ -25,7 +25,6 @@ import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.Array;
-import ortus.boxlang.runtime.types.IStruct;
 
 @BoxBIF
 public class EntityLoad extends BaseORMBIF {
@@ -81,6 +80,10 @@ public class EntityLoad extends BaseORMBIF {
 	 * @param arguments Arguments scope of the BIF.
 	 */
 	private Object loadEntitiesByFilter( IBoxContext context, ArgumentsScope arguments ) {
-		throw new BoxRuntimeException( "Unimplemented" );
+		// IStruct filter = arguments.getAsStruct( ORMKeys.idOrFilter );
+		// if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
+		// return this.ormApp.loadEntitiesByFilter( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ), filter );
+		// }
+		return null;
 	}
 }
