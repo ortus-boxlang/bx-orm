@@ -28,6 +28,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -42,7 +43,6 @@ public class BaseORMTest {
 
 	public static BoxRuntime		instance;
 	public static ModuleRecord		moduleRecord;
-	public static Key				moduleName				= new Key( "orm" );
 	public static Key				derbyModule				= new Key( "bx-derby" );
 	public static String			moduleDependenciesPath	= Paths.get( "./src/test/resources/modules" ).toAbsolutePath().toString();
 	public static Key				result					= Key.of( "result" );
@@ -96,12 +96,12 @@ public class BaseORMTest {
 		}
 
 		// Is ORM module loaded?
-		if ( !instance.getModuleService().hasModule( moduleName ) ) {
+		if ( !instance.getModuleService().hasModule( ORMKeys.moduleName ) ) {
 			System.out.println( "Loading ORM module..." );
 			String physicalPath = Paths.get( "./build/module" ).toAbsolutePath().toString();
 			moduleRecord = new ModuleRecord( physicalPath );
 
-			instance.getModuleService().getRegistry().put( moduleName, moduleRecord );
+			instance.getModuleService().getRegistry().put( ORMKeys.moduleName, moduleRecord );
 
 			moduleRecord
 			    .loadDescriptor( context )

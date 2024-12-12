@@ -21,6 +21,8 @@ import ortus.boxlang.runtime.scopes.Key;
 
 public class ORMKeys {
 
+	public static final Key	moduleName				= Key.of( "orm" );
+
 	// Various keys used as context attachments
 	public static final Key	ORMService				= Key.of( "ORMService" );
 	public static final Key	RequestListener			= Key.of( "RequestListener" );
