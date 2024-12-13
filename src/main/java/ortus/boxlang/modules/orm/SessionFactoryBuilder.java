@@ -145,10 +145,6 @@ public class SessionFactoryBuilder {
 		// module's dependencies.
 		ClassLoader		oldClassLoader	= Thread.currentThread().getContextClassLoader();
 		ModuleRecord	moduleRecord	= runtime.getModuleService().getModuleRecord( Key.of( "orm" ) );
-
-		System.out.println(
-		    String.format( "=====> Setting thread [%s] context classloader to [%s]", Thread.currentThread().getName(), moduleRecord.classLoader.getName() )
-		);
 		Thread.currentThread().setContextClassLoader( moduleRecord.classLoader );
 
 		// Make sure we clean up the classloader when we're done.

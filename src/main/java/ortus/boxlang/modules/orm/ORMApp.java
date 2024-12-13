@@ -139,21 +139,17 @@ public class ORMApp {
 
 		this.entityMap.forEach( ( datasource, entities ) -> {
 			if ( logger.isDebugEnabled() )
-				logger.debug( "Creating session factory for datasource: {}", datasource.getOriginalName() );
+				logger.debug( "Creating session factory for datasource: {}", datasource.getUniqueName() );
 
 			this.datasources.add( datasource );
 
 			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, datasource, config, entities );
 			SessionFactory			factory	= builder.build();
-
-			logger.info( "Registering new Hibernate session factory for name: {}", getName() );
-
 			this.sessionFactories.put( datasource.getUniqueName(), factory );
 
 			if ( datasource.equals( this.defaultDatasource ) ) {
 				if ( logger.isDebugEnabled() )
-					logger.debug( "Setting the default session factory to the default datasource: {}", datasource.getOriginalName() );
-
+					logger.debug( "Setting the default session factory to the default datasource: {}", datasource.getUniqueName() );
 				this.defaultSessionFactory = factory;
 			}
 		} );
