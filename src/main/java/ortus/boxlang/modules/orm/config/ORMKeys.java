@@ -70,6 +70,7 @@ public class ORMKeys {
 	 * OLD setting name. Deprecated. Use {@link entityPaths} instead.
 	 */
 	public static final Key	cfclocation				= Key.of( "cfclocation" );
+	public static final Key	location				= Key.of( "location" );
 	/**
 	 * Path to locations of boxlang entity classes.
 	 * <p>

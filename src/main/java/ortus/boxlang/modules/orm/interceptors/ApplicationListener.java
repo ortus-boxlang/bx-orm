@@ -17,6 +17,8 @@
  */
 package ortus.boxlang.modules.orm.interceptors;
 
+import java.net.URI;
+
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -66,9 +68,11 @@ public class ApplicationListener extends BaseInterceptor {
 
 		RequestBoxContext		context				= ( RequestBoxContext ) args.get( "context" );
 		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( "listener" );
+		URI						startingTemplate	= ( URI ) args.get( "template" );
 		ORMConfig				config				= ORMConfig.loadFromContext( context );
 
-		if ( config != null && startingListener.getAppName() != null ) {
+		// If the starting template is null, it means, the listener is not linked to a template and no Application.bx, so ignore it.
+		if ( startingTemplate != null && config != null ) {
 			this.logger.info( "ORMEnabled, starting up ORM app for [{}]", startingListener.getAppName() );
 			this.ormService.startupApp( context, config, startingListener );
 		}
@@ -81,6 +85,7 @@ public class ApplicationListener extends BaseInterceptor {
 	public void onApplicationEnd( IStruct args ) {
 		this.logger.info( "onApplicationEnd fired; Shutting down ORM application" );
 		Application application = ( Application ) args.get( "application" );
+		// If the orm app doesn't exist, this is a no-op
 		this.ormService.shutdownApp( ORMService.buildUniqueAppName( application.getName(), application.getStartingListener().getSettings() ) );
 	}
 

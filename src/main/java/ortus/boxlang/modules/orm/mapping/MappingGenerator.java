@@ -44,7 +44,6 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
@@ -64,21 +63,34 @@ public class MappingGenerator {
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime		= BoxRuntime.getInstance();
+	private static final BoxRuntime	runtime						= BoxRuntime.getInstance();
+
+	/**
+	 * The temp folder to save the generated XML mapping files.
+	 */
+	private static final String		ENTITY_TEMP_FOLDER			= "orm_mappings";
+
+	/**
+	 * The valid file extensions for entity files.
+	 */
+	private static final String[]	ENTITY_EXTENSIONS			= { ".bx", ".cfc" };
+
+	/**
+	 * The maximum number of entities to process synchronously.
+	 */
+	private static final int		MAX_SYNCHRONOUS_ENTITIES	= 20;
 
 	/**
 	 * The logger for the ORM application.
 	 */
 	protected BoxLangLogger			logger;
 
-	private Key						location	= Key.of( "location" );
-
 	/**
 	 * The location to save the generated XML mapping files.
 	 * <p>
 	 * This could be a temporary directory, or (when `savemapping` is enabled) the same as the entity directory.
 	 */
-	private String					saveDirectory;
+	private String					saveDirectory				= null;
 
 	/**
 	 * Whether to save the mapping files alongside the entity files. (Default: false)
@@ -93,7 +105,7 @@ public class MappingGenerator {
 	/**
 	 * List of paths to search for entities.
 	 */
-	private List<Path>				entityPaths;
+	private List<Path>				entityPaths					= new ArrayList<>();
 
 	/**
 	 * ALL ORM configuration.
@@ -103,7 +115,7 @@ public class MappingGenerator {
 	/**
 	 * List of discovered entities.
 	 */
-	private List<EntityRecord>		entities;
+	private List<EntityRecord>		entities					= new ArrayList<>();
 
 	/**
 	 * The default datasource to "discover" the entity under when an entity has none specified.
@@ -123,32 +135,32 @@ public class MappingGenerator {
 	 */
 	public MappingGenerator( IJDBCCapableContext context, ORMConfig config ) {
 		this.logger					= runtime.getLoggingService().getLogger( "orm" );
-		this.entities				= new ArrayList<>();
 		this.config					= config;
-		this.saveDirectory			= null;
 		this.saveAlongsideEntity	= config.saveMapping;
-		this.entityPaths			= new java.util.ArrayList<>();
 		this.context				= context;
 		this.defaultDatasource		= getDefaultDatasource();
 		// this.appDirectory = context.getParentOfType( ApplicationBoxContext.class ).getApplication().getApplicationDirectory();
 
 		if ( !this.saveAlongsideEntity ) {
-			this.saveDirectory = Path.of( FileSystemUtil.getTempDirectory(), "orm_mappings", String.valueOf( config.hashCode() ) ).toString();
+			this.saveDirectory = Path.of( FileSystemUtil.getTempDirectory(), ENTITY_TEMP_FOLDER, String.valueOf( config.hashCode() ) ).toString();
 			new File( this.saveDirectory ).mkdirs();
 		}
 
 		for ( String entityPath : config.entityPaths ) {
-			this.entityPaths.add( FileSystemUtil.expandPath( ( IBoxContext ) context, entityPath ).absolutePath() );
+			this.entityPaths.add( FileSystemUtil.expandPath( context, entityPath ).absolutePath() );
 		}
+
 		if ( this.entityPaths.isEmpty() ) {
-			this.entityPaths.add( FileSystemUtil.expandPath( ( IBoxContext ) context, "." ).absolutePath() );
+			this.entityPaths.add( FileSystemUtil.expandPath( context, "." ).absolutePath() );
 			logger.warn(
-			    "No entity paths found in ORM configuration; defaulting to app root. (You should STRONGLY consider setting an 'entityPaths' array in your ORM settings.)" );
+			    "No entity paths found in ORM configuration; defaulting to app root. Which makes things REAALLLLYYYY SLOW!! (You should STRONGLY consider setting an 'entityPaths' array in your ORM settings.)"
+			);
 		}
 	}
 
 	/**
 	 * Retrieve the entity map for this session factory, constructing them if necessary.
+	 * We return a Map of datasource names to a list of EntityRecords.
 	 *
 	 * @param context   The JDBC-capable context.
 	 * @param ormConfig The ORM configuration.
@@ -173,13 +185,13 @@ public class MappingGenerator {
 	 * This method will generate the XML mapping files for all discovered entities and store them in the entity map.
 	 */
 	public MappingGenerator generateMappings() {
-		final int			MAX_SYNCHRONOUS_ENTITIES	= 20;
-		ArrayList<IStruct>	classes						= discoverBLClasses( this.entityPaths );
-		boolean				doParallel					= false;
+		ArrayList<IStruct>	classes		= discoverBLClasses( this.entityPaths );
+		// TODO: Until we finalize loading, then we can start doing parallel
+		boolean				doParallel	= false;
 
 		if ( doParallel ) {
-			if ( logger.isDebugEnabled() )
-				logger.debug( "Parallelizing metadata introspection {}", MAX_SYNCHRONOUS_ENTITIES );
+
+			logger.debug( "Parallelizing metadata introspection {}", MAX_SYNCHRONOUS_ENTITIES );
 
 			this.entities = classes.parallelStream()
 			    // Parse class metadata
@@ -187,27 +199,24 @@ public class MappingGenerator {
 			    // Filter out non-persistent entities
 			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
 			    // Convert to EntityRecord
-			    .map( ( IStruct entity ) -> toEntityRecord( entity ) )
-			    .collect( java.util.stream.Collectors.toList() );
+			    .map( this::toEntityRecord )
+			    .toList();
 		} else {
 			this.entities = classes.stream()
 			    // Parse class metadata
-			    .map( ( IStruct possibleEntity ) -> readMeta( possibleEntity ) )
+			    .map( this::readMeta )
 			    // Filter out non-persistent entities
 			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
 			    // Convert to EntityRecord
-			    .map( ( IStruct entity ) -> toEntityRecord( entity ) )
-			    .collect( java.util.stream.Collectors.toList() );
-			// Add to entity map
-			// .forEach( ( entityRecord ) -> entityMap.put( entityRecord.getEntityName(), entityRecord ) );
+			    .map( this::toEntityRecord )
+			    .toList();
 		}
 
 		// Generate XML mapping files for each entity
-		// @TODO: Should this also be parallel???
-		this.entities.stream()
-		    .forEach( ( EntityRecord entity ) -> {
-			    entity.setXmlFilePath( writeXMLFile( entity ) );
-		    } );
+		// Change this to a stream if we will be doing parallel processing
+		for ( EntityRecord entity : this.entities ) {
+			entity.setXmlFilePath( writeXMLFile( entity ) );
+		}
 
 		return this;
 	}
@@ -217,6 +226,7 @@ public class MappingGenerator {
 	 * We currently throw a BoxRuntimeException if no datasource is found in the ORM
 	 * configuration, but eventually we will support a default datasource.
 	 *
+	 * @return The ORM datasource.
 	 */
 	private DataSource getDefaultDatasource() {
 		ConnectionManager	connectionManager	= this.context.getConnectionManager();
@@ -241,8 +251,8 @@ public class MappingGenerator {
 	 * @return A list of structs containing the location and file name of each discovered entity.
 	 */
 	private ArrayList<IStruct> discoverBLClasses( List<Path> entityPaths ) {
-		return entityPaths.stream()
-		    // @TODO: Resolve mappings for each entity path
+		return entityPaths
+		    .stream()
 		    .flatMap( path -> {
 			    try {
 				    // TODO: Return path.parent() alongside each discovered entity file so we know the entity location / mapping and can get a correct FQN.
@@ -250,9 +260,12 @@ public class MappingGenerator {
 				        // only files
 				        .filter( Files::isRegularFile )
 				        // Only .bx or .cfc class files
-				        .filter( file -> StringUtils.endsWithAny( file.toString(), ".bx", ".cfc" ) )
+				        .filter( file -> StringUtils.endsWithAny( file.toString(), ENTITY_EXTENSIONS ) )
 				        // map to a struct instance containing the location and file name. We need both to generate the FQN.
-				        .map( file -> Struct.of( this.location, path.toString(), Key.file, file.toString() ) );
+				        .map( file -> Struct.of(
+				            ORMKeys.location, path.toString(),
+				            Key.file, file.toString()
+				        ) );
 			    } catch ( IOException e ) {
 				    if ( config.ignoreParseErrors ) {
 					    e.printStackTrace();
@@ -324,7 +337,7 @@ public class MappingGenerator {
 		IStruct				meta			= theEntity.getAsStruct( Key.metadata );
 		IStruct				annotations		= meta.getAsStruct( Key.annotations );
 		String				entityName		= readEntityName( meta );
-		ResolvedFilePath	entityRootPath	= FileSystemUtil.contractPath( context.getApplicationContext(), meta.getAsString( Key.path ) );
+		ResolvedFilePath	entityRootPath	= FileSystemUtil.contractPath( context, meta.getAsString( Key.path ) );
 		String				fqn				= entityRootPath.getBoxFQN().toString();
 		if ( fqn == null || fqn.isBlank() ) {
 			throw new BoxRuntimeException( "Failed to generate FQN for entity: " + entityName );
@@ -451,23 +464,6 @@ public class MappingGenerator {
 				return null;
 			}
 			throw new BoxRuntimeException( message, e );
-			/**
-			 * [BoxLang]
-			 *
-			 * Copyright [2023] [Ortus Solutions, Corp]
-			 *
-			 * Licensed under the Apache License, Version 2.0 (the "License");
-			 * you may not use this file except in compliance with the License.
-			 * You may obtain a copy of the License at
-			 *
-			 * http://www.apache.org/licenses/LICENSE-2.0
-			 *
-			 * Unless required by applicable law or agreed to in writing, software
-			 * distributed under the License is distributed on an "AS IS" BASIS,
-			 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-			 * See the License for the specific language governing permissions and
-			 * limitations under the License.
-			 */
 		}
 
 		return xmlPath;

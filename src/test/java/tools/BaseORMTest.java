@@ -17,12 +17,9 @@
  */
 package tools;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.SQLException;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -60,14 +57,13 @@ public class BaseORMTest {
 	}
 
 	@AfterAll
-	public static void teardown() throws SQLException {
+	public static void teardown() {
 		instance.getApplicationService().shutdownApplication( Key.of( "BXORMTest" ) );
 	}
 
 	@BeforeEach
 	public void setupEach() {
 		variables = context.getScopeNearby( VariablesScope.name );
-		assertNotNull( context.getApplicationContext() );
 
 		JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
 		JDBCTestUtils.resetAlternateTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDatasourceOrThrow( Key.of( "dsn2" ) ), context );

@@ -115,7 +115,7 @@ public class ORMApp {
 		this.name		= name;
 
 		ConnectionManager connectionManager = context.getConnectionManager();
-		this.defaultDatasource = config.datasource == null
+		this.defaultDatasource = this.config.datasource == null
 		    ? connectionManager.getDefaultDatasourceOrThrow()
 		    : connectionManager.getDatasourceOrThrow( Key.of( config.datasource ) );
 
@@ -132,7 +132,7 @@ public class ORMApp {
 	 * Start up the ORM application, creating session factories for all discovered entities and their datasources.
 	 */
 	public ORMApp startup() {
-		this.entityMap = MappingGenerator.discoverEntities( context, config );
+		this.entityMap = MappingGenerator.discoverEntities( this.context, this.config );
 
 		if ( logger.isDebugEnabled() )
 			logger.debug( "Discovered entities on [{}] datasources", this.entityMap.size() );
@@ -146,13 +146,13 @@ public class ORMApp {
 			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, datasource, config, entities );
 			SessionFactory			factory	= builder.build();
 
-			logger.info( "Registering new Hibernate session factory for name: {}", builder.getUniqueName() );
+			logger.info( "Registering new Hibernate session factory for name: {}", getName() );
 
 			this.sessionFactories.put( datasource.getUniqueName(), factory );
 
 			if ( datasource.equals( this.defaultDatasource ) ) {
 				if ( logger.isDebugEnabled() )
-					logger.debug( "Setting the default datasource: {}", datasource );
+					logger.debug( "Setting the default session factory to the default datasource: {}", datasource.getOriginalName() );
 
 				this.defaultSessionFactory = factory;
 			}
