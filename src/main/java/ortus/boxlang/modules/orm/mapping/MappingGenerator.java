@@ -58,6 +58,10 @@ import ortus.boxlang.runtime.types.exceptions.ParseException;
 import ortus.boxlang.runtime.util.FileSystemUtil;
 import ortus.boxlang.runtime.util.ResolvedFilePath;
 
+/**
+ * Hibernate entity mapping generator. Responsible for walking the file tree and generating hibernate mapping configurations for each discovered
+ * persistent entity.
+ */
 public class MappingGenerator {
 
 	/**

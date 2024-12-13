@@ -25,6 +25,12 @@ import ortus.boxlang.runtime.dynamic.casters.IntegerCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
+/**
+ * A "Modern", aka JPA-style, implementation of the entity metadata configuration.
+ * 
+ * i.e. handles translating JPA-style property annotations like `@Entity` or `@Discriminator{...}` into the IEntityMeta interface for consistent
+ * reference by the HibernateXMLWriter.
+ */
 public class ModernEntityMeta extends AbstractEntityMeta {
 
 	public ModernEntityMeta( IStruct entityMeta ) {

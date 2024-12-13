@@ -27,6 +27,12 @@ import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.types.util.JSONUtil;
 
+/**
+ * A "Classic", aka traditional, implementation of the property metadata configuration.
+ * 
+ * i.e. handles translating CFML property annotations like `sqltype="varchar"` into the IPropertyMeta interface for consistent reference by the
+ * HibernateXMLWriter.
+ */
 public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
 	public ClassicPropertyMeta( String entityName, IStruct meta, IEntityMeta definingEntity ) {

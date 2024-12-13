@@ -25,6 +25,12 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 
+/**
+ * A "Class", aka traditional, implementation of the entity metadata configuration.
+ * 
+ * i.e. handles translating traditional CFML component annotations like `persistent="true"` into the IPropertyMeta interface for consistent reference
+ * by the HibernateXMLWriter.
+ */
 public class ClassicEntityMeta extends AbstractEntityMeta {
 
 	public ClassicEntityMeta( IStruct entityMeta ) {

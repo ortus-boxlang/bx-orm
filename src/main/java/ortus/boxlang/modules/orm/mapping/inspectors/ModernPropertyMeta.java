@@ -23,6 +23,12 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 
+/**
+ * A "Modern", aka JPA-style, implementation of the property metadata configuration.
+ * 
+ * i.e. handles translating JPA-style property annotations like `@Varchar` into the IPropertyMeta interface for consistent reference by the
+ * HibernateXMLWriter.
+ */
 public class ModernPropertyMeta extends AbstractPropertyMeta {
 
 	public ModernPropertyMeta( String entityName, IStruct meta, IEntityMeta definingEntity ) {

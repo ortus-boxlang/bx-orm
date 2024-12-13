@@ -40,6 +40,9 @@ import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 
+/**
+ * ORM configuration manager, normalizer, validator, etc.
+ */
 public class ORMConfig {
 
 	/**

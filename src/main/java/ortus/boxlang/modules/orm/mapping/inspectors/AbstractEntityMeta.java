@@ -29,6 +29,12 @@ import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 
+/**
+ * Abstract (parent) entity metadata configuration class.
+ * 
+ * Useful for collecting entity metadata into a consistent interface, no matter whether the source is traditional CFML annotations or modern JPA-style
+ * annotations.
+ */
 public abstract class AbstractEntityMeta implements IEntityMeta {
 
 	/**

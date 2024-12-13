@@ -31,6 +31,9 @@ import org.hibernate.tuple.entity.EntityMetamodel;
 
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 
+/**
+ * Hibernate implementation class for helping convert tuples (database rows) into boxlang classes.
+ */
 public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	EntityMetamodel entityMetamodel;

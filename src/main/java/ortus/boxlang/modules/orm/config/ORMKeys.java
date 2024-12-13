@@ -19,6 +19,9 @@ package ortus.boxlang.modules.orm.config;
 
 import ortus.boxlang.runtime.scopes.Key;
 
+/**
+ * Key instances specific to the ORM module.
+ */
 public class ORMKeys {
 
 	public static final Key	moduleName				= Key.of( "orm" );

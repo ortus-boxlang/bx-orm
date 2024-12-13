@@ -20,6 +20,9 @@ package ortus.boxlang.modules.orm.hibernate;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.LazyInitializer;
 
+/**
+ * Boxlang class proxy.
+ */
 public class BoxProxy implements HibernateProxy {
 
 	@Override

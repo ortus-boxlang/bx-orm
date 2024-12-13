@@ -17,6 +17,26 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-public class ORMEvictQueries {
+import org.apache.commons.lang3.NotImplementedException;
 
+import ortus.boxlang.runtime.bifs.BoxBIF;
+import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.scopes.ArgumentsScope;
+
+/**
+ * BIF to evict all queries from the named or default cache.
+ */
+@BoxBIF
+public class ORMEvictQueries extends BaseORMBIF {
+
+	/**
+	 * ExampleBIF
+	 *
+	 * @param context   The context in which the BIF is being invoked.
+	 * @param arguments Argument scope for the BIF.
+	 */
+	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		// TODO implement BIF
+		throw new NotImplementedException();
+	}
 }

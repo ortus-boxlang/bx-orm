@@ -30,6 +30,9 @@ import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.ProxyFactory;
 import org.hibernate.type.CompositeType;
 
+/**
+ * Assists in generating BoxProxy classes for Hibernate.
+ */
 public class BoxProxyFactory implements ProxyFactory {
 
 	public PersistentClass	mappingInfo;

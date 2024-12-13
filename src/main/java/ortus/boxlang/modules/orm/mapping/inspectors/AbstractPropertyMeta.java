@@ -25,6 +25,9 @@ import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
+/**
+ * An abstract/parent utility class for property metadata configuration.
+ */
 public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
 	/**

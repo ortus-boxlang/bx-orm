@@ -8,6 +8,9 @@ import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.types.IStruct;
 
+/**
+ * Abstract, parent BIF utility class which all ORM bifs should extend for reuse.
+ */
 public abstract class BaseORMBIF extends BIF {
 
 	/**

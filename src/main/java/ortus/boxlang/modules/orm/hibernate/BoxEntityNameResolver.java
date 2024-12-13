@@ -24,6 +24,9 @@ import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.types.IStruct;
 
+/**
+ * Determine entity names for a given entity/boxlang class.
+ */
 public class BoxEntityNameResolver implements EntityNameResolver {
 
 	@Override
