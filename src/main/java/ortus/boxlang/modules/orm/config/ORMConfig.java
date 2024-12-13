@@ -446,7 +446,9 @@ public class ORMConfig {
 		    : null;
 		BootstrapServiceRegistry	bootstrapRegistry	= new BootstrapServiceRegistryBuilder()
 		    .applyIntegrator( new EventListener( eventHandlerClass ) )
-		    .applyClassLoader( this.classLoader )
+		    // This throws 'org.hibernate.cache.jcache.internal.StrategyRegistrationProviderImpl not a subtype'
+		    // do we still need it, now that we've fixed the boxlang bug where a new request context was being started?
+		    // .applyClassLoader( this.classLoader )
 		    .build();
 		Configuration				configuration		= new Configuration( bootstrapRegistry );
 
