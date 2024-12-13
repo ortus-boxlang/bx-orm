@@ -742,8 +742,9 @@ public class HibernateXMLWriter {
 			if ( this.throwOnErrors ) {
 				throw new BoxRuntimeException( message );
 			}
+		} else {
+			theNode.setAttribute( "entity-name", associatedEntity.getEntityName() );
 		}
-		theNode.setAttribute( "entity-name", associatedEntity.getEntityName() );
 	}
 
 	/**
