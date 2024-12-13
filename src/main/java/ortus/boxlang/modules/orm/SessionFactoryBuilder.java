@@ -18,6 +18,8 @@
 package ortus.boxlang.modules.orm;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -151,8 +153,10 @@ public class SessionFactoryBuilder {
 		SessionFactory	factory;
 		Configuration	configuration;
 		try {
-			configuration	= buildConfiguration();
-			factory			= configuration.buildSessionFactory();
+			System.out.println( "Context class loader: " + Thread.currentThread().getContextClassLoader().getName() );
+			configuration = buildConfiguration();
+			System.out.println( "After buildConfiguration Context class loader: " + Thread.currentThread().getContextClassLoader().getName() );
+			factory = configuration.buildSessionFactory();
 		} finally {
 			Thread.currentThread().setContextClassLoader( oldClassLoader );
 		}
@@ -171,14 +175,19 @@ public class SessionFactoryBuilder {
 	 * @return a populated Hibernate configuration object
 	 */
 	private Configuration buildConfiguration() {
-		Configuration	configuration	= ormConfig.toHibernateConfig();
-		Properties		properties		= new Properties();
+		Configuration			configuration	= ormConfig.toHibernateConfig();
+		Properties				properties		= new Properties();
+		Collection<ClassLoader>	classLoaders	= new ArrayList<>();
+		classLoaders.add( runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader );
 
 		// @TODO: Any configuration which needs a specific java type (such as the
 		// connection provider instance) goes here
 		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasource ) );
 		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
+		properties.put( AvailableSettings.CLASSLOADERS, classLoaders );
+		properties.put( AvailableSettings.TC_CLASSLOADER, "org.hibernate.boot.registry.classloading.internal.AggregatedClassLoader" );
 		properties.put( BOXLANG_CONTEXT, context );
+
 		// properties.put( AvailableSettings.SESSION_FACTORY_NAME, getAppName().toString() );
 
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
