@@ -22,17 +22,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu-latest", "windows-latest" ]
-        jdkVersion: [ "21" ]
+        os: ["ubuntu-latest", "windows-latest"]
+        jdkVersion: ["21"]
         experimental: [false]
         #include:
-          #- jdkVersion: "17"
-          #  os: "windows-latest"
-          #  experimental: true
-          # Disabled for now until we can figure out the gradle matrix
-          #- jdkVersion: "17"
-          #  os: "ubuntu-latest"
-          #  experimental: true
+        #- jdkVersion: "17"
+        #  os: "windows-latest"
+        #  experimental: true
+        # Disabled for now until we can figure out the gradle matrix
+        #- jdkVersion: "17"
+        #  os: "ubuntu-latest"
+        #  experimental: true
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -88,7 +88,7 @@ jobs:
             **/build/test-results/**
 
       - name: Inform Slack
-        if: ${{ failure() && github.ref == 'refs/heads/development' }}
+        if: ${{ !matrix.experimental && failure() && github.ref == 'refs/heads/development' }}
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_CHANNEL: boxlang
@@ -98,6 +98,7 @@ jobs:
           SLACK_TITLE: "${{ env.MODULE_ID }} Build Failure"
           SLACK_USERNAME: CI
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          MSG_MINIMAL: true
 
   publish-test-results:
     name: Publish Test Results
