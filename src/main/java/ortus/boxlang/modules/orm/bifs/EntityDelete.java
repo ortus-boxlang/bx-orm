@@ -23,7 +23,7 @@ import org.hibernate.Session;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.modules.orm.util.EntityUtil;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
@@ -51,9 +51,13 @@ public class EntityDelete extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session	= ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
-		IClassRunnable	entity	= ( IClassRunnable ) arguments.get( ORMKeys.entity );
-		session.delete( EntityUtil.getEntityName( entity ), entity );
+		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );
+		String			entityName		= getEntityName( entity );
+		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
+		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
+
+		session.delete( entityName, entity );
+
 		return null;
 	}
 }

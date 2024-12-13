@@ -23,7 +23,7 @@ import org.hibernate.Session;
 
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.modules.orm.util.EntityUtil;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
@@ -55,13 +55,16 @@ public class EntitySave extends BaseORMBIF {
 	 * @return
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session			session		= ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
-		IClassRunnable	entity		= ( IClassRunnable ) arguments.get( ORMKeys.entity );
-		Boolean			forceInsert	= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
+		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );
+		String			entityName		= getEntityName( entity );
+		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
+		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
+		Boolean			forceInsert		= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
+
 		if ( forceInsert ) {
-			session.save( EntityUtil.getEntityName( entity ), entity );
+			session.save( entityName, entity );
 		} else {
-			session.saveOrUpdate( EntityUtil.getEntityName( entity ), entity );
+			session.saveOrUpdate( entityName, entity );
 		}
 
 		return null;
