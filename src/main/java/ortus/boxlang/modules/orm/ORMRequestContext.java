@@ -103,7 +103,7 @@ public class ORMRequestContext {
 		this.context	= context;
 		this.config		= config;
 		this.ormService	= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
-		this.ormApp		= this.ormService.getORMApp( context );
+		this.ormApp		= this.ormService.getORMAppByContext( context );
 		this.logger		= runtime.getLoggingService().getLogger( "orm" );
 	}
 

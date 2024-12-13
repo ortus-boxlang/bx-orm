@@ -71,13 +71,13 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	@Override
 	protected Getter buildPropertyGetter( Property mappedProperty, PersistentClass mappedEntity ) {
-		return new BoxPropertyGetter( SessionFactoryBuilder.getContext( this.getEntityMetamodel().getSessionFactory() ),
+		return new BoxPropertyGetter( SessionFactoryBuilder.getRequestContext( this.getEntityMetamodel().getSessionFactory() ),
 		    mappedProperty, mappedEntity );
 	}
 
 	@Override
 	protected Setter buildPropertySetter( Property mappedProperty, PersistentClass mappedEntity ) {
-		return new BoxPropertySetter( SessionFactoryBuilder.getContext( this.getEntityMetamodel().getSessionFactory() ),
+		return new BoxPropertySetter( SessionFactoryBuilder.getRequestContext( this.getEntityMetamodel().getSessionFactory() ),
 		    mappedProperty, mappedEntity );
 	}
 

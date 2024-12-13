@@ -17,12 +17,12 @@
  */
 package ortus.boxlang.modules.orm.interceptors;
 
-import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.Application;
+import ortus.boxlang.runtime.application.BaseApplicationListener;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
@@ -56,20 +56,21 @@ public class ApplicationListener extends BaseInterceptor {
 	/**
 	 * Listen for application startup and construct a Hibernate session factory if
 	 * ORM configuration is present in the application config.
+	 * Remember that when this fires, there is NO APPLICATION scope or APPLICATION loaded yet.
 	 */
 	@InterceptionPoint
-	public void afterApplicationListenerLoad( IStruct args ) {
+	public void beforeApplicationListenerLoad( IStruct args ) {
 		this.logger.debug(
-		    "afterApplicationListenerLoad fired; checking for ORM configuration in the application context config"
+		    "beforeApplicationListenerLoad fired; checking for ORM configuration"
 		);
 
-		RequestBoxContext	context	= ( RequestBoxContext ) args.get( "context" );
-		ORMConfig			config	= ORMConfig.loadFromContext( context );
-		if ( config != null ) {
-			this.logger.info( "ORMEnabled is true and ORM settings are specified - Firing ORM application startup." );
-			// System.out.println( "ORMService is registered:" + runtime.hasGlobalService( ORMKeys.ORMService ) );
+		RequestBoxContext		context				= ( RequestBoxContext ) args.get( "context" );
+		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( "listener" );
+		ORMConfig				config				= ORMConfig.loadFromContext( context );
 
-			this.ormService.startupApp( context, config );
+		if ( config != null && startingListener.getAppName() != null ) {
+			this.logger.info( "ORMEnabled, starting up ORM app for [{}]", startingListener.getAppName() );
+			this.ormService.startupApp( context, config, startingListener );
 		}
 	}
 
@@ -78,23 +79,9 @@ public class ApplicationListener extends BaseInterceptor {
 	 */
 	@InterceptionPoint
 	public void onApplicationEnd( IStruct args ) {
-
-		if ( !runtime.hasGlobalService( ORMKeys.ORMService ) ) {
-			this.logger.error( "No global service found for ORMService; unable to shut down ORM application" );
-		}
-
 		this.logger.info( "onApplicationEnd fired; Shutting down ORM application" );
-
 		Application application = ( Application ) args.get( "application" );
-		this.ormService.shutdownApp( ORMApp.getUniqueAppName( application, application.getStartingListener().getSettings() ) );
+		this.ormService.shutdownApp( ORMService.buildUniqueAppName( application.getName(), application.getStartingListener().getSettings() ) );
 	}
 
-	/**
-	 * Listen for application restart and clean up application-specific Hibernate resources.
-	 */
-	@InterceptionPoint
-	public void onApplicationRestart( IStruct args ) {
-		this.logger.info( "onApplicationRestart fired; cleaning up ORM resources for this application context" );
-		// @TODO: clean up Hibernate resources
-	}
 }

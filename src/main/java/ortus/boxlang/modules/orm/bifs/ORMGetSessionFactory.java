@@ -56,15 +56,15 @@ public class ORMGetSessionFactory extends BaseORMBIF {
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
-	 * 
+	 *
 	 * @argument.datasource The name of the datasource to retrieve the SessionFactory for. If not specified, the Application's default datasource is used.
 	 */
 	public SessionFactory _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String datasourceName = StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 		if ( !datasourceName.isBlank() ) {
-			return this.ormService.getORMApp( context ).getSessionFactoryOrThrow( Key.of( datasourceName ) );
+			return this.ormService.getORMAppByContext( context ).getSessionFactoryOrThrow( Key.of( datasourceName ) );
 		}
-		return this.ormService.getORMApp( context ).getDefaultSessionFactoryOrThrow();
+		return this.ormService.getORMAppByContext( context ).getDefaultSessionFactoryOrThrow();
 	}
 
 }

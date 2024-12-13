@@ -61,12 +61,12 @@ public class EntityNameArray extends BaseORMBIF {
 
 	/**
 	 * Retrieve an array of entity names for this ORM application.
-	 * 
+	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
-	 * 
+	 *
 	 * @argument.delimiter The delimiter to use between entity names. Defaults to a comma.
-	 * 
+	 *
 	 * @argument.datasource The name of the datasource to filter on. If provided, only entities configured for this datasource will be returned.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
@@ -79,7 +79,7 @@ public class EntityNameArray extends BaseORMBIF {
 		}
 
 		ConnectionManager	connectionManager	= context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
-		ORMApp				ormApp				= this.ormService.getORMApp( context );
+		ORMApp				ormApp				= this.ormService.getORMAppByContext( context );
 		List<EntityRecord>	entityList			= datasourceName != null
 		    ? ormApp.getEntityRecords( connectionManager.getDatasourceOrThrow( Key.of( datasourceName ) ) )
 		    : ormApp.getEntityRecords();

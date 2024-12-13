@@ -32,7 +32,6 @@ import ortus.boxlang.modules.orm.config.ORMConnectionProvider;
 import ortus.boxlang.modules.orm.hibernate.EntityTuplizer;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
@@ -79,46 +78,18 @@ public class SessionFactoryBuilder {
 	private IJDBCCapableContext		context;
 
 	/**
-	 * The application context for this session factory.
-	 */
-	private ApplicationBoxContext	applicationContext;
-
-	/**
 	 * ------------------------------------------------------------------------------------------------------------
 	 * Static Helpers
 	 * ------------------------------------------------------------------------------------------------------------
 	 */
 
 	/**
-	 * Get the application context tied to this Hibernate session factory.
-	 *
-	 * @TODO: Move this into our SessionFactory wrapper class.
-	 *
-	 * @param sessionFactory The Hibernate session factory
-	 */
-	public static ApplicationBoxContext getApplicationContext( SessionFactory sessionFactory ) {
-		return ( ApplicationBoxContext ) sessionFactory.getProperties().get( BOXLANG_APPLICATION_CONTEXT );
-	}
-
-	/**
 	 * Get the BoxLang context tied to this Hibernate session factory.
 	 *
 	 * @param sessionFactory The Hibernate session factory
 	 */
-	public static IBoxContext getContext( SessionFactory sessionFactory ) {
+	public static IBoxContext getRequestContext( SessionFactory sessionFactory ) {
 		return ( IBoxContext ) sessionFactory.getProperties().get( BOXLANG_CONTEXT );
-	}
-
-	/**
-	 * Get a unique name for this context's ORM Application.
-	 *
-	 * Used to ensure we can tell the various ORM apps apart.
-	 *
-	 * @return a unique key for the given context's application.
-	 */
-	public static String getUniqueAppName( IBoxContext context ) {
-		ApplicationBoxContext appContext = ( ApplicationBoxContext ) context.getParentOfType( ApplicationBoxContext.class );
-		return appContext.getApplication().getName() + "_" + context.getConfig().hashCode();
 	}
 
 	/**
@@ -127,7 +98,7 @@ public class SessionFactoryBuilder {
 	 * @return a unique key for the given context/datasource combination.
 	 */
 	public static Key getUniqueName( IBoxContext context, DataSource datasource ) {
-		return Key.of( SessionFactoryBuilder.getUniqueAppName( context ) + "_" + datasource.getUniqueName().getName() );
+		return Key.of( ORMService.getAppNameFromContext( context ) + "_" + datasource.getUniqueName().getName() );
 	}
 
 	/**
@@ -145,12 +116,11 @@ public class SessionFactoryBuilder {
 	 * @param entities   The discovered entities for this session factory.
 	 */
 	public SessionFactoryBuilder( IJDBCCapableContext context, DataSource datasource, ORMConfig ormConfig, List<EntityRecord> entities ) {
-		this.ormConfig			= ormConfig;
-		this.context			= context;
-		this.applicationContext	= context.getApplicationContext();
-		this.datasource			= datasource;
-		this.entities			= entities;
-		this.logger				= runtime.getLoggingService().getLogger( "orm" );
+		this.ormConfig	= ormConfig;
+		this.context	= context;
+		this.datasource	= datasource;
+		this.entities	= entities;
+		this.logger		= runtime.getLoggingService().getLogger( "orm" );
 	}
 
 	/**
@@ -176,6 +146,9 @@ public class SessionFactoryBuilder {
 		ClassLoader		oldClassLoader	= Thread.currentThread().getContextClassLoader();
 		ModuleRecord	moduleRecord	= runtime.getModuleService().getModuleRecord( Key.of( "orm" ) );
 
+		System.out.println(
+		    String.format( "=====> Setting thread [%s] context classloader to [%s]", Thread.currentThread().getName(), moduleRecord.classLoader.getName() )
+		);
 		Thread.currentThread().setContextClassLoader( moduleRecord.classLoader );
 
 		// Make sure we clean up the classloader when we're done.
@@ -209,7 +182,6 @@ public class SessionFactoryBuilder {
 		// connection provider instance) goes here
 		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasource ) );
 		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
-		properties.put( BOXLANG_APPLICATION_CONTEXT, applicationContext );
 		properties.put( BOXLANG_CONTEXT, context );
 		// properties.put( AvailableSettings.SESSION_FACTORY_NAME, getAppName().toString() );
 

@@ -27,11 +27,14 @@ import ch.qos.logback.classic.LoggerContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.application.BaseApplicationListener;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.BaseService;
+import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Java class responsible for constructing and managing the Hibernate ORM
@@ -138,31 +141,53 @@ public class ORMService extends BaseService {
 
 	/**
 	 * --------------------------------------------------------------------------
-	 * Service Methods
+	 * ORM Application Methods
 	 * --------------------------------------------------------------------------
 	 */
 
 	/**
-	 * Start up a new ORM application with the given context and ORM configuration.
+	 * Helper method to construct ORM based application names, which rely on the unique combination
+	 * of an application name and the application's configuration.
+	 *
+	 * @param appName The application name.
+	 * @param config  The application configuration.
+	 *
+	 * @return A unique key for the given application name and configuration.
+	 */
+	public static Key buildUniqueAppName( Key appName, IStruct config ) {
+		return Key.of( new StringBuilder( appName.getNameNoCase() ).append( "_" ).append( config.hashCode() ).toString() );
+	}
+
+	/**
+	 * Build a unique application name from the given context.
 	 *
 	 * @param context The IBoxContext for the application.
-	 * @param config  The ORM configuration - parsed from the application settings.
 	 *
-	 * @return The ORM application that was started.
+	 * @return A unique key for the given application name and configuration.
 	 */
-	public ORMApp startupApp( RequestBoxContext context, ORMConfig config ) {
-		// We store the new ORM application in the application context, so we can retrieve it later.
-		// The BoxLang application can have 0-n ORM applications, so we need to store them in the application context.
-		return context.getApplicationContext().computeAttachmentIfAbsent( ORMKeys.ORMApp, key -> {
-			ORMApp newORMApp = new ORMApp( context, config );
+	public static Key getAppNameFromContext( IBoxContext context ) {
+		return buildUniqueAppName( context.getApplicationContext().getApplication().getName(), context.getConfig() );
+	}
 
-			if ( getLogger().isDebugEnabled() )
-				getLogger().debug( "Starting ORMApp {}", newORMApp.getUniqueName() );
-
-			this.ormApps.put( newORMApp.getUniqueName(), newORMApp );
-			newORMApp.startup();
-			return newORMApp;
-		} );
+	/**
+	 * Start up a new ORM application with the given context and ORM configuration.
+	 * Please note that a new ORM application will be constructed if the following conditions are met:
+	 * - An application listener name changes
+	 * - The application.bx configuration changes
+	 *
+	 * @param context          The IBoxContext for the application.
+	 * @param config           The ORM configuration - parsed from the application settings.
+	 * @param startingListener The listener that is starting the ORM application.
+	 *
+	 * @return A new or existing ORM application if started already.
+	 */
+	public ORMApp startupApp( RequestBoxContext context, ORMConfig config, BaseApplicationListener startingListener ) {
+		Key appName = ORMService.buildUniqueAppName( startingListener.getAppName(), context.getConfig() );
+		// Atomically create or get the ORMApp for the given context.
+		return this.ormApps.computeIfAbsent(
+		    appName,
+		    key -> new ORMApp( context, config, appName ).startup()
+		);
 	}
 
 	/**
@@ -173,10 +198,9 @@ public class ORMService extends BaseService {
 	 * @param context The IBoxContext for the application.
 	 */
 	public void shutdownApp( IBoxContext context ) {
-		Key appName = ORMApp.getUniqueAppName( context );
+		Key appName = ORMService.getAppNameFromContext( context );
 		this.shutdownApp( appName );
 		context.getRequestContext().removeAttachment( ORMKeys.ORMRequestContext );
-		context.getApplicationContext().removeAttachment( appName );
 	}
 
 	/**
@@ -187,10 +211,10 @@ public class ORMService extends BaseService {
 	 * @param uniqueAppName The unique name of the ORM application to shut down.
 	 */
 	public void shutdownApp( Key uniqueAppName ) {
-		ORMApp app = ormApps.get( uniqueAppName );
+		// We remove it first to prevent further access to the ORMApp
+		ORMApp app = this.ormApps.remove( uniqueAppName );
 		if ( app != null ) {
 			app.shutdown();
-			this.ormApps.remove( uniqueAppName );
 		}
 	}
 
@@ -202,22 +226,79 @@ public class ORMService extends BaseService {
 	 * @return The reloaded ORM application.
 	 */
 	public ORMApp reloadApp( IBoxContext context ) {
-		this.shutdownApp( context );
-		return this.startupApp( context.getRequestContext(), ORMConfig.loadFromContext( context.getRequestContext() ) );
+		RequestBoxContext requestContext = context instanceof RequestBoxContext castedContext ? castedContext : context.getRequestContext();
+		shutdownApp( requestContext );
+		return startupApp(
+		    requestContext,
+		    ORMConfig.loadFromContext( requestContext ),
+		    requestContext.getApplicationListener()
+		);
 	}
 
 	/**
 	 * Retrieve the ORM application configured for the given context.
+	 * We build the application name by searching the context for an application context, and getting the name of the application.
 	 *
 	 * @param context The IBoxContext for the current request. The parent application context is used for the ORM application lookup.
+	 *
+	 * @return The ORM application for the given context.
+	 *
+	 * @throws BoxRuntimeException If the ORM application is not found for the given context.
 	 */
-	public ORMApp getORMApp( IBoxContext context ) {
-		Key name = Key.of( ORMApp.getUniqueAppName( context ) );
-		if ( !this.ormApps.containsKey( name ) ) {
-			throw new RuntimeException( "ORMApp not found for context: " + name );
+	public ORMApp getORMAppByContext( IBoxContext context ) {
+		Key appName = ORMService.buildUniqueAppName( context.getApplicationContext().getApplication().getName(), context.getConfig() );
+		if ( !hasORMApp( appName ) ) {
+			var message = String.format( "ORMApp not found for context using appname [%s].  Registered app names are: %s", appName, getORMAppNames() );
+			throw new BoxRuntimeException( message );
 		}
-		return this.ormApps.get( name );
+		return getORMApp( appName );
 	}
+
+	/**
+	 * Get the ORM by unique name.
+	 *
+	 * @param appName The unique name of the ORM application.
+	 *
+	 * @return The ORM application, if it exists, or null.
+	 */
+	public ORMApp getORMApp( Key appName ) {
+		return this.ormApps.get( appName );
+	}
+
+	/**
+	 * Do we have an ORM application for the name
+	 *
+	 * @param appName The unique name of the ORM application.
+	 *
+	 * @return True if the ORM application exists, false otherwise.
+	 */
+	public boolean hasORMApp( Key appName ) {
+		return this.ormApps.containsKey( appName );
+	}
+
+	/**
+	 * How many ORM apps are currently running?
+	 *
+	 * @return The number of ORM applications currently running.
+	 */
+	public int getORMAppCount() {
+		return this.ormApps.size();
+	}
+
+	/**
+	 * Get an array list of all the ORM applications currently running.
+	 *
+	 * @return An array list of all the ORM applications currently running.
+	 */
+	public List<String> getORMAppNames() {
+		return List.copyOf( this.ormApps.keySet().stream().map( Key::getName ).toList() );
+	}
+
+	/**
+	 * --------------------------------------------------------------------------
+	 * Helper methods
+	 * --------------------------------------------------------------------------
+	 */
 
 	/**
 	 * Get the ORM logger that logs to the "orm" category.

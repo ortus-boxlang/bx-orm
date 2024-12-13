@@ -60,7 +60,7 @@ public class TransactionManager extends BaseInterceptor {
 		logger.debug( "onTransactionBegin fired" );
 
 		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
-		ORMApp				ormApp				= ormService.getORMApp( context );
+		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
 		ORMConfig			config				= ormRequestContext.getConfig();
 
@@ -100,7 +100,7 @@ public class TransactionManager extends BaseInterceptor {
 		logger.debug( "onTransactionCommit fired" );
 
 		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
-		ORMApp				ormApp				= ormService.getORMApp( context );
+		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
 		ORMConfig			config				= ormRequestContext.getConfig();
 
@@ -130,7 +130,7 @@ public class TransactionManager extends BaseInterceptor {
 		logger.debug( "onTransactionRollback fired" );
 
 		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
-		ORMApp				ormApp				= ormService.getORMApp( context );
+		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
 		ORMConfig			config				= ormRequestContext.getConfig();
 
@@ -171,7 +171,7 @@ public class TransactionManager extends BaseInterceptor {
 		logger.debug( "onTransactionEnd fired" );
 
 		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
-		ORMApp				ormApp				= ormService.getORMApp( context );
+		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
 		ORMConfig			config				= ormRequestContext.getConfig();
 

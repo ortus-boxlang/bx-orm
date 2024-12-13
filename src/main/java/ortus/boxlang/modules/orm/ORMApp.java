@@ -31,8 +31,6 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.application.Application;
-import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
@@ -42,7 +40,6 @@ import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 public class ORMApp {
@@ -55,12 +52,12 @@ public class ORMApp {
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime				runtime	= BoxRuntime.getInstance();
+	private static final BoxRuntime				runtime				= BoxRuntime.getInstance();
 
 	/**
 	 * A map of session factories, keyed by name.
 	 */
-	private Map<Key, SessionFactory>			sessionFactories;
+	private Map<Key, SessionFactory>			sessionFactories	= new ConcurrentHashMap<>();
 
 	/**
 	 * The boxlang context used to create this ORM application.
@@ -92,41 +89,12 @@ public class ORMApp {
 	/**
 	 * Array of configured datasources for this ORM application.
 	 */
-	private List<DataSource>					datasources;
+	private List<DataSource>					datasources			= new ArrayList<>();
 
 	/**
 	 * A map of entities discovered for this ORM application, keyed by datasource name.
 	 */
 	private Map<DataSource, List<EntityRecord>>	entityMap;
-
-	/**
-	 * ------------------------------------------------------------------------------------------------------------
-	 * Static Helpers
-	 * ------------------------------------------------------------------------------------------------------------
-	 */
-
-	/**
-	 * Get a unique name for this context's ORM Application.
-	 *
-	 * Used to ensure we can tell the various ORM apps apart.
-	 *
-	 * @return a unique key for the given context's application.
-	 */
-	public static Key getUniqueAppName( IBoxContext context ) {
-		ApplicationBoxContext appContext = context.getApplicationContext();
-		return getUniqueAppName( appContext.getApplication(), appContext.getApplication().getStartingListener().getSettings() );
-	}
-
-	/**
-	 * Get a unique name for this context's ORM Application.
-	 *
-	 * Used to ensure we can tell the various ORM apps apart.
-	 *
-	 * @return a unique key for the given context's application.
-	 */
-	public static Key getUniqueAppName( Application application, IStruct appConfig ) {
-		return Key.of( application.getName() + "_" + appConfig.hashCode() );
-	}
 
 	/**
 	 * ------------------------------------------------------------------------------------------------------------
@@ -140,31 +108,30 @@ public class ORMApp {
 	 * @param context The BoxLang Request context for the application.
 	 * @param config  The ORM configuration for the application.
 	 */
-	public ORMApp( RequestBoxContext context, ORMConfig config ) {
-		// @TODO: Consider only storing the ApplicationBoxContext, as that's the parent, and the RequestBoxContext will obviously age out pretty quickly.
+	public ORMApp( RequestBoxContext context, ORMConfig config, Key name ) {
 		this.context	= context;
 		this.logger		= runtime.getLoggingService().getLogger( "orm" );
-
-		if ( context.getParentOfType( ApplicationBoxContext.class ) == null ) {
-			logger.error( "ORMApp created with a context that is not inside an application context; aborting." );
-			return;
-		}
-
-		this.config				= config;
-		this.sessionFactories	= new ConcurrentHashMap<>();
-		this.datasources		= new ArrayList<>();
-		this.name				= ORMApp.getUniqueAppName( context );
+		this.config		= config;
+		this.name		= name;
 
 		ConnectionManager connectionManager = context.getConnectionManager();
 		this.defaultDatasource = config.datasource == null
 		    ? connectionManager.getDefaultDatasourceOrThrow()
 		    : connectionManager.getDatasourceOrThrow( Key.of( config.datasource ) );
+
+		this.logger.debug( "ORMApp created for application: [{}]", name );
 	}
+
+	/**
+	 * ------------------------------------------------------------------------------------------------------------
+	 * App Methods
+	 * ------------------------------------------------------------------------------------------------------------
+	 */
 
 	/**
 	 * Start up the ORM application, creating session factories for all discovered entities and their datasources.
 	 */
-	public void startup() {
+	public ORMApp startup() {
 		this.entityMap = MappingGenerator.discoverEntities( context, config );
 
 		if ( logger.isDebugEnabled() )
@@ -190,6 +157,8 @@ public class ORMApp {
 				this.defaultSessionFactory = factory;
 			}
 		} );
+
+		return this;
 	}
 
 	/**
@@ -199,7 +168,7 @@ public class ORMApp {
 	 *
 	 * @return a unique key for the given context's application.
 	 */
-	public Key getUniqueName() {
+	public Key getName() {
 		return this.name;
 	}
 
@@ -257,7 +226,7 @@ public class ORMApp {
 
 	/**
 	 * Load an entity by its primary key.
-	 * 
+	 *
 	 * @param context    Boxlang Request context
 	 * @param entityName The name of the entity to load
 	 * @param keyValue   The primary key value to load the entity by. This can be a single value such as a string or integer, or a struct for composite
@@ -277,7 +246,7 @@ public class ORMApp {
 
 	/**
 	 * Get the java type for the primary key of an entity.
-	 * 
+	 *
 	 * TODO: We're using Hibernate's deprecated metamodel. Refactor to use JPA metamodel.
 	 */
 	private Class<?> getKeyJavaType( Session session, String entityName ) {
@@ -292,7 +261,7 @@ public class ORMApp {
 	 * Metamodel metamodel = session
 	 * .getEntityManagerFactory()
 	 * .getMetamodel();
-	 * 
+	 *
 	 * EntityType<?> entityType = metamodel.entity( entityClassType );
 	 * SingularAttribute<?, ?> idAttribute = entityType.getId( entityType.getIdType().getJavaType() );
 	 * return idAttribute.getJavaType();
