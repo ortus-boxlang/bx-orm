@@ -36,7 +36,6 @@ import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
-import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.scopes.Key;
@@ -63,9 +62,9 @@ public class SessionFactoryBuilder {
 	private BoxLangLogger			logger;
 
 	/**
-	 * The ORM datasource for this session factory.
+	 * The ORM datasource name which this session factory should be tied to.
 	 */
-	private DataSource				datasource;
+	private Key						datasourceName;
 
 	/**
 	 * The ORM configuration for this session factory.
@@ -99,11 +98,14 @@ public class SessionFactoryBuilder {
 
 	/**
 	 * Get a unique key for the given context/datasource combination.
+	 * 
+	 * @param context        The BoxLang context for this session factory.
+	 * @param datasourceName The ORM datasource for this session factory.
 	 *
 	 * @return a unique key for the given context/datasource combination.
 	 */
-	public static Key getUniqueName( IBoxContext context, DataSource datasource ) {
-		return Key.of( ORMService.getAppNameFromContext( context ) + "_" + datasource.getUniqueName().getName() );
+	public static Key getUniqueName( IBoxContext context, Key datasourceName ) {
+		return Key.of( ORMService.getAppNameFromContext( context ) + "_" + datasourceName.getName() );
 	}
 
 	/**
@@ -115,17 +117,17 @@ public class SessionFactoryBuilder {
 	/**
 	 * Constructor
 	 *
-	 * @param context    The BoxLang context for this session factory.
-	 * @param datasource The ORM datasource for this session factory.
-	 * @param ormConfig  The ORM configuration for this session factory.
-	 * @param entities   The discovered entities for this session factory.
+	 * @param context        The BoxLang context for this session factory.
+	 * @param datasourceName The ORM datasource for this session factory.
+	 * @param ormConfig      The ORM configuration for this session factory.
+	 * @param entities       The discovered entities for this session factory.
 	 */
-	public SessionFactoryBuilder( IJDBCCapableContext context, DataSource datasource, ORMConfig ormConfig, List<EntityRecord> entities ) {
-		this.ormConfig	= ormConfig;
-		this.context	= context;
-		this.datasource	= datasource;
-		this.entities	= entities;
-		this.logger		= runtime.getLoggingService().getLogger( "orm" );
+	public SessionFactoryBuilder( IJDBCCapableContext context, Key datasourceName, ORMConfig ormConfig, List<EntityRecord> entities ) {
+		this.ormConfig		= ormConfig;
+		this.context		= context;
+		this.datasourceName	= datasourceName;
+		this.entities		= entities;
+		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 	}
 
 	/**
@@ -134,7 +136,7 @@ public class SessionFactoryBuilder {
 	 * @return a unique name for this session factory, based on the application name and datasource name.
 	 */
 	public Key getUniqueName() {
-		return SessionFactoryBuilder.getUniqueName( this.context, datasource );
+		return SessionFactoryBuilder.getUniqueName( this.context, datasourceName );
 	}
 
 	/**
@@ -185,7 +187,7 @@ public class SessionFactoryBuilder {
 
 		// @TODO: Any configuration which needs a specific java type (such as the
 		// connection provider instance) goes here
-		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasource ) );
+		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasourceName ) );
 		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
 		properties.put( AvailableSettings.CLASSLOADERS, classLoaders );
 		properties.put( AvailableSettings.TC_CLASSLOADER, "org.hibernate.boot.registry.classloading.internal.AggregatedClassLoader" );

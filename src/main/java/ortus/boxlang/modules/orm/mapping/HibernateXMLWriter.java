@@ -48,12 +48,12 @@ public class HibernateXMLWriter {
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime				runtime	= BoxRuntime.getInstance();
+	private static final BoxRuntime			runtime	= BoxRuntime.getInstance();
 
 	/**
 	 * The logger for the ORM application.
 	 */
-	private BoxLangLogger						logger;
+	private BoxLangLogger					logger;
 
 	/**
 	 * IEntityMeta instance which represents the parsed entity metadata in a normalized form.
@@ -61,36 +61,36 @@ public class HibernateXMLWriter {
 	 * The source of this metadata could be CFML persistent
 	 * annotations like `persistent=true` and `fieldtype="id"` OR modern BoxLang-syntax, JPA-style annotations like `@Entity` and `@Id`.
 	 */
-	IEntityMeta									entity;
+	IEntityMeta								entity;
 
 	/**
 	 * XML Document root, created by the constructor.
 	 * <p>
 	 * This is the root element of the Hibernate mapping document, and will be returned by {@link #generateXML()}.
 	 */
-	Document									document;
+	Document								document;
 
 	/**
 	 * A function that takes a class name and returns an EntityRecord instance.
 	 * <p>
 	 * This is used to look up the metadata for associated entities when generating association elements.
 	 */
-	BiFunction<String, String, EntityRecord>	entityLookup;
+	BiFunction<String, Key, EntityRecord>	entityLookup;
 
 	/**
 	 * Whether to throw an exception when an error occurs during XML generation.
 	 */
-	boolean										throwOnErrors;
+	boolean									throwOnErrors;
 
 	public HibernateXMLWriter( IEntityMeta entity ) {
 		this( entity, null, true );
 	}
 
-	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, String, EntityRecord> entityLookup ) {
+	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, Key, EntityRecord> entityLookup ) {
 		this( entity, entityLookup, true );
 	}
 
-	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, String, EntityRecord> entityLookup, boolean throwOnErrors ) {
+	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, Key, EntityRecord> entityLookup, boolean throwOnErrors ) {
 		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 		this.entity			= entity;
 		this.entityLookup	= entityLookup;
@@ -734,7 +734,8 @@ public class HibernateXMLWriter {
 		if ( relationClassName == null || relationClassName.isBlank() ) {
 			return;
 		}
-		EntityRecord associatedEntity = entityLookup.apply( relationClassName, this.entity.getDatasource() );
+		Key				datasourceName		= this.entity.getDatasource().isEmpty() ? Key.defaultDatasource : Key.of( this.entity.getDatasource() );
+		EntityRecord	associatedEntity	= entityLookup.apply( relationClassName, datasourceName );
 		if ( associatedEntity == null ) {
 			String message = String.format( "Could not find entity '%s' referenced in property '%s' on entity '%s'", relationClassName, prop.getName(),
 			    prop.getDefiningEntity().getEntityName() );

@@ -23,8 +23,12 @@ import java.sql.SQLException;
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
 
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
+import ortus.boxlang.runtime.scopes.Key;
 
 /**
  * Java class responsible for providing datasource connections to Hibernate ORM.
@@ -47,11 +51,11 @@ public class ORMConnectionProvider implements ConnectionProvider {
 	 * The BoxLang DataSource object which manages database connections and
 	 * especially connection pooling.
 	 */
-	private DataSource				dataSource;
+	private Key						datasourceName;
 
-	public ORMConnectionProvider( DataSource dataSource ) {
-		this.logger		= runtime.getLoggingService().getLogger( "orm" );
-		this.dataSource	= dataSource;
+	public ORMConnectionProvider( Key datasourceName ) {
+		this.logger			= runtime.getLoggingService().getLogger( "orm" );
+		this.datasourceName	= datasourceName;
 	}
 
 	@Override
@@ -62,8 +66,9 @@ public class ORMConnectionProvider implements ConnectionProvider {
 
 	@Override
 	public Connection getConnection() throws SQLException {
-		Connection connection = dataSource.getConnection();
-		logger.debug( "Getting connection {} for datasource: {}", connection, dataSource.getOriginalName() );
+		DataSource	datasource	= getDatasourceForKey( RequestBoxContext.getCurrent(), datasourceName );
+		Connection	connection	= datasource.getConnection();
+		logger.debug( "Getting connection {} for datasource: {}", connection, datasourceName.getOriginalValue() );
 		return connection;
 	}
 
@@ -89,4 +94,16 @@ public class ORMConnectionProvider implements ConnectionProvider {
 		throw new UnsupportedOperationException( "Unimplemented method 'isUnwrappableAs'" );
 	}
 
+	/**
+	 * Retrieve the datasource for the configured datasource name - either the defined entity datasource, or the default datasource.
+	 * 
+	 * @param context        JDBC-capable context - i.e. an IBoxContext containing a ConnectionManager.
+	 * @param datasourceName Datasource name to look up.
+	 */
+	private DataSource getDatasourceForKey( IJDBCCapableContext context, Key datasourceName ) {
+		ConnectionManager connectionManager = context.getConnectionManager();
+		return datasourceName == null || datasourceName.equals( Key.defaultDatasource )
+		    ? connectionManager.getDefaultDatasourceOrThrow()
+		    : connectionManager.getDatasourceOrThrow( datasourceName );
+	}
 }

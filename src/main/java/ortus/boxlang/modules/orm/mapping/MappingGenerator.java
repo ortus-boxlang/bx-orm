@@ -46,9 +46,6 @@ import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
-import ortus.boxlang.runtime.dynamic.casters.StringCaster;
-import ortus.boxlang.runtime.jdbc.ConnectionManager;
-import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -122,11 +119,6 @@ public class MappingGenerator {
 	private List<EntityRecord>		entities					= new ArrayList<>();
 
 	/**
-	 * The default datasource to "discover" the entity under when an entity has none specified.
-	 */
-	private DataSource				defaultDatasource;
-
-	/**
 	 * The JDBC-capable boxlang context, used to look up datasources referenced in the ORM config or on the entities themselves.
 	 */
 	private IJDBCCapableContext		context;
@@ -142,7 +134,6 @@ public class MappingGenerator {
 		this.config					= config;
 		this.saveAlongsideEntity	= config.saveMapping;
 		this.context				= context;
-		this.defaultDatasource		= getDefaultDatasource();
 		// this.appDirectory = context.getParentOfType( ApplicationBoxContext.class ).getApplication().getApplicationDirectory();
 
 		if ( !this.saveAlongsideEntity ) {
@@ -171,7 +162,7 @@ public class MappingGenerator {
 	 *
 	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
 	 */
-	public static Map<DataSource, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
+	public static Map<Key, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
 		if ( !ormConfig.autoGenMap ) {
 			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
 			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
@@ -223,26 +214,6 @@ public class MappingGenerator {
 		}
 
 		return this;
-	}
-
-	/**
-	 * Get the ORM datasource from the ORM configuration.
-	 * We currently throw a BoxRuntimeException if no datasource is found in the ORM
-	 * configuration, but eventually we will support a default datasource.
-	 *
-	 * @return The ORM datasource.
-	 */
-	private DataSource getDefaultDatasource() {
-		ConnectionManager	connectionManager	= this.context.getConnectionManager();
-		Object				ormDatasource		= this.config.datasource;
-		if ( ormDatasource != null ) {
-			if ( ormDatasource instanceof IStruct datasourceStruct ) {
-				return connectionManager.getOnTheFlyDataSource( datasourceStruct );
-			}
-			return connectionManager.getDatasourceOrThrow( Key.of( ormDatasource ) );
-		}
-		logger.warn( "ORM configuration is missing 'datasource' key; falling back to default datasource" );
-		return connectionManager.getDefaultDatasourceOrThrow();
 	}
 
 	/**
@@ -349,42 +320,16 @@ public class MappingGenerator {
 
 		if ( logger.isDebugEnabled() )
 			logger.debug( "Generated FQN for entity [{}]: [{}]", entityName, fqn );
-
-		DataSource datasource = null;
+		Key datasourceName = Key.of( config.datasource );
 		if ( annotations.containsKey( Key.datasource ) ) {
-			datasource = lookupEntityDatasource( context.getConnectionManager(), StringCaster.cast( annotations.getOrDefault( Key.datasource, "" ) ) );
-		}
-		if ( datasource == null ) {
-			if ( this.defaultDatasource != null ) {
-				datasource = this.defaultDatasource;
-			} else {
-				throw new BoxRuntimeException( "Failed to find datasource for entity: " + entityName );
-			}
+			datasourceName = Key.of( annotations.getAsString( Key.datasource ) );
 		}
 		return new EntityRecord(
 		    entityName,
 		    fqn,
 		    meta,
-		    datasource
+		    datasourceName
 		);
-	}
-
-	/**
-	 * Lookup the datasource by name from the connection manager.
-	 *
-	 * @param connectionManager The JDBC-capable context's connection manager.
-	 * @param datasourceName    String datasource name to find in application datasource configuration
-	 */
-	private DataSource lookupEntityDatasource( ConnectionManager connectionManager, String datasourceName ) {
-		if ( datasourceName.isEmpty() ) {
-			return null;
-		}
-		var datasource = connectionManager.getDatasource( Key.of( datasourceName.trim() ) );
-		if ( datasource == null ) {
-			// @TODO: check config.skipParseErrors before throwing...
-			throw new BoxRuntimeException( "Failed to find datasource: " + datasourceName.trim() );
-		}
-		return datasource;
 	}
 
 	/**
@@ -434,7 +379,7 @@ public class MappingGenerator {
 	 *
 	 * @return The map of discovered entities, where the key is the datasource name and the value is a List of EntityRecord instances for that datasource.
 	 */
-	public Map<DataSource, List<EntityRecord>> getEntityDatasourceMap() {
+	public Map<Key, List<EntityRecord>> getEntityDatasourceMap() {
 		return this.entities.stream().collect( java.util.stream.Collectors.groupingBy( EntityRecord::getDatasource ) );
 	}
 
@@ -485,8 +430,10 @@ public class MappingGenerator {
 	 */
 	private String generateXML( EntityRecord entity ) {
 		try {
-			IStruct		meta		= entity.getMetadata();
-			IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+			IStruct meta = entity.getMetadata();
+			// ensure the 'datasource' key is populated with our default logic
+			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
+			IEntityMeta entityMeta = AbstractEntityMeta.autoDiscoverMetaType( meta );
 			entity.setEntityMeta( entityMeta );
 
 			Document			doc			= new HibernateXMLWriter( entityMeta, this::entityLookup, !this.config.ignoreParseErrors ).generateXML();
@@ -521,17 +468,17 @@ public class MappingGenerator {
 	 * <p>
 	 * Useful for determining relationship entity names based off the provided class name.
 	 *
-	 * @param className  The class name to lookup.
-	 * @param datasource The datasource name to match on, if any.
+	 * @param className      The class name to lookup.
+	 * @param datasourceName The datasource name to match on, if any.
 	 *
 	 * @return EntityRecord instance or null.
 	 */
-	public EntityRecord entityLookup( String className, String datasource ) {
+	public EntityRecord entityLookup( String className, Key datasourceName ) {
 		return this.entities
 		    .stream()
 		    .filter( ( EntityRecord e ) -> {
 			    return e.getClassName().equalsIgnoreCase( className )
-			        && ( datasource == null || e.getDatasource().equals( datasource ) );
+			        && ( datasourceName == null || e.getDatasource().equals( datasourceName ) );
 		    } )
 		    .findFirst()
 		    .orElse( null );

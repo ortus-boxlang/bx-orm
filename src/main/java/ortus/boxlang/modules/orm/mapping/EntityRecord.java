@@ -21,7 +21,6 @@ import java.nio.file.Path;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
-import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -48,9 +47,9 @@ public class EntityRecord {
 	private String		className;
 
 	/**
-	 * The configured datasource for this entity.
+	 * Name of the datasource which this entity should use to connect to the DB.
 	 */
-	private DataSource	datasource;
+	private Key			datasource;
 
 	/**
 	 * Struct of metadata for the entity. Includes annotations, file path, etc.
@@ -81,7 +80,7 @@ public class EntityRecord {
 		this( entityName, classFQN, metadata, null );
 	}
 
-	public EntityRecord( String entityName, String classFQN, IStruct metadata, DataSource onDatasource ) {
+	public EntityRecord( String entityName, String classFQN, IStruct metadata, Key onDatasource ) {
 		this.entityName		= entityName;
 		this.classFQN		= classFQN;
 		this.datasource		= onDatasource;
@@ -127,7 +126,7 @@ public class EntityRecord {
 		return classFQN;
 	}
 
-	public DataSource getDatasource() {
+	public Key getDatasource() {
 		return datasource;
 	}
 
@@ -151,8 +150,8 @@ public class EntityRecord {
 		    Key.metadata, metadata,
 		    "xmlFilePath", xmlFilePath,
 		    "resolverPrefix", resolverPrefix,
-		    // @TODO: Write a better serializer for these two:
-		    ORMKeys.datasource, datasource.getUniqueName()
+		    ORMKeys.datasource, datasource
+		// @TODO: Write a better serializer for this:
 		// ORMKeys.entityMeta, entityMeta.toString(),
 		);
 	}

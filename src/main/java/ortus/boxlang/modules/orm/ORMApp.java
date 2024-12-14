@@ -52,54 +52,54 @@ public class ORMApp {
 	/**
 	 * The logger for the ORM application.
 	 */
-	private BoxLangLogger						logger;
+	private BoxLangLogger					logger;
 
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime				runtime				= BoxRuntime.getInstance();
+	private static final BoxRuntime			runtime				= BoxRuntime.getInstance();
 
 	/**
 	 * A map of session factories, keyed by name.
 	 */
-	private Map<Key, SessionFactory>			sessionFactories	= new ConcurrentHashMap<>();
+	private Map<Key, SessionFactory>		sessionFactories	= new ConcurrentHashMap<>();
 
 	/**
 	 * The boxlang context used to create this ORM application.
 	 */
-	private RequestBoxContext					context;
+	private RequestBoxContext				context;
 
 	/**
 	 * The ORM configuration.
 	 */
-	private ORMConfig							config;
+	private ORMConfig						config;
 
 	/**
 	 * A unique name for this ORM application.
 	 */
-	private Key									name;
+	private Key								name;
 
 	/**
 	 * The default session factory for this ORM application.
 	 * <p>
 	 * In other words, the session factory for the default datasource.
 	 */
-	private SessionFactory						defaultSessionFactory;
+	private SessionFactory					defaultSessionFactory;
 
 	/**
 	 * The default datasource for this ORM application - created from the datasource named in the ORM configuration.
 	 */
-	private DataSource							defaultDatasource;
+	private Key								defaultDatasource;
 
 	/**
-	 * Array of configured datasources for this ORM application.
+	 * Array of configured datasource names for this ORM application.
 	 */
-	private List<DataSource>					datasources			= new ArrayList<>();
+	private List<Key>						datasources			= new ArrayList<>();
 
 	/**
 	 * A map of entities discovered for this ORM application, keyed by datasource name.
 	 */
-	private Map<DataSource, List<EntityRecord>>	entityMap;
+	private Map<Key, List<EntityRecord>>	entityMap;
 
 	/**
 	 * ------------------------------------------------------------------------------------------------------------
@@ -114,15 +114,11 @@ public class ORMApp {
 	 * @param config  The ORM configuration for the application.
 	 */
 	public ORMApp( RequestBoxContext context, ORMConfig config, Key name ) {
-		this.context	= context;
-		this.logger		= runtime.getLoggingService().getLogger( "orm" );
-		this.config		= config;
-		this.name		= name;
-
-		ConnectionManager connectionManager = context.getConnectionManager();
-		this.defaultDatasource = this.config.datasource == null
-		    ? connectionManager.getDefaultDatasourceOrThrow()
-		    : connectionManager.getDatasourceOrThrow( Key.of( config.datasource ) );
+		this.context			= context;
+		this.logger				= runtime.getLoggingService().getLogger( "orm" );
+		this.config				= config;
+		this.name				= name;
+		this.defaultDatasource	= this.config.datasource;
 
 		this.logger.debug( "ORMApp created for application: [{}]", name );
 	}
@@ -144,17 +140,17 @@ public class ORMApp {
 
 		this.entityMap.forEach( ( datasource, entities ) -> {
 			if ( logger.isDebugEnabled() )
-				logger.debug( "Creating session factory for datasource: {}", datasource.getUniqueName() );
+				logger.debug( "Creating session factory for datasource: {}", datasource );
 
 			this.datasources.add( datasource );
 
 			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, datasource, config, entities );
 			SessionFactory			factory	= builder.build();
-			this.sessionFactories.put( datasource.getUniqueName(), factory );
+			this.sessionFactories.put( Key.of( datasource ), factory );
 
 			if ( datasource.equals( this.defaultDatasource ) ) {
 				if ( logger.isDebugEnabled() )
-					logger.debug( "Setting the default session factory to the default datasource: {}", datasource.getUniqueName() );
+					logger.debug( "Setting the default session factory to the default datasource: {}", datasource );
 				this.defaultSessionFactory = factory;
 			}
 		} );
@@ -187,9 +183,9 @@ public class ORMApp {
 	 * @param datasource The datasource for which to get entities. Will filter the result to entities with a `datasource="myDatasourceName"`
 	 *                   annotation.
 	 */
-	public List<EntityRecord> getEntityRecords( DataSource datasource ) {
+	public List<EntityRecord> getEntityRecords( Key datasource ) {
 		if ( !this.entityMap.containsKey( datasource ) ) {
-			throw new BoxRuntimeException( "No entities found for datasource: " + datasource );
+			throw new BoxRuntimeException( "No entities found for datasource: " + datasource.getOriginalValue() );
 		}
 		return this.entityMap.get( datasource );
 	}
@@ -211,9 +207,9 @@ public class ORMApp {
 			return entityFromDefault.get();
 		}
 
-		for ( DataSource datasource : this.datasources ) {
-			if ( !datasource.equals( this.defaultDatasource ) ) {
-				var entityFromDatasource = getEntityRecords( datasource ).stream()
+		for ( Key datasourceName : this.datasources ) {
+			if ( !datasourceName.equals( this.defaultDatasource ) ) {
+				var entityFromDatasource = getEntityRecords( datasourceName ).stream()
 				    .filter( ( entity ) -> entity.getEntityName().equalsIgnoreCase( entityName ) )
 				    .findFirst();
 
@@ -272,7 +268,7 @@ public class ORMApp {
 	/**
 	 * Get the entity map for this ORM application, where the key is the configured datasource name and the value is a list of EntityRecords.
 	 */
-	public Map<DataSource, List<EntityRecord>> getEntityMap() {
+	public Map<Key, List<EntityRecord>> getEntityMap() {
 		return this.entityMap;
 	}
 
@@ -288,8 +284,18 @@ public class ORMApp {
 	 *
 	 * @param datasourceName Datasource name to look up the session factory for.
 	 */
+	public SessionFactory getSessionFactoryOrThrow( String datasourceName ) {
+		return getSessionFactoryOrThrow( Key.of( datasourceName ) );
+	}
+
+	/**
+	 * Get the SessionFactory instantiated for this particular datasource.
+	 *
+	 * @param datasourceName Datasource name to look up the session factory for.
+	 */
 	public SessionFactory getSessionFactoryOrThrow( Key datasourceName ) {
-		return getSessionFactoryOrThrow( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDatasourceOrThrow( datasourceName ) );
+		IJDBCCapableContext jdbcContext = context.getParentOfType( IJDBCCapableContext.class );
+		return getSessionFactoryOrThrow( jdbcContext.getConnectionManager().getDatasourceOrThrow( datasourceName ) );
 	}
 
 	/**
@@ -329,7 +335,7 @@ public class ORMApp {
 	/**
 	 * Get the list of datasources configured for this ORM application.
 	 */
-	public List<DataSource> getDatasources() {
+	public List<Key> getDatasources() {
 		return this.datasources;
 	}
 

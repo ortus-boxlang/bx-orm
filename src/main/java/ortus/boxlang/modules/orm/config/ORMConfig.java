@@ -109,7 +109,7 @@ public class ORMConfig {
 	 * Define the data source to be utilized by the ORM. If not used,
 	 * defaults to the this.datasource in the Application.cfc.
 	 */
-	public String						datasource;
+	public Key							datasource;
 
 	/**
 	 * <ul>
@@ -372,11 +372,26 @@ public class ORMConfig {
 		if ( properties.containsKey( ORMKeys.datasource ) && properties.get( ORMKeys.datasource ) != null ) {
 			Object datasourceProperty = properties.get( ORMKeys.datasource );
 			if ( datasourceProperty instanceof String datasourceName ) {
-				datasource = datasourceName;
+				datasource = Key.of( datasourceName );
 			} else if ( datasourceProperty instanceof IStruct datasourceStruct ) {
 				// @TODO: Implement this!
 				// datasourceStruct = datasourceStruct;
 			}
+		}
+		if ( datasource == null || datasource.equals( Key.EMPTY ) ) {
+			// @TODO: Read the default datasource
+			// String defaultDSN = (String)this.context.getConfigItems(new Key[]{Key.defaultDatasource});
+			// Key defaultDSNKey = Key.of(defaultDSN);
+			// IStruct configDatasources = (IStruct)this.context.getConfigItems(new Key[]{Key.datasources});
+			// if (!defaultDSN.isEmpty() && configDatasources.containsKey(defaultDSNKey)) {
+			// IStruct targetConfig = configDatasources.getAsStruct(defaultDSNKey);
+			// DatasourceConfig dsn = (new DatasourceConfig(defaultDSNKey)).process(targetConfig).withAppName(this.getApplicationName());
+			// this.defaultDatasource = this.datasourceService.register(dsn);
+			// return this.defaultDatasource;
+			// } else {
+			// return null;
+			// }
+			datasource = Key.defaultDatasource;
 		}
 
 		if ( properties.containsKey( ORMKeys.dbcreate ) && properties.get( ORMKeys.dbcreate ) != null

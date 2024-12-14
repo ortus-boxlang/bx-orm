@@ -108,6 +108,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		this.meta					= entityMeta;
 		this.annotations			= this.meta.getAsStruct( Key.annotations );
 
+		this.datasource				= this.meta.getAsString( Key.datasource );
+
 		// Handle generic entity metadata, i.e. metadata that is common to both classic and modern annotation syntax.
 		this.isExtended				= this.meta.containsKey( Key._EXTENDS )
 		    && !this.meta.getAsStruct( Key._EXTENDS ).isEmpty();

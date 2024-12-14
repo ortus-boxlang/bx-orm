@@ -71,7 +71,7 @@ public class TransactionManager extends BaseInterceptor {
 				logger.debug(
 				    "'autoManageSession' is enabled; flushing ORM session [{}] for datasource [{}] prior to transaction begin.",
 				    ormSession,
-				    datasource.getUniqueName()
+				    datasource.getOriginalValue()
 				);
 
 				ormSession.flush();
@@ -80,7 +80,7 @@ public class TransactionManager extends BaseInterceptor {
 			logger.debug(
 			    "Starting ORM transaction on session [{}] for datasource: [{}]",
 			    ormSession,
-			    datasource.getUniqueName()
+			    datasource.getOriginalValue()
 			);
 
 			if ( ormSession.isJoinedToTransaction() ) {
@@ -110,7 +110,7 @@ public class TransactionManager extends BaseInterceptor {
 			logger.debug(
 			    "Committing ORM transaction on session [{}] for datasource [{}]",
 			    ormSession,
-			    datasource.getUniqueName()
+			    datasource.getOriginalValue()
 			);
 
 			ormSession.getTransaction().commit();
@@ -118,7 +118,7 @@ public class TransactionManager extends BaseInterceptor {
 			logger.debug(
 			    "Beginning new ORM transaction on session [{}] for datasource [{}]",
 			    ormSession,
-			    datasource.getUniqueName()
+			    datasource.getOriginalValue()
 			);
 
 			ormSession.beginTransaction();
@@ -141,7 +141,7 @@ public class TransactionManager extends BaseInterceptor {
 			logger.debug(
 			    "Rolling back ORM transaction on session [{}] for datasource [{}]",
 			    ormSession,
-			    datasource.getUniqueName()
+			    datasource.getOriginalValue()
 			);
 
 			ormSession.getTransaction().rollback();
@@ -151,7 +151,7 @@ public class TransactionManager extends BaseInterceptor {
 					logger.debug(
 					    "'autoManageSession' is enabled; clearing ORM session [{}] for datasource [{}] after transaction rollback.",
 					    ormSession,
-					    datasource.getOriginalName() );
+					    datasource.getOriginalValue() );
 				}
 				ormSession.clear();
 			}
@@ -159,7 +159,7 @@ public class TransactionManager extends BaseInterceptor {
 			logger.debug(
 			    "Beginning new ORM transaction on session [{}] for datasource [{}]",
 			    ormSession,
-			    datasource.getUniqueName()
+			    datasource.getOriginalValue()
 			);
 
 			ormSession.beginTransaction();
@@ -181,7 +181,7 @@ public class TransactionManager extends BaseInterceptor {
 			logger.debug(
 			    "Ending ORM transaction on session [{}] for datasource [{}]",
 			    ormSession,
-			    datasource.getUniqueName()
+			    datasource.getOriginalValue()
 			);
 
 			ormSession.getTransaction().commit();
