@@ -171,98 +171,209 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		return new ModernEntityMeta( meta );
 	}
 
+	/**
+	 * Gets the datasource of the entity.
+	 *
+	 * @return the datasource of the entity.
+	 */
 	public String getDatasource() {
 		return this.datasource;
 	}
 
+	/**
+	 * Gets the name of the entity.
+	 *
+	 * @return the name of the entity.
+	 */
 	public String getEntityName() {
 		return this.entityName;
 	}
 
+	/**
+	 * Checks if the entity is a simple entity.
+	 *
+	 * @return true if the entity is a simple entity, false otherwise.
+	 */
 	public boolean isSimpleEntity() {
 		return this.isSimpleEntity;
 	}
 
+	/**
+	 * Checks if the entity is extended.
+	 *
+	 * @return true if the entity is extended, false otherwise.
+	 */
 	public boolean isExtended() {
 		return this.isExtended;
 	}
 
+	/**
+	 * Checks if the entity is immutable.
+	 *
+	 * @return true if the entity is immutable, false otherwise.
+	 */
 	public boolean isImmutable() {
 		return this.isImmutable;
 	}
 
+	/**
+	 * Checks if dynamic insert is enabled for the entity.
+	 *
+	 * @return true if dynamic insert is enabled, false otherwise.
+	 */
 	public boolean isDynamicInsert() {
 		return this.isDynamicInsert;
 	}
 
+	/**
+	 * Checks if dynamic update is enabled for the entity.
+	 *
+	 * @return true if dynamic update is enabled, false otherwise.
+	 */
 	public boolean isDynamicUpdate() {
 		return this.isDynamicUpdate;
 	}
 
+	/**
+	 * Checks if select before update is enabled for the entity.
+	 *
+	 * @return true if select before update is enabled, false otherwise.
+	 */
 	public boolean isSelectBeforeUpdate() {
 		return this.isSelectBeforeUpdate;
 	}
 
+	/**
+	 * Gets the table name of the entity.
+	 *
+	 * @return the table name of the entity.
+	 */
 	public String getTableName() {
-		// @TODO: Use the naming strategy to generate or massage the table name
 		return this.tableName;
 	}
 
+	/**
+	 * Gets the schema name of the entity.
+	 *
+	 * @return the schema name of the entity.
+	 */
 	public String getSchema() {
 		return this.schemaName;
 	}
 
+	/**
+	 * Gets the catalog name of the entity.
+	 *
+	 * @return the catalog name of the entity.
+	 */
 	public String getCatalog() {
 		return this.catalogName;
 	}
 
+	/**
+	 * Gets the discriminator of the entity.
+	 *
+	 * @return the discriminator of the entity.
+	 */
 	public IStruct getDiscriminator() {
 		return this.discriminator;
 	}
 
+	/**
+	 * Gets the cache configuration of the entity.
+	 *
+	 * @return the cache configuration of the entity.
+	 */
 	public IStruct getCache() {
 		return this.cache;
 	}
 
+	/**
+	 * Gets the batch size for the entity.
+	 *
+	 * @return the batch size for the entity.
+	 */
 	public Integer getBatchSize() {
 		return this.batchsize;
 	}
 
+	/**
+	 * Gets the row ID of the entity.
+	 *
+	 * @return the row ID of the entity.
+	 */
 	public String getRowID() {
 		return this.rowid;
 	}
 
+	/**
+	 * Checks if lazy loading is enabled for the entity.
+	 *
+	 * @return true if lazy loading is enabled, false otherwise.
+	 */
 	public boolean isLazy() {
 		return this.isLazy;
 	}
 
+	/**
+	 * Gets the optimistic lock strategy for the entity.
+	 *
+	 * @return the optimistic lock strategy for the entity.
+	 */
 	public String getOptimisticLock() {
 		return this.optimisticLock;
 	}
 
+	/**
+	 * Gets the where clause for the entity.
+	 *
+	 * @return the where clause for the entity.
+	 */
 	public String getWhere() {
 		return this.where;
 	}
 
+	/**
+	 * Gets the parent metadata of the entity.
+	 *
+	 * @return the parent metadata of the entity.
+	 */
 	public IStruct getParentMeta() {
 		return this.parentMeta;
 	}
 
 	/**
-	 * Property methods
+	 * Gets the ID properties of the entity.
+	 *
+	 * @return the ID properties of the entity.
 	 */
 	public List<IPropertyMeta> getIdProperties() {
 		return this.idProperties;
 	}
 
+	/**
+	 * Gets the properties of the entity.
+	 *
+	 * @return the properties of the entity.
+	 */
 	public List<IPropertyMeta> getProperties() {
 		return this.properties;
 	}
 
+	/**
+	 * Gets the version property of the entity.
+	 *
+	 * @return the version property of the entity.
+	 */
 	public IPropertyMeta getVersionProperty() {
 		return this.versionProperty;
 	}
 
+	/**
+	 * Gets the associations of the entity.
+	 *
+	 * @return the associations of the entity.
+	 */
 	public List<IPropertyMeta> getAssociations() {
 		return this.associations;
 	}

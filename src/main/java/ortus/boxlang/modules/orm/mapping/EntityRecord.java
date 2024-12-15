@@ -76,10 +76,25 @@ public class EntityRecord {
 		this( entityName, classFQN, null );
 	}
 
+	/**
+	 * Create a new entity record.
+	 * 
+	 * @param entityName The name of the entity.
+	 * @param classFQN   The fully qualified class name of the entity, like `models.User`.
+	 * @param metadata   The parsed boxlang class metadata for the entity.
+	 */
 	public EntityRecord( String entityName, String classFQN, IStruct metadata ) {
 		this( entityName, classFQN, metadata, null );
 	}
 
+	/**
+	 * Create a new entity record.
+	 * 
+	 * @param entityName   The name of the entity.
+	 * @param classFQN     The fully qualified class name of the entity, like `models.User`.
+	 * @param metadata     The parsed boxlang class metadata for the entity.
+	 * @param onDatasource The name of the datasource which this entity should use to connect to the DB.
+	 */
 	public EntityRecord( String entityName, String classFQN, IStruct metadata, Key onDatasource ) {
 		this.entityName		= entityName;
 		this.classFQN		= classFQN;
@@ -91,49 +106,82 @@ public class EntityRecord {
 		this.className = fqn[ fqn.length - 1 ];
 	}
 
+	/**
+	 * Set the XML file path for this entity.
+	 */
 	public EntityRecord setXmlFilePath( Path xmlFilePath ) {
 		this.xmlFilePath = xmlFilePath;
 		return this;
 	}
 
+	/**
+	 * Set the parsed BOXLANG class metadata for this entity.
+	 */
 	public EntityRecord setMetadata( IStruct metadata ) {
 		this.metadata = metadata;
 		return this;
 	}
 
+	/**
+	 * Set the parsed ENTITY metadata for this entity (.i.e. Hibernate-relevant metadata).
+	 */
 	public EntityRecord setEntityMeta( IEntityMeta entityMeta ) {
 		this.entityMeta = entityMeta;
 		return this;
 	}
 
+	/**
+	 * Get a struct of all parsed metadata for this boxlang class.
+	 */
 	public IStruct getMetadata() {
 		return metadata;
 	}
 
+	/**
+	 * Retrieve the entity name.
+	 */
 	public String getEntityName() {
 		return entityName;
 	}
 
+	/**
+	 * Retrieve the entity metadata, parsed from the class metadata.
+	 */
 	public IEntityMeta getEntityMeta() {
 		return entityMeta;
 	}
 
+	/**
+	 * Retrieve the class name.
+	 */
 	public String getClassName() {
 		return className;
 	}
 
+	/**
+	 * Retrieve the fully qualified class name, like `models.User`.
+	 */
 	public String getClassFQN() {
 		return classFQN;
 	}
 
+	/**
+	 * Retrieve the datasource name.
+	 */
 	public Key getDatasource() {
 		return datasource;
 	}
 
+	/**
+	 * Retrieve the path to the generated XML file for this entity.
+	 */
 	public Path getXmlFilePath() {
 		return xmlFilePath;
 	}
 
+	/**
+	 * Retrieve the Box class resolver prefix, i.e. `bx`.
+	 */
 	public String getResolverPrefix() {
 		return resolverPrefix;
 	}
@@ -142,6 +190,9 @@ public class EntityRecord {
 		return filePath.endsWith( "cfc" ) ? "cfc" : ClassLocator.BX_PREFIX;
 	}
 
+	/**
+	 * Retrieve this entity record as a struct.
+	 */
 	public IStruct asStruct() {
 		return Struct.of(
 		    ORMKeys.entityName, entityName,

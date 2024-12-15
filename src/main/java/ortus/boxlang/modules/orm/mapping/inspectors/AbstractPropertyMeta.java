@@ -26,7 +26,17 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
 /**
- * An abstract/parent utility class for property metadata configuration.
+ * Abstract base class for property metadata in the ORM framework.
+ * Provides common functionality for parsing property metadata annotations.
+ * 
+ * <p>
+ * This class is responsible for parsing and storing metadata related to properties
+ * such as column definitions, generator configurations, and associations.
+ * </p>
+ * 
+ * <p>
+ * Subclasses must implement methods to parse specific types of annotations.
+ * </p>
  */
 public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
@@ -154,63 +164,108 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	 */
 	protected abstract IStruct parseAssociation( IStruct annotations );
 
+	/**
+	 * Get ALL annotations for this property.
+	 */
 	public IStruct getAnnotations() {
 		return this.annotations;
 	}
 
+	/**
+	 * Is this property immutable?
+	 */
 	public boolean isImmutable() {
 		return this.isImmutable;
 	}
 
+	/**
+	 * Is optimistic lock enabled on this property?
+	 */
 	public boolean isOptimisticLock() {
 		return this.isOptimisticLock;
 	}
 
+	/**
+	 * Get the property's `lazy` annotation value.
+	 */
 	public String getLazy() {
 		return this.lazy;
 	}
 
+	/**
+	 * Get the property name.
+	 */
 	public String getName() {
 		return this.name;
 	}
 
+	/**
+	 * Get this property's `formula` annotation value.
+	 */
 	public String getFormula() {
 		return this.formula;
 	}
 
+	/**
+	 * Get the unsaved value for this property.
+	 */
 	public String getUnsavedValue() {
 		return this.unsavedValue;
 	}
 
+	/**
+	 * Get a struct of column metadata for this property.
+	 */
 	public IStruct getColumn() {
 		return this.column;
 	}
 
+	/**
+	 * Get a struct of generator metadata for this property.
+	 */
 	public IStruct getGenerator() {
 		return this.generator;
 	}
 
+	/**
+	 * Check if this property's fieldtype indicates an association - i.e. one-to-one, one-to-many, etc.
+	 */
 	public boolean isAssociationType() {
 		return this.fieldType.isAssociationType();
 	}
 
+	/**
+	 * Get the association metadata for this property.
+	 */
 	public IStruct getAssociation() {
 		return this.association;
 	}
 
+	/**
+	 * Get the field type for this property.
+	 */
 	public FIELDTYPE getFieldType() {
 		return this.fieldType;
 	}
 
+	/**
+	 * Set the field type for this property.
+	 */
 	public IPropertyMeta setFieldType( FIELDTYPE fieldType ) {
 		this.fieldType = fieldType;
 		return this;
 	}
 
+	/**
+	 * Get the ORM type for this property (string, integer, etc).
+	 */
 	public String getORMType() {
 		return this.ormType;
 	}
 
+	/**
+	 * Get the SQL type for this property (varchar, integer, etc).
+	 */
 	public String getSqlType() {
 		return this.sqlType;
 	}

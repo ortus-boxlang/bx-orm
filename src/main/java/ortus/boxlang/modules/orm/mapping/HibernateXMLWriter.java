@@ -82,14 +82,33 @@ public class HibernateXMLWriter {
 	 */
 	boolean									throwOnErrors;
 
+	/**
+	 * Create a new Hibernate XML writer for the given entity metadata.
+	 * 
+	 * @param entity The entity metadata to generate XML for.
+	 */
 	public HibernateXMLWriter( IEntityMeta entity ) {
 		this( entity, null, true );
 	}
 
+	/**
+	 * Create a new Hibernate XML writer for the given entity metadata, using the provided entity lookup function to find associated entities.
+	 * 
+	 * @param entity       The entity metadata to generate XML for.
+	 * @param entityLookup A function that takes an entity name and returns an EntityRecord instance.
+	 */
 	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, Key, EntityRecord> entityLookup ) {
 		this( entity, entityLookup, true );
 	}
 
+	/**
+	 * Create a new Hibernate XML writer for the given entity metadata, using the provided entity lookup function to find associated entities.
+	 * 
+	 * @param entity        The entity metadata to generate XML for.
+	 * @param entityLookup  A function that takes 1) an entity name, and 2) a datasource name, and returns an EntityRecord instance matching this combo
+	 *                      (or null.)
+	 * @param throwOnErrors Whether to throw an exception when an error occurs during XML generation.
+	 */
 	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, Key, EntityRecord> entityLookup, boolean throwOnErrors ) {
 		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 		this.entity			= entity;
