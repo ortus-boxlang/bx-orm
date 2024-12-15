@@ -23,6 +23,7 @@ import java.util.List;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
@@ -108,7 +109,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		this.meta					= entityMeta;
 		this.annotations			= this.meta.getAsStruct( Key.annotations );
 
-		this.datasource				= this.meta.getAsString( Key.datasource );
+		this.datasource				= StringCaster.cast( this.meta.getOrDefault( Key.datasource, "" ) );
 
 		// Handle generic entity metadata, i.e. metadata that is common to both classic and modern annotation syntax.
 		this.isExtended				= this.meta.containsKey( Key._EXTENDS )
