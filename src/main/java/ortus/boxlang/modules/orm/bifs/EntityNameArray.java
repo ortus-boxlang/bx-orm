@@ -68,20 +68,16 @@ public class EntityNameArray extends BaseORMBIF {
 	 * @argument.datasource The name of the datasource to filter on. If provided, only entities configured for this datasource will be returned.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Key		bifMethodKey	= arguments.getAsKey( BIF.__functionName );
-		String	datasourceName	= ( String ) arguments.getAsString( Key.datasource );
-		String	delimiter		= ( String ) arguments.getOrDefault( Key.delimiter, "," );
+		Key					bifMethodKey	= arguments.getAsKey( BIF.__functionName );
+		String				datasourceName	= ( String ) arguments.getAsString( Key.datasource );
+		String				delimiter		= ( String ) arguments.getOrDefault( Key.delimiter, "," );
 
-		if ( delimiter == null ) {
-			delimiter = ",";
-		}
-
-		ORMApp				ormApp		= this.ormService.getORMAppByContext( context );
-		List<EntityRecord>	entityList	= datasourceName != null
+		ORMApp				ormApp			= this.ormService.getORMAppByContext( context );
+		List<EntityRecord>	entityList		= datasourceName != null
 		    ? ormApp.getEntityRecords( Key.of( datasourceName ) )
 		    : ormApp.getEntityRecords();
 
-		Array				entityNames	= Array.fromList(
+		Array				entityNames		= Array.fromList(
 		    entityList
 		        .stream()
 		        .map( entity -> entity.getEntityName() )

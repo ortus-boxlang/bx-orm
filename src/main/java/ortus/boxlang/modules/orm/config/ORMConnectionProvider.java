@@ -29,6 +29,7 @@ import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Java class responsible for providing datasource connections to Hibernate ORM.
@@ -66,7 +67,12 @@ public class ORMConnectionProvider implements ConnectionProvider {
 
 	@Override
 	public Connection getConnection() throws SQLException {
-		DataSource	datasource	= getDatasourceForKey( RequestBoxContext.getCurrent(), datasourceName );
+		IJDBCCapableContext context = RequestBoxContext.getCurrent();
+		if ( context == null ) {
+			// @TODO: Decide what to do here. We should probably just create a new context, but I feel like that would break ORM startup.
+			throw new BoxRuntimeException( "No JDBC-capable context available." );
+		}
+		DataSource	datasource	= getDatasourceForKey( context, datasourceName );
 		Connection	connection	= datasource.getConnection();
 		logger.debug( "Getting connection {} for datasource: {}", connection, datasourceName.getOriginalValue() );
 		return connection;

@@ -304,11 +304,11 @@ public class ORMApp {
 	 * @param datasource The datasource for which to get the session factory.
 	 */
 	public SessionFactory getSessionFactoryOrThrow( DataSource datasource ) {
-		if ( !this.sessionFactories.containsKey( datasource.getUniqueName() ) ) {
-			throw new BoxRuntimeException( "No session factory found for datasource: " + datasource.getUniqueName() );
+		if ( !this.sessionFactories.containsKey( Key.of( datasource.getOriginalName() ) ) ) {
+			throw new BoxRuntimeException( "No session factory found for datasource: " + datasource.getOriginalName() );
 		}
 
-		return this.sessionFactories.get( datasource.getUniqueName() );
+		return this.sessionFactories.get( Key.of( datasource.getOriginalName() ) );
 	}
 
 	/**
