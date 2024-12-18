@@ -89,7 +89,7 @@ public class ORMApp {
 	/**
 	 * The default datasource for this ORM application - created from the datasource named in the ORM configuration.
 	 */
-	private Key								defaultDatasource;
+	private Key								defaultDataSource;
 
 	/**
 	 * Array of configured datasource names for this ORM application.
@@ -118,7 +118,7 @@ public class ORMApp {
 		this.logger				= runtime.getLoggingService().getLogger( "orm" );
 		this.config				= config;
 		this.name				= name;
-		this.defaultDatasource	= this.config.datasource;
+		this.defaultDataSource	= this.config.datasource;
 
 		this.logger.debug( "ORMApp created for application: [{}]", name );
 	}
@@ -148,7 +148,7 @@ public class ORMApp {
 			SessionFactory			factory	= builder.build();
 			this.sessionFactories.put( Key.of( datasource ), factory );
 
-			if ( datasource.equals( this.defaultDatasource ) ) {
+			if ( datasource.equals( this.defaultDataSource ) ) {
 				if ( logger.isDebugEnabled() )
 					logger.debug( "Setting the default session factory to the default datasource: {}", datasource );
 				this.defaultSessionFactory = factory;
@@ -199,7 +199,7 @@ public class ORMApp {
 	 * @return
 	 */
 	public EntityRecord lookupEntity( String entityName, Boolean fail ) {
-		var entityFromDefault = getEntityRecords( this.defaultDatasource ).stream()
+		var entityFromDefault = getEntityRecords( this.defaultDataSource ).stream()
 		    .filter( ( entity ) -> entity.getEntityName().equalsIgnoreCase( entityName ) )
 		    .findFirst();
 
@@ -208,7 +208,7 @@ public class ORMApp {
 		}
 
 		for ( Key datasourceName : this.datasources ) {
-			if ( !datasourceName.equals( this.defaultDatasource ) ) {
+			if ( !datasourceName.equals( this.defaultDataSource ) ) {
 				var entityFromDatasource = getEntityRecords( datasourceName ).stream()
 				    .filter( ( entity ) -> entity.getEntityName().equalsIgnoreCase( entityName ) )
 				    .findFirst();
@@ -352,9 +352,11 @@ public class ORMApp {
 		// no open sessions before calling this method as the impact on those
 		// sessions is indeterminate."
 		for ( SessionFactory sessionFactory : this.sessionFactories.values() ) {
+			logger.debug( "ORMApp.shutdown: Closing session factory: {}", sessionFactory );
 			sessionFactory.close();
 		}
 		// This SHOULD be a redundant call, and SHOULD no-op if it was closed above.
+		logger.debug( "ORMApp.shutdown: Closing default session factory: {}", this.defaultSessionFactory );
 		this.defaultSessionFactory.close();
 		this.sessionFactories.clear();
 
@@ -362,13 +364,16 @@ public class ORMApp {
 		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
 		this.datasources.forEach( ( datasource ) -> {
 			DataSource ormDatasource = connectionManager.getDatasource( datasource );
+			logger.debug( "ORMApp.shutdown: Shutting down and removing datasource: {}", ormDatasource.getOriginalName() );
 			runtime.getDataSourceService().remove( ormDatasource.getUniqueName() );
 			// ormDatasource.shutdown();
 		} );
-
-		DataSource defaultDataSource = connectionManager.getDatasource( this.defaultDatasource );
-		runtime.getDataSourceService().remove( defaultDataSource.getUniqueName() );
-
 		this.datasources.clear();
+
+		DataSource defaultDataSource = connectionManager.getDatasource( this.defaultDataSource );
+		logger.debug( "ORMApp.shutdown: Shutting down and removing default datasource: {}", defaultDataSource.getOriginalName() );
+		runtime.getDataSourceService().remove( defaultDataSource.getUniqueName() );
+		this.defaultDataSource = null;
+
 	}
 }

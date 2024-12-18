@@ -87,6 +87,7 @@ public class ORMConnectionProvider implements ConnectionProvider {
 		// Just do a regular connection.close(); BoxLang's connection pooling strategy
 		// (currently HikariCP) will intercept this and carefully release the
 		// connection back into the pool for later reuse.
+		logger.debug( "closing connection {} for datasource: {}", conn, datasourceName.getOriginalValue() );
 		conn.close();
 	}
 

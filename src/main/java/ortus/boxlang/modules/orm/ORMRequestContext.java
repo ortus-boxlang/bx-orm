@@ -143,9 +143,9 @@ public class ORMRequestContext {
 	 * @return The Hibernate session.
 	 */
 	public Session getSession( DataSource datasource ) {
-		Key sessionKey = datasource.getUniqueName();
+		Key sessionKey = Key.of( datasource.getOriginalName() );
 		return this.sessions.computeIfAbsent( sessionKey, ( key ) -> {
-			logger.trace( "opening NEW session for key: {}", sessionKey.getName() );
+			logger.debug( "opening NEW session for key: {}", sessionKey.getName() );
 
 			SessionFactory sessionFactory = this.ormApp.getSessionFactoryOrThrow( datasource );
 			return sessionFactory.openSession();
@@ -180,6 +180,7 @@ public class ORMRequestContext {
 			if ( tx.isActive() ) {
 				logger.warn( "Session [{}] has an active transaction; committing before flushing", key.getName() );
 				try {
+					logger.debug( "ORMRequestContext.shutdown: committing open transaction on session {}", key );
 					tx.commit();
 				} catch ( Exception e ) {
 					logger.error( "Error committing transaction on session [{}]", key.getName(), e );
@@ -187,6 +188,7 @@ public class ORMRequestContext {
 				}
 			}
 			try {
+				logger.debug( "ORMRequestContext.shutdown: Closing session {}", key );
 				session.close();
 			} catch ( Exception e ) {
 				logger.error( "Error closing session [{}] or session factory", key.getName(), e );
