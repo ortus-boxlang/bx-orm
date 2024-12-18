@@ -58,6 +58,7 @@ public class BaseORMTest {
 
 	@AfterAll
 	public static void teardown() {
+		context.getApplicationListener().onRequestEnd( context, null );
 		instance.getApplicationService().shutdownApplication( Key.of( "BXORMTest" ) );
 	}
 
