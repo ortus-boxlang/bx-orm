@@ -48,7 +48,7 @@ public class BaseORMTest {
 
 	@BeforeAll
 	public static void setUp() {
-		instance	= BoxRuntime.getInstance( true );
+		instance = BoxRuntime.getInstance( true );
 
 		// Load the module
 		loadModule( instance.getRuntimeContext() );
