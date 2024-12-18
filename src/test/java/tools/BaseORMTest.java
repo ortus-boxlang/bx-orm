@@ -51,9 +51,8 @@ public class BaseORMTest {
 		instance	= BoxRuntime.getInstance( true );
 
 		// Load the module
-		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
-		loadModule( context );
-		context.loadApplicationDescriptor( Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+		loadModule( instance.getRuntimeContext() );
+		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
 	}
 
 	@AfterAll
