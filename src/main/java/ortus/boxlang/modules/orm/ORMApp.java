@@ -218,6 +218,10 @@ public class ORMApp {
 				}
 			}
 		}
+		if ( fail ) {
+			String entityNames = getEntityRecords().stream().map( er -> er.getEntityName() ).toString();
+			throw new BoxRuntimeException( "Entity not found: " + entityName + "; configured entities are [" + entityNames + "]" );
+		}
 		return null;
 	}
 
