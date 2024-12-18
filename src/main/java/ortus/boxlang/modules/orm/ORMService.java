@@ -166,7 +166,8 @@ public class ORMService extends BaseService {
 	 * @return A unique key for the given application name and configuration.
 	 */
 	public static Key getAppNameFromContext( IBoxContext context ) {
-		return buildUniqueAppName( context.getApplicationContext().getApplication().getName(), context.getConfig() );
+		IStruct settings = context.getApplicationContext().getApplication().getStartingListener().getSettings();
+		return buildUniqueAppName( context.getApplicationContext().getApplication().getName(), settings );
 	}
 
 	/**
@@ -182,7 +183,7 @@ public class ORMService extends BaseService {
 	 * @return A new or existing ORM application if started already.
 	 */
 	public ORMApp startupApp( RequestBoxContext context, ORMConfig config, BaseApplicationListener startingListener ) {
-		Key appName = ORMService.buildUniqueAppName( startingListener.getAppName(), context.getConfig() );
+		Key appName = ORMService.buildUniqueAppName( startingListener.getAppName(), startingListener.getSettings() );
 		// Atomically create or get the ORMApp for the given context.
 		return this.ormApps.computeIfAbsent(
 		    appName,
@@ -214,6 +215,7 @@ public class ORMService extends BaseService {
 		// We remove it first to prevent further access to the ORMApp
 		ORMApp app = this.ormApps.remove( uniqueAppName );
 		if ( app != null ) {
+			logger.info( "Shutting down ORMApp for unique name [{}]", uniqueAppName );
 			app.shutdown();
 		}
 	}
@@ -246,7 +248,8 @@ public class ORMService extends BaseService {
 	 * @throws BoxRuntimeException If the ORM application is not found for the given context.
 	 */
 	public ORMApp getORMAppByContext( IBoxContext context ) {
-		Key appName = ORMService.buildUniqueAppName( context.getApplicationContext().getApplication().getName(), context.getConfig() );
+		IStruct	settings	= context.getApplicationContext().getApplication().getStartingListener().getSettings();
+		Key		appName		= ORMService.buildUniqueAppName( context.getApplicationContext().getApplication().getName(), settings );
 		if ( !hasORMApp( appName ) ) {
 			var message = String.format( "ORMApp not found for context using appname [%s].  Registered app names are: %s", appName, getORMAppNames() );
 			throw new BoxRuntimeException( message );

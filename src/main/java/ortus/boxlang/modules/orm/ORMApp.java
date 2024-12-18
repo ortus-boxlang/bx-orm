@@ -351,5 +351,6 @@ public class ORMApp {
 			sessionFactory.close();
 		}
 		this.sessionFactories.clear();
+		this.datasources.clear();
 	}
 }
