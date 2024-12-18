@@ -193,6 +193,7 @@ public class ORMRequestContext {
 				// ensure we continue to close other sessions
 			}
 		} );
+		this.sessions.clear();
 		return this;
 	}
 }
