@@ -176,7 +176,22 @@ public class ORMRequestContext {
 
 		logger.debug( "onRequestEnd - closing ORM sessions" );
 		this.sessions.forEach( ( key, session ) -> {
-			session.close();
+			var tx = session.getTransaction();
+			if ( tx.isActive() ) {
+				logger.warn( "Session [{}] has an active transaction; committing before flushing", key.getName() );
+				try {
+					tx.commit();
+				} catch ( Exception e ) {
+					logger.error( "Error committing transaction on session [{}]", key.getName(), e );
+					tx.rollback();
+				}
+			}
+			try {
+				session.close();
+			} catch ( Exception e ) {
+				logger.error( "Error closing session [{}] or session factory", key.getName(), e );
+				// ensure we continue to close other sessions
+			}
 		} );
 		return this;
 	}

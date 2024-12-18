@@ -350,7 +350,21 @@ public class ORMApp {
 		for ( SessionFactory sessionFactory : this.sessionFactories.values() ) {
 			sessionFactory.close();
 		}
+		// This SHOULD be a redundant call, and SHOULD no-op if it was closed above.
+		this.defaultSessionFactory.close();
 		this.sessionFactories.clear();
+
+		// shouldn't this be performed by BoxLang Core?
+		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
+		this.datasources.forEach( ( datasource ) -> {
+			DataSource ormDatasource = connectionManager.getDatasource( datasource );
+			runtime.getDataSourceService().remove( ormDatasource.getUniqueName() );
+			// ormDatasource.shutdown();
+		} );
+
+		DataSource defaultDataSource = connectionManager.getDatasource( this.defaultDatasource );
+		runtime.getDataSourceService().remove( defaultDataSource.getUniqueName() );
+
 		this.datasources.clear();
 	}
 }
