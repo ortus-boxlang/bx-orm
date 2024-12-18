@@ -187,7 +187,7 @@ public class SessionFactoryBuilder {
 
 		// @TODO: Any configuration which needs a specific java type (such as the
 		// connection provider instance) goes here
-		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasourceName ) );
+		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( context.getConnectionManager(), this.datasourceName ) );
 		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
 		properties.put( AvailableSettings.CLASSLOADERS, classLoaders );
 		properties.put( AvailableSettings.TC_CLASSLOADER, "org.hibernate.boot.registry.classloading.internal.AggregatedClassLoader" );
