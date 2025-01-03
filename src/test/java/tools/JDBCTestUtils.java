@@ -106,11 +106,11 @@ public class JDBCTestUtils {
 		} catch ( DatabaseException e ) {
 			// Ignore the exception if the table already exists
 		}
+		datasource.execute( "DELETE FROM alternate_ds", context );
 		datasource.execute(
 		    """
-		    TRUNCATE TABLE alternate_ds;
 		    INSERT INTO alternate_ds (id,name) VALUES
-		    (12345, 'Marty McTester' );
+		    (12345, 'Marty McTester' )
 		    """, context );
 	}
 
@@ -125,23 +125,24 @@ public class JDBCTestUtils {
 			datasource.execute( "CREATE TABLE vehicles ( vin VARCHAR(17), make VARCHAR(155), model VARCHAR(155), FK_manufacturer INTEGER )", context );
 		} catch ( DatabaseException e ) {
 			// Ignore the exception if the table already exists
+			System.out.println( e.getMessage() );
 		}
+		datasource.execute( "DELETE FROM manufacturers", context );
+		datasource.execute( "DELETE FROM vehicles", context );
 		datasource.execute(
 		    """
-		    TRUNCATE TABLE manufacturers;
 		    INSERT INTO manufacturers ( id, name, address ) VALUES
 		    ( 1, 'Ford Motor Company', '202 Ford Way, Dearborn MI' ),
 		    ( 42, 'Honda Motor Co.', 'CHI-5, 1919 Torrance Blvd., Torrance, CA 90501 - 2746 ' ),
-		    ( 77, 'General Moters Corporation', 'P.O. BOX 33170, Detroit, MI 48232-5170' );
+		    ( 77, 'General Moters Corporation', 'P.O. BOX 33170, Detroit, MI 48232-5170' )
 		    """, context );
 
 		datasource.execute(
 		    """
-		    TRUNCATE TABLE vehicles;
 		    INSERT INTO vehicles (vin,make,model,FK_manufacturer) VALUES
 		    ('1HGCM82633A123456','Honda', 'Accord', 42 ),
 		    ('2HGCM82633A654321','Honda', 'Civic', 42 ),
-		    ('1HGCM82633A789012','Honda', 'Ridgeline', 42 );
+		    ('1HGCM82633A789012','Honda', 'Ridgeline', 42 )
 		    """, context );
 	}
 }
