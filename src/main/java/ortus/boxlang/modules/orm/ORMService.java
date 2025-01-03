@@ -199,8 +199,7 @@ public class ORMService extends BaseService {
 	 * @param context The IBoxContext for the application.
 	 */
 	public void shutdownApp( IBoxContext context ) {
-		Key appName = ORMService.getAppNameFromContext( context );
-		this.shutdownApp( appName );
+		this.shutdownApp( ORMService.getAppNameFromContext( context ) );
 		context.getRequestContext().removeAttachment( ORMKeys.ORMRequestContext );
 	}
 
@@ -217,6 +216,10 @@ public class ORMService extends BaseService {
 		if ( app != null ) {
 			logger.info( "Shutting down ORMApp for unique name [{}]", uniqueAppName );
 			app.shutdown();
+		}
+		RequestBoxContext context = RequestBoxContext.getCurrent();
+		if ( context != null && context.hasAttachment( ORMKeys.ORMRequestContext ) ) {
+			context.removeAttachment( ORMKeys.ORMRequestContext );
 		}
 	}
 
