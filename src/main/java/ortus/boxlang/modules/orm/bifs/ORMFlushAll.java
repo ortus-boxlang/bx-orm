@@ -17,8 +17,7 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import org.apache.commons.lang3.NotImplementedException;
-
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
@@ -27,14 +26,18 @@ import ortus.boxlang.runtime.scopes.ArgumentsScope;
 public class ORMFlushAll extends BaseORMBIF {
 
 	/**
-	 * ExampleBIF
+	 * ORMFlushAll
+	 * <p>
+	 * Flush all open Hibernate sessions in the current request.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
-	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		// TODO implement BIF
-		throw new NotImplementedException();
+	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		ORMRequestContext ormRequestContext = ORMRequestContext.getForContext( context.getRequestContext() );
+		ormRequestContext.getSessions().forEach( ( key, session ) -> session.flush() );
+		// @TODO: Announce 'onFlush' event
+		return null;
 	}
 
 }

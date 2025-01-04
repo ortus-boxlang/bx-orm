@@ -19,7 +19,6 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +27,6 @@ import tools.BaseORMTest;
 
 public class ORMFlushAllTest extends BaseORMTest {
 
-	@Disabled( "Unimplemented" )
 	@DisplayName( "It can flush ALL sessions" )
 	@Test
 	public void testORMFlushAll() {
@@ -36,15 +34,15 @@ public class ORMFlushAllTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			entitySave( entityNew( "Manufacturer", { name : "Dodge", address : "101 Dodge Circle" } ) );
-			entitySave( entityNew( "MappingFromAnotherMother", { name : "test" } ) );
+			entitySave( entityNew( "AlternateDS", { id: createUUID(), name : "test" } ) );
 			
 			defaultDS1 = queryExecute( "SELECT * FROM manufacturers WHERE name='Dodge'" );
-			alternateDS1 = queryExecute( "SELECT * FROM MappingFromAnotherMother WHERE name='test'" );
+			alternateDS1 = queryExecute( "SELECT * FROM alternate_ds WHERE name='test'", {}, { datasource : "dsn2" } );
 			
 			ORMFlushAll();
 
 			defaultDS2 = queryExecute( "SELECT * FROM manufacturers WHERE name='Dodge'" );
-			alternateDS2 = queryExecute( "SELECT * FROM MappingFromAnotherMother WHERE name='test'" );
+			alternateDS2 = queryExecute( "SELECT * FROM alternate_ds WHERE name='test'", {}, { datasource : "dsn2" } );
 			""",
 			context
 		);

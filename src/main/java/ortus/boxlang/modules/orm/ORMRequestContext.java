@@ -115,6 +115,13 @@ public class ORMRequestContext {
 	}
 
 	/**
+	 * Retrieve the Hibernate sessions for this request context, keyed by datasource name.
+	 */
+	public Map<Key, Session> getSessions() {
+		return this.sessions;
+	}
+
+	/**
 	 * Get the default Hibernate session, opening one if it does not already exist.
 	 *
 	 * @return The Hibernate session.
