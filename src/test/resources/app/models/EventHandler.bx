@@ -2,7 +2,7 @@ class{
 
     property name="eventLog" type="array" persistent="false";
 
-    funcion init(){
+    function init(){
         eventLog = [];
     }
 
