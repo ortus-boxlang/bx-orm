@@ -17,23 +17,30 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
 public class EntityMergeTest extends BaseORMTest {
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can merge an entity into the persistence context" )
 	@Test
 	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+		// @formatter:off
+		instance.executeSource( """
+			vehicle = entityLoadByPK( 'Vehicle', '1HGCM82633A123456' );
+			ormGetSession().detach( vehicle );
+			vehicle.setModel( 'Fit' );
+			entityMerge( vehicle );
+			ormFlush();
+			result = queryExecute( "SELECT * FROM vehicles WHERE vin='1HGCM82633A123456'" );
+		""", context );
+		// @formatter:on
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( Key.of( "model" ) ) ).isEqualTo( "Fit" );
 	}
 
 }

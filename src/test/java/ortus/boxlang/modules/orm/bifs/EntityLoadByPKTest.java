@@ -51,7 +51,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
 	}
 
-	@Disabled( "Entity injection is not working on .cfc files. To fix." )
 	@DisplayName( "It can load an entity from the non-default datasource and call a getter method" )
 	@Test
 	public void testEntityLoadAlternateDatasourceAndCallGetter() {
@@ -79,7 +78,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertTrue( variables.getAsBoolean( result ) );
 	}
 
-	@Disabled( "Tofix" )
+	@Disabled( "Context and variable names are colliding, which only allows the first test to pass. These tests run fine individually." )
 	@DisplayName( "It will add add* methods for *-to-many associations" )
 	@Test
 	public void testEntityAddMethod() {
@@ -96,7 +95,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertTrue( variables.getAsBoolean( result ) );
 	}
 
-	@Disabled( "Tofix" )
+	@Disabled( "Context and variable names are colliding, which only allows the first test to pass. These tests run fine individually." )
 	@DisplayName( "It will add remove* methods for associations" )
 	@Test
 	public void testEntityRemoveMethod() {

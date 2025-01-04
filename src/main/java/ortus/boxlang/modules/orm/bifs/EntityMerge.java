@@ -17,24 +17,45 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import org.apache.commons.lang3.NotImplementedException;
+import java.util.Set;
 
+import org.hibernate.Session;
+
+import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
 public class EntityMerge extends BaseORMBIF {
 
 	/**
-	 * ExampleBIF
+	 * Constructor
+	 */
+	public EntityMerge() {
+		super();
+		declaredArguments = new Argument[] {
+		    new Argument( true, "Any", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		};
+	}
+
+	/**
+	 * Merge the state of the given entity into the current persistence context.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
-	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		// TODO implement BIF
-		throw new NotImplementedException();
+	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );
+		String			entityName		= getEntityName( entity );
+		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
+		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
+		return session.merge( entity );
 	}
 
 }
