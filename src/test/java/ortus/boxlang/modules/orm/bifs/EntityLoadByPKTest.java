@@ -42,7 +42,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				result = entityLoadByPK( "MappingFromAnotherMother", 12345 );
+				result = entityLoadByPK( "AlternateDS", '123e4567-e89b-12d3-a456-426614174000' );
 			""",
 			context
 		);
@@ -59,7 +59,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				result = entityLoadByPK( "MappingFromAnotherMother", 12345 );
+				result = entityLoadByPK( "AlternateDS", '123e4567-e89b-12d3-a456-426614174000' );
 				theName = result.getName();
 			""",
 			context

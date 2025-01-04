@@ -102,7 +102,7 @@ public class JDBCTestUtils {
 
 	public static void resetAlternateTables( DataSource datasource, IBoxContext context ) {
 		try {
-			datasource.execute( "CREATE TABLE alternate_ds ( id INTEGER, name VARCHAR(155) )", context );
+			datasource.execute( "CREATE TABLE alternate_ds ( id VARCHAR(40), name VARCHAR(155) )", context );
 		} catch ( DatabaseException e ) {
 			// Ignore the exception if the table already exists
 		}
@@ -110,7 +110,7 @@ public class JDBCTestUtils {
 		datasource.execute(
 		    """
 		    INSERT INTO alternate_ds (id,name) VALUES
-		    (12345, 'Marty McTester' )
+		    ('123e4567-e89b-12d3-a456-426614174000', 'Marty McTester' )
 		    """, context );
 	}
 

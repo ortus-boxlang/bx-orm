@@ -33,7 +33,7 @@ public class EntityNameArrayTest extends BaseORMTest {
 	public void testEntityNameArray() {
 		instance.executeSource( "result = entityNameArray()", context );
 		assertInstanceOf( Array.class, variables.get( result ) );
-		assertThat( variables.getAsArray( result ) ).isEqualTo( Array.of( "Manufacturer", "MappingFromAnotherMother", "Vehicle" ) );
+		assertThat( variables.getAsArray( result ) ).isEqualTo( Array.of( "Manufacturer", "AlternateDS", "Vehicle" ) );
 	}
 
 	@DisplayName( "It can get entities for a custom datasource name" )
@@ -41,6 +41,6 @@ public class EntityNameArrayTest extends BaseORMTest {
 	public void testEntityNameArrayWithCustomDatasource() {
 		instance.executeSource( "result = entityNameArray( datasource = 'dsn2' )", context );
 		assertInstanceOf( Array.class, variables.get( result ) );
-		assertThat( variables.getAsArray( result ) ).isEqualTo( Array.of( "MappingFromAnotherMother" ) );
+		assertThat( variables.getAsArray( result ) ).isEqualTo( Array.of( "AlternateDS" ) );
 	}
 }

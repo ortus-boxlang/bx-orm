@@ -54,7 +54,7 @@ public class ORMClearSessionTest extends BaseORMTest {
 	public void testSessionClearOnNamedDatasource() {
 		instance.executeSource(
 		    """
-		    theEntity = entityNew( "MappingFromAnotherMother", { name : "Testy McTesterson" } );
+		    theEntity = entityNew( "AlternateDS", { name : "Testy McTesterson" } );
 		    entitySave( theEntity );
 
 		    beforeClear = ormGetSession().contains( theEntity );
