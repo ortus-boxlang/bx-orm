@@ -28,12 +28,14 @@ import org.hibernate.SessionFactory;
 import org.hibernate.metadata.ClassMetadata;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
@@ -253,8 +255,9 @@ public class ORMApp {
 	 * @param context    Context in which the BIF was invoked.
 	 * @param entityName The name of the entity to load.
 	 * @param filter     Struct of filter criteria.
+	 * @param options    Struct of options, including maxResults, offset, order, etc.
 	 */
-	public Array loadEntitiesByFilter( RequestBoxContext context, String entityName, IStruct filter ) {
+	public Array loadEntitiesByFilter( RequestBoxContext context, String entityName, IStruct filter, IStruct options ) {
 		EntityRecord			entityRecord	= this.lookupEntity( entityName, true );
 		Session					session			= ORMRequestContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 
@@ -266,8 +269,33 @@ public class ORMApp {
 			}
 		}
 
+		if ( options.containsKey( ORMKeys.cacheable ) ) {
+			criteria.setCacheable( BooleanCaster.cast( options.get( ORMKeys.cacheable ) ) );
+		}
+		if ( options.containsKey( Key.timeout ) ) {
+			Integer timeout = options.getAsInteger( Key.timeout );
+			if ( timeout != null ) {
+				criteria.setTimeout( timeout );
+			}
+		}
+		if ( options.containsKey( ORMKeys.maxResults ) ) {
+			Integer maxResults = options.getAsInteger( ORMKeys.maxResults );
+			if ( maxResults != null ) {
+				criteria.setMaxResults( maxResults );
+			}
+		}
+		if ( options.containsKey( Key.offset ) ) {
+			Integer offset = options.getAsInteger( Key.offset );
+			if ( offset != null && offset > 0 ) {
+				criteria.setFirstResult( offset );
+			}
+		}
+
+		// @TODO: Order.
+
+		List results = criteria.list();
 		return Array.of(
-		    criteria.list()
+		    results
 		        .stream()
 		        .map( entity -> ( IClassRunnable ) entity )
 		        .toArray()

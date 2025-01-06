@@ -78,7 +78,7 @@ public class EntityLoadTest extends BaseORMTest {
 		// @formatter:on
 		assertThat( variables.get( result ) ).isNotNull();
 		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
-		assertThat( ( ( IClassRunnable ) variables.get( result ) ).get( "vin" ) ).isEqualTo( "load" );
+		assertThat( ( ( IClassRunnable ) variables.get( result ) ).get( "vin" ) ).isEqualTo( "1HGCM82633A123456" );
 	}
 
 	@Disabled( "Unimplemented" )

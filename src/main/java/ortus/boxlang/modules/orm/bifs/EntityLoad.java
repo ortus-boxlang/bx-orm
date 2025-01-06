@@ -26,9 +26,30 @@ import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 
 @BoxBIF
 public class EntityLoad extends BaseORMBIF {
+
+	/**
+	 * Default options for loading entities.
+	 */
+	private final IStruct DEFAULT_OPTIONS = Struct.of(
+	    // Specifies whether to retrieve a single, unique item. Default is false.
+	    "unique", Boolean.FALSE,
+	    // Ignores the case of sort order when set to true. Use only if you specify the sortorder parameter.
+	    "ignorecase", Boolean.FALSE,
+	    // Specifies the position from which to retrieve the objects.
+	    "offset", 0,
+	    // Specifies the maximum number of objects to be retrieved.
+	    "maxresults", null,
+	    // Whether the result has to be cached in the secondary cache. Default is false.
+	    "cacheable", Boolean.FALSE,
+	    // Name of the cache in secondary cache.
+	    "cachename", null,
+	    // Specifies the timeout value (in seconds) for the query.
+	    "timeout", null
+	);
 
 	/**
 	 * Constructor
@@ -50,15 +71,14 @@ public class EntityLoad extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		if ( !arguments.containsKey( ORMKeys.idOrFilter ) ) {
-			// No filter or ID provided, load all entities as an array.
-			return loadEntitiesByFilter( context, arguments );
+		if ( arguments.containsKey( ORMKeys.idOrFilter ) ) {
+			boolean idIsSimpleValue = StringCaster.attempt( arguments.get( ORMKeys.idOrFilter ) ).wasSuccessful();
+			if ( idIsSimpleValue ) {
+				return loadEntityById( context, arguments );
+			}
 		}
-		boolean idIsSimpleValue = StringCaster.attempt( arguments.get( ORMKeys.idOrFilter ) ).wasSuccessful();
-		if ( idIsSimpleValue ) {
-			return loadEntityById( context, arguments );
-		}
-		// assume struct filter...
+		// EITHER: No filter or was ID provided, so load all entities as an array...
+		// OR a non-simple value was provided (i.e. a struct or array), so load by filter.
 		return loadEntitiesByFilter( context, arguments );
 	}
 
@@ -85,11 +105,34 @@ public class EntityLoad extends BaseORMBIF {
 	 * @param arguments Arguments scope of the BIF.
 	 */
 	private Object loadEntitiesByFilter( IBoxContext context, ArgumentsScope arguments ) {
-		IStruct filter = arguments.containsKey( ORMKeys.idOrFilter ) ? arguments.getAsStruct( ORMKeys.idOrFilter ) : null;
-		if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
-			// @TODO: Unique is true; return a single entity.
-			return null;
+		IStruct	options	= buildCriteriaOptions( arguments );
+		IStruct	filter	= arguments.getAsStruct( ORMKeys.idOrFilter );
+
+		Array	results	= this.ormApp.loadEntitiesByFilter( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ), filter, options );
+		if ( options.getAsBoolean( ORMKeys.unique ) ) {
+			return results.isEmpty() ? null : results.getFirst();
 		}
-		return this.ormApp.loadEntitiesByFilter( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ), filter );
+		return results;
+	}
+
+	private IStruct buildCriteriaOptions( ArgumentsScope arguments ) {
+		IStruct options = Struct.of();
+		options.putAll( DEFAULT_OPTIONS );
+		if ( arguments.containsKey( ORMKeys.options ) && arguments.get( ORMKeys.options ) != null ) {
+			options.putAll( arguments.getAsStruct( ORMKeys.options ) );
+		}
+		if ( arguments.containsKey( ORMKeys.uniqueOrOrder ) ) {
+			Object uniqueOrOrder = arguments.get( ORMKeys.uniqueOrOrder );
+			if ( uniqueOrOrder instanceof String ) {
+				options.put( "order", uniqueOrOrder );
+			} else {
+				boolean unique = BooleanCaster.cast( uniqueOrOrder );
+				if ( unique ) {
+					options.put( "unique", Boolean.TRUE );
+					options.put( "maxresults", 1 );
+				}
+			}
+		}
+		return options;
 	}
 }

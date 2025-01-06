@@ -179,6 +179,8 @@ public class ORMKeys {
 	public static final Key	idOrFilter				= Key.of( "idOrFilter" );
 	public static final Key	uniqueOrOrder			= Key.of( "uniqueOrOrder" );
 	public static final Key	options					= Key.of( "options" );
+	public static final Key	maxResults				= Key.of( "maxResults" );
+	public static final Key	cacheable				= Key.of( "cacheable" );
 
 	/**
 	 * ORM event keys
