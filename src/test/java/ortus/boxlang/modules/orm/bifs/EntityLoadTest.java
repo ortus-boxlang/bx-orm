@@ -29,6 +29,19 @@ import tools.BaseORMTest;
 
 public class EntityLoadTest extends BaseORMTest {
 
+	@DisplayName( "It can load array of entities with no filter or ID" )
+	@Test
+	public void testEntityLoadByNameOnly() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityLoad( 'Vehicle' );
+		""", context );
+		// @formatter:on
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Array.class );
+		assertThat( variables.getAsArray( result ).getFirst() ).isInstanceOf( IClassRunnable.class );
+	}
+
 	@DisplayName( "It can load array of entities by ID" )
 	@Test
 	public void testEntityLoadIDArray() {

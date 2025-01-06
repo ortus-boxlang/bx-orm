@@ -25,6 +25,7 @@ import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.Array;
+import ortus.boxlang.runtime.types.IStruct;
 
 @BoxBIF
 public class EntityLoad extends BaseORMBIF {
@@ -36,7 +37,7 @@ public class EntityLoad extends BaseORMBIF {
 		super();
 		declaredArguments = new Argument[] {
 		    new Argument( true, "String", ORMKeys.entityName ),
-		    new Argument( true, "Any", ORMKeys.idOrFilter ),
+		    new Argument( false, "Any", ORMKeys.idOrFilter ),
 		    new Argument( false, "String", ORMKeys.uniqueOrOrder ),
 		    new Argument( false, "String", ORMKeys.options )
 		};
@@ -49,6 +50,10 @@ public class EntityLoad extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		if ( !arguments.containsKey( ORMKeys.idOrFilter ) ) {
+			// No filter or ID provided, load all entities as an array.
+			return loadEntitiesByFilter( context, arguments );
+		}
 		boolean idIsSimpleValue = StringCaster.attempt( arguments.get( ORMKeys.idOrFilter ) ).wasSuccessful();
 		if ( idIsSimpleValue ) {
 			return loadEntityById( context, arguments );
@@ -80,10 +85,11 @@ public class EntityLoad extends BaseORMBIF {
 	 * @param arguments Arguments scope of the BIF.
 	 */
 	private Object loadEntitiesByFilter( IBoxContext context, ArgumentsScope arguments ) {
-		// IStruct filter = arguments.getAsStruct( ORMKeys.idOrFilter );
-		// if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
-		// return this.ormApp.loadEntitiesByFilter( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ), filter );
-		// }
-		return null;
+		IStruct filter = arguments.containsKey( ORMKeys.idOrFilter ) ? arguments.getAsStruct( ORMKeys.idOrFilter ) : null;
+		if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
+			// @TODO: Unique is true; return a single entity.
+			return null;
+		}
+		return this.ormApp.loadEntitiesByFilter( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ), filter );
 	}
 }

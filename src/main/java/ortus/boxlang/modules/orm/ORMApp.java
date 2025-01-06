@@ -40,6 +40,8 @@ import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Array;
+import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
@@ -243,6 +245,33 @@ public class ORMApp {
 		var				entity			= session.get( entityName, id );
 		// @TODO: announce postLoad event
 		return ( IClassRunnable ) entity;
+	}
+
+	/**
+	 * Load an array of entities by filter criteria.
+	 * 
+	 * @param context    Context in which the BIF was invoked.
+	 * @param entityName The name of the entity to load.
+	 * @param filter     Struct of filter criteria.
+	 */
+	public Array loadEntitiesByFilter( RequestBoxContext context, String entityName, IStruct filter ) {
+		EntityRecord			entityRecord	= this.lookupEntity( entityName, true );
+		Session					session			= ORMRequestContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+
+		org.hibernate.Criteria	criteria		= session.createCriteria( entityName );
+
+		if ( filter != null ) {
+			for ( Map.Entry<Key, Object> entry : filter.entrySet() ) {
+				criteria.add( org.hibernate.criterion.Restrictions.eq( entry.getKey().getName(), entry.getValue() ) );
+			}
+		}
+
+		return Array.of(
+		    criteria.list()
+		        .stream()
+		        .map( entity -> ( IClassRunnable ) entity )
+		        .toArray()
+		);
 	}
 
 	/**
