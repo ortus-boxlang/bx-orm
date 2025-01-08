@@ -122,15 +122,14 @@ public class EntityLoad extends BaseORMBIF {
 			options.putAll( arguments.getAsStruct( ORMKeys.options ) );
 		}
 		if ( arguments.containsKey( ORMKeys.uniqueOrOrder ) ) {
-			Object uniqueOrOrder = arguments.get( ORMKeys.uniqueOrOrder );
-			if ( uniqueOrOrder instanceof String ) {
-				options.put( "order", uniqueOrOrder );
-			} else {
-				boolean unique = BooleanCaster.cast( uniqueOrOrder );
+			Boolean unique = BooleanCaster.cast( arguments.get( ORMKeys.uniqueOrOrder ), false );
+			if ( unique != null ) {
+				options.put( "unique", unique );
 				if ( unique ) {
-					options.put( "unique", Boolean.TRUE );
 					options.put( "maxresults", 1 );
 				}
+			} else {
+				options.put( "order", arguments.get( ORMKeys.uniqueOrOrder ) );
 			}
 		}
 		return options;

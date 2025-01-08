@@ -67,7 +67,6 @@ public class EntityLoadTest extends BaseORMTest {
 		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
 	}
 
-	@Disabled( "Unimplemented" )
 	@DisplayName( "It can load SINGLE entity by filter criteria" )
 	@Test
 	public void testEntityLoadFilterUnique() {
@@ -81,7 +80,6 @@ public class EntityLoadTest extends BaseORMTest {
 		assertThat( ( ( IClassRunnable ) variables.get( result ) ).get( "vin" ) ).isEqualTo( "1HGCM82633A123456" );
 	}
 
-	@Disabled( "Unimplemented" )
 	@DisplayName( "It can load array of entities by filter criteria" )
 	@Test
 	public void testEntityLoadFilterArray() {
