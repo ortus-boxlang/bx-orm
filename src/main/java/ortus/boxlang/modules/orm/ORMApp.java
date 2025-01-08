@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Order;
 import org.hibernate.metadata.ClassMetadata;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
@@ -291,7 +292,17 @@ public class ORMApp {
 			}
 		}
 
-		// @TODO: Order.
+		if ( options.containsKey( ORMKeys.orderBy ) ) {
+			options.getAsArray( ORMKeys.orderBy ).forEach( ( item ) -> {
+				IStruct	order		= ( IStruct ) item;
+				String	orderColumn	= order.getAsString( ORMKeys.property );
+				if ( order.getAsBoolean( ORMKeys.ascending ) ) {
+					criteria.addOrder( Order.asc( orderColumn ) );
+				} else {
+					criteria.addOrder( Order.desc( orderColumn ) );
+				}
+			} );
+		}
 
 		List results = criteria.list();
 		return Array.of(

@@ -19,7 +19,6 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -96,13 +95,12 @@ public class EntityLoadTest extends BaseORMTest {
 		} );
 	}
 
-	@Disabled( "Unimplemented" )
 	@DisplayName( "It can load array of entities by filter criteria, sorting by custom order clause" )
 	@Test
 	public void testEntityLoadFilterSort() {
 		// @formatter:off
 		instance.executeSource( """
-			result = entityLoad( 'Vehicle', { 'make' : 'Honda' }, 'model DESC' );
+			result = entityLoad( 'Vehicle', { 'make' : 'Honda' }, 'features asc,model DESC' );
 		""", context );
 		// @formatter:on
 

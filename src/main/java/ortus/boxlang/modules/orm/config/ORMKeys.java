@@ -181,6 +181,7 @@ public class ORMKeys {
 	public static final Key	options					= Key.of( "options" );
 	public static final Key	maxResults				= Key.of( "maxResults" );
 	public static final Key	cacheable				= Key.of( "cacheable" );
+	public static final Key	ascending				= Key.of( "ascending" );
 
 	/**
 	 * ORM event keys

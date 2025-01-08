@@ -20,6 +20,7 @@ package ortus.boxlang.modules.orm.bifs;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.dynamic.casters.ArrayCaster;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
@@ -27,6 +28,8 @@ import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.util.BLCollector;
+import ortus.boxlang.runtime.types.util.ListUtil;
 
 @BoxBIF
 public class EntityLoad extends BaseORMBIF {
@@ -129,7 +132,23 @@ public class EntityLoad extends BaseORMBIF {
 					options.put( "maxresults", 1 );
 				}
 			} else {
-				options.put( "order", arguments.get( ORMKeys.uniqueOrOrder ) );
+				options.put(
+				    ORMKeys.orderBy,
+				    ArrayCaster.cast(
+				        ListUtil.asList( StringCaster.cast( arguments.get( ORMKeys.uniqueOrOrder ) ), "," )
+				            .stream()
+				            .map( String::valueOf )
+				            .map( String::trim )
+				            .map( item -> {
+					            var parts = item.split( " " );
+					            return Struct.of(
+					                "property", parts[ 0 ],
+					                "ascending", parts.length == 1 || "asc".equalsIgnoreCase( parts[ 1 ] )
+					            );
+				            } )
+				            .collect( BLCollector.toArray() )
+				    )
+				);
 			}
 		}
 		return options;
