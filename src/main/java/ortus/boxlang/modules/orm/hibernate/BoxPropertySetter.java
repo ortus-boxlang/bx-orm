@@ -28,7 +28,6 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
-import ortus.boxlang.runtime.scopes.VariablesScope;
 
 /**
  * This class is used to set a property on a BoxLang class for a Hibernate entity.
@@ -63,8 +62,8 @@ public class BoxPropertySetter implements Setter {
 	public void set( Object target, Object value, SessionFactoryImplementor factory ) {
 		logger.trace( "Setting property {} on entity {} to value {}", mappedProperty.getName(), mappedEntity.getEntityName(), value );
 		if ( target instanceof IClassRunnable instance ) {
-			VariablesScope variables = instance.getVariablesScope();
-			variables.put( mappedProperty.getName(), value );
+			instance.getThisScope().put( mappedProperty.getName(), value );
+			instance.getVariablesScope().put( mappedProperty.getName(), value );
 		}
 	}
 
