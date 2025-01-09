@@ -93,10 +93,10 @@ public class EntityLoad extends BaseORMBIF {
 	 */
 	private Object loadEntityById( IBoxContext context, ArgumentsScope arguments ) {
 		if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
-			return this.ormApp.loadEntityById( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ),
+			return ormService.getORMAppByContext( context ).loadEntityById( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ),
 			    arguments.get( ORMKeys.idOrFilter ) );
 		}
-		var entity = this.ormApp.loadEntityById( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ),
+		var entity = ormService.getORMAppByContext( context ).loadEntityById( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ),
 		    arguments.get( ORMKeys.idOrFilter ) );
 		return entity == null ? Array.EMPTY : Array.of( entity );
 	}
@@ -111,7 +111,8 @@ public class EntityLoad extends BaseORMBIF {
 		IStruct	options	= buildCriteriaOptions( arguments );
 		IStruct	filter	= arguments.getAsStruct( ORMKeys.idOrFilter );
 
-		Array	results	= this.ormApp.loadEntitiesByFilter( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ), filter, options );
+		Array	results	= ormService.getORMAppByContext( context ).loadEntitiesByFilter( context.getRequestContext(),
+		    arguments.getAsString( ORMKeys.entityName ), filter, options );
 		if ( options.getAsBoolean( ORMKeys.unique ) ) {
 			return results.isEmpty() ? null : results.getFirst();
 		}

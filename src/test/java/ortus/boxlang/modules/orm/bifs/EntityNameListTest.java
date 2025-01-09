@@ -30,14 +30,14 @@ public class EntityNameListTest extends BaseORMTest {
 	@Test
 	public void testEntityNameList() {
 		instance.executeSource( "result = entityNameList()", context );
-		assertThat( variables.get( result ) ).isEqualTo( "Manufacturer,AlternateDS,Vehicle" );
+		assertThat( variables.get( result ) ).isEqualTo( "AlternateDS,Manufacturer,Vehicle" );
 	}
 
 	@DisplayName( "It returns a list of entity names with a custom delimiter" )
 	@Test
 	public void testEntityNameListWithDelimiter() {
 		instance.executeSource( "result = entityNameList( '|' )", context );
-		assertThat( variables.get( result ) ).isEqualTo( "Manufacturer|AlternateDS|Vehicle" );
+		assertThat( variables.get( result ) ).isEqualTo( "AlternateDS|Manufacturer|Vehicle" );
 	}
 
 	@DisplayName( "It can get entities for a custom datasource name" )

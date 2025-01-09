@@ -65,6 +65,6 @@ public class EntityLoadByPK extends BaseORMBIF {
 		String	entityName	= arguments.getAsString( ORMKeys.entity );
 		Object	keyValue	= arguments.get( Key.id );
 
-		return this.ormApp.loadEntityById( context.getRequestContext(), entityName, keyValue );
+		return ormService.getORMAppByContext( context ).loadEntityById( context.getRequestContext(), entityName, keyValue );
 	}
 }

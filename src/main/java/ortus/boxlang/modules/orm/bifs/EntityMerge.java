@@ -53,7 +53,7 @@ public class EntityMerge extends BaseORMBIF {
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		String			entityName		= getEntityName( entity );
-		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
+		EntityRecord	entityRecord	= ormService.getORMAppByContext( context ).lookupEntity( entityName, true );
 		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
 		return session.merge( entity );
 	}

@@ -21,6 +21,7 @@ import java.util.Set;
 
 import org.hibernate.Session;
 
+import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
@@ -57,6 +58,7 @@ public class EntitySave extends BaseORMBIF {
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		String			entityName		= getEntityName( entity );
+		ORMApp			ormApp			= ORMRequestContext.getForContext( context.getRequestContext() ).getORMApp();
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
 		Boolean			forceInsert		= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );

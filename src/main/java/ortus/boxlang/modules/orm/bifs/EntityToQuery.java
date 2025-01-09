@@ -19,6 +19,8 @@ package ortus.boxlang.modules.orm.bifs;
 
 import java.util.List;
 
+import ortus.boxlang.modules.orm.ORMApp;
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
@@ -53,22 +55,26 @@ public class EntityToQuery extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		String	entityName	= arguments.containsKey( Key._name )
+		ORMApp			ormApp			= ORMRequestContext.getForContext( context.getRequestContext() ).getORMApp();
+		EntityRecord	entityRecord	= null;
+		String			entityName		= arguments.containsKey( Key._name )
 		    ? arguments.getAsString( Key._name )
 		    : null;
 
-		Object	item		= arguments.get( ORMKeys.entity );
+		Object			item			= arguments.get( ORMKeys.entity );
 		if ( item instanceof Array entities ) {
 			if ( entityName == null ) {
 				entityName = getEntityNameOrThrow( entities.getFirst() );
 			}
-			return populateQuery( entities, entityName );
+			entityRecord = ormApp.lookupEntity( entityName, true );
+			return populateQuery( entities, entityRecord );
 		}
 		if ( entityName == null ) {
 			entityName = getEntityNameOrThrow( item );
 		}
 
-		return populateQuery( Array.of( item ), entityName );
+		entityRecord = ormApp.lookupEntity( entityName, true );
+		return populateQuery( Array.of( item ), entityRecord );
 	}
 
 	private String getEntityNameOrThrow( Object item ) {
@@ -78,10 +84,9 @@ public class EntityToQuery extends BaseORMBIF {
 		return getEntityName( ( IClassRunnable ) item );
 	}
 
-	private Query populateQuery( Array entities, String entityName ) {
-		EntityRecord		entityRecord	= ormApp.lookupEntity( entityName, true );
-		List<IPropertyMeta>	props			= entityRecord.getEntityMeta().getAllPersistentProperties();
-		Query				result			= new Query();
+	private Query populateQuery( Array entities, EntityRecord entityRecord ) {
+		List<IPropertyMeta>	props	= entityRecord.getEntityMeta().getAllPersistentProperties();
+		Query				result	= new Query();
 		for ( IPropertyMeta prop : props ) {
 			result.addColumn( Key.of( prop.getName() ), QueryColumnType.fromString( prop.getORMType() ) );
 		}
