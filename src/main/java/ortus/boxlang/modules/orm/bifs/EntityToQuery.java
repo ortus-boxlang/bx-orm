@@ -17,14 +17,34 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import org.apache.commons.lang3.NotImplementedException;
+import java.util.List;
 
+import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.types.Array;
+import ortus.boxlang.runtime.types.Query;
+import ortus.boxlang.runtime.types.QueryColumnType;
 
 @BoxBIF
 public class EntityToQuery extends BaseORMBIF {
+
+	/**
+	 * Constructor
+	 */
+	public EntityToQuery() {
+		super();
+		declaredArguments = new Argument[] {
+		    new Argument( true, "Any", ORMKeys.entity ),
+		    new Argument( false, "Any", Key._name )
+		};
+	}
 
 	/**
 	 * ExampleBIF
@@ -32,9 +52,44 @@ public class EntityToQuery extends BaseORMBIF {
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
-	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		// TODO implement BIF
-		throw new NotImplementedException();
+	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		String	entityName	= arguments.containsKey( Key._name )
+		    ? arguments.getAsString( Key._name )
+		    : null;
+
+		Object	item		= arguments.get( ORMKeys.entity );
+		if ( item instanceof Array entities ) {
+			if ( entityName == null ) {
+				entityName = getEntityNameOrThrow( entities.getFirst() );
+			}
+			return populateQuery( entities, entityName );
+		}
+		if ( entityName == null ) {
+			entityName = getEntityNameOrThrow( item );
+		}
+
+		return populateQuery( Array.of( item ), entityName );
+	}
+
+	private String getEntityNameOrThrow( Object item ) {
+		if ( ! ( item instanceof IClassRunnable ) ) {
+			throw new IllegalArgumentException( "Entity must be an Boxlang class or array of classes" );
+		}
+		return getEntityName( ( IClassRunnable ) item );
+	}
+
+	private Query populateQuery( Array entities, String entityName ) {
+		EntityRecord		entityRecord	= ormApp.lookupEntity( entityName, true );
+		List<IPropertyMeta>	props			= entityRecord.getEntityMeta().getAllPersistentProperties();
+		Query				result			= new Query();
+		for ( Object item : entities ) {
+			IClassRunnable entity = ( IClassRunnable ) item;
+			for ( IPropertyMeta prop : props ) {
+				Object value = prop.isAssociationType() ? null : entity.get( prop.getName() );
+				result.addColumn( Key.of( prop.getName() ), QueryColumnType.fromString( prop.getORMType() ), new Object[] { value } );
+			}
+		}
+		return result;
 	}
 
 }

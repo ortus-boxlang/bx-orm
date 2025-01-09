@@ -17,23 +17,50 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Query;
 import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
 public class EntityToQueryTest extends BaseORMTest {
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can convert one entity into a single-row query" )
 	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testEntityToQuerySingleEntity() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityToQuery(
+				entityLoad( 'Vehicle', '1HGCM82633A123456' )
+			);
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Query.class );
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
+
+		IStruct row = variables.getAsQuery( result ).getRowAsStruct( 0 );
+
+		// key properties should be present
+		assertThat( row.containsKey( "vin" ) ).isTrue();
+
+		// regular properties should be present
+		assertThat( row.containsKey( "make" ) ).isTrue();
+		assertThat( row.containsKey( "model" ) ).isTrue();
+		assertThat( row.containsKey( "features" ) ).isTrue();
+
+		// associations should be present, but NOT populated
+		assertThat( row.containsKey( "manufacturer" ) ).isTrue();
+
+		assertThat( row.get( "vin" ) ).isEqualTo( "1HGCM82633A123456" );
+		assertThat( row.get( "make" ) ).isEqualTo( "Honda" );
+		assertThat( row.get( "model" ) ).isEqualTo( "Accord" );
+		assertThat( row.get( "features" ) ).isNull();
+		assertThat( row.get( "manufacturer" ) ).isNull();
 	}
 
 }

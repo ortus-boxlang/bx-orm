@@ -115,6 +115,20 @@ public interface IEntityMeta {
 	 */
 
 	/**
+	 * Retrieve a list of all persistent (ORM) properties
+	 * 
+	 * Includes:
+	 * <ul>
+	 * <li>ID properties</li>
+	 * <li>version properties</li>
+	 * <li>timestamp properties</li>
+	 * <li>relationship properties</li>
+	 * <li>other (normal) properties</li>
+	 * </ul>
+	 */
+	public List<IPropertyMeta> getAllPersistentProperties();
+
+	/**
 	 * Retrieve a list of all key properties.
 	 */
 	public List<IPropertyMeta> getIdProperties();

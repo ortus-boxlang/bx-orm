@@ -352,6 +352,15 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	}
 
 	/**
+	 * Gets ALL entity properties, including id,version,timestamp,relationship, and regular properties.
+	 *
+	 * @return all ORM properties.
+	 */
+	public List<IPropertyMeta> getAllPersistentProperties() {
+		return this.allPersistentProperties;
+	}
+
+	/**
 	 * Gets the properties of the entity.
 	 *
 	 * @return the properties of the entity.

@@ -14,7 +14,10 @@ class entityName="Vehicle" table="vehicles" persistent="true" {
     property 
         name="model" 
         type="string";
-    
+
+    property 
+        name="features" 
+        type="string";
 
     property 
         name="manufacturer" 

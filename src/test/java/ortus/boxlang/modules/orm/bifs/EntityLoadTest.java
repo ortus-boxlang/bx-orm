@@ -46,7 +46,7 @@ public class EntityLoadTest extends BaseORMTest {
 	public void testEntityLoadIDArray() {
 		// @formatter:off
 		instance.executeSource( """
-			result = entityLoad( 'Vehicle', '1HGCM82633A123456');
+			result = entityLoad( 'Vehicle', '1HGCM82633A123456' );
 		""", context );
 		// @formatter:on
 		assertThat( variables.get( result ) ).isNotNull();
