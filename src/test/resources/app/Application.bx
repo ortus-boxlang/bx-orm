@@ -5,14 +5,12 @@ class{
 		"TestDB" = {
 			driver = "derby",
 			database = "test",
-			url = "jdbc:derby:memory:TestDB;create=true;",
-			maxConnections = "3500"
+			url = "jdbc:derby:memory:TestDB;create=true;"
 		},
 		"dsn2": {
 			driver = "derby",
 			database = "dsn2",
-			url = "jdbc:derby:memory:dsn2;create=true;",
-			maxConnections = "3500"
+			url = "jdbc:derby:memory:dsn2;create=true;"
 		}
 	};
 	this.datasource = "TestDB";

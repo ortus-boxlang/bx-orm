@@ -89,6 +89,9 @@ public class ORMConnectionProvider implements ConnectionProvider {
 		// connection back into the pool for later reuse.
 		logger.debug( "closing connection {} for datasource: {}", conn, datasourceName.getOriginalValue() );
 		conn.close();
+
+		// @TODO: This is horribly inefficient, but it fixes issues with test timeouts due to... connection leaks? unreleased statements? I'm not sure.
+		runtime.getDataSourceService().remove( datasourceName );
 	}
 
 	@Override
