@@ -63,7 +63,7 @@ public class EntityLoad extends BaseORMBIF {
 		    new Argument( true, "String", ORMKeys.entityName ),
 		    new Argument( false, "Any", ORMKeys.idOrFilter ),
 		    new Argument( false, "String", ORMKeys.uniqueOrOrder ),
-		    new Argument( false, "String", ORMKeys.options )
+		    new Argument( false, "Struct", ORMKeys.options )
 		};
 	}
 

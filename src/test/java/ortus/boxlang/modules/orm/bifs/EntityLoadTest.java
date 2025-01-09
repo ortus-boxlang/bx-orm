@@ -117,4 +117,26 @@ public class EntityLoadTest extends BaseORMTest {
 		assertThat( third.get( "model" ) ).isEqualTo( "Accord" );
 	}
 
+	@DisplayName( "It can load array of entities with maxResults and offset options" )
+	@Test
+	public void testEntityLoadMaxAndOffset() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityLoad( "Vehicle", { "make" : "Honda" }, "model ASC", { maxResults : 2, offset: 1 } )
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Array.class );
+
+		Array vehicles = variables.getAsArray( result );
+		assertThat( vehicles.size() ).isEqualTo( 2 );
+		var	first	= ( ( IClassRunnable ) vehicles.getAt( 1 ) );
+		var	second	= ( ( IClassRunnable ) vehicles.getAt( 2 ) );
+
+		// skips or "offsets" past Accord, so Civic is first
+		assertThat( first.get( "model" ) ).isEqualTo( "Civic" );
+		assertThat( second.get( "model" ) ).isEqualTo( "Ridgeline" );
+	}
+
 }
