@@ -34,7 +34,7 @@ public class EntityToQueryTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource( """
 			result = entityToQuery(
-				entityLoad( 'Vehicle', '1HGCM82633A123456' )
+				entityLoadByPK( 'Vehicle', '1HGCM82633A123456' )
 			);
 		""", context );
 		// @formatter:on
@@ -63,4 +63,38 @@ public class EntityToQueryTest extends BaseORMTest {
 		assertThat( row.get( "manufacturer" ) ).isNull();
 	}
 
+	@DisplayName( "It can convert one entity into a single-row query" )
+	@Test
+	public void testEntityToQueryArray() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityToQuery(
+				entityLoad( "Vehicle", { "make" : "Honda" }, "model ASC", { maxResults : 3 } )
+			);
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Query.class );
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 3 );
+
+		IStruct row = variables.getAsQuery( result ).getRowAsStruct( 0 );
+
+		// key properties should be present
+		assertThat( row.containsKey( "vin" ) ).isTrue();
+
+		// regular properties should be present
+		assertThat( row.containsKey( "make" ) ).isTrue();
+		assertThat( row.containsKey( "model" ) ).isTrue();
+		assertThat( row.containsKey( "features" ) ).isTrue();
+
+		// associations should be present, but NOT populated
+		assertThat( row.containsKey( "manufacturer" ) ).isTrue();
+
+		assertThat( row.get( "vin" ) ).isEqualTo( "1HGCM82633A123456" );
+		assertThat( row.get( "make" ) ).isEqualTo( "Honda" );
+		assertThat( row.get( "model" ) ).isEqualTo( "Accord" );
+		assertThat( row.get( "features" ) ).isNull();
+		assertThat( row.get( "manufacturer" ) ).isNull();
+	}
 }

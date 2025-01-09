@@ -82,12 +82,18 @@ public class EntityToQuery extends BaseORMBIF {
 		EntityRecord		entityRecord	= ormApp.lookupEntity( entityName, true );
 		List<IPropertyMeta>	props			= entityRecord.getEntityMeta().getAllPersistentProperties();
 		Query				result			= new Query();
+		for ( IPropertyMeta prop : props ) {
+			result.addColumn( Key.of( prop.getName() ), QueryColumnType.fromString( prop.getORMType() ) );
+		}
 		for ( Object item : entities ) {
-			IClassRunnable entity = ( IClassRunnable ) item;
+			IClassRunnable	entity	= ( IClassRunnable ) item;
+			Object[]		row		= new Object[ props.size() ];
+			int				i		= 0;
 			for ( IPropertyMeta prop : props ) {
-				Object value = prop.isAssociationType() ? null : entity.get( prop.getName() );
-				result.addColumn( Key.of( prop.getName() ), QueryColumnType.fromString( prop.getORMType() ), new Object[] { value } );
+				row[ i ] = prop.isAssociationType() ? null : entity.get( prop.getName() );
+				i++;
 			}
+			result.addRow( row );
 		}
 		return result;
 	}
