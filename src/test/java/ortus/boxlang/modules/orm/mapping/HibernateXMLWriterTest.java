@@ -1109,12 +1109,6 @@ public class HibernateXMLWriterTest {
 	} )
 	// @formatter:on
 	public void testMultipleFKColumns( String sourceCode ) {
-		IStruct		meta		= getClassMetaFromCode( sourceCode );
-
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
-		// TODO:...
-
 	}
 
 	@Disabled( "Unimplemented" )

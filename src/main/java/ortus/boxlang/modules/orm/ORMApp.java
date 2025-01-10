@@ -215,8 +215,6 @@ public class ORMApp {
 	 *
 	 * @param entityName The entity name to look up
 	 * @param fail       Whether to throw an exception if the entity is not found.
-	 *
-	 * @return
 	 */
 	public EntityRecord lookupEntity( String entityName, Boolean fail ) {
 		var entityFromDefault = getEntityRecords( this.defaultDataSource ).stream()
