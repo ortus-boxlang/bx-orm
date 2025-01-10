@@ -210,4 +210,20 @@ public class ORMKeys {
 	 */
 	public static final Key	EVENT_POST_NEW			= Key.of( "post_new" );
 	public static final Key	EVENT_POST_LOAD			= Key.of( "post_load" );
+
+	/**
+	 * BoxLang Naming Strategy method names
+	 */
+	public static final Key	getTableName			= Key.of( "getTableName" );
+	public static final Key	getColumnName			= Key.of( "getColumnName" );
+	public static final Key	getSequenceName			= Key.of( "getSequenceName" );
+	public static final Key	getSchemaName			= Key.of( "getSchemaName" );
+	public static final Key	getCatalogName			= Key.of( "getCatalogName" );
+
+	// And, the naming strategy argument keys:
+	public static final Key	tableName				= Key.of( "tableName" );
+	public static final Key	columnName				= Key.of( "columnName" );
+	public static final Key	sequenceName			= Key.of( "sequenceName" );
+	public static final Key	schemaName				= Key.of( "schemaName" );
+	public static final Key	catalogName				= Key.of( "catalogName" );
 }

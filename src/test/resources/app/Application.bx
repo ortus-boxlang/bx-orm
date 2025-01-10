@@ -9,19 +9,20 @@ class{
 			LeakDetectionThreshold = 3000
 		},
 		"dsn2": {
-			driver = "derby",
-			database = "dsn2",
-			url = "jdbc:derby:memory:dsn2;create=true;",
+			driver                 = "derby",
+			database               = "dsn2",
+			url                    = "jdbc:derby:memory:dsn2;create=true;",
 			LeakDetectionThreshold = 3000
 		}
 	};
 	this.datasource = "TestDB";
 	this.ormSettings={
-		"datasource" : "TestDB",
-		"entityPaths": [ "src/test/resources/app/models" ],
-		"saveMapping": "true",
-		"logSQL"     : "true",
-		"dialect"    : "DerbyTenSevenDialect"
+		"datasource"    : "TestDB",
+		"entityPaths"   : [ "src/test/resources/app/models" ],
+		"saveMapping"   : "true",
+		"logSQL"        : "true",
+		"dialect"       : "DerbyTenSevenDialect"
+		// , "namingStrategy": "src.test.resources.app.CustomNamingStrategy"
 	}
 	this.ormEnabled = "true";
 }

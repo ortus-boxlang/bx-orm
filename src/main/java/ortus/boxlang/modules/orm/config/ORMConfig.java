@@ -168,7 +168,7 @@ public class ORMConfig {
 	 * - default : Uses the table or column names as is
 	 * - smart : This strategy changes the logical table or column name to
 	 * uppercase.
-	 * - CFC PATH : Use your own CFC to determine naming
+	 * - CFC PATH : Use your own CFC to determine naming. Must implement `orm.models.INamingStrategy`
 	 */
 	public String						namingStrategy;
 
@@ -563,7 +563,6 @@ public class ORMConfig {
 	}
 
 	private PhysicalNamingStrategy getNamingStrategyForName( String name ) {
-		// @TODO: Use an enum for the naming strategies
 		return switch ( name.toLowerCase() ) {
 			/**
 			 * Historically, the "smart" naming strategy simply converts camelCase to
@@ -588,6 +587,8 @@ public class ORMConfig {
 		return ( IClassRunnable ) CLASS_LOCATOR.load(
 		    context,
 		    fqn,
+		    ClassLocator.BX_PREFIX,
+		    true,
 		    context.getCurrentImports()
 		)
 		    .invokeConstructor( context )

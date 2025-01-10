@@ -1,0 +1,22 @@
+/**
+ * Test of the custom naming strategy
+ */ 
+class {
+
+	/**
+	 * Defines the table name to be used for a specified table name. The specified table name is either 
+	 * the table name specified in the mapping or chosen using the entity name. 
+	 */
+	public string function getTableName(string tableName){
+		return tableName;
+	}
+
+	/**
+	 * Defines the column name to be used for a specified column name. The specified column name is either 
+	 * the column name specified in the mapping or chosen using the proeprty name.  
+	 */
+	public string function getColumnName(string columnName){
+		return columnName;
+	}
+
+}

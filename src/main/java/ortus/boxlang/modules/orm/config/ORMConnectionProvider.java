@@ -71,11 +71,6 @@ public class ORMConnectionProvider implements ConnectionProvider {
 
 	@Override
 	public Connection getConnection() throws SQLException {
-		// IJDBCCapableContext context = RequestBoxContext.getCurrent();
-		// if ( context == null ) {
-		// // @TODO: Decide what to do here. We should probably just create a new context, but I feel like that would break ORM startup.
-		// throw new BoxRuntimeException( "No JDBC-capable context available." );
-		// }
 		DataSource	datasource	= getDatasourceForKey( datasourceName );
 		Connection	connection	= datasource.getConnection();
 		logger.debug( "Getting connection {} for datasource: {}", connection, datasourceName.getOriginalValue() );

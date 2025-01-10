@@ -21,12 +21,17 @@ import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 
+import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Struct;
 
 /**
- * A physical naming strategy that fires the appropriate methods on a named
- * Boxlang class to convert all identifiers to whatever case the Boxlang class
- * specifies.
+ * A physical naming strategy that wraps a custom naming strategy defined in a BoxLang class.
  * <p>
  * Historically the CFML component would implement these methods:
  * <ul>
@@ -43,50 +48,70 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
  */
 public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 
-	private final IClassRunnable customNamingStrategy;
+	private final IClassRunnable wrappedBLClass;
 
-	public BoxLangClassNamingStrategy( IClassRunnable customNamingStrategy ) {
-		this.customNamingStrategy = customNamingStrategy;
+	public BoxLangClassNamingStrategy( IClassRunnable wrappedBLClass ) {
+		this.wrappedBLClass = wrappedBLClass;
+	}
+
+	/**
+	 * Retrieve the underlying naming strategy BoxLang class.
+	 */
+	public IClassRunnable unwrap() {
+		return this.wrappedBLClass;
 	}
 
 	@Override
 	public Identifier toPhysicalCatalogName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
-		// @TODO: Implement this. This was unsupported in the Lucee Hibernate extension.
-		// Call `getCatalogName()` on the customNamingStrategy class, passing
-		// `logicalName` as the sole parameter.
-		return null;
+		return fireImplementation( ORMKeys.getCatalogName, ORMKeys.catalogName, logicalName );
 	}
 
 	@Override
 	public Identifier toPhysicalSchemaName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
-		// @TODO: Implement this. This was unsupported in the Lucee Hibernate extension.
-		// Call `getSchemaName()` on the customNamingStrategy class, passing
-		// `logicalName` as the sole parameter.
-		return null;
-	}
-
-	@Override
-	public Identifier toPhysicalTableName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
-		// @TODO: Implement this.
-		// Call `getTableName()` on the customNamingStrategy class, passing
-		// `logicalName` as the sole parameter.
-		return null;
+		return fireImplementation( ORMKeys.getSchemaName, ORMKeys.schemaName, logicalName );
 	}
 
 	@Override
 	public Identifier toPhysicalSequenceName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
-		// @TODO: Implement this. This was unsupported in the Lucee Hibernate extension.
-		// Call `getSequenceName()` on the customNamingStrategy class, passing
-		// `logicalName` as the sole parameter.
-		return null;
+		return fireImplementation( ORMKeys.getSequenceName, ORMKeys.sequenceName, logicalName );
+	}
+
+	@Override
+	public Identifier toPhysicalTableName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
+		return fireImplementation( ORMKeys.getTableName, ORMKeys.tableName, logicalName );
 	}
 
 	@Override
 	public Identifier toPhysicalColumnName( Identifier logicalName, JdbcEnvironment jdbcEnvironment ) {
-		// @TODO: Implement this.
-		// Call `getColumnName()` on the customNamingStrategy class, passing
-		// `logicalName` as the sole parameter.
-		return null;
+		return fireImplementation( ORMKeys.getColumnName, ORMKeys.columnName, logicalName );
 	}
 
+	/**
+	 * Fire the naming strategy method in the wrapped BoxLang class IF implemented, else return the original identifier unmodified.
+	 * 
+	 * @param methodName    Method name to invoke, like <code>getTableName()</code>
+	 * @param argumentName  Argument name to pass to the method, like <code>tableName</code>
+	 * @param theIdentifier The original identifier (like "autos") which the method should transform.
+	 */
+	private Identifier fireImplementation( Key methodName, Key argumentName, Identifier theIdentifier ) {
+		if ( this.wrappedBLClass.containsKey( methodName ) ) {
+			return Identifier.toIdentifier(
+			    ( String ) this.wrappedBLClass.dereferenceAndInvoke(
+			        getContextForInvocation(),
+			        methodName,
+			        Struct.of( argumentName, theIdentifier.getText() ),
+			        true // throw on not found
+			    )
+			);
+		}
+		return theIdentifier;
+	}
+
+	private IBoxContext getContextForInvocation() {
+		IBoxContext context = RequestBoxContext.getCurrent();
+		if ( context == null ) {
+			context = new ScriptingRequestBoxContext( BoxRuntime.getInstance().getRuntimeContext() );
+		}
+		return context;
+	}
 }
