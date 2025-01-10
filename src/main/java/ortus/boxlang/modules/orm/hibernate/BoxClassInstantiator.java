@@ -309,19 +309,9 @@ public class BoxClassInstantiator implements Instantiator {
 		    methodName,
 		    ( context, function ) -> {
 			    boolean		isArrayCollection	= collectionType == "bag";
-
-			    // @TODO: We just need the SessionFactory to get this working.
-			    // List<Key> keys = SessionFactoryBuilder.lookupEntityByClassName( sessionFactory,
-			    // associationMeta.getAsString( Key._CLASS ) )
-			    // .getEntityMeta()
-			    // .getIdProperties()
-			    // .stream()
-			    // .map( prop -> Key.of( prop.getName() ) )
-			    // .toList();
-			    // @TODO: Pull this from the associated entity's getIdProperties().getName().
-			    List<Key>	keys				= associationMeta.getAsString( Key._CLASS ).equals( "Vehicle" )
-			        ? List.of( Key.of( "vin" ) )
-			        : List.of( Key.id );
+			    List<Key>	keys				= this.entityMetamodel.getIdentifierProperty().getName() != null
+			        ? List.of( Key.of( this.entityMetamodel.getIdentifierProperty().getName() ) )
+			        : new ArrayList<>();
 			    IClassRunnable itemToRemove		= ( IClassRunnable ) context.getArgumentsScope().get( collectionKey );
 			    VariablesScope variablesScope	= context.getThisClass().getVariablesScope();
 
