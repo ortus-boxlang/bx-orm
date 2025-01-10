@@ -28,6 +28,8 @@ import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Order;
 import org.hibernate.metadata.ClassMetadata;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
@@ -160,7 +162,20 @@ public class ORMApp {
 			}
 		} );
 
+		configureLoggingPerORMConfig();
+
 		return this;
+	}
+
+	/**
+	 * Enable SQL logging for this ORM application if the ORM configuration specifies it.
+	 */
+	private void configureLoggingPerORMConfig() {
+		if ( this.config.logSQL ) {
+			LoggerContext loggerContext = runtime.getLoggingService().getLoggerContext();
+			loggerContext.getLogger( "org.hibernate.SQL" ).setLevel( Level.DEBUG );
+			loggerContext.getLogger( "org.hibernate.type.descriptor.sql" ).setLevel( Level.DEBUG );
+		}
 	}
 
 	/**
