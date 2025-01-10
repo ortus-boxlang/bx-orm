@@ -36,7 +36,6 @@ import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
-import ortus.boxlang.runtime.types.IStruct;
 
 public class BaseORMTest {
 
@@ -83,13 +82,6 @@ public class BaseORMTest {
 	public void setupEach() {
 		getLogger().debug( "Running @BeforeEach" );
 		variables = context.getScopeNearby( VariablesScope.name );
-
-		String[] registeredDSs = context.getRuntime().getDataSourceService().getNames();
-		for ( String ds : registeredDSs ) {
-			IStruct	stats	= context.getRuntime().getDataSourceService().get( Key.of( ds ) ).getPoolStats();
-			Integer	active	= stats.getAsInteger( Key.of( "activeConnections" ) );
-			getLogger().debug( "Stats for {}: ", ds, stats.asString() );
-		}
 		JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
 		JDBCTestUtils.resetAlternateTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDatasourceOrThrow( Key.of( "dsn2" ) ), context );
 	}
