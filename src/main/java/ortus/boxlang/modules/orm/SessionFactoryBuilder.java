@@ -98,7 +98,7 @@ public class SessionFactoryBuilder {
 
 	/**
 	 * Get a unique key for the given context/datasource combination.
-	 * 
+	 *
 	 * @param context        The BoxLang context for this session factory.
 	 * @param datasourceName The ORM datasource for this session factory.
 	 *
@@ -158,10 +158,8 @@ public class SessionFactoryBuilder {
 		SessionFactory	factory;
 		Configuration	configuration;
 		try {
-			System.out.println( "Context class loader: " + Thread.currentThread().getContextClassLoader().getName() );
-			configuration = buildConfiguration();
-			System.out.println( "After buildConfiguration Context class loader: " + Thread.currentThread().getContextClassLoader().getName() );
-			factory = configuration.buildSessionFactory();
+			configuration	= buildConfiguration();
+			factory			= configuration.buildSessionFactory();
 		} finally {
 			Thread.currentThread().setContextClassLoader( oldClassLoader );
 		}
