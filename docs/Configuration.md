@@ -53,6 +53,7 @@ The following ORM settings have been renamed:
 * `cfcLocation` -> `entityPaths`
 * `skipCFCWithError` -> `ignoreParseErrors`
 
-## CFIDE.orm.IEventHandler
+The following CFML interface names/paths have been changed as well:
 
-We expect this will be renamed to `BXORM.IEventHandler`. Stay tuned. 😁
+* `CFIDE.orm.IEventHandler` ->  `orm.models.IEventHandler`
+* `lucee.runtime.orm.naming.NamingStrategy` ->  `orm.models.INamingStrategy`.
