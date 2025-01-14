@@ -17,23 +17,39 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
 public class ORMCloseAllSessionsTest extends BaseORMTest {
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can close all ORM sessions" )
 	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testORMCloseAllSessions() {
+		instance.executeSource(
+		    """
+		    mySession                       = ormGetSession();
+		    alternateSession                = ormGetSession( "dsn2" );
+		    defaultSessionOpenBeforeClose   = mySession.isOpen();
+		    alternateSessionOpenBeforeClose = alternateSession.isOpen();
+
+		    ORMCloseAllSessions();
+
+		    defaultSessionOpenAfterClose   = mySession.isOpen();
+		    alternateSessionOpenAfterClose = alternateSession.isOpen();
+		    """,
+		    context
+		);
+
+		assertTrue( variables.getAsBoolean( Key.of( "defaultSessionOpenBeforeClose" ) ) );
+		assertTrue( variables.getAsBoolean( Key.of( "alternateSessionOpenBeforeClose" ) ) );
+		assertFalse( variables.getAsBoolean( Key.of( "defaultSessionOpenAfterClose" ) ) );
+		assertFalse( variables.getAsBoolean( Key.of( "alternateSessionOpenAfterClose" ) ) );
 	}
 
 }

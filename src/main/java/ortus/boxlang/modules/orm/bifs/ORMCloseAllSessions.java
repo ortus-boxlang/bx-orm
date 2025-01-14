@@ -17,8 +17,7 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import org.apache.commons.lang3.NotImplementedException;
-
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
@@ -27,14 +26,17 @@ import ortus.boxlang.runtime.scopes.ArgumentsScope;
 public class ORMCloseAllSessions extends BaseORMBIF {
 
 	/**
-	 * ExampleBIF
+	 * Close all Hibernate sessions for the current context on all datasources.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @return null/void.
 	 */
-	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		// TODO implement BIF
-		throw new NotImplementedException();
+	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		ORMRequestContext.getForContext( context.getRequestContext() ).closeAllSessions();
+
+		return null;
 	}
 
 }
