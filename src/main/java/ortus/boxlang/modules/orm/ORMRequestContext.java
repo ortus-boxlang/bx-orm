@@ -181,6 +181,7 @@ public class ORMRequestContext {
 			} );
 		}
 
+		logger.debug( "onRequestEnd - closing ORM sessions" );
 		this.closeAllSessions();
 
 		return this;
@@ -192,28 +193,36 @@ public class ORMRequestContext {
 	 * Attempts a transaction commit prior to closing the sessions, if an active transaction is present.
 	 */
 	public ORMRequestContext closeAllSessions() {
-		logger.debug( "onRequestEnd - closing ORM sessions" );
 		this.sessions.forEach( ( key, session ) -> {
-			var tx = session.getTransaction();
-			if ( tx.isActive() ) {
-				logger.warn( "Session [{}] has an active transaction; committing before flushing", key.getName() );
-				try {
-					logger.debug( "ORMRequestContext.closeAllSessions: committing open transaction on session {}", key );
-					tx.commit();
-				} catch ( Exception e ) {
-					logger.error( "Error committing transaction on session [{}]", key.getName(), e );
-					tx.rollback();
-				}
-			}
+			logger.debug( "Closing session on datasource {}", key );
 			try {
-				logger.debug( "ORMRequestContext.closeAllSessions: Closing session {}", key );
-				session.close();
+				closeSession( session );
 			} catch ( Exception e ) {
-				logger.error( "Error closing session [{}] or session factory", key.getName(), e );
+				logger.error( "Error closing session or session factory on datasource {}", key.getName(), e );
 				// ensure we continue to close other sessions
 			}
 		} );
 		this.sessions.clear();
+		return this;
+	}
+
+	/**
+	 * Close a single Hibernate session on the given datasource.
+	 * <p>
+	 * Attempts a transaction commit prior to closing the session, if an active transaction is present.
+	 */
+	public ORMRequestContext closeSession( Session session ) {
+		var tx = session.getTransaction();
+		if ( tx.isActive() ) {
+			logger.warn( "Session has an active transaction; committing before flushing" );
+			try {
+				tx.commit();
+			} catch ( Exception e ) {
+				logger.error( "Error committing transaction on session", e );
+				tx.rollback();
+			}
+		}
+		session.close();
 		return this;
 	}
 }

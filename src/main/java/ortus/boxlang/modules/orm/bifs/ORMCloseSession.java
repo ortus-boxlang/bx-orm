@@ -55,14 +55,15 @@ public class ORMCloseSession extends BaseORMBIF {
 	 * @return null.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session	session;
-		String	datasourceName	= StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
+		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
+		Session				session;
+		String				datasourceName		= StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 		if ( !datasourceName.isBlank() ) {
-			session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( Key.of( datasourceName ) );
+			session = ormRequestContext.getSession( Key.of( datasourceName ) );
 		} else {
-			session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
+			session = ormRequestContext.getSession();
 		}
-		session.close();
+		ormRequestContext.closeSession( session );
 
 		return null;
 	}
