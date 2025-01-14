@@ -17,23 +17,34 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.types.Array;
 import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
 public class ORMExecuteQueryTest extends BaseORMTest {
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can run an HQL query" )
 	@Test
 	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+		instance.executeSource( """
+		                        result = ormExecuteQuery( "FROM Vehicle");
+		                        """, context );
+		Object array = variables.get( result );
+		assertThat( array ).isInstanceOf( Array.class );
+		Array a = ( Array ) array;
+		assertThat( a.size() ).isEqualTo( 3 );
+
+		// Object query = variables.get( result );
+		// assertThat( query ).isInstanceOf( Query.class );
+		// Query q = ( Query ) query;
+		// assertThat( q.size() ).isEqualTo( 3 );
+		// IStruct first = q.getRowAsStruct( 0 );
+		// assertThat( first ).containsKey( Key.of( "make" ) );
+		// assertThat( first.get( Key.of( "make" ) ) ).isEqualTo( "Honda" );
 	}
 
 }

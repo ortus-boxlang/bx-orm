@@ -17,24 +17,56 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import org.apache.commons.lang3.NotImplementedException;
+import java.util.List;
+import java.util.Set;
 
+import org.hibernate.Session;
+
+import ortus.boxlang.modules.orm.ORMApp;
+import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.types.Array;
+import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
 public class ORMExecuteQuery extends BaseORMBIF {
 
 	/**
-	 * ExampleBIF
+	 * Constructor
+	 */
+	public ORMExecuteQuery() {
+		super();
+		declaredArguments = new Argument[] {
+		    new Argument( true, "String", ORMKeys.hql, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		    new Argument( false, "Any", Key.params, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		    new Argument( false, "Boolean", ORMKeys.unique, Set.of() ),
+		    new Argument( false, "Struct", Key.options, Set.of() )
+		};
+	}
+
+	/**
+	 * ORMExecuteQuery
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
-	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		// TODO implement BIF
-		throw new NotImplementedException();
+	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		ORMApp							app				= ormService.getORMAppByContext( RequestBoxContext.getCurrent() );
+		ORMRequestContext				requestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
+
+		// @TODO: Use arguments.options.datasource
+		Session							session			= requestContext.getSession();
+		org.hibernate.query.Query<?>	hqlQuery		= session.createQuery( arguments.getAsString( ORMKeys.hql ) );
+
+		List<?>							result			= hqlQuery.list();
+
+		return Array.fromList( result );
 	}
 
 }
