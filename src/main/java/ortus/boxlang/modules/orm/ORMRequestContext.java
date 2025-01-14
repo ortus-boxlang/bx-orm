@@ -174,13 +174,14 @@ public class ORMRequestContext {
 	 * Will close all Hibernate sessions and unregister the transaction manager.
 	 */
 	public ORMRequestContext shutdown() {
+
+		// Auto-flush all sessions at the end of the request
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
 			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
-			this.sessions.forEach( ( key, session ) -> {
-				session.flush();
-			} );
+			this.sessions.forEach( ( key, session ) -> session.flush() );
 		}
 
+		// Close all ORM sessions
 		logger.debug( "onRequestEnd - closing ORM sessions" );
 		this.closeAllSessions();
 

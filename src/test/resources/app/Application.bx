@@ -5,14 +5,14 @@ class{
 		"TestDB" = {
 			driver = "derby",
 			database = "test",
-			url = "jdbc:derby:memory:TestDB;create=true;",
-			LeakDetectionThreshold = 3000
+			url = "jdbc:derby:build/db/TestDB;create=true;derby.language.logStatementText=true;derby.locks.deadlockTrace=true;derby.stream.error.logSeverityLevel=0;",
+			LeakDetectionThreshold = 3
 		},
 		"dsn2": {
 			driver                 = "derby",
 			database               = "dsn2",
-			url                    = "jdbc:derby:memory:dsn2;create=true;",
-			LeakDetectionThreshold = 3000
+			url                    = "jdbc:derby:build/db/dsn2;create=true;derby.language.logStatementText=true;derby.locks.deadlockTrace=true;derby.stream.error.logSeverityLevel=0;",
+			LeakDetectionThreshold = 3
 		}
 	};
 	this.datasource = "TestDB";

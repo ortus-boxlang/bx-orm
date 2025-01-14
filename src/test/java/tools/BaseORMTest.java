@@ -22,8 +22,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -37,53 +41,46 @@ import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 
-public class BaseORMTest {
+@TestInstance( TestInstance.Lifecycle.PER_CLASS )
+@Execution( ExecutionMode.SAME_THREAD )
+public abstract class BaseORMTest {
 
-	public static BoxRuntime		instance;
-	public static ModuleRecord		moduleRecord;
-	public static Key				derbyModule				= new Key( "bx-derby" );
-	public static String			moduleDependenciesPath	= Paths.get( "./src/test/resources/modules" ).toAbsolutePath().toString();
-	public static Key				result					= Key.of( "result" );
-	public static RequestBoxContext	context;
-	public IScope					variables;
+	public static BoxRuntime	instance;
+	public static ModuleRecord	moduleRecord;
+	public static Key			derbyModule				= new Key( "bx-derby" );
+	public static String		moduleDependenciesPath	= Paths.get( "./src/test/resources/modules" ).toAbsolutePath().toString();
+	public static Key			result					= Key.of( "result" );
+	public RequestBoxContext	context;
+	public IScope				variables;
+	public Boolean				seededDB				= false;
 
 	@BeforeAll
-	public static void setUp() {
-		System.out.println( "Running @BeforeAll" );
+	public void setUp() {
 		instance = BoxRuntime.getInstance( true );
-
 		// Load the module
 		loadModule( instance.getRuntimeContext() );
 		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+		JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
+		JDBCTestUtils.resetAlternateTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDatasourceOrThrow( Key.of( "dsn2" ) ),
+		    context );
 	}
 
 	@AfterAll
-	public static void teardown() {
-		getLogger().debug( "Running @AfterAll" );
-		context.getApplicationListener().onRequestEnd( context, null );
-
-		// @TODO: This should be done in boxlang core if getConnectionManager().shutdown() is called
-		// getLogger().debug( "Shutting down default datasource" );
-		// context.getConnectionManager().getDefaultDatasource().shutdown();
-		// context.getConnectionManager().getCachedDatasources().forEach( ( key, ds ) -> {
-		// try {
-		// getLogger().debug( "Shutting down {} datasource", ds.getUniqueName() );
-		// ds.shutdown();
-		// } catch ( Exception e ) {
-		// getLogger().error( "Error shutting down datasource: " + key, e );
-		// }
-		// } );
-		// getLogger().debug( "Shutting down connection manager" );
-		// context.getConnectionManager().shutdown();
+	public void teardown() {
 		instance.getApplicationService().shutdownApplication( Key.of( "BXORMTest" ) );
 	}
 
 	@BeforeEach
 	public void setupEach() {
-		getLogger().debug( "Running @BeforeEach" );
+		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+		context.getApplicationListener().onRequestStart( context, null );
 		variables = context.getScopeNearby( VariablesScope.name );
-		JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
-		JDBCTestUtils.resetAlternateTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDatasourceOrThrow( Key.of( "dsn2" ) ), context );
+	}
+
+	@AfterEach
+	public void teardownEach() {
+		variables.clear();
+		context.getApplicationListener().onRequestEnd( context, null );
 	}
 
 	protected static void loadModule( IBoxContext context ) {
