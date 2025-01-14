@@ -64,15 +64,15 @@ public class TransactionManagementTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			transaction{
-				entitySave( entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } ) );
+				entitySave( entityNew( "manufacturer", { name : "BMW Group", address : "102 BMW Tower" } ) );
 			}
-			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Audi Corp'" );
+			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'BMW Group'" );
 			""",
 			context
 		);
 		// @formatter:on
 		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
-		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Audi Corp" );
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "BMW Group" );
 	}
 
 	@DisplayName( "It rolls back on transaction rollback" )
@@ -82,10 +82,10 @@ public class TransactionManagementTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			transaction{
-				entitySave( entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } ) );
+				entitySave( entityNew( "manufacturer", { name : "Subaru Corporation", address : "101 Sub Way" } ) );
 				transactionRollback();
 			}
-			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Audi Corp'" );
+			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Subaru Corporation'" );
 			""",
 			context
 		);
@@ -100,16 +100,16 @@ public class TransactionManagementTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			transaction{
-				entitySave( entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } ) );
+				entitySave( entityNew( "manufacturer", { name : "Mitsubishi Corp", address : "101 Mitsubishi Way" } ) );
 				transactionCommit();
 				transactionRollback();
 			}
-			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Audi Corp'" );
+			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Mitsubishi Corp'" );
 			""",
 			context
 		);
 		// @formatter:on
 		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
-		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Audi Corp" );
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Mitsubishi Corp" );
 	}
 }
