@@ -65,6 +65,10 @@ public class ApplicationListener extends BaseInterceptor {
 		this.logger.debug(
 		    "beforeApplicationListenerLoad fired; checking for ORM configuration"
 		);
+		// @TODO: This is a hacky hack; please remove.
+		if ( this.ormService == null ) {
+			this.ormService = ( ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService ) );
+		}
 
 		RequestBoxContext		context				= ( RequestBoxContext ) args.get( "context" );
 		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( "listener" );
@@ -83,6 +87,10 @@ public class ApplicationListener extends BaseInterceptor {
 	 */
 	@InterceptionPoint
 	public void onApplicationEnd( IStruct args ) {
+		// @TODO: This is a hacky hack; please remove.
+		if ( this.ormService == null ) {
+			this.ormService = ( ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService ) );
+		}
 		this.logger.info( "onApplicationEnd fired; Shutting down ORM application" );
 		Application application = ( Application ) args.get( "application" );
 		// If the orm app doesn't exist, this is a no-op
