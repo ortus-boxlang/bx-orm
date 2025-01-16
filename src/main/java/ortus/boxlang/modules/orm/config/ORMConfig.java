@@ -18,7 +18,10 @@
 package ortus.boxlang.modules.orm.config;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.Properties;
+import java.util.stream.Stream;
 
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.boot.registry.BootstrapServiceRegistry;
@@ -469,6 +472,25 @@ public class ORMConfig {
 		    // .applyClassLoader( this.classLoader )
 		    .build();
 		Configuration				configuration		= new Configuration( bootstrapRegistry );
+		var							sysEnvProps			= new Properties();
+
+		Field[]						availableSettings	= AvailableSettings.class.getFields();
+		for ( var prop : System.getProperties().entrySet() ) {
+			String settingName = ( String ) prop.getKey();
+			if ( settingName.startsWith( "HIBERNATE_" ) ) {
+				Object	value			= prop.getValue();
+				Field	foundSetting	= Stream.of( availableSettings ).filter( field -> field.getName() == settingName ).findFirst().orElse( null );
+				try {
+					if ( foundSetting != null ) {
+						sysEnvProps.put( foundSetting.get( foundSetting ), value );
+					}
+				} catch ( IllegalAccessException e ) {
+					logger.error( "Unable to read or set setting from env var: {}", settingName );
+				}
+			}
+			sysEnvProps.put( prop.getKey(), prop.getValue() );
+		}
+		configuration.addProperties( sysEnvProps );
 
 		if ( this.dbcreate != null ) {
 			switch ( dbcreate ) {
