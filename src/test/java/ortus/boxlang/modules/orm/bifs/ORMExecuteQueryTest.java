@@ -19,32 +19,87 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.types.Array;
 import tools.BaseORMTest;
 
 public class ORMExecuteQueryTest extends BaseORMTest {
 
-	@DisplayName( "It can run an HQL query" )
+	@DisplayName( "It can run an HQL query with just HQL" )
 	@Test
-	public void testTestBIF() {
+	public void testHQLOnly() {
+		// @formatter:off
 		instance.executeSource( """
-		                        result = ormExecuteQuery( "FROM Vehicle");
-		                        """, context );
+		result = ormExecuteQuery( "FROM Vehicle" );
+		""", context );
+		// @formatter:on
 		Object array = variables.get( result );
 		assertThat( array ).isInstanceOf( Array.class );
 		Array a = ( Array ) array;
 		assertThat( a.size() ).isEqualTo( 3 );
+	}
 
-		// Object query = variables.get( result );
-		// assertThat( query ).isInstanceOf( Query.class );
-		// Query q = ( Query ) query;
-		// assertThat( q.size() ).isEqualTo( 3 );
-		// IStruct first = q.getRowAsStruct( 0 );
-		// assertThat( first ).containsKey( Key.of( "make" ) );
-		// assertThat( first.get( Key.of( "make" ) ) ).isEqualTo( "Honda" );
+	@DisplayName( "It can run an HQL query on another datasource" )
+	@Test
+	public void testHQLOnAlternateDatasource() {
+		// @formatter:off
+		instance.executeSource( """
+		result = ormExecuteQuery( "FROM AlternateDS", [], { datasource: "dsn2" } );
+		""", context );
+		// @formatter:on
+		Object array = variables.get( result );
+		assertThat( array ).isInstanceOf( Array.class );
+		Array a = ( Array ) array;
+		assertThat( a.size() ).isEqualTo( 2 );
+	}
+
+	@Disabled( "unimplemented" )
+	@DisplayName( "It can run an HQL query with HQL and params" )
+	@Test
+	public void testHQLAndParams() {
+		// @formatter:off
+		instance.executeSource( """
+		result = ormExecuteQuery( "FROM Vehicle WHERE make=?1", ['make'] );
+		""", context );
+		// @formatter:on
+		Object array = variables.get( result );
+		assertThat( array ).isInstanceOf( Array.class );
+		Array a = ( Array ) array;
+		assertThat( a.size() ).isEqualTo( 3 );
+	}
+
+	@Disabled( "unimplemented" )
+	@DisplayName( "It can run an HQL query with HQL, params, and unique boolean" )
+	@Test
+	public void testHQLParamsAndUnique() {
+		// @formatter:off
+		instance.executeSource( """
+		result = ormExecuteQuery( "FROM Vehicle WHERE id=?1", ['1HGCM82633A123456'], true );
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isInstanceOf( IClassRunnable.class );
+		IClassRunnable vehicle = ( IClassRunnable ) item;
+		assertThat( vehicle.get( "model" ) ).isEqualTo( "Accord" );
+	}
+
+	@Disabled( "unimplemented" )
+	@DisplayName( "It supports positional params" )
+	@Test
+	public void testHQLPositionalParams() {
+		// @formatter:off
+		instance.executeSource( """
+		result = ormExecuteQuery( "FROM Vehicle WHERE id=? OR make=?", ['1HGCM82633A123456','Honda'], true );
+		""", context );
+		// @formatter:on
+		Object array = variables.get( result );
+		assertThat( array ).isInstanceOf( Array.class );
+		Array a = ( Array ) array;
+		assertThat( a.size() ).isEqualTo( 3 );
 	}
 
 }
