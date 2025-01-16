@@ -3,16 +3,22 @@ class{
 
 	this.datasources={
 		"TestDB" = {
-			driver = "derby",
-			database = "test",
-			url = "jdbc:derby:build/db/TestDB;create=true;derby.language.logStatementText=true;derby.locks.deadlockTrace=true;derby.stream.error.logSeverityLevel=0;",
-			LeakDetectionThreshold = 3
+			"driver"                 = "mysql",
+			"database"               = "test",
+			"host"                   = "localhost",
+			"port"                   = "3306",
+			"username"               = "root",
+			"password"               = "123456Password",
+			"LeakDetectionThreshold" = 3
 		},
 		"dsn2": {
-			driver                 = "derby",
-			database               = "dsn2",
-			url                    = "jdbc:derby:build/db/dsn2;create=true;derby.language.logStatementText=true;derby.locks.deadlockTrace=true;derby.stream.error.logSeverityLevel=0;",
-			LeakDetectionThreshold = 3
+			"driver"                 = "mysql",
+			"database"               = "dsn2",
+			"host"                   = "localhost",
+			"port"                   = "3306",
+			"username"               = "root",
+			"password"               = "123456Password",
+			"LeakDetectionThreshold" = 3
 		}
 	};
 	this.datasource = "TestDB";

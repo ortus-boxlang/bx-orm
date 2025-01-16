@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       DB_USER: root
-      DB_PASSWORD: root
+      DB_PASSWORD: 123456Password
     continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
@@ -48,11 +48,11 @@ jobs:
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
 
-      # - name: Setup Database and Fixtures
-      #   run: |
-      #     sudo systemctl start mysql.service
-      #     mysql -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }} -e 'CREATE DATABASE mementifier;'
-      #     mysql -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }} < test-harness/tests/resources/coolblog.sql
+      - name: Setup Database and Fixtures
+        run: |
+          sudo systemctl start mysql.service
+          mysql -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }} -e 'CREATE DATABASE test;'
+          mysql -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }} -e 'CREATE DATABASE dsn2;'
 
       #- name: Setup CommandBox CLI
       #  uses: Ortus-Solutions/setup-commandbox@v2.0.1

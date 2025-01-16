@@ -40,7 +40,7 @@ public class EntityReloadTest extends BaseORMTest {
 				myEntity = entityLoadByPK( "Manufacturer", 1 );
 				result = myEntity.getAddress();
 				
-				queryExecute( "UPDATE Manufacturers SET address='101 Ford Circle, Detroit MI' WHERE id=1" );
+				queryExecute( "UPDATE manufacturers SET address='101 Ford Circle, Detroit MI' WHERE id=1" );
 				reloadedAddress = entityReload( "myEntity" ).getAddress();
 			""",
 			context
@@ -59,7 +59,7 @@ public class EntityReloadTest extends BaseORMTest {
 				manufacturer = entityLoadByPK( "Manufacturer", 1 );
 				result = manufacturer.getAddress();
 				
-				queryExecute( "UPDATE Manufacturers SET address='101 Ford Circle, Detroit MI' WHERE id=1" );
+				queryExecute( "UPDATE manufacturers SET address='101 Ford Circle, Detroit MI' WHERE id=1" );
 				reloadedAddress = entityReload( manufacturer ).getAddress();
 			""",
 			context

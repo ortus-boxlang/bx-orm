@@ -58,7 +58,7 @@ public abstract class BaseORMTest {
 	public void setUp() {
 		instance = BoxRuntime.getInstance( true );
 		// Load the module
-		loadModule( instance.getRuntimeContext() );
+		loadModules( instance.getRuntimeContext() );
 		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
 		JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
 		JDBCTestUtils.resetAlternateTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDatasourceOrThrow( Key.of( "dsn2" ) ),
@@ -83,42 +83,30 @@ public abstract class BaseORMTest {
 		context.getApplicationListener().onRequestEnd( context, null );
 	}
 
-	protected static void loadModule( IBoxContext context ) {
-		// Is Derby module loaded?
-		if ( !instance.getModuleService().hasModule( derbyModule ) ) {
-			getLogger().debug( "Loading Derby module..." );
-			String derbyPath = moduleDependenciesPath + "/bx-derby";
+	protected static void loadModules( IBoxContext context ) {
+		// Load the Derby module
+		loadModule( derbyModule, moduleDependenciesPath + "/bx-mysql", context );
+		// Load the ORM module
+		loadModule( ORMKeys.moduleName, Paths.get( "./build/module" ).toAbsolutePath().toString(), context );
+	}
 
-			if ( !Files.exists( Paths.get( derbyPath ) ) ) {
-				getLogger().debug( "Derby module not found at " + derbyPath );
+	protected static void loadModule( Key moduleName, String modulePath, IBoxContext context ) {
+		if ( !instance.getModuleService().hasModule( moduleName ) ) {
+			getLogger().debug( "Loading {} module...", moduleName );
+			if ( !Files.exists( Paths.get( modulePath ) ) ) {
+				getLogger().debug( "{} module not found at {}", moduleName, modulePath );
 				getLogger().debug( "Please run 'gradle installModuleDependencies' to install the required modules." );
 				System.exit( 1 );
 			}
 
-			ModuleRecord derbyRecord = new ModuleRecord( derbyPath );
-			instance.getModuleService().getRegistry().put( derbyModule, derbyRecord );
+			ModuleRecord derbyRecord = new ModuleRecord( modulePath );
+			instance.getModuleService().getRegistry().put( moduleName, derbyRecord );
 			derbyRecord
 			    .loadDescriptor( context )
 			    .register( context )
 			    .activate( context );
 		} else {
-			getLogger().debug( "Derby module already loaded, skipping..." );
-		}
-
-		// Is ORM module loaded?
-		if ( !instance.getModuleService().hasModule( ORMKeys.moduleName ) ) {
-			getLogger().debug( "Loading ORM module..." );
-			String physicalPath = Paths.get( "./build/module" ).toAbsolutePath().toString();
-			moduleRecord = new ModuleRecord( physicalPath );
-
-			instance.getModuleService().getRegistry().put( ORMKeys.moduleName, moduleRecord );
-
-			moduleRecord
-			    .loadDescriptor( context )
-			    .register( context )
-			    .activate( context );
-		} else {
-			getLogger().debug( "ORM module already loaded, skipping..." );
+			getLogger().debug( "{} module already loaded, skipping...", moduleName );
 		}
 	}
 
