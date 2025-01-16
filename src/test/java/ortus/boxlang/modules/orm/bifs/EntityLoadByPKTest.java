@@ -66,7 +66,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		// @formatter:on
 		assertThat( variables.get( result ) ).isNotNull();
 		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
-		assertThat( variables.get( Key.of( "theName" ) ) ).isEqualTo( "Marty McTester" );
+		assertThat( variables.get( Key.of( "theName" ) ) ).isEqualTo( "Bilbo Baggins" );
 	}
 
 	@DisplayName( "It will add has* methods for associations" )
