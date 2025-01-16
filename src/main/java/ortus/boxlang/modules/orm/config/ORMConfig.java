@@ -476,10 +476,11 @@ public class ORMConfig {
 
 		Field[]						availableSettings	= AvailableSettings.class.getFields();
 		for ( var prop : System.getProperties().entrySet() ) {
-			String settingName = ( String ) prop.getKey();
+			String settingName = ( ( String ) prop.getKey() ).toUpperCase();
 			if ( settingName.startsWith( "HIBERNATE_" ) ) {
 				Object	value			= prop.getValue();
-				Field	foundSetting	= Stream.of( availableSettings ).filter( field -> field.getName() == settingName ).findFirst().orElse( null );
+				Field	foundSetting	= Stream.of( availableSettings ).filter( field -> field.getName().equalsIgnoreCase( settingName ) ).findFirst()
+				    .orElse( null );
 				try {
 					if ( foundSetting != null ) {
 						sysEnvProps.put( foundSetting.get( foundSetting ), value );
