@@ -58,11 +58,6 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:5.+"
 	testImplementation "org.mockito:mockito-core:5.+"
 	testImplementation "com.google.truth:truth:1.+"
-	// @TODO: Figure out why we need this for running tests - they should be included in the boxlang dep.
-	// https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
-	//testImplementation 'ch.qos.logback:logback-classic:1.5.7'
-	// https://mvnrepository.com/artifact/com.zaxxer/HikariCP
-	testImplementation 'com.zaxxer:HikariCP:5.1.0'
 }
 
 java {
@@ -223,7 +218,7 @@ task downloadBoxLang( type: Download ) {
     // Configure the URL of the file to download
 	src([
 		"https://downloads.ortussolutions.com/ortussolutions/boxlang/${boxlangVersion}/boxlang-${boxlangVersion}-all.jar",
-		"https://downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-derby/${derbyVersion}/bx-derby-${derbyVersion}.zip"
+		"https://downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-mysql/${mysqlVersion}/bx-mysql-${mysqlVersion}.zip"
 	])
     // Specify the destination directory for the downloaded files
     dest "src/test/resources/libs/"
@@ -235,8 +230,8 @@ task downloadBoxLang( type: Download ) {
  * Install any dependencies the module needs
  */
 task installModuleDependencies( dependsOn: downloadBoxLang, type: Copy ) {
-	from zipTree( file( "${testResourceDirectory}/libs/bx-derby-${derbyVersion}.zip" ) )
-	into "${testResourceDirectory}/modules/bx-derby"
+	from zipTree( file( "${testResourceDirectory}/libs/bx-mysql-${mysqlVersion}.zip" ) )
+	into "${testResourceDirectory}/modules/bx-mysql"
 }
 
 /**
