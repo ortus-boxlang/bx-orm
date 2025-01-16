@@ -6,18 +6,18 @@ class{
 			"driver"                 = "mysql",
 			"database"               = "test",
 			"host"                   = "localhost",
-			"port"                   = "3306",
-			"username"               = "root",
-			"password"               = "root",
+			"port"                   = "${env.MYSQL_USERNAME:3006}",
+			"username"               = "${env.MYSQL_USERNAME:root}",
+			"password"               = "${env.MYSQL_PASSWORD:root}",
 			"LeakDetectionThreshold" = 3
 		},
 		"dsn2": {
 			"driver"                 = "mysql",
 			"database"               = "dsn2",
 			"host"                   = "localhost",
-			"port"                   = "3306",
-			"username"               = "root",
-			"password"               = "root",
+			"port"                   = "${env.MYSQL_USERNAME:3006}",
+			"username"               = "${env.MYSQL_USERNAME:root}",
+			"password"               = "${env.MYSQL_PASSWORD:root}",
 			"LeakDetectionThreshold" = 3
 		}
 	};
