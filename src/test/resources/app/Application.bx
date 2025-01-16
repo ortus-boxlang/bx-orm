@@ -21,6 +21,7 @@ class{
 			"LeakDetectionThreshold" = 3
 		}
 	};
+	writeOutput( serializeJSON( this.datasources.TestDB ) );
 	this.datasource = "TestDB";
 	this.ormSettings={
 		"datasource"    : "TestDB",
