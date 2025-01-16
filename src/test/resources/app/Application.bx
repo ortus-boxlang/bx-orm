@@ -5,7 +5,7 @@ class{
 		"TestDB" = {
 			"driver"                 = "mysql",
 			"database"               = "test",
-			"host"                   = "localhost",
+			"host"                   = "127.0.0.1",
 			"port"                   = "${env.MYSQL_USERNAME:3006}",
 			"username"               = "${env.MYSQL_USERNAME:root}",
 			"password"               = "${env.MYSQL_PASSWORD:root}",
@@ -14,7 +14,7 @@ class{
 		"dsn2": {
 			"driver"                 = "mysql",
 			"database"               = "dsn2",
-			"host"                   = "localhost",
+			"host"                   = "127.0.0.1",
 			"port"                   = "${env.MYSQL_USERNAME:3006}",
 			"username"               = "${env.MYSQL_USERNAME:root}",
 			"password"               = "${env.MYSQL_PASSWORD:root}",
