@@ -8,7 +8,7 @@ class{
 			"host"                   = "localhost",
 			"port"                   = "3306",
 			"username"               = "root",
-			"password"               = "123456Password",
+			"password"               = "root",
 			"LeakDetectionThreshold" = 3
 		},
 		"dsn2": {
@@ -17,7 +17,7 @@ class{
 			"host"                   = "localhost",
 			"port"                   = "3306",
 			"username"               = "root",
-			"password"               = "123456Password",
+			"password"               = "root",
 			"LeakDetectionThreshold" = 3
 		}
 	};
