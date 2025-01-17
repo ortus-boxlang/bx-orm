@@ -6,7 +6,7 @@ services:
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "${MYSQL_PORT}:3306"
+      - "${DB_PORT}:3306"
 
   # mariadb:
   #   image: mariadb:latest
