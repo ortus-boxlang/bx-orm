@@ -7,33 +7,5 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     ports:
       - "${DB_PORT}:3306"
-
-  # mariadb:
-  #   image: mariadb:latest
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: ${MARIADB_PASSWORD}
-  #     MYSQL_DATABASE: ${MARIADB_DATABASE}
-  #     # MYSQL_USER: myuser
-  #     # MYSQL_PASSWORD: mypassword
-  #   # volumes:
-  #   #   - ./data:/var/lib/mysql
-  #   ports:
-  #     - "${MARIADB_PORT}:3306"
-
-  # postgres:
-  #   image: postgres:11.3
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USERNAME}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #     POSTGRES_DB: ${POSTGRES_DATABASE}
-  #   ports:
-  #     - "${POSTGRES_PORT}:5432"
-
-  # mssql:
-  #   image: mcr.microsoft.com/mssql/server:2019-latest
-  #   environment:
-  #     MSSQL_SA_PASSWORD: ${MSSQL_PASSWORD}
-  #     ACCEPT_EULA: "Y"
-  #     MSSQL_PID: "Developer"
-  #   ports:
-  #     - "${MSSQL_PORT}:1433"
+    volumes:
+      - ./src/test/resources/seed.sql:/docker-entrypoint-initdb.d/seed.sql
