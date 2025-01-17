@@ -24,7 +24,6 @@ import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
@@ -39,8 +38,7 @@ import ortus.boxlang.runtime.types.IStruct;
 public class TransactionManager extends BaseInterceptor {
 
 	// The properties to configure the interceptor with
-	private static BoxRuntime	runtime	= BoxRuntime.getInstance();
-	private ORMService			ormService;
+	private ORMService ormService;
 
 	/**
 	 * This method is called by the BoxLang runtime to configure the interceptor
@@ -51,8 +49,8 @@ public class TransactionManager extends BaseInterceptor {
 	@Override
 	public void configure( IStruct properties ) {
 		this.properties	= properties;
-		this.logger		= runtime.getLoggingService().getLogger( "orm" );
-		this.ormService	= ( ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService ) );
+		this.logger		= getRuntime().getLoggingService().getLogger( "orm" );
+		this.ormService	= ( ( ORMService ) getRuntime().getGlobalService( ORMKeys.ORMService ) );
 	}
 
 	@InterceptionPoint

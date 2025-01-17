@@ -20,7 +20,6 @@ package ortus.boxlang.modules.orm.interceptors;
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
@@ -34,9 +33,6 @@ import ortus.boxlang.runtime.types.IStruct;
  */
 public class RequestListener extends BaseInterceptor {
 
-	// The properties to configure the interceptor with
-	private static BoxRuntime runtime = BoxRuntime.getInstance();
-
 	/**
 	 * This method is called by the BoxLang runtime to configure the interceptor
 	 * with a Struct of properties
@@ -46,7 +42,7 @@ public class RequestListener extends BaseInterceptor {
 	@Override
 	public void configure( IStruct properties ) {
 		this.properties	= properties;
-		this.logger		= runtime.getLoggingService().getLogger( "orm" );
+		this.logger		= getRuntime().getLoggingService().getLogger( "orm" );
 	}
 
 	@InterceptionPoint
