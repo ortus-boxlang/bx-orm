@@ -200,10 +200,11 @@ createModuleStructure.finalizedBy( zipModuleStructure )
 shadowJar.finalizedBy( createModuleStructure )
 
 test {
-    useJUnitPlatform()
-    testLogging {
+	useJUnitPlatform()
+	testLogging {
 		showStandardStreams = true
 	}
+	classpath = classpath.filter { !it.path.contains('/build/resources') }
 }
 
 /**
