@@ -47,7 +47,7 @@ public abstract class BaseORMTest {
 
 	public static BoxRuntime	instance;
 	public static ModuleRecord	moduleRecord;
-	public static Key			derbyModule				= new Key( "bx-derby" );
+	public static Key			jdbcDriverModule		= new Key( "bx-mysql" );
 	public static String		moduleDependenciesPath	= Paths.get( "./src/test/resources/modules" ).toAbsolutePath().toString();
 	public static Key			result					= Key.of( "result" );
 	public RequestBoxContext	context;
@@ -84,8 +84,8 @@ public abstract class BaseORMTest {
 	}
 
 	protected static void loadModules( IBoxContext context ) {
-		// Load the Derby module
-		loadModule( derbyModule, moduleDependenciesPath + "/bx-mysql", context );
+		// Load the JDBC driver
+		loadModule( jdbcDriverModule, moduleDependenciesPath + "/bx-mysql", context );
 		// Load the ORM module
 		loadModule( ORMKeys.moduleName, Paths.get( "./build/module" ).toAbsolutePath().toString(), context );
 	}
@@ -99,9 +99,9 @@ public abstract class BaseORMTest {
 				System.exit( 1 );
 			}
 
-			ModuleRecord derbyRecord = new ModuleRecord( modulePath );
-			instance.getModuleService().getRegistry().put( moduleName, derbyRecord );
-			derbyRecord
+			ModuleRecord moduleRecord = new ModuleRecord( modulePath );
+			instance.getModuleService().getRegistry().put( moduleName, moduleRecord );
+			moduleRecord
 			    .loadDescriptor( context )
 			    .register( context )
 			    .activate( context );
