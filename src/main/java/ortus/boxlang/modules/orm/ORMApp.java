@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Order;
@@ -274,7 +275,6 @@ public class ORMApp {
 	public Array loadEntitiesByFilter( RequestBoxContext context, String entityName, IStruct filter, IStruct options ) {
 		EntityRecord			entityRecord	= this.lookupEntity( entityName, true );
 		Session					session			= ORMRequestContext.getForContext( context ).getSession( entityRecord.getDatasource() );
-
 		org.hibernate.Criteria	criteria		= session.createCriteria( entityName );
 
 		if ( filter != null ) {
@@ -283,6 +283,21 @@ public class ORMApp {
 			}
 		}
 
+		return Array.of(
+		    executeCriteriaQuery( criteria, options )
+		        .stream()
+		        .map( entity -> ( IClassRunnable ) entity )
+		        .toArray()
+		);
+	}
+
+	/**
+	 * Execute a Criteria query with various options.
+	 * 
+	 * @param criteria The criteria to execute.
+	 * @param options  Struct of options, including maxResults, offset, order, etc.
+	 */
+	public List executeCriteriaQuery( Criteria criteria, IStruct options ) {
 		if ( options.containsKey( ORMKeys.cacheable ) ) {
 			criteria.setCacheable( BooleanCaster.cast( options.get( ORMKeys.cacheable ) ) );
 		}
@@ -316,14 +331,7 @@ public class ORMApp {
 				}
 			} );
 		}
-
-		List results = criteria.list();
-		return Array.of(
-		    results
-		        .stream()
-		        .map( entity -> ( IClassRunnable ) entity )
-		        .toArray()
-		);
+		return criteria.list();
 	}
 
 	/**
@@ -335,20 +343,6 @@ public class ORMApp {
 		ClassMetadata metadata = session.getSessionFactory().getClassMetadata( entityName );
 		return metadata.getIdentifierType().getReturnedClass();
 	}
-
-	/**
-	 * TODO: Get this JPA metamodel stuff working. We're currently unable to get the class name for dynamic boxlang classes; this may change in the
-	 * future.
-	 * private Class<?> getKeyJavaType( Session session, Class entityClassType ) {
-	 * Metamodel metamodel = session
-	 * .getEntityManagerFactory()
-	 * .getMetamodel();
-	 *
-	 * EntityType<?> entityType = metamodel.entity( entityClassType );
-	 * SingularAttribute<?, ?> idAttribute = entityType.getId( entityType.getIdType().getJavaType() );
-	 * return idAttribute.getJavaType();
-	 * }
-	 */
 
 	/**
 	 * Get the entity map for this ORM application, where the key is the configured datasource name and the value is a list of EntityRecords.

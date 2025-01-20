@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.types.Array;
 import tools.BaseORMTest;
 
@@ -78,13 +77,13 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 	public void testHQLParamsAndUnique() {
 		// @formatter:off
 		instance.executeSource( """
-		result = ormExecuteQuery( "FROM Vehicle WHERE id=?1", ['1HGCM82633A123456'], true );
+		result = ormExecuteQuery( "FROM Vehicle WHERE id=?1 OR make=?2", ['1HGCM82633A123456','Honda'], true );
 		""", context );
 		// @formatter:on
-		Object item = variables.get( result );
-		assertThat( item ).isInstanceOf( IClassRunnable.class );
-		IClassRunnable vehicle = ( IClassRunnable ) item;
-		assertThat( vehicle.get( "model" ) ).isEqualTo( "Accord" );
+		Object array = variables.get( result );
+		assertThat( array ).isInstanceOf( Array.class );
+		Array a = ( Array ) array;
+		assertThat( a.size() ).isEqualTo( 3 );
 	}
 
 	@Disabled( "unimplemented" )
