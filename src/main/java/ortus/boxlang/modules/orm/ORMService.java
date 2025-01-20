@@ -20,6 +20,7 @@ package ortus.boxlang.modules.orm;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -155,7 +156,16 @@ public class ORMService extends BaseService {
 	 * @return A unique key for the given application name and configuration.
 	 */
 	public static Key buildUniqueAppName( Key appName, IStruct config ) {
-		return Key.of( new StringBuilder( appName.getNameNoCase() ).append( "_" ).append( config.hashCode() ).toString() );
+		List<Key>	hashableKeys	= List.of( ORMKeys.ORMEnabled, ORMKeys.ORMSettings, Key.datasource );
+		String		ormSettingKey	= hashableKeys.stream().map( key -> {
+										Object val = config.containsKey( key ) ? config.get( key ) : "";
+										if ( val instanceof IStruct valStruct ) {
+											val = valStruct.asString().replaceAll( "\\s+", "" );
+										}
+										return ( String ) val;
+									} )
+		    .collect( Collectors.joining( "_" ) );
+		return Key.of( new StringBuilder( appName.getNameNoCase() ).append( "_" ).append( ormSettingKey.hashCode() ).toString() );
 	}
 
 	/**
@@ -254,7 +264,7 @@ public class ORMService extends BaseService {
 		IStruct	settings	= context.getApplicationContext().getApplication().getStartingListener().getSettings();
 		Key		appName		= ORMService.buildUniqueAppName( context.getApplicationContext().getApplication().getName(), settings );
 		if ( !hasORMApp( appName ) ) {
-			var message = String.format( "ORMApp not found for context using appname [%s].  Registered app names are: %s", appName, getORMAppNames() );
+			var message = String.format( "ORM app not found for context using key name [%s].  Registered ORM app keys are: %s", appName, getORMAppNames() );
 			throw new BoxRuntimeException( message );
 		}
 		return getORMApp( appName );
