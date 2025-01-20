@@ -26,7 +26,8 @@ To get started hacking on boxlang-orm:
 
 1. Clone the repo
 2. Copy the latest boxlang binary jar to `src/test/resources/libs/boxlang-1.0.0-all.jar`
-3. Copy/unzip the latest JDBC module of your choice to `src/test/resources/libs/modules/`, for example `src/test/resources/modules/bx-derby`.
+3. Download the [MySQL JDBC driver module](https://s3.amazonaws.com/downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-mysql/1.0.0/bx-mysql-1.0.0-snapshot.zip) and unzip it to to `src/test/resources/libs/modules/`
+4. Run `docker-compose up -d mysql` in the root
 
 ## Ortus Sponsors
 
