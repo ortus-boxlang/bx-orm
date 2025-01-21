@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import tools.BaseORMTest;
 
@@ -54,6 +56,20 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( array ).isInstanceOf( Array.class );
 		Array a = ( Array ) array;
 		assertThat( a.size() ).isEqualTo( 2 );
+	}
+
+	@DisplayName( "It can run an HQL query with hql, unique, and options" )
+	@Test
+	public void testUniqueAndOptions() {
+		// @formatter:off
+		instance.executeSource( """
+		result = ormExecuteQuery( "FROM Vehicle ORDER BY model ASC", true, { readOnly: true, offset: 1, maxResults: 5 } );
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isInstanceOf( IClassRunnable.class );
+		IClassRunnable vehicle = ( IClassRunnable ) item;
+		assertThat( vehicle.get( Key.of( "model" ) ) ).isEqualTo( "Civic" );
 	}
 
 	@Disabled( "unimplemented" )

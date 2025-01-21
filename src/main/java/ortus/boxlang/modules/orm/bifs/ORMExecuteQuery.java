@@ -21,14 +21,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.hibernate.Session;
-
-import ortus.boxlang.modules.orm.ORMApp;
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.HQLQuery;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.jdbc.QueryParameter;
@@ -63,23 +59,20 @@ public class ORMExecuteQuery extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		ORMApp					app				= ormService.getORMAppByContext( RequestBoxContext.getCurrent() );
-		ORMRequestContext		requestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
-
-		IStruct					options			= arguments.containsKey( Key.options ) && arguments.get( Key.options ) != null
+		IStruct					options		= arguments.containsKey( Key.options ) && arguments.get( Key.options ) != null
 		    ? StructCaster.cast( arguments.getOrDefault( Key.options, Struct.EMPTY ) )
-		    : Struct.EMPTY;
-		List<QueryParameter>	params			= null;
-		Boolean					unique			= false;
+		    : new Struct();
+		List<QueryParameter>	params		= null;
+		Boolean					isUnique	= false;
 
 		// "params" arg could positionally be either params (an array or struct) or unique.
-		Object					paramsArg		= arguments.get( Key.params );
+		Object					paramsArg	= arguments.get( Key.params );
 		// "unique" arg could positionally be either unique (boolean or string boolean representation) or a struct of options.
-		Object					uniqueArg		= arguments.get( ORMKeys.unique );
+		Object					uniqueArg	= arguments.get( ORMKeys.unique );
 
 		if ( paramsArg != null ) {
 			if ( paramsArg instanceof Boolean || paramsArg instanceof String ) {
-				unique = BooleanCaster.cast( paramsArg );
+				isUnique = BooleanCaster.cast( paramsArg );
 			} else if ( paramsArg instanceof Array paramsArray ) {
 				params = processBindings( paramsArray );
 			} else if ( paramsArg instanceof IStruct paramStruct ) {
@@ -88,20 +81,22 @@ public class ORMExecuteQuery extends BaseORMBIF {
 		}
 
 		if ( uniqueArg != null ) {
-			if ( uniqueArg instanceof IStruct theRealOptions && options.isEmpty() ) {
-				options = theRealOptions;
+			if ( uniqueArg instanceof Struct theRealOptions ) {
+				options.putAll( theRealOptions );
 			} else {
-				unique = BooleanCaster.cast( uniqueArg );
+				isUnique = BooleanCaster.cast( uniqueArg );
+				options.put( ORMKeys.unique, isUnique );
 			}
 		}
-
-		Key								datasource	= options.containsKey( Key.datasource ) ? Key.of( options.getAsString( Key.datasource ) ) : null;
-		Session							session		= requestContext.getSession( datasource );
-		org.hibernate.query.Query<?>	hqlQuery	= session.createQuery( arguments.getAsString( ORMKeys.hql ) );
-
-		List<?>							result		= hqlQuery.list();
-
-		return Array.fromList( result );
+		options.putIfAbsent( ORMKeys.unique, isUnique );
+		if ( isUnique ) {
+			options.put( ORMKeys.maxResults, 1 );
+		}
+		List<?> results = new HQLQuery( context, arguments.getAsString( ORMKeys.hql ), params, options ).execute();
+		if ( options.getAsBoolean( ORMKeys.unique ) ) {
+			return results.isEmpty() ? null : results.getFirst();
+		}
+		return Array.fromList( results );
 	}
 
 	private List<QueryParameter> processBindings( IStruct bindings ) {
