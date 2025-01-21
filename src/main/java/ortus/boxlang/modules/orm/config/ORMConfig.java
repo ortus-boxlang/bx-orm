@@ -664,14 +664,16 @@ public class ORMConfig {
 	 */
 	private String toFullHibernateDialectName( String dialectName ) {
 		switch ( dialectName.trim().toUpperCase().replace( "DIALECT", "" ) ) {
-			case "CUBRID" :
-				return "org.hibernate.dialect.CUBRIDDialect";
 			case "CACHE71" :
 				return "org.hibernate.dialect.Cache71Dialect";
 			case "COCKROACHDB192" :
 				return "org.hibernate.dialect.CockroachDB192Dialect";
 			case "COCKROACHDB201" :
 				return "org.hibernate.dialect.CockroachDB201Dialect";
+			case "CUBRID" :
+				return "org.hibernate.dialect.CUBRIDDialect";
+			case "DATADIRECTORACLE9" :
+				return "org.hibernate.dialect.DataDirectOracle9Dialect";
 			case "DB2390" :
 				return "org.hibernate.dialect.DB2390Dialect";
 			case "DB2390V8" :
@@ -684,8 +686,6 @@ public class ORMConfig {
 				return "org.hibernate.dialect.DB297Dialect";
 			case "DB2" :
 				return "org.hibernate.dialect.DB2Dialect";
-			case "DATADIRECTORACLE9" :
-				return "org.hibernate.dialect.DataDirectOracle9Dialect";
 			case "DERBY" :
 				return "org.hibernate.dialect.DerbyDialect";
 			case "DERBYTENFIVE" :
@@ -734,6 +734,8 @@ public class ORMConfig {
 				return "org.hibernate.dialect.MariaDBDialect";
 			case "MCKOI" :
 				return "org.hibernate.dialect.MckoiDialect";
+			case "MicrosoftSQLServer" :
+				return "org.hibernate.dialect.SQLServerDialect";
 			case "MIMERSQL" :
 				return "org.hibernate.dialect.MimerSQLDialect";
 			case "MYSQL55" :
@@ -767,6 +769,8 @@ public class ORMConfig {
 				return "org.hibernate.dialect.OracleDialect";
 			case "POINTBASE" :
 				return "org.hibernate.dialect.PointbaseDialect";
+			case "POSTGRESPLUS" :
+				return "org.hibernate.dialect.PostgresPlusDialect";
 			case "POSTGRESQL10" :
 				return "org.hibernate.dialect.PostgreSQL10Dialect";
 			case "POSTGRESQL81" :
@@ -787,8 +791,6 @@ public class ORMConfig {
 				return "org.hibernate.dialect.PostgreSQL9Dialect";
 			case "POSTGRESQL" :
 				return "org.hibernate.dialect.PostgreSQLDialect";
-			case "POSTGRESPLUS" :
-				return "org.hibernate.dialect.PostgresPlusDialect";
 			case "PROGRESS" :
 				return "org.hibernate.dialect.ProgressDialect";
 			case "RDMSOS2200" :
