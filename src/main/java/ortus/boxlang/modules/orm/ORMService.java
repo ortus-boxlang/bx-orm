@@ -35,6 +35,7 @@ import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.BaseService;
+import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
@@ -148,6 +149,26 @@ public class ORMService extends BaseService {
 	 */
 
 	/**
+	 * Stringify the value for ORM configuration uniqueness detection.
+	 * 
+	 * @param value The value to stringify. Arrays, structs, and string-castable values are supported.
+	 */
+	public static String stringify( Object value ) {
+		if ( value instanceof Array valArray ) {
+			return valArray.stream()
+			    .map( StringCaster::cast )
+			    .collect( Collectors.joining( "," ) );
+		}
+		if ( value instanceof IStruct valStruct ) {
+			return valStruct.entrySet().stream()
+			    .sorted( Map.Entry.comparingByKey() )
+			    .map( entry -> StringCaster.cast( entry.getKey().getName() ) + "=" + stringify( entry.getValue() ) )
+			    .collect( Collectors.joining( "," ) );
+		}
+		return StringCaster.cast( value );
+	}
+
+	/**
 	 * Helper method to construct ORM based application names, which rely on the unique combination
 	 * of an application name and the application's configuration.
 	 *
@@ -159,11 +180,7 @@ public class ORMService extends BaseService {
 	public static Key buildUniqueAppName( Key appName, IStruct config ) {
 		List<Key>	hashableKeys	= List.of( ORMKeys.ORMEnabled, ORMKeys.ORMSettings, Key.datasource );
 		String		ormSettingKey	= hashableKeys.stream().map( key -> {
-										Object val = config.containsKey( key ) ? config.get( key ) : "";
-										if ( val instanceof IStruct valStruct ) {
-											val = valStruct.asString().replaceAll( "\\s+", "" );
-										}
-										return StringCaster.cast( val );
+										return stringify( config.containsKey( key ) ? config.get( key ) : "" );
 									} )
 		    .collect( Collectors.joining( "_" ) );
 		return Key.of( new StringBuilder( appName.getNameNoCase() ).append( "_" ).append( ormSettingKey.hashCode() ).toString() );
