@@ -31,6 +31,7 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.BaseApplicationListener;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.BaseService;
@@ -162,7 +163,7 @@ public class ORMService extends BaseService {
 										if ( val instanceof IStruct valStruct ) {
 											val = valStruct.asString().replaceAll( "\\s+", "" );
 										}
-										return ( String ) val;
+										return StringCaster.cast( val );
 									} )
 		    .collect( Collectors.joining( "_" ) );
 		return Key.of( new StringBuilder( appName.getNameNoCase() ).append( "_" ).append( ormSettingKey.hashCode() ).toString() );
