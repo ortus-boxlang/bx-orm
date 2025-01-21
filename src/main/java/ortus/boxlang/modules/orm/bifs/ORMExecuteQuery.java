@@ -59,24 +59,22 @@ public class ORMExecuteQuery extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IStruct					options		= arguments.containsKey( Key.options ) && arguments.get( Key.options ) != null
+		IStruct	options		= arguments.containsKey( Key.options ) && arguments.get( Key.options ) != null
 		    ? StructCaster.cast( arguments.getOrDefault( Key.options, Struct.EMPTY ) )
 		    : new Struct();
-		List<QueryParameter>	params		= null;
-		Boolean					isUnique	= false;
+		Object	params		= null;
+		Boolean	isUnique	= false;
 
 		// "params" arg could positionally be either params (an array or struct) or unique.
-		Object					paramsArg	= arguments.get( Key.params );
+		Object	paramsArg	= arguments.get( Key.params );
 		// "unique" arg could positionally be either unique (boolean or string boolean representation) or a struct of options.
-		Object					uniqueArg	= arguments.get( ORMKeys.unique );
+		Object	uniqueArg	= arguments.get( ORMKeys.unique );
 
 		if ( paramsArg != null ) {
 			if ( paramsArg instanceof Boolean || paramsArg instanceof String ) {
 				isUnique = BooleanCaster.cast( paramsArg );
-			} else if ( paramsArg instanceof Array paramsArray ) {
-				params = processBindings( paramsArray );
-			} else if ( paramsArg instanceof IStruct paramStruct ) {
-				params = processBindings( paramStruct );
+			} else {
+				params = paramsArg;
 			}
 		}
 
@@ -97,13 +95,6 @@ public class ORMExecuteQuery extends BaseORMBIF {
 			return results.isEmpty() ? null : results.getFirst();
 		}
 		return Array.fromList( results );
-	}
-
-	private List<QueryParameter> processBindings( IStruct bindings ) {
-		if ( bindings == null ) {
-			return new ArrayList<>();
-		}
-		return new ArrayList<>();
 	}
 
 	private List<QueryParameter> processBindings( Array bindings ) {

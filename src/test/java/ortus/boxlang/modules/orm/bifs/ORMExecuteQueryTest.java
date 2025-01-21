@@ -41,7 +41,7 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		Object array = variables.get( result );
 		assertThat( array ).isInstanceOf( Array.class );
 		Array a = ( Array ) array;
-		assertThat( a.size() ).isEqualTo( 3 );
+		assertThat( a.size() ).isEqualTo( 4 );
 	}
 
 	@DisplayName( "It can run an HQL query on another datasource" )
@@ -72,19 +72,21 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( vehicle.get( Key.of( "model" ) ) ).isEqualTo( "Civic" );
 	}
 
-	@Disabled( "unimplemented" )
+	// @Disabled( "unimplemented" )
 	@DisplayName( "It can run an HQL query with HQL and params" )
 	@Test
 	public void testHQLAndParams() {
 		// @formatter:off
 		instance.executeSource( """
-		result = ormExecuteQuery( "FROM Vehicle WHERE make=?1", ['make'] );
+		result = ormExecuteQuery(
+			"FROM Vehicle WHERE make=:make OR model IN (:model) OR model=:specificModel",
+			{ make : "Ford", model : { value: ['Civic','Accord'], list : true }, specificModel : "Ridgeline" } );
 		""", context );
 		// @formatter:on
 		Object array = variables.get( result );
 		assertThat( array ).isInstanceOf( Array.class );
 		Array a = ( Array ) array;
-		assertThat( a.size() ).isEqualTo( 3 );
+		assertThat( a.size() ).isEqualTo( 4 );
 	}
 
 	@Disabled( "unimplemented" )
