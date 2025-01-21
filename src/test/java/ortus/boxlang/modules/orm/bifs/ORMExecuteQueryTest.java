@@ -19,7 +19,6 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -103,7 +102,6 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( vehicle.get( Key.of( "model" ) ) ).isEqualTo( "Accord" );
 	}
 
-	@Disabled( "unimplemented" )
 	@DisplayName( "It supports JDBC-style positional params" )
 	@Test
 	public void testHQLPositionalParams() {

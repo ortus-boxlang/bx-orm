@@ -124,6 +124,8 @@ public class HQLQuery {
 		StringBuilder	newHQL				= new StringBuilder();
 		// This is the name of the current named parameter being processed
 		StringBuilder	paramName			= new StringBuilder();
+		// This is the name (index) of the current positional parameter being processed, like ?1 or ?23
+		StringBuilder	positionName		= new StringBuilder();
 		// This is the current HQL token being processed. We'll save these for later when we apply the parameters.
 		// We could techincally finalize this string now, but we'd end up casting all the values twice which seems inefficient.
 		StringBuilder	HQLWithParamToken	= new StringBuilder();
@@ -135,10 +137,11 @@ public class HQLQuery {
 		// 2 = Inside a single line comment
 		// 3 = Inside a multi-line comment
 		// 4 = Inside a named parameter
+		// 5 = Inside a positional parameter, like ? or ?1 or ?23
 		int				state				= 0;
 
 		// This should always match params.size(), but is a little easier to use
-		int				paramsEncountered	= 0;
+		final int[]		paramsEncountered	= { 0 };
 		// Pop this into a lambda so we can re-use it for the last named parameter
 		Runnable		processNamed		= () -> {
 												HQLWithParamTokens.add( HQLWithParamToken.toString() );
@@ -152,7 +155,7 @@ public class HQLQuery {
 														QueryParameter newParam = QueryParameter.fromAny( namedParameters.get( finalParamName ) );
 														foundNamedParams.add( finalParamName );
 														params.add( newParam );
-														// List params add ?, ?, ? etc. to the HQL string
+														// List params add ?1, ?2, ?3 etc. to the HQL string
 														if ( newParam.isListParam() ) {
 															List<Object> values = ( List<Object> ) newParam.getValue();
 															newHQL.append(
@@ -167,6 +170,28 @@ public class HQLQuery {
 														throw new DatabaseException(
 														    "Named parameter [:" + finalParamName.getName() + "] not provided to query." );
 													}
+												}
+											};
+		// Pop this into a lambda so we can re-use it for the last positional parameter
+		Runnable		processPositional	= () -> {
+												if ( paramsEncountered[ 0 ] > positionalParameters.size() ) {
+													throw new DatabaseException( "Too few positional parameters [" + positionalParameters.size()
+													    + "] provided for query having at least [" + paramsEncountered[ 0 ] + "] '?' char(s)." );
+												}
+												HQLWithParamTokens.add( HQLWithParamToken.toString() );
+												HQLWithParamToken.setLength( 0 );
+												var newParam = QueryParameter.fromAny( positionalParameters.get( paramsEncountered[ 0 ] - 1 ) );
+												params.add( newParam );
+												// List params add ?1, ?2, ?3 etc. to the HQL string
+												if ( newParam.isListParam() ) {
+													List<Object> values = ( List<Object> ) newParam.getValue();
+													newHQL.append(
+													    values.stream()
+													        .map( v -> "?" + ( ++this.parameterCount ) )
+													        .collect( Collectors.joining( ", " ) )
+													);
+												} else {
+													newHQL.append( "?" + ( ++this.parameterCount ) );
 												}
 											};
 
@@ -187,28 +212,14 @@ public class HQLQuery {
 						state = 3;
 					} else if ( c == '?' ) {
 						// We've encountered a positional parameter
-						paramsEncountered++;
-						if ( isPositional ) {
-							if ( paramsEncountered > positionalParameters.size() ) {
-								throw new DatabaseException( "Too few positional parameters [" + positionalParameters.size()
-								    + "] provided for query having at least [" + paramsEncountered + "] '?' char(s)." );
-							}
-
-							HQLWithParamTokens.add( HQLWithParamToken.toString() );
-							HQLWithParamToken.setLength( 0 );
-							var				newParam	= QueryParameter.fromAny( positionalParameters.get( paramsEncountered - 1 ) );
-							List<Object>	values;
-							// List params add ?, ?, ? etc. to the HQL string
-							if ( newParam.isListParam() && ( values = ( List<Object> ) newParam.getValue() ).size() > 1 ) {
-								newHQL.append( "?, ".repeat( values.size() - 1 ) );
-							}
-							params.add( newParam );
-							// append here and break so the ? doesn't go into the HQLWithParamToken
-							newHQL.append( c );
-							break;
-						} else {
+						paramsEncountered[ 0 ]++;
+						if ( !isPositional ) {
 							throw new DatabaseException( "Positional parameter [?] found in query with named parameters." );
 						}
+
+						state = 5;
+						// Do not append anything
+						break;
 					} else if ( c == ':' ) {
 						// We've encountered a named parameter
 						state = 4;
@@ -269,6 +280,19 @@ public class HQLQuery {
 					paramName.append( c );
 					break;
 				}
+				// Inside a numbered positional parameter, like ?1 or ?23
+				case 5 : {
+					if ( ! ( Character.isDigit( c ) ) ) {
+						processPositional.run();
+						positionName.setLength( 0 );
+						// reset the state and backup to re-precess the next char again
+						state = 0;
+						i--;
+						break;
+					}
+					positionName.append( c );
+					break;
+				}
 			}
 		}
 
@@ -276,11 +300,9 @@ public class HQLQuery {
 		if ( state == 4 ) {
 			processNamed.run();
 		}
-
-		// Make sure positional params were all used
-		if ( isPositional && positionalParameters.size() > paramsEncountered ) {
-			throw new DatabaseException( "Too many positional parameters [" + positionalParameters.size()
-			    + "] provided for query having only [" + paramsEncountered + "] '?' char(s)." );
+		// If positional param is the last thing in the query
+		if ( state == 5 ) {
+			processPositional.run();
 		}
 
 		HQLWithParamTokens.add( HQLWithParamToken.toString() );
