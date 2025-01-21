@@ -19,6 +19,7 @@ import ortus.boxlang.runtime.jdbc.QueryParameter;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 
 public class HQLQuery {
@@ -62,7 +63,27 @@ public class HQLQuery {
 			if ( castedArray.isEmpty() ) {
 				return new ArrayList<>();
 			}
-			// ... otherwise, we need to process the array
+			// An array could be an array of structs where a name is specified in each struct, which we massage back into a struct
+			int		foundNames		= 0;
+			IStruct	possibleStruct	= Struct.of();
+			for ( Object item : castedArray ) {
+				CastAttempt<IStruct> itemStructAttempt = StructCaster.attempt( item );
+				if ( itemStructAttempt.wasSuccessful() ) {
+					IStruct itemStruct = itemStructAttempt.get();
+					if ( itemStruct.containsKey( Key._NAME ) ) {
+						foundNames++;
+						possibleStruct.put( Key.of( itemStruct.get( Key._NAME ) ), itemStruct );
+					}
+				}
+			}
+			// All items in the array are structs with names
+			if ( foundNames == castedArray.size() ) {
+				return buildParameterList( null, possibleStruct );
+			} else if ( foundNames > 0 ) {
+				throw new DatabaseException( "Invalid query params passed as array of structs. Some structs have a name, some do not." );
+			}
+			// No structs with names were found, or possbly no structs were found at all!
+			return buildParameterList( castedArray, null );
 		}
 		CastAttempt<IStruct> castAsStruct = StructCaster.attempt( bindings );
 		if ( castAsStruct.wasSuccessful() ) {

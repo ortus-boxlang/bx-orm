@@ -72,15 +72,15 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( vehicle.get( Key.of( "model" ) ) ).isEqualTo( "Civic" );
 	}
 
-	// @Disabled( "unimplemented" )
-	@DisplayName( "It can run an HQL query with HQL and params" )
+	@DisplayName( "It can run an HQL query with HQL and named params" )
 	@Test
 	public void testHQLAndParams() {
 		// @formatter:off
 		instance.executeSource( """
 		result = ormExecuteQuery(
 			"FROM Vehicle WHERE make=:make OR model IN (:model) OR model=:specificModel",
-			{ make : "Ford", model : { value: ['Civic','Accord'], list : true }, specificModel : "Ridgeline" } );
+			{ make : "Ford", model : { value: ['Civic','Accord'], list : true }, specificModel : "Ridgeline" }
+		);
 		""", context );
 		// @formatter:on
 		Object array = variables.get( result );
@@ -89,7 +89,6 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( a.size() ).isEqualTo( 4 );
 	}
 
-	@Disabled( "unimplemented" )
 	@DisplayName( "It can run an HQL query with HQL, params, and unique boolean" )
 	@Test
 	public void testHQLParamsAndUnique() {
@@ -98,14 +97,14 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		result = ormExecuteQuery( "FROM Vehicle WHERE id=?1 OR make=?2", ['1HGCM82633A123456','Honda'], true );
 		""", context );
 		// @formatter:on
-		Object array = variables.get( result );
-		assertThat( array ).isInstanceOf( Array.class );
-		Array a = ( Array ) array;
-		assertThat( a.size() ).isEqualTo( 3 );
+		Object item = variables.get( result );
+		assertThat( item ).isInstanceOf( IClassRunnable.class );
+		IClassRunnable vehicle = ( IClassRunnable ) item;
+		assertThat( vehicle.get( Key.of( "model" ) ) ).isEqualTo( "Accord" );
 	}
 
 	@Disabled( "unimplemented" )
-	@DisplayName( "It supports positional params" )
+	@DisplayName( "It supports JDBC-style positional params" )
 	@Test
 	public void testHQLPositionalParams() {
 		// @formatter:off
@@ -113,10 +112,10 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		result = ormExecuteQuery( "FROM Vehicle WHERE id=? OR make=?", ['1HGCM82633A123456','Honda'], true );
 		""", context );
 		// @formatter:on
-		Object array = variables.get( result );
-		assertThat( array ).isInstanceOf( Array.class );
-		Array a = ( Array ) array;
-		assertThat( a.size() ).isEqualTo( 3 );
+		Object item = variables.get( result );
+		assertThat( item ).isInstanceOf( IClassRunnable.class );
+		IClassRunnable vehicle = ( IClassRunnable ) item;
+		assertThat( vehicle.get( Key.of( "model" ) ) ).isEqualTo( "Accord" );
 	}
 
 }
