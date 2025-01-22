@@ -17,23 +17,54 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
-// TODO implement test
+// @TODO: Fix Cache provider configuration.
 @Disabled
 public class ORMEvictCollectionTest extends BaseORMTest {
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can evict entity collections for all entities of type name" )
 	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testORMEvictCollection() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			record = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
+			// isPresentBeforeEvict = ...
+			
+			ORMEvictCollection( "manufacturer", "vehicles" );
+			// isPresentAfterEvict = ...
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsBoolean( Key.of( "isPresentBeforeEvict" ) ) ).isTrue();
+		assertThat( variables.getAsBoolean( Key.of( "isPresentAfterEvict" ) ) ).isFalse();
 	}
 
+	@DisplayName( "It can evict entity collections for a specific entity" )
+	@Test
+	public void testORMEvictCollectionWithPrimaryKey() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			record = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
+			// isPresentBeforeEvict = ...
+			
+			ORMEvictCollection( "manufacturer", "vehicles", record.getId() );
+			// isPresentAfterEvict = ...
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsBoolean( Key.of( "isPresentBeforeEvict" ) ) ).isTrue();
+		assertThat( variables.getAsBoolean( Key.of( "isPresentAfterEvict" ) ) ).isFalse();
+	}
 }

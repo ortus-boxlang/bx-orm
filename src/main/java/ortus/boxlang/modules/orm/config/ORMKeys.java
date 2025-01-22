@@ -184,6 +184,7 @@ public class ORMKeys {
 	public static final Key	ascending				= Key.of( "ascending" );
 	public static final Key	hql						= Key.of( "hql" );
 	public static final Key	primaryKey				= Key.of( "primaryKey" );
+	public static final Key	collectionName			= Key.of( "collectionName" );
 
 	/**
 	 * ORM event keys

@@ -61,6 +61,8 @@ public class ORMEvictEntity extends BaseORMBIF {
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
 		SessionFactory	factory			= session.getSessionFactory();
+		// Fix casing.
+		entityName = entityRecord.getEntityName();
 
 		if ( primaryKey == null ) {
 			factory.getCache().evictEntityData( entityName );

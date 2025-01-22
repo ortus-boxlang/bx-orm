@@ -31,13 +31,39 @@ public class ORMEvictEntityTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-			result = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
+			record = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
+			isPresentBeforeEvict = ORMGetSessionFactory().getCache().containsEntity( "Manufacturer", record.getId() );
+			
 			ORMEvictEntity( "manufacturer" );
+			isPresentAfterEvict = ORMGetSessionFactory().getCache().containsEntity( "Manufacturer", record.getId() );
+			""",
+			context
+		);
+		// @formatter:on
+		// @TODO: Fix Cache provider configuration.
+		// assertThat( variables.getAsBoolean( Key.of( "isPresentBeforeEvict" ) ) ).isTrue();
+		// assertThat( variables.getAsBoolean( Key.of( "isPresentAfterEvict" ) ) ).isFalse();
+	}
+
+	@DisplayName( "It accepts a second argument for the primary key" )
+	@Test
+	public void testORMEvictEntityWithPrimaryKey() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			record = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
+			isPresentBeforeEvict = ORMGetSessionFactory().getCache().containsEntity( "Manufacturer", record.getId() );
+
+			ORMEvictEntity( "manufacturer", record.getId() );
+			isPresentAfterEvict = ORMGetSessionFactory().getCache().containsEntity( "Manufacturer", record.getId() );
 			// test it...
 			""",
 			context
 		);
 		// @formatter:on
+		// @TODO: Fix Cache provider configuration.
+		// assertThat( variables.getAsBoolean( Key.of( "isPresentBeforeEvict" ) ) ).isTrue();
+		// assertThat( variables.getAsBoolean( Key.of( "isPresentAfterEvict" ) ) ).isFalse();
 	}
 
 }

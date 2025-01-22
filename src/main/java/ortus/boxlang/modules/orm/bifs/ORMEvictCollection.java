@@ -17,24 +17,64 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import org.apache.commons.lang3.NotImplementedException;
+import java.io.Serializable;
+import java.util.Set;
 
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+
+import ortus.boxlang.modules.orm.ORMApp;
+import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
 public class ORMEvictCollection extends BaseORMBIF {
 
 	/**
-	 * ExampleBIF
+	 * Constructor
+	 */
+	public ORMEvictCollection() {
+		super();
+		declaredArguments = new Argument[] {
+		    new Argument( true, "String", ORMKeys.entityName, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		    new Argument( true, "String", ORMKeys.collectionName, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		    new Argument( false, "String", ORMKeys.primaryKey )
+		};
+	}
+
+	/**
+	 * Evict all entity data for a given collection on a given entity type from the second-level cache.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		// TODO implement BIF
-		throw new NotImplementedException();
+		String			entityName		= arguments.getAsString( ORMKeys.entityName );
+		String			primaryKey		= arguments.getAsString( ORMKeys.primaryKey );
+		ORMApp			ormApp			= ORMRequestContext.getForContext( context.getRequestContext() ).getORMApp();
+		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
+		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
+		SessionFactory	factory			= session.getSessionFactory();
+		// Fix casing.
+		entityName = entityRecord.getEntityName();
+		String collection = entityName + "." + arguments.getAsString( ORMKeys.collectionName );
+
+		if ( primaryKey == null ) {
+			factory.getCache().evictCollectionData( collection );
+		} else {
+			String			keyType	= ormApp.getKeyJavaType( session, entityName ).getSimpleName();
+			Serializable	id		= ( Serializable ) GenericCaster.cast( context, primaryKey, keyType );
+			factory.getCache().evictCollectionData( collection, id );
+		}
+
+		return null;
 	}
 
 }
