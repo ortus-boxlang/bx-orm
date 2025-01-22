@@ -51,6 +51,8 @@ dependencies {
 	implementation 'org.hibernate:hibernate-jcache:5.6.15.Final'
 	// https://mvnrepository.com/artifact/javax.cache/cache-api
 	implementation 'javax.cache:cache-api:1.1.1'
+	// https://mvnrepository.com/artifact/org.ehcache/ehcache
+	implementation 'org.ehcache:ehcache:3.10.8'
 
     // Testing Dependencies
 	testImplementation files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '-all.jar' )

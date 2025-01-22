@@ -511,8 +511,9 @@ public class ORMConfig {
 				configuration.setPhysicalNamingStrategy( loadedNamingStrategy );
 			}
 		}
+
+		configuration.setProperty( AvailableSettings.USE_SECOND_LEVEL_CACHE, Boolean.toString( this.secondaryCacheEnabled ) );
 		if ( this.secondaryCacheEnabled ) {
-			configuration.setProperty( AvailableSettings.USE_SECOND_LEVEL_CACHE, "true" );
 			configuration.setProperty( AvailableSettings.USE_QUERY_CACHE, "true" );
 			configuration.setProperty( AvailableSettings.CACHE_REGION_FACTORY, "jcache" );
 			configuration.setProperty( "hibernate.javax.cache.provider", this.getJCacheProviderClassPath() );
