@@ -17,23 +17,27 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
+// @Disabled
 public class ORMEvictEntityTest extends BaseORMTest {
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can evict entities from the second-level cache" )
 	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testORMEvictEntity() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			result = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
+			ORMEvictEntity( "manufacturer" );
+			// test it...
+			""",
+			context
+		);
+		// @formatter:on
 	}
 
 }

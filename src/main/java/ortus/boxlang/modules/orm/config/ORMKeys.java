@@ -183,6 +183,7 @@ public class ORMKeys {
 	public static final Key	cacheable				= Key.of( "cacheable" );
 	public static final Key	ascending				= Key.of( "ascending" );
 	public static final Key	hql						= Key.of( "hql" );
+	public static final Key	primaryKey				= Key.of( "primaryKey" );
 
 	/**
 	 * ORM event keys

@@ -339,7 +339,7 @@ public class ORMApp {
 	 *
 	 * TODO: We're using Hibernate's deprecated metamodel. Refactor to use JPA metamodel.
 	 */
-	private Class<?> getKeyJavaType( Session session, String entityName ) {
+	public Class<?> getKeyJavaType( Session session, String entityName ) {
 		ClassMetadata metadata = session.getSessionFactory().getClassMetadata( entityName );
 		return metadata.getIdentifierType().getReturnedClass();
 	}
