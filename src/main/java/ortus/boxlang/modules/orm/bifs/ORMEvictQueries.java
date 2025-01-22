@@ -17,11 +17,15 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import org.apache.commons.lang3.NotImplementedException;
+import org.hibernate.SessionFactory;
 
+import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Argument;
 
 /**
  * BIF to evict all queries from the named or default cache.
@@ -30,13 +34,39 @@ import ortus.boxlang.runtime.scopes.ArgumentsScope;
 public class ORMEvictQueries extends BaseORMBIF {
 
 	/**
-	 * ExampleBIF
+	 * Constructor
+	 */
+	public ORMEvictQueries() {
+		super();
+		declaredArguments = new Argument[] {
+		    new Argument( false, "String", ORMKeys.cacheName ),
+		    new Argument( false, "String", ORMKeys.datasource )
+		};
+	}
+
+	/**
+	 * Evict all queries from the named or default cache on the named or default datasource.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		// TODO implement BIF
-		throw new NotImplementedException();
+		String				cacheName			= arguments.getAsString( ORMKeys.cacheName );
+		String				datasourceName		= arguments.getAsString( ORMKeys.datasource );
+		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
+		SessionFactory		factory				= null;
+		if ( datasourceName == null ) {
+			factory = ormRequestContext.getSession().getSessionFactory();
+		} else {
+			factory = ormRequestContext.getSession( Key.of( datasourceName ) ).getSessionFactory();
+		}
+
+		if ( cacheName == null ) {
+			factory.getCache().evictDefaultQueryRegion();
+		} else {
+			factory.getCache().evictQueryRegion( cacheName );
+		}
+
+		return null;
 	}
 }

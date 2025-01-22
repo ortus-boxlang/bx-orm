@@ -17,23 +17,61 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import tools.BaseORMTest;
 
-// TODO implement test
-@Disabled
 public class ORMEvictQueriesTest extends BaseORMTest {
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "It can evict queries from the default cache" )
 	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testORMEvictQueries() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			// isPresentBeforeEvict = ...
+			ORMEvictQueries();
+			// isPresentAfterEvict = ...
+			""",
+			context
+		);
+		// @formatter:on
+		// assertThat( variables.getAsBoolean( Key.of( "isPresentBeforeEvict" ) ) ).isTrue();
+		// assertThat( variables.getAsBoolean( Key.of( "isPresentAfterEvict" ) ) ).isFalse();
 	}
 
+	@DisplayName( "It can evict queries on the named cache" )
+	@Test
+	public void testORMEvictQueriesWithCacheName() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			// isPresentBeforeEvict = ...
+			ORMEvictQueries( "queries" );
+			// isPresentAfterEvict = ...
+			""",
+			context
+		);
+		// @formatter:on
+		// assertThat( variables.getAsBoolean( Key.of( "isPresentBeforeEvict" ) ) ).isTrue();
+		// assertThat( variables.getAsBoolean( Key.of( "isPresentAfterEvict" ) ) ).isFalse();
+	}
+
+	@DisplayName( "It can evict queries on the named cache and datasource" )
+	@Test
+	public void testORMEvictQueriesWithCacheNameAndDatasourceName() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			// isPresentBeforeEvict = ...
+			ORMEvictQueries( "queries", "dsn2" );
+			// isPresentAfterEvict = ...
+			""",
+			context
+		);
+		// @formatter:on
+		// assertThat( variables.getAsBoolean( Key.of( "isPresentBeforeEvict" ) ) ).isTrue();
+		// assertThat( variables.getAsBoolean( Key.of( "isPresentAfterEvict" ) ) ).isFalse();
+	}
 }

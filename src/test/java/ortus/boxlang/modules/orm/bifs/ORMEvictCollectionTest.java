@@ -36,7 +36,6 @@ public class ORMEvictCollectionTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-			record = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
 			// isPresentBeforeEvict = ...
 			
 			ORMEvictCollection( "manufacturer", "vehicles" );
@@ -55,7 +54,6 @@ public class ORMEvictCollectionTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-			record = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
 			// isPresentBeforeEvict = ...
 			
 			ORMEvictCollection( "manufacturer", "vehicles", record.getId() );
