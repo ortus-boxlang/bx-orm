@@ -57,7 +57,8 @@ dependencies {
     // Testing Dependencies
 	testImplementation files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '-all.jar' )
 	testImplementation files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '-all.jar' )
-    testImplementation "org.junit.jupiter:junit-jupiter:5.+"
+    // Pinning this because the next version up breaks our tests
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.3"
 	testImplementation "org.mockito:mockito-core:5.+"
 	testImplementation "com.google.truth:truth:1.+"
 }
