@@ -98,7 +98,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		// Update fieldtype annotation just in case we altered it.
 		annotations.put( ORMKeys.fieldtype, associationType );
 
-		if ( associationType.endsWith( "-to-many" ) ) {
+		final String finalAssociationType = associationType;
+
+		if ( finalAssociationType.endsWith( "-to-many" ) ) {
 			// IS A COLLECTION
 			association.compute( ORMKeys.collectionType, ( key, object ) -> {
 				String propertyType = annotations.getAsString( Key.type );
@@ -129,9 +131,10 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				// helpx.adobe.com/coldfusion/developing-applications/coldfusion-orm/performance-optimization/lazy-loading.html
 				String lazy = annotations.getAsString( ORMKeys.lazy ).trim().toLowerCase();
 				if ( "true".equals( lazy ) ) {
-					lazy = association.get( ORMKeys.collectionType ).equals( "map" ) || association.get( ORMKeys.collectionType ).equals( "bag" )
-					    ? "true"
-					    : "proxy";
+					lazy = finalAssociationType.endsWith( "-to-many" )
+					    && ( association.get( ORMKeys.collectionType ).equals( "map" ) || association.get( ORMKeys.collectionType ).equals( "bag" ) )
+					        ? "true"
+					        : "proxy";
 				}
 				return lazy;
 			} );
