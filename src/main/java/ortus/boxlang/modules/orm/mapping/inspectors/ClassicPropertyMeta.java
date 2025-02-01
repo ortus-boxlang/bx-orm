@@ -29,7 +29,7 @@ import ortus.boxlang.runtime.types.util.JSONUtil;
 
 /**
  * A "Classic", aka traditional, implementation of the property metadata configuration.
- * 
+ *
  * i.e. handles translating CFML property annotations like `sqltype="varchar"` into the IPropertyMeta interface for consistent reference by the
  * HibernateXMLWriter.
  */
@@ -129,7 +129,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				// helpx.adobe.com/coldfusion/developing-applications/coldfusion-orm/performance-optimization/lazy-loading.html
 				String lazy = annotations.getAsString( ORMKeys.lazy ).trim().toLowerCase();
 				if ( "true".equals( lazy ) ) {
-					lazy = "proxy";
+					lazy = association.get( ORMKeys.collectionType ).equals( "map" ) || association.get( ORMKeys.collectionType ).equals( "bag" )
+					    ? "true"
+					    : "proxy";
 				}
 				return lazy;
 			} );
@@ -176,7 +178,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			/*
 			 * @TODO: Map to JPA cascade types: ALL, PERSIST, MERGE, REMOVE, REFRESH, DETACH
 			 * https://jakarta.ee/specifications/persistence/3.0/jakarta-persistence-spec-3.0#a15100
-			 * 
+			 *
 			 * The possible values are:
 			 * persist, merge, delete, save-update, evict, replicate, lock, refresh, all, none
 			 */
