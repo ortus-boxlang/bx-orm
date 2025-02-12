@@ -181,12 +181,11 @@ public class MappingGenerator {
 	 */
 	public MappingGenerator generateMappings() {
 		ArrayList<IStruct>	classes		= discoverBLClasses( this.entityPaths );
-		// TODO: Until we finalize loading, then we can start doing parallel
-		boolean				doParallel	= false;
+		boolean				doParallel	= classes.size() > MAX_SYNCHRONOUS_ENTITIES;
 
 		if ( doParallel ) {
 
-			logger.debug( "Parallelizing metadata introspection {}", MAX_SYNCHRONOUS_ENTITIES );
+			logger.debug( "Found more than {} entities; parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
 
 			this.entities = classes.parallelStream()
 			    // Parse class metadata

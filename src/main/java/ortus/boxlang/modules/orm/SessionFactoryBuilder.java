@@ -183,8 +183,7 @@ public class SessionFactoryBuilder {
 		Collection<ClassLoader>	classLoaders	= new ArrayList<>();
 		classLoaders.add( runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader );
 
-		// @TODO: Any configuration which needs a specific java type (such as the
-		// connection provider instance) goes here
+		// Any configuration which needs a specific java type (such as the connection provider instance) goes here
 		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( context.getConnectionManager(), this.datasourceName ) );
 		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
 		properties.put( AvailableSettings.CLASSLOADERS, classLoaders );
