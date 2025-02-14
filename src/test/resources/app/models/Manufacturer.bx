@@ -1,29 +1,29 @@
 @Entity
-@Table {
+@Table ({
     "name" : "manufacturers"
-}
+})
 class accessors=true {
     @id
-    @ORMType "integer"
-    @GeneratedValue{
+    @ORMType("integer")
+    @GeneratedValue({
         "strategy" : "increment"
-    }
+    })
     property name="id";
 
     @Column
-    @ORMType "string"
+    @ORMType("string")
     property name="name";
 
     @Column
-    @ORMType "string"
+    @ORMType("string")
     property name="address";
 
-    @OneToMany{
+    @OneToMany({
         "singularname" : "Vehicle",
         // "mappedBy" : "manufacturer",
         "class"    : "Vehicle",
         "fkcolumn" : "FK_manufacturer"
-    }
+    })
     property name="vehicles";
 
 }

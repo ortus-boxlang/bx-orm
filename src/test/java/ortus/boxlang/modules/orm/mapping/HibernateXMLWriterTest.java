@@ -126,13 +126,13 @@ public class HibernateXMLWriterTest {
 	    {}
 	    """,
 	    """
-	    @Entity "Car"
-	    @Table{
+	    @Entity ("Car")
+	    @Table({
 	    	"name"   : "vehicles",
 	    	"schema" : "foo",
 	    	"catalog": "morefoo"
-	    }
-	    @OptimisticLock "all"
+	    })
+	    @OptimisticLock("all")
 	    class {}
 	    """
 	} )
@@ -185,14 +185,14 @@ public class HibernateXMLWriterTest {
 	    "class persistent discriminatorValue=\"Ford\" discriminatorColumn=\"autoType\" {}",
 		// Note we can't test the `type`, `formula`, `force`, and `insert` keys with the parameterized test, as the older annotation style doesn't support them
 	    """
-			@Discriminator {
+			@Discriminator({
 				"name"    : "autoType",
 				"value"   : "Ford",
 				"type"    : "string",
 				"formula" : "foo",
 				"force"   : "false",
 				"insert"  : "true",
-			}
+			})
 			class {}
 		"""
 	} )
@@ -292,7 +292,7 @@ public class HibernateXMLWriterTest {
 	    """
 	    class {
 	    	@Id
-	    	@ORMType "integer"
+	    	@ORMType("integer")
 	    	property name="the_id";
 	    }
 	    """
@@ -385,9 +385,9 @@ public class HibernateXMLWriterTest {
 		@Entity
 		class {
 			@Id
-			@GeneratedValue{
+			@GeneratedValue({
 				"strategy" : "increment"
-			}
+			})
 			property name="the_id";
 		}
 		"""
@@ -431,11 +431,11 @@ public class HibernateXMLWriterTest {
 		@Entity
 		class {
 			@Id
-			@GeneratedValue{
+			@GeneratedValue({
 				"strategy"  : "select",
 				"selectKey" : "foo",
 				"generated" : "insert"
-			}
+			})
 			property name="the_id";
 		}
 		"""
@@ -491,9 +491,9 @@ public class HibernateXMLWriterTest {
 	    """
 	    @Entity
 	    class {
-	    	@Column{
+	    	@Column({
 	    		formula="SELECT TOP 1 name from theNames"
-	    	}
+	    	})
 	     	property name="the_name";
 	    }
 	    """
@@ -529,10 +529,10 @@ public class HibernateXMLWriterTest {
 	    """
 	    @Entity
 	    class {
-	    	@Column{
+	    	@Column({
 	    		sqltype="varchar",
 	    		name="NameColumn"
-	    	}
+	    	})
 	     	property name="the_name";
 	    }
 	    """
@@ -624,12 +624,12 @@ public class HibernateXMLWriterTest {
 	    """
 		@Entity
 		class {
-			@Column{
+			@Column({
 				name      : "amountCol",
 				length    : 12,
 				scale     : 10,
 				precision : 2
-			}
+			})
 			property name="amount";
 		}
 		"""
@@ -671,14 +671,14 @@ public class HibernateXMLWriterTest {
 	    """
 		@Entity
 		class {
-			@Column{
+			@Column({
 				"table"      : "foo",
 				"unique"     : true,
 				"nullable"   : false,
 				"insertable" : false,
 				"updateable" : false,
 				"default"    : "test"
-			}
+			})
 			property name="title";
 		}
 		"""
@@ -830,7 +830,7 @@ public class HibernateXMLWriterTest {
 	    """
 	    @Entity
 	    class {
-	    	@OneToOne {
+	    	@OneToOne ({
 	    		// "mappedBy" : "id",
 	    		"fkcolumn"   : "FK_owner",
 	    		"foreignKey" : "fooID",
@@ -838,7 +838,7 @@ public class HibernateXMLWriterTest {
 	    		"constrained": true,
 	    		"fetch"      : "join",
 	    		"lazy"       : "extra"
-	    	}
+	    	})
 	    	property name="owner";
 	    }
 	    """
@@ -946,7 +946,7 @@ public class HibernateXMLWriterTest {
 	    """
 	    @Entity
 	    class {
-	    	@OneToMany{
+	    	@OneToMany ({
 	    		"mappedBy"       : "owners",
 	    		"orderBy"        : "name DESC",
 	    		"where"          : "Age IS NOT NULL",
@@ -954,7 +954,7 @@ public class HibernateXMLWriterTest {
 	    		"fkcolumn"       : "FK_owner",
 	    		"cascade"        : "all",
 	    		"class"          : "Person"
-	    	}
+	    	})
 	    	property name="owners" type="array";
 	    }
 	    """
@@ -1062,11 +1062,11 @@ public class HibernateXMLWriterTest {
 	    class persistent cacheuse="transactional" cacheName="foo" cacheInclude="non-lazy" {}
 	    """,
 	    """
-	    @Cache {
+	    @Cache({
 	    	strategy: "transactional",
 	    	region  : "foo",
 	    	include   : "non-lazy"
-	    }
+	    })
 	    @Entity
 	    class {}
 	    """
