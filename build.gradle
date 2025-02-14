@@ -40,8 +40,8 @@ dependencies {
 	// Until BoxLang is published to Maven Central
 	// Look for it in the local build directory
 	// You must run `./gradle build -x test` in the BoxLang project
-	compileOnly files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '-all.jar' )
-    compileOnly files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '-all.jar' )
+	compileOnly files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '.jar' )
+    compileOnly files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
 
 	// Implementation Dependencies
 	// IMPORTANT: If updating Hibernate, please change the static version number in `src/main/java/ortus/boxlang/modules/orm/bifs/GetHibernateVersion.java` to match.
@@ -55,8 +55,8 @@ dependencies {
 	implementation 'org.ehcache:ehcache:3.10.8'
 
     // Testing Dependencies
-	testImplementation files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '-all.jar' )
-	testImplementation files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '-all.jar' )
+	testImplementation files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '.jar' )
+	testImplementation files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
     // Pinning this because the next version up breaks our tests
     testImplementation "org.junit.jupiter:junit-jupiter:5.11.3"
 	testImplementation "org.mockito:mockito-core:5.+"
@@ -212,7 +212,7 @@ test {
 
 /**
  * TEMPORARY until we publish to maven
- * Task to download the latest jar from https://ortus-temp.s3.amazonaws.com/jericho/libs/boxlang-1.0.0-all.jar
+ * Task to download the latest jar from https://ortus-temp.s3.amazonaws.com/jericho/libs/boxlang-1.0.0.jar
  */
 task downloadBoxLang( type: Download ) {
 	// Create the destination directory
@@ -221,7 +221,7 @@ task downloadBoxLang( type: Download ) {
 	}
     // Configure the URL of the file to download
 	src([
-		"https://downloads.ortussolutions.com/ortussolutions/boxlang/${boxlangVersion}/boxlang-${boxlangVersion}-all.jar",
+		"https://downloads.ortussolutions.com/ortussolutions/boxlang/${boxlangVersion}/boxlang-${boxlangVersion}.jar",
 		"https://downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-mysql/${mysqlVersion}/bx-mysql-${mysqlVersion}.zip"
 	])
     // Specify the destination directory for the downloaded files
