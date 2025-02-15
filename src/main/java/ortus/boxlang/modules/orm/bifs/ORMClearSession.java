@@ -19,8 +19,6 @@ package ortus.boxlang.modules.orm.bifs;
 
 import java.util.Set;
 
-import org.hibernate.Session;
-
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
@@ -49,22 +47,22 @@ public class ORMClearSession extends BaseORMBIF {
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
-	 * 
+	 *
 	 * @argument.datasource The datasource on which to clear the current session. If not provided, the default datasource will be used.
-	 * 
-	 * @return null.
+	 *
+	 * @return True if the session was cleared, false otherwise.
 	 */
-	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session	session;
-		String	datasourceName	= StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
-		if ( !datasourceName.isBlank() ) {
-			session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession( Key.of( datasourceName ) );
-		} else {
-			session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
-		}
-		session.clear();
+	public Boolean _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		Key					datasourceName	= Key.of( StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" ) );
+		ORMRequestContext	ormContext		= ORMRequestContext.getForContext( context.getRequestContext() );
 
-		return null;
+		// If not ORM app found then ignore
+		if ( ormContext.hasORMApp() ) {
+			ormContext.getSession( datasourceName.isEmpty() ? null : datasourceName ).clear();
+			return true;
+		}
+
+		return false;
 	}
 
 }

@@ -108,6 +108,13 @@ public class ORMRequestContext {
 	}
 
 	/**
+	 * Check if this request context has an ORM application loaded, or none found.
+	 */
+	public boolean hasORMApp() {
+		return this.ormApp != null;
+	}
+
+	/**
 	 * Retrieve the initialized ORM application for this request context.
 	 */
 	public ORMApp getORMApp() {
@@ -174,7 +181,6 @@ public class ORMRequestContext {
 	 * Will close all Hibernate sessions and unregister the transaction manager.
 	 */
 	public ORMRequestContext shutdown() {
-
 		// Auto-flush all sessions at the end of the request
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
 			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );

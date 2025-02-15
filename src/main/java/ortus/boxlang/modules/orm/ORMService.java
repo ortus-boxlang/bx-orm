@@ -37,7 +37,6 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.BaseService;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
-import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Java class responsible for constructing and managing the Hibernate ORM
@@ -150,7 +149,7 @@ public class ORMService extends BaseService {
 
 	/**
 	 * Stringify the value for ORM configuration uniqueness detection.
-	 * 
+	 *
 	 * @param value The value to stringify. Arrays, structs, and string-castable values are supported.
 	 */
 	public static String stringify( Object value ) {
@@ -274,18 +273,12 @@ public class ORMService extends BaseService {
 	 *
 	 * @param context The IBoxContext for the current request. The parent application context is used for the ORM application lookup.
 	 *
-	 * @return The ORM application for the given context.
-	 *
-	 * @throws BoxRuntimeException If the ORM application is not found for the given context.
+	 * @return The ORM application for the given context or null if not found
 	 */
 	public ORMApp getORMAppByContext( IBoxContext context ) {
 		IStruct	settings	= context.getApplicationContext().getApplication().getStartingListener().getSettings();
 		Key		appName		= ORMService.buildUniqueAppName( context.getApplicationContext().getApplication().getName(), settings );
-		if ( !hasORMApp( appName ) ) {
-			var message = String.format( "ORM app not found for context using key name [%s].  Registered ORM app keys are: %s", appName, getORMAppNames() );
-			throw new BoxRuntimeException( message );
-		}
-		return getORMApp( appName );
+		return !hasORMApp( appName ) ? null : getORMApp( appName );
 	}
 
 	/**
