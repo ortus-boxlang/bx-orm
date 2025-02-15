@@ -26,14 +26,14 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
-import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Struct;
 
 /**
  * A physical naming strategy that wraps a custom naming strategy defined in a BoxLang class.
  * <p>
- * Historically the CFML component would implement these methods:
+ * Historically the class would implement these methods:
  * <ul>
  * <li><code>getTableName()</code></li>
  * <li><code>getColumnName()</code></li>
@@ -48,17 +48,10 @@ import ortus.boxlang.runtime.types.Struct;
  */
 public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 
-	private final IClassRunnable wrappedBLClass;
+	private final DynamicObject wrappedBLClass;
 
-	public BoxLangClassNamingStrategy( IClassRunnable wrappedBLClass ) {
+	public BoxLangClassNamingStrategy( DynamicObject wrappedBLClass ) {
 		this.wrappedBLClass = wrappedBLClass;
-	}
-
-	/**
-	 * Retrieve the underlying naming strategy BoxLang class.
-	 */
-	public IClassRunnable unwrap() {
-		return this.wrappedBLClass;
 	}
 
 	@Override
@@ -88,13 +81,13 @@ public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 
 	/**
 	 * Fire the naming strategy method in the wrapped BoxLang class IF implemented, else return the original identifier unmodified.
-	 * 
+	 *
 	 * @param methodName    Method name to invoke, like <code>getTableName()</code>
 	 * @param argumentName  Argument name to pass to the method, like <code>tableName</code>
 	 * @param theIdentifier The original identifier (like "autos") which the method should transform.
 	 */
 	private Identifier fireImplementation( Key methodName, Key argumentName, Identifier theIdentifier ) {
-		if ( this.wrappedBLClass.containsKey( methodName ) ) {
+		if ( this.wrappedBLClass.hasMethodNoCase( methodName.getNameNoCase() ) ) {
 			return Identifier.toIdentifier(
 			    ( String ) this.wrappedBLClass.dereferenceAndInvoke(
 			        getContextForInvocation(),

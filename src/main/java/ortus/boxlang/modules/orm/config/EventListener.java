@@ -62,6 +62,7 @@ import org.hibernate.tuple.entity.EntityMetamodel;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
+import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
@@ -89,9 +90,14 @@ public class EventListener
 	/**
 	 * Global listener for this event handler.
 	 */
-	private IClassRunnable			globalListener;
+	private DynamicObject			globalListener;
 
-	EventListener( IClassRunnable globalListener ) {
+	/**
+	 * Constructor
+	 *
+	 * @param globalListener The global event listener to fire on each event.
+	 */
+	EventListener( DynamicObject globalListener ) {
 		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 		this.globalListener	= globalListener;
 	}
@@ -176,7 +182,7 @@ public class EventListener
 	public void onPostLoad( PostLoadEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
+		    ORMKeys.entity, event.getEntity()
 		);
 		announceGlobalEvent( ORMKeys.postLoad, event, args );
 		announceEntityEvent( ORMKeys.postLoad, ( IClassRunnable ) event.getEntity(), args );
@@ -186,7 +192,7 @@ public class EventListener
 	public void onPreLoad( PreLoadEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
+		    ORMKeys.entity, event.getEntity()
 		);
 		announceGlobalEvent( ORMKeys.preLoad, event, args );
 		announceEntityEvent( ORMKeys.preLoad, ( IClassRunnable ) event.getEntity(), args );
@@ -196,7 +202,7 @@ public class EventListener
 	public void onPostUpdate( PostUpdateEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
+		    ORMKeys.entity, event.getEntity()
 		);
 		announceGlobalEvent( ORMKeys.postUpdate, event, args );
 		announceEntityEvent( ORMKeys.postUpdate, ( IClassRunnable ) event.getEntity(), args );
@@ -211,7 +217,7 @@ public class EventListener
 		} );
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, ( IClassRunnable ) event.getEntity(),
+		    ORMKeys.entity, event.getEntity(),
 		    ORMKeys.oldData, oldData
 		);
 		announceGlobalEvent( ORMKeys.preUpdate, event, args );
@@ -228,6 +234,7 @@ public class EventListener
 		announceGlobalEvent( ORMKeys.onDelete, event, args );
 	}
 
+	@SuppressWarnings( "rawtypes" )
 	@Override
 	public void onDelete( DeleteEvent event, Set transientEntities ) throws HibernateException {
 		IStruct args = Struct.of(
@@ -240,7 +247,7 @@ public class EventListener
 	public void onPostDelete( PostDeleteEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
+		    ORMKeys.entity, event.getEntity()
 		);
 		announceGlobalEvent( ORMKeys.postDelete, event, args );
 		announceEntityEvent( ORMKeys.postDelete, ( IClassRunnable ) event.getEntity(), args );
@@ -250,7 +257,7 @@ public class EventListener
 	public boolean onPreDelete( PreDeleteEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
+		    ORMKeys.entity, event.getEntity()
 		);
 		announceGlobalEvent( ORMKeys.preDelete, event, args );
 		announceEntityEvent( ORMKeys.preDelete, ( IClassRunnable ) event.getEntity(), args );
@@ -262,7 +269,7 @@ public class EventListener
 	public void onPostInsert( PostInsertEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
+		    ORMKeys.entity, event.getEntity()
 		);
 		announceGlobalEvent( ORMKeys.postInsert, event, args );
 		announceEntityEvent( ORMKeys.postInsert, ( IClassRunnable ) event.getEntity(), args );
@@ -272,7 +279,7 @@ public class EventListener
 	public boolean onPreInsert( PreInsertEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, ( IClassRunnable ) event.getEntity()
+		    ORMKeys.entity, event.getEntity()
 		);
 		announceGlobalEvent( ORMKeys.preInsert, event, args );
 		announceEntityEvent( ORMKeys.preInsert, ( IClassRunnable ) event.getEntity(), args );
@@ -281,8 +288,12 @@ public class EventListener
 	}
 
 	private void announceGlobalEvent( Key eventType, AbstractEvent event, IStruct args ) {
-		if ( globalListener != null && globalListener.containsKey( eventType ) ) {
-			logger.debug( "Ready to invoke {} on global EventHandler with args {}", eventType.getName(), args.toString() );
+
+		if ( globalListener != null && globalListener.hasMethodNoCase( eventType.getNameNoCase() ) ) {
+
+			if ( logger.isDebugEnabled() ) {
+				logger.debug( "Ready to invoke {} on global EventHandler with args {}", eventType.getName(), args.toString() );
+			}
 
 			// Fire the method on the global event handler
 			this.globalListener.dereferenceAndInvoke( getCurrentContext(), eventType, args, false );
@@ -291,7 +302,9 @@ public class EventListener
 
 	private void announceEntityEvent( Key eventType, IClassRunnable entity, IStruct args ) {
 		if ( entity.containsKey( eventType ) ) {
-			logger.debug( "Ready to invoke {} on entity with args {}", eventType.getName(), args.toString() );
+			if ( logger.isDebugEnabled() ) {
+				logger.debug( "Ready to invoke {} on entity with args {}", eventType.getName(), args.toString() );
+			}
 
 			// Fire the method on the entity itself
 			entity.dereferenceAndInvoke( getCurrentContext(), eventType, args, false );
