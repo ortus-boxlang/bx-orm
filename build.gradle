@@ -135,6 +135,7 @@ jar {
     }
 }
 shadowJar {
+	archiveClassifier = ""
     mergeServiceFiles()
     destinationDirectory = file( "build/libs" )
 }
@@ -161,7 +162,7 @@ spotless {
  */
 task createModuleStructure(type: Copy) {
     from( 'build/libs' ) {
-		include "${project.name}-${version}-all.jar"
+		include "${project.name}-${version}.jar"
         into 'libs'
     }
     from( 'src/main/bx' ) {
