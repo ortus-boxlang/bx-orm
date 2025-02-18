@@ -35,9 +35,9 @@ import ortus.boxlang.modules.orm.config.naming.MacroCaseNamingStrategy;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
-import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
@@ -462,7 +462,8 @@ public class ORMConfig {
 	 * @return Hibernate Configuration object.
 	 */
 	public Configuration toHibernateConfig() {
-		IClassRunnable				eventHandlerClass	= this.eventHandler != null
+		// Load the event handler class if it is specified, else null
+		DynamicObject				eventHandlerClass	= this.eventHandler != null
 		    ? loadBoxLangClassByFQN( this.requestContext, this.eventHandler )
 		    : null;
 		BootstrapServiceRegistry	bootstrapRegistry	= new BootstrapServiceRegistryBuilder()
@@ -586,6 +587,13 @@ public class ORMConfig {
 		return configuration;
 	}
 
+	/**
+	 * Get the naming strategy for the given name.
+	 *
+	 * @name The name of the naming strategy.
+	 *
+	 * @return The naming strategy for the given name.
+	 */
 	private PhysicalNamingStrategy getNamingStrategyForName( String name ) {
 		return switch ( name.toLowerCase() ) {
 			/**
@@ -600,21 +608,29 @@ public class ORMConfig {
 			 */
 			case "default" -> null;
 			/**
-			 * The "cfc" naming strategy allows apps to define their own naming strategy by
-			 * providing a full CFC path.
+			 * The "class" naming strategy allows apps to define their own naming strategy by
+			 * providing a full box class path.
 			 */
 			default -> new BoxLangClassNamingStrategy( loadBoxLangClassByFQN( this.requestContext, name ) );
 		};
 	}
 
-	private IClassRunnable loadBoxLangClassByFQN( RequestBoxContext context, String fqn ) {
-		return ( IClassRunnable ) CLASS_LOCATOR.load(
+	/**
+	 * Load a BoxLang class by its fully-qualified name.
+	 *
+	 * @param context The current request context.
+	 * @param fqn     The fully-qualified name of the class to load.
+	 *
+	 * @return The loaded class.
+	 */
+	private DynamicObject loadBoxLangClassByFQN( RequestBoxContext context, String fqn ) {
+		return CLASS_LOCATOR.load(
 		    context,
 		    fqn,
 		    ClassLocator.BX_PREFIX,
 		    true,
 		    context.getCurrentImports()
-		).unWrapBoxLangClass();
+		);
 	}
 
 	/**
