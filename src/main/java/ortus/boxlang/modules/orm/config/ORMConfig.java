@@ -749,7 +749,7 @@ public class ORMConfig {
 				return "org.hibernate.dialect.MariaDBDialect";
 			case "MCKOI" :
 				return "org.hibernate.dialect.MckoiDialect";
-			case "MicrosoftSQLServer" :
+			case "MICROSOFTSQLSERVER" :
 				return "org.hibernate.dialect.SQLServerDialect";
 			case "MIMERSQL" :
 				return "org.hibernate.dialect.MimerSQLDialect";
