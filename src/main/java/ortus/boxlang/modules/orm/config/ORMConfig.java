@@ -238,18 +238,12 @@ public class ORMConfig {
 	private RequestBoxContext			requestContext;
 
 	/**
-	 * Class loader for ORM classes.
-	 */
-	private ClassLoader					classLoader;
-
-	/**
 	 * Constructor
 	 *
 	 * @param properties Struct of ORM configuration properties.
 	 */
 	public ORMConfig( IStruct properties, RequestBoxContext context ) {
-		this.logger			= runtime.getLoggingService().getLogger( "orm" );
-		this.classLoader	= runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader;
+		this.logger = runtime.getLoggingService().getLogger( "orm" );
 
 		if ( properties == null ) {
 			properties = new Struct();
@@ -468,9 +462,6 @@ public class ORMConfig {
 		    : null;
 		BootstrapServiceRegistry	bootstrapRegistry	= new BootstrapServiceRegistryBuilder()
 		    .applyIntegrator( new EventListener( eventHandlerClass ) )
-		    // This throws 'org.hibernate.cache.jcache.internal.StrategyRegistrationProviderImpl not a subtype'
-		    // do we still need it, now that we've fixed the boxlang bug where a new request context was being started?
-		    // .applyClassLoader( this.classLoader )
 		    .build();
 		Configuration				configuration		= new Configuration( bootstrapRegistry );
 		var							sysEnvProps			= new Properties();
