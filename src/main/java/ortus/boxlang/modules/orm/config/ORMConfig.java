@@ -33,6 +33,7 @@ import org.hibernate.tool.schema.Action;
 import ortus.boxlang.modules.orm.config.naming.BoxLangClassNamingStrategy;
 import ortus.boxlang.modules.orm.config.naming.MacroCaseNamingStrategy;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.config.segments.DatasourceConfig;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.interop.DynamicObject;
@@ -384,19 +385,7 @@ public class ORMConfig {
 			}
 		}
 		if ( datasource == null || datasource.equals( Key.EMPTY ) ) {
-			// @TODO: Read the default datasource
-			// String defaultDSN = (String)this.context.getConfigItems(new Key[]{Key.defaultDatasource});
-			// Key defaultDSNKey = Key.of(defaultDSN);
-			// IStruct configDatasources = (IStruct)this.context.getConfigItems(new Key[]{Key.datasources});
-			// if (!defaultDSN.isEmpty() && configDatasources.containsKey(defaultDSNKey)) {
-			// IStruct targetConfig = configDatasources.getAsStruct(defaultDSNKey);
-			// DatasourceConfig dsn = (new DatasourceConfig(defaultDSNKey)).process(targetConfig).withAppName(this.getApplicationName());
-			// this.defaultDatasource = this.datasourceService.register(dsn);
-			// return this.defaultDatasource;
-			// } else {
-			// return null;
-			// }
-			datasource = Key.defaultDatasource;
+			datasource = getAppDefaultDatasource();
 		}
 
 		if ( properties.containsKey( ORMKeys.dbcreate ) && properties.get( ORMKeys.dbcreate ) != null
@@ -438,6 +427,22 @@ public class ORMConfig {
 		if ( properties.containsKey( ORMKeys.catalog ) && properties.get( ORMKeys.catalog ) != null
 		    && !properties.getAsString( ORMKeys.catalog ).isBlank() ) {
 			catalog = properties.getAsString( ORMKeys.catalog );
+		}
+	}
+
+	private Key getAppDefaultDatasource() {
+		// @TODO: Read the default datasource
+		String	defaultDSN			= ( String ) this.requestContext.getConfigItems( new Key[] { Key.defaultDatasource } );
+		Key		defaultDSNKey		= Key.of( defaultDSN );
+		IStruct	configDatasources	= ( IStruct ) this.requestContext.getConfigItems( new Key[] { Key.datasources } );
+		if ( !defaultDSN.isEmpty() && configDatasources.containsKey( defaultDSNKey ) ) {
+			IStruct				targetConfig	= configDatasources.getAsStruct( defaultDSNKey );
+			DatasourceConfig	dsn				= ( new DatasourceConfig( defaultDSNKey ) ).process( targetConfig )
+			    .withAppName( Key.of( this.requestContext.getApplicationName() ) );
+			return runtime.getDataSourceService().register( dsn ).getUniqueName();
+		} else {
+			// We may have to switch to a null as a representation of the default datasource.;
+			return Key.defaultDatasource;
 		}
 	}
 
