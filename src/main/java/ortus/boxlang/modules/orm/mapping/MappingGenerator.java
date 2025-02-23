@@ -181,7 +181,7 @@ public class MappingGenerator {
 	 */
 	public MappingGenerator generateMappings() {
 		ArrayList<IStruct>	classes		= discoverBLClasses( this.entityPaths );
-		boolean				doParallel	= classes.size() > MAX_SYNCHRONOUS_ENTITIES;
+		boolean				doParallel	= config.enableThreadedMapping && classes.size() > MAX_SYNCHRONOUS_ENTITIES;
 
 		if ( doParallel ) {
 

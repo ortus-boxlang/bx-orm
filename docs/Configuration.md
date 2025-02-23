@@ -57,3 +57,9 @@ The following CFML interface names/paths have been changed as well:
 
 * `CFIDE.orm.IEventHandler` ->  `orm.models.IEventHandler`
 * `lucee.runtime.orm.naming.NamingStrategy` ->  `orm.models.INamingStrategy`.
+
+## NEW Settings
+
+The following ORM settings are brand-new for BoxLang and do not exist in either Adobe ColdFusion or Lucee Server:
+
+* `enableThreadedMapping` - Enable the use of threading to process ORM entities in parallel, greatly speeding up an ORM load.

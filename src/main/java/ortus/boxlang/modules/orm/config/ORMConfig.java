@@ -233,6 +233,11 @@ public class ORMConfig {
 	public boolean						useDBForMapping			= false;
 
 	/**
+	 * Enable or disable the use of threading for mapping multiple ORM entities concurrently.
+	 */
+	public boolean						enableThreadedMapping	= true;
+
+	/**
 	 * Application context used for class lookups in naming strategies, event handlers, etc.
 	 */
 	private RequestBoxContext			requestContext;
@@ -348,6 +353,9 @@ public class ORMConfig {
 		}
 		if ( properties.containsKey( ORMKeys.ignoreParseErrors ) && properties.get( ORMKeys.ignoreParseErrors ) != null ) {
 			ignoreParseErrors = BooleanCaster.cast( properties.get( ORMKeys.ignoreParseErrors ) );
+		}
+		if ( properties.containsKey( ORMKeys.enableThreadedMapping ) && properties.get( ORMKeys.enableThreadedMapping ) != null ) {
+			enableThreadedMapping = BooleanCaster.cast( properties.get( ORMKeys.enableThreadedMapping ) );
 		}
 
 		// String properties: Check key existence, check for null, and check for empty

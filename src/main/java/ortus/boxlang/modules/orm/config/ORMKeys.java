@@ -64,6 +64,7 @@ public class ORMKeys {
 	public static final Key	useDBForMapping			= Key.of( "useDBForMapping" );
 	public static final Key	ignoreParseErrors		= Key.of( "ignoreParseErrors" );
 	public static final Key	ignoreExtras			= Key.of( "ignoreExtras" );
+	public static final Key	enableThreadedMapping	= Key.of( "enableThreadedMapping" );
 
 	/**
 	 * OLD setting name. Deprecated. Use {@link ignoreParseErrors} instead.
