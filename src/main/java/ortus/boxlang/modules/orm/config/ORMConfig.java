@@ -33,7 +33,6 @@ import org.hibernate.tool.schema.Action;
 import ortus.boxlang.modules.orm.config.naming.BoxLangClassNamingStrategy;
 import ortus.boxlang.modules.orm.config.naming.MacroCaseNamingStrategy;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.config.segments.DatasourceConfig;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.interop.DynamicObject;
@@ -430,20 +429,29 @@ public class ORMConfig {
 		}
 	}
 
+	/**
+	 * Read the default datasource name from application settings.
+	 */
 	private Key getAppDefaultDatasource() {
 		// @TODO: Read the default datasource
-		String	defaultDSN			= ( String ) this.requestContext.getConfigItems( new Key[] { Key.defaultDatasource } );
-		Key		defaultDSNKey		= Key.of( defaultDSN );
+		Key		defaultDatasource	= Key.of( ( String ) this.requestContext.getConfigItems( new Key[] { Key.defaultDatasource } ) );
 		IStruct	configDatasources	= ( IStruct ) this.requestContext.getConfigItems( new Key[] { Key.datasources } );
-		if ( !defaultDSN.isEmpty() && configDatasources.containsKey( defaultDSNKey ) ) {
-			IStruct				targetConfig	= configDatasources.getAsStruct( defaultDSNKey );
-			DatasourceConfig	dsn				= ( new DatasourceConfig( defaultDSNKey ) ).process( targetConfig )
-			    .withAppName( Key.of( this.requestContext.getApplicationName() ) );
-			return runtime.getDataSourceService().register( dsn ).getUniqueName();
+		if ( !defaultDatasource.isEmpty() && configDatasources.containsKey( defaultDatasource ) ) {
+			return defaultDatasource;
 		} else {
 			// We may have to switch to a null as a representation of the default datasource.;
 			return Key.defaultDatasource;
 		}
+	}
+
+	/**
+	 * Get the application name for datasource purposes.
+	 * 
+	 * Note that the application itself may not be defined yet, which is why we use the applicationListener's appName as a fallback.
+	 */
+	private Key getAppName() {
+		String appName = this.requestContext.getApplicationName();
+		return appName.isBlank() ? this.requestContext.getApplicationListener().getAppName() : Key.of( appName );
 	}
 
 	/**
