@@ -93,7 +93,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			association.put( ORMKeys.unique, true );
 			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.inverseJoinColumn ) ) );
 		}
-		association.put( Key.type, associationType );
+		association.put( Key.type, associationType.toLowerCase().trim() );
 
 		// Update fieldtype annotation just in case we altered it.
 		annotations.put( ORMKeys.fieldtype, associationType );

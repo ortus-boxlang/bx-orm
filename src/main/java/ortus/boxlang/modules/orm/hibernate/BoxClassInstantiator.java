@@ -119,13 +119,21 @@ public class BoxClassInstantiator implements Instantiator {
 			    String		collectionType	= association.getAsString( ORMKeys.collectionType );
 
 			    // hasX(), used on all associations
-			    DynamicFunction hasUDF		= getHasMethod( collectionType, association );
+			    DynamicFunction hasUDF		= null;
+			    String		associationType	= association.getAsString( Key.type );
+			    if ( associationType.endsWith( "to-many" ) ) {
+				    hasUDF = getToManyHasMethod( collectionType, association );
+			    } else {
+				    hasUDF = getSimpleHasMethod( collectionType, association );
+			    }
 			    logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
 			        prop.getName(), entityRecord.getEntityName() );
 			    theEntity.getThisScope().put( hasUDF.getName(), hasUDF );
 			    theEntity.getVariablesScope().put( hasUDF.getName(), hasUDF );
 
-			    if ( association.containsKey( ORMKeys.collectionType ) ) {
+			    // @TODO: I'm not sure this conditional is correct at all... but without more & better testing, I don't want to change it.
+			    boolean isCollectionType = association.containsKey( ORMKeys.collectionType );
+			    if ( isCollectionType ) {
 				    // addX(), used on to-many associations
 				    DynamicFunction addUDF = getAddMethod( collectionType, association );
 				    logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getName(),
@@ -207,7 +215,7 @@ public class BoxClassInstantiator implements Instantiator {
 	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
-	public DynamicFunction getHasMethod( String collectionType, IStruct associationMeta ) {
+	public DynamicFunction getSimpleHasMethod( String collectionType, IStruct associationMeta ) {
 		// uses the singular name, if it exists
 		Key	methodName		= getMethodName( "has", associationMeta );
 		// uses the property name
@@ -230,9 +238,59 @@ public class BoxClassInstantiator implements Instantiator {
 		    },
 		    new Argument[] {},
 		    "boolean",
-		    "Returns true if the entity has a value for the association " + collectionKey.getName(),
+		    "Returns true if the entity has a value for the association [" + collectionKey.getName() + "]",
 		    Struct.EMPTY
 		);
+	}
+
+	/**
+	 * Create a `has*` method for the entity association, like `hasManufacturer( object relation )`, which returns a boolean indicating whether the given
+	 * object is present in the association collection.
+	 *
+	 * @param collectionType  The type of collection, like 'bag' or 'map'.
+	 * @param associationMeta The metadata for the association.
+	 *
+	 * @return A DynamicFunction that can be injected into the entity class.
+	 */
+	public DynamicFunction getToManyHasMethod( String collectionType, IStruct associationMeta ) {
+		// uses the singular name, if it exists
+		Key	methodName		= getMethodName( "has", associationMeta );
+		// uses the property name
+		Key	collectionKey	= Key.of( associationMeta.getAsString( Key._NAME ) );
+		return new DynamicFunction(
+		    methodName,
+		    ( context, function ) -> {
+			    Object		itemToCheck	= context.getArgumentsScope().get( collectionKey );
+			    VariablesScope scope	= context.getThisClass().getVariablesScope();
+			    Object		collection	= scope.get( collectionKey );
+
+			    if ( collection == null ) {
+				    return false;
+			    }
+
+			    if ( collectionType == "bag" ) {
+				    if ( collection instanceof PersistentBag bagCollection ) {
+					    return bagCollection.stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
+				    }
+				    return ( ( Array ) collection ).stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
+			    } else {
+				    return scope.getAsStruct( collectionKey ).containsKey( itemToCheck );
+			    }
+		    },
+		    new Argument[] {
+		        new Argument( false, "any", collectionKey, Set.of() )
+		    },
+		    "boolean",
+		    "Returns false if the the entity association [" + collectionKey.getName()
+		        + "] is empty OR the given object is not present in the collection; else returns true.",
+		    Struct.EMPTY
+		);
+		// new Argument[] {
+		// new Argument( true, "any", collectionKey, Set.of( Validator.REQUIRED ) ),
+		// },
+		// "class",
+		// String.format( "Append the provided entity to the {} collection, creating it if it does not exist.", collectionKey.getName() ),
+		// Struct.EMPTY
 	}
 
 	/**
