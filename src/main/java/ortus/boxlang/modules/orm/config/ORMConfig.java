@@ -445,16 +445,6 @@ public class ORMConfig {
 	}
 
 	/**
-	 * Get the application name for datasource purposes.
-	 * 
-	 * Note that the application itself may not be defined yet, which is why we use the applicationListener's appName as a fallback.
-	 */
-	private Key getAppName() {
-		String appName = this.requestContext.getApplicationName();
-		return appName.isBlank() ? this.requestContext.getApplicationListener().getAppName() : Key.of( appName );
-	}
-
-	/**
 	 * Encapsulates the logic for setting the `entityPaths` configuration setting based on a string, list of strings, array, or null value.
 	 *
 	 * @param entityPaths The value of the `entityPaths` or (deprecated) `cfcLocation` configuration setting.
