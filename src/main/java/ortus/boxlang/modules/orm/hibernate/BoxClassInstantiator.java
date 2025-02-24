@@ -263,7 +263,7 @@ public class BoxClassInstantiator implements Instantiator {
 			    }
 
 			    // create collection if it doesn't exist
-			    if ( !variablesScope.containsKey( collectionKey ) ) {
+			    if ( !variablesScope.containsKey( collectionKey ) || variablesScope.get( collectionKey ) == null ) {
 				    variablesScope.put( collectionKey, isArrayCollection ? new Array() : new Struct() );
 			    }
 
