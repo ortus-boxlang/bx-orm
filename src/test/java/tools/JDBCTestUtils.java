@@ -58,9 +58,13 @@ public class JDBCTestUtils {
 	 */
 	public static void resetTables( DataSource datasource, IBoxContext context ) {
 		try {
+			datasource.execute(
+			    "CREATE TABLE features ( id INTEGER PRIMARY KEY, name VARCHAR(50), description VARCHAR(155) )", context );
+			datasource.execute(
+			    "CREATE TABLE vehicle_features ( FK_vehicle VARCHAR(17), FK_feature INTEGER )", context );
 			datasource.execute( "CREATE TABLE manufacturers ( id INTEGER, name VARCHAR(155), address VARCHAR(155) )", context );
 			datasource.execute(
-			    "CREATE TABLE vehicles ( vin VARCHAR(17), make VARCHAR(155), model VARCHAR(155), features VARCHAR(155), FK_manufacturer INTEGER )", context );
+			    "CREATE TABLE vehicles ( vin VARCHAR(17), make VARCHAR(155), model VARCHAR(155), FK_manufacturer INTEGER )", context );
 		} catch ( DatabaseException e ) {
 			// Ignore the exception if the table already exists
 			System.out.println( e.getMessage() );
