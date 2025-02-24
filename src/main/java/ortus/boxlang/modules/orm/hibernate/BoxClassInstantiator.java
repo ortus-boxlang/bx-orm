@@ -122,20 +122,23 @@ public class BoxClassInstantiator implements Instantiator {
 			    DynamicFunction hasUDF		= getHasMethod( collectionType, association );
 			    logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
 			        prop.getName(), entityRecord.getEntityName() );
-			    theEntity.put( hasUDF.getName(), hasUDF );
+			    theEntity.getThisScope().put( hasUDF.getName(), hasUDF );
+			    theEntity.getVariablesScope().put( hasUDF.getName(), hasUDF );
 
 			    if ( association.containsKey( ORMKeys.collectionType ) ) {
 				    // addX(), used on to-many associations
 				    DynamicFunction addUDF = getAddMethod( collectionType, association );
 				    logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getName(),
 				        entityRecord.getEntityName() );
-				    theEntity.put( addUDF.getName(), addUDF );
+				    theEntity.getThisScope().put( addUDF.getName(), addUDF );
+				    theEntity.getVariablesScope().put( addUDF.getName(), addUDF );
 
 				    // removeX(), used on to-many associations
 				    DynamicFunction removeUDF = getRemoveMethod( collectionType, association );
 				    logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
 				        prop.getName(), entityRecord.getEntityName() );
-				    theEntity.put( removeUDF.getName(), removeUDF );
+				    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
+				    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
 			    }
 		    } );
 
