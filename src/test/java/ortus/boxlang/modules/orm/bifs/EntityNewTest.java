@@ -93,16 +93,37 @@ public class EntityNewTest extends BaseORMTest {
 	@DisplayName( "It can populate new entities with association UDFs" )
 	@Test
 	public void testEntityNewAssociationUDFs() {
+		// @formatter:off
 		instance.executeSource(
 		    """
-		    result = entityNew( 'Vehicle', { name : 'Dodge Powerwagon' } ).hasManufacturer();
-		    entityNew( 'Vehicle', { name : 'Dodge Powerwagon' } )
-		    	.setManufacturer( entityNew( "Manufacturer", { name : "Dodge" } ) );
-		    result2 = entityNew( 'Vehicle', { name : 'Dodge Powerwagon' } ).hasManufacturer()
-		    """, context
+			vehicle = entityNew( 'Vehicle', { name : 'Dodge Powerwagon' } );
+			// test we can call generated methods externally
+			hasManufacturerExternalAccessPre = vehicle.hasManufacturer();
+			// call internal method which calls hasManufacturer() to test we can call generated methods internally
+			hasManufacturerInternalAccessPre = vehicle.checkHasManufacturer();
+
+			vehicle.setManufacturer( entityNew( "Manufacturer", { name : "Dodge" } ) );
+			// test we can call generated methods externally
+			hasManufacturerExternalAccessPost = vehicle.hasManufacturer();
+			// call internal method which calls hasManufacturer() to test we can call generated methods internally
+			hasManufacturerInternalAccessPost = vehicle.checkHasManufacturer();
+			""", context
 		);
-		assertTrue( variables.get( result ) instanceof Boolean );
-		assertFalse( variables.getAsBoolean( result ) );
-		assertFalse( variables.getAsBoolean( Key.of( "result2" ) ) );
+		// @formatter:on
+		// BEFORE manufacturer is set
+		Key	hasManufacturerExternalAccessPre	= Key.of( "hasManufacturerExternalAccessPre" );
+		Key	hasManufacturerInternalAccessPre	= Key.of( "hasManufacturerinternalAccessPre" );
+		assertTrue( variables.get( hasManufacturerExternalAccessPre ) instanceof Boolean );
+		assertTrue( variables.get( hasManufacturerInternalAccessPre ) instanceof Boolean );
+		assertFalse( variables.getAsBoolean( hasManufacturerExternalAccessPre ) );
+		assertFalse( variables.getAsBoolean( hasManufacturerInternalAccessPre ) );
+
+		// AFTER manufacturer is set
+		Key	hasManufacturerExternalAccessPost	= Key.of( "hasManufacturerExternalAccessPost" );
+		Key	hasManufacturerInternalAccessPost	= Key.of( "hasManufacturerinternalAccessPost" );
+		assertTrue( variables.get( hasManufacturerExternalAccessPost ) instanceof Boolean );
+		assertTrue( variables.get( hasManufacturerInternalAccessPost ) instanceof Boolean );
+		assertTrue( variables.getAsBoolean( hasManufacturerExternalAccessPost ) );
+		assertTrue( variables.getAsBoolean( hasManufacturerInternalAccessPost ) );
 	}
 }
