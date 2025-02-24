@@ -18,10 +18,7 @@
 package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -67,8 +64,6 @@ public class EntityNewTest extends BaseORMTest {
 		);
 		// @formatter:on
 		assertThat( variables.get( "post_new_fired" ) ).isEqualTo( "true" );
-		;
-
 		variables.put( "post_new_fired", "false" );
 	}
 
@@ -86,8 +81,8 @@ public class EntityNewTest extends BaseORMTest {
 		);
 		// @formatter:on
 		assertInstanceOf( IClassRunnable.class, variables.get( result ) );
-		assertEquals( "Bugatti Automobiles", variables.get( Key._NAME ) );
-		assertEquals( "101 Bugatti Way", variables.get( Key.of( "address" ) ) );
+		assertThat( variables.get( Key._NAME ) ).isEqualTo( "Bugatti Automobiles" );
+		assertThat( variables.get( Key.of( "address" ) ) ).isEqualTo( "101 Bugatti Way" );
 	}
 
 	@DisplayName( "It can populate new entities with association UDFs" )
@@ -113,17 +108,49 @@ public class EntityNewTest extends BaseORMTest {
 		// BEFORE manufacturer is set
 		Key	hasManufacturerExternalAccessPre	= Key.of( "hasManufacturerExternalAccessPre" );
 		Key	hasManufacturerInternalAccessPre	= Key.of( "hasManufacturerinternalAccessPre" );
-		assertTrue( variables.get( hasManufacturerExternalAccessPre ) instanceof Boolean );
-		assertTrue( variables.get( hasManufacturerInternalAccessPre ) instanceof Boolean );
-		assertFalse( variables.getAsBoolean( hasManufacturerExternalAccessPre ) );
-		assertFalse( variables.getAsBoolean( hasManufacturerInternalAccessPre ) );
+		assertThat( variables.get( hasManufacturerExternalAccessPre ) ).isInstanceOf( Boolean.class );
+		assertThat( variables.get( hasManufacturerInternalAccessPre ) ).isInstanceOf( Boolean.class );
+		assertThat( variables.getAsBoolean( hasManufacturerExternalAccessPre ) ).isFalse();
+		assertThat( variables.getAsBoolean( hasManufacturerInternalAccessPre ) ).isFalse();
 
 		// AFTER manufacturer is set
 		Key	hasManufacturerExternalAccessPost	= Key.of( "hasManufacturerExternalAccessPost" );
 		Key	hasManufacturerInternalAccessPost	= Key.of( "hasManufacturerinternalAccessPost" );
-		assertTrue( variables.get( hasManufacturerExternalAccessPost ) instanceof Boolean );
-		assertTrue( variables.get( hasManufacturerInternalAccessPost ) instanceof Boolean );
-		assertTrue( variables.getAsBoolean( hasManufacturerExternalAccessPost ) );
-		assertTrue( variables.getAsBoolean( hasManufacturerInternalAccessPost ) );
+		assertThat( variables.get( hasManufacturerExternalAccessPost ) ).isInstanceOf( Boolean.class );
+		assertThat( variables.get( hasManufacturerInternalAccessPost ) ).isInstanceOf( Boolean.class );
+		assertThat( variables.getAsBoolean( hasManufacturerExternalAccessPost ) ).isTrue();
+		assertThat( variables.getAsBoolean( hasManufacturerInternalAccessPost ) ).isTrue();
+	}
+
+	@DisplayName( "It supports hasManufacturer() with value argument comparison" )
+	@Test
+	public void testHasValueComparison() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+				vehicle = entityNew( 'Vehicle', { name : 'Dodge Powerwagon' } );
+				feature = entityNew( "Feature", { name : "Windshield wipers", description : "Do I really need to describe this to you?" } );
+				
+				beforeSet = vehicle.hasFeature( feature );
+				vehicle.addFeature( feature );
+				
+				afterSet                     = vehicle.hasFeature( feature );
+				afterSetWithDifferentFeature = vehicle.hasFeature( entityNew( "Feature", { name : "Powered windows" } ) );
+			""",
+			context
+		);
+		// @formatter:on
+
+		Key	beforeSet						= Key.of( "beforeSet" );
+		Key	afterSet						= Key.of( "afterSet" );
+		Key	afterSetWithDifferentFeature	= Key.of( "afterSetWithDifferentFeature" );
+
+		assertThat( variables.get( beforeSet ) ).isInstanceOf( Boolean.class );
+		assertThat( variables.get( afterSet ) ).isInstanceOf( Boolean.class );
+		assertThat( variables.get( afterSetWithDifferentFeature ) ).isInstanceOf( Boolean.class );
+
+		assertThat( variables.getAsBoolean( beforeSet ) ).isFalse();
+		assertThat( variables.getAsBoolean( afterSet ) ).isTrue();
+		assertThat( variables.getAsBoolean( afterSetWithDifferentFeature ) ).isFalse();
 	}
 }

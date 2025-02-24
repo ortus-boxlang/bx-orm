@@ -1,0 +1,13 @@
+class entityName="Feature" table="features" persistent="true"{
+
+    property
+        name="id"
+        fieldtype="id"
+        generator="increment";
+    property name="name" type="string";
+    property name="description" type="string";
+
+    function init(){
+        return this;
+    }
+}

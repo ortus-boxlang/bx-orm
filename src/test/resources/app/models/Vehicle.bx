@@ -17,7 +17,15 @@ class entityName="Vehicle" table="vehicles" persistent="true" {
 
     property 
         name="features" 
-        type="string";
+        singularName="feature"
+        type="array"
+        fieldtype="many-to-many"
+        cfc="Feature"
+        linktable="vehicle_features"
+        fkcolumn="FK_vehicle"
+        inversejoincolumn="FK_feature"
+        lazy="false"
+        cascade="all";
 
     property 
         name="manufacturer" 
@@ -33,6 +41,9 @@ class entityName="Vehicle" table="vehicles" persistent="true" {
         return this;
     }
 
+    /**
+     * Used for testing internal access to generated methods.
+     */
     function checkHasManufacturer(){
         return hasManufacturer();
     }
