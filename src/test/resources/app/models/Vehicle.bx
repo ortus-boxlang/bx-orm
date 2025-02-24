@@ -33,6 +33,10 @@ class entityName="Vehicle" table="vehicles" persistent="true" {
         return this;
     }
 
+    function checkHasManufacturer(){
+        return hasManufacturer();
+    }
+
     function preLoad(){
         getEventLog().append( "preLoad" );
     }
