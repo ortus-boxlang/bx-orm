@@ -17,11 +17,8 @@
  */
 package tools;
 
-import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
-import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 
 /**
@@ -29,67 +26,6 @@ import ortus.boxlang.runtime.types.exceptions.DatabaseException;
  * highly environment-specific and depend on certain loaded JDBC drivers.
  */
 public class JDBCTestUtils {
-
-	/**
-	 * Boolean test that a MySQL database is reachable at localhost:3306.
-	 * <p>
-	 * Useful in `@EnabledIf` annotations for conditionally executing MySQL-specific tests:
-	 * <p>
-	 * <code>
-	 * &#64;EnabledIf( "tools.JDBCTestUtils#isMySQLReachable" )
-	 * </code>
-	 *
-	 * @return
-	 */
-	public static boolean isMySQLReachable() {
-		try {
-			DataSource.fromStruct(
-			    "MySQLReachable",
-			    Struct.of(
-			        "database", "MySQLReachable",
-			        "driver", "mysql",
-			        "connectionString", "jdbc:mysql//localhost:3306/mysqlStoredProc",
-			        "maxConnections", 1,
-			        "minConnections", 1,
-			        "username", "root",
-			        "password", "db_pass"
-			    )
-			);
-		} catch ( Exception e ) {
-			return false;
-		}
-		return true;
-	}
-
-	/**
-	 * Boolean test for the presence of the BoxLang MySQL module.
-	 * <p>
-	 * Useful in `@EnabledIf` annotations for conditional test execution based on the loaded JDBC drivers:
-	 * <p>
-	 * <code>
-	 * &#64;EnabledIf( "tools.JDBCTestUtils#hasMySQLModule" )
-	 * </code>
-	 *
-	 * @return
-	 */
-	public static boolean hasMySQLModule() {
-		return BoxRuntime.getInstance().getModuleService().hasModule( Key.of( "mysql" ) );
-	}
-
-	/**
-	 * Boolean test for the presence of the BoxLang MSSQL module
-	 * <p>
-	 * Useful in `@EnabledIf` annotations for conditional test execution based on the loaded JDBC drivers:
-	 * <p>
-	 * <code>
-	 * &#64;EnabledIf( "tools.JDBCTestUtils#hasMSSQLModule" )
-	 * </code>
-	 *
-	 * @return
-	 */
-	public static boolean hasMSSQLModule() {
-		return BoxRuntime.getInstance().getModuleService().hasModule( Key.of( "mssql" ) );
-	}
 
 	/**
 	 * Remove the manufacturers table from the database.
