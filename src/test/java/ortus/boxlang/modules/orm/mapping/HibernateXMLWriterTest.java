@@ -875,10 +875,11 @@ public class HibernateXMLWriterTest {
 	    		cfc="Person"
 	    		cascade="all"
 	    		fieldtype="many-to-many"
-	    		linkTable="tblOwners"
+	    		linkTable="link_person_owners"
 	    		linkCatalog="myDB"
 	    		linkSchema="dbo"
 	    		fkcolumn="FK_owner"
+	    		inversejoincolumn="FK_person"
 	    		mappedBy="owners"
 	    		orderBy="name";
 	    }
@@ -901,7 +902,7 @@ public class HibernateXMLWriterTest {
 
 		NamedNodeMap bagAttrs = bagNode.getAttributes();
 		assertEquals( "owners", bagAttrs.getNamedItem( "name" ).getTextContent() );
-		assertEquals( "tblOwners", bagAttrs.getNamedItem( "table" ).getTextContent() );
+		assertEquals( "link_person_owners", bagAttrs.getNamedItem( "table" ).getTextContent() );
 		assertEquals( "dbo", bagAttrs.getNamedItem( "schema" ).getTextContent() );
 		assertEquals( "myDB", bagAttrs.getNamedItem( "catalog" ).getTextContent() );
 		assertEquals( "all", bagAttrs.getNamedItem( "cascade" ).getTextContent() );
@@ -916,12 +917,13 @@ public class HibernateXMLWriterTest {
 		// mappedBy -> key.property-ref
 		assertEquals( "owners", keyAttrs.getNamedItem( "property-ref" ).getTextContent() );
 
-		Node oneToManyNode = bagNode.getLastChild();
-		assertNotNull( oneToManyNode );
-		assertEquals( "many-to-many", oneToManyNode.getNodeName() );
+		Node ManyToManyNode = bagNode.getLastChild();
+		assertNotNull( ManyToManyNode );
+		assertEquals( "many-to-many", ManyToManyNode.getNodeName() );
 
-		// NamedNodeMap manyToManyAttrs = oneToManyNode.getAttributes();
-		// assertEquals( "Person", manyToManyAttrs.getNamedItem( "class" ).getTextContent() );
+		NamedNodeMap manyToManyAttrs = ManyToManyNode.getAttributes();
+		assertEquals( "Person", manyToManyAttrs.getNamedItem( "entity-name" ).getTextContent() );
+		assertEquals( "FK_person", manyToManyAttrs.getNamedItem( "column" ).getTextContent() );
 	}
 
 	// @formatter:off
@@ -1130,7 +1132,6 @@ public class HibernateXMLWriterTest {
 	 * missingRowIgnored
 	 * joinColumn
 	 * inverse
-	 * inversejoincolumn
 	 * structkeycolumn
 	 * structkeytype
 	 * structkeydatatype ?? ACF only?

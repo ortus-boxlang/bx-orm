@@ -91,7 +91,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( associationType.equalsIgnoreCase( "one-to-many" ) && annotations.containsKey( ORMKeys.linkTable ) ) {
 			associationType = "many-to-many";
 			association.put( ORMKeys.unique, true );
-			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.inverseJoinColumn ) ) );
+			association.put( ORMKeys.inverseJoinColumn, translateColumnName( annotations.getAsString( ORMKeys.inverseJoinColumn ) ) );
 		}
 		association.put( Key.type, associationType.toLowerCase().trim() );
 
@@ -139,10 +139,18 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				return lazy;
 			} );
 		}
-		association.putIfAbsent( Key._CLASS, annotations.getAsString( ORMKeys.cfc ) );
+		// Column name properties- these are translated later in this same method.
+		if ( annotations.containsKey( ORMKeys.inverseJoinColumn ) ) {
+			association.put( ORMKeys.inverseJoinColumn, annotations.getAsString( ORMKeys.inverseJoinColumn ) );
+		}
+		if ( annotations.containsKey( ORMKeys.fkcolumn ) ) {
+			association.put( Key.column, annotations.getAsString( ORMKeys.fkcolumn ) );
+		}
+
 		if ( annotations.containsKey( Key._CLASS ) ) {
 			association.put( Key._CLASS, annotations.getAsString( Key._CLASS ) );
 		}
+		association.putIfAbsent( Key._CLASS, annotations.getAsString( ORMKeys.cfc ) );
 		if ( annotations.containsKey( ORMKeys.insert ) ) {
 			association.put( ORMKeys.insertable, BooleanCaster.cast( annotations.get( ORMKeys.insert ) ) );
 		}
@@ -197,10 +205,6 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.inverse ) ) {
 			association.put( ORMKeys.inverse, BooleanCaster.cast( annotations.get( ORMKeys.inverse ) ) );
 		}
-		association.computeIfPresent( ORMKeys.inverseJoinColumn, ( key, value ) -> translateColumnName( ( String ) value ) );
-		if ( annotations.containsKey( ORMKeys.fkcolumn ) ) {
-			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.fkcolumn ) ) );
-		}
 		if ( annotations.containsKey( ORMKeys.linkTable ) ) {
 			association.putIfAbsent( Key.table, translateTableName( annotations.getAsString( ORMKeys.linkTable ) ) );
 			// if there's a linkTable, we need to set the schema and catalog
@@ -210,6 +214,10 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		association.putIfAbsent( Key.table, translateTableName( annotations.getAsString( Key.table ) ) );
 		association.putIfAbsent( ORMKeys.schema, annotations.getAsString( ORMKeys.schema ) );
 		association.putIfAbsent( ORMKeys.catalog, annotations.getAsString( ORMKeys.catalog ) );
+
+		// Fire up the translator for all column name properties
+		association.computeIfPresent( ORMKeys.inverseJoinColumn, ( key, value ) -> translateColumnName( ( String ) value ) );
+		association.computeIfPresent( Key.column, ( key, value ) -> translateColumnName( ( String ) value ) );
 		return association;
 	}
 
