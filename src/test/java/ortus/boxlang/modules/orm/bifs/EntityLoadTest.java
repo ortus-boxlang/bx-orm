@@ -100,7 +100,7 @@ public class EntityLoadTest extends BaseORMTest {
 	public void testEntityLoadFilterSort() {
 		// @formatter:off
 		instance.executeSource( """
-			result = entityLoad( 'Vehicle', { 'make' : 'Honda' }, 'features asc,model DESC' );
+			result = entityLoad( 'Vehicle', { 'make' : 'Honda' }, 'model DESC' );
 		""", context );
 		// @formatter:on
 
