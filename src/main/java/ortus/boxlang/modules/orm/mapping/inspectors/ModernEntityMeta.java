@@ -27,7 +27,7 @@ import ortus.boxlang.runtime.types.IStruct;
 
 /**
  * A "Modern", aka JPA-style, implementation of the entity metadata configuration.
- * 
+ *
  * i.e. handles translating JPA-style property annotations like `@Entity` or `@Discriminator{...}` into the IEntityMeta interface for consistent
  * reference by the HibernateXMLWriter.
  */
@@ -116,6 +116,25 @@ public class ModernEntityMeta extends AbstractEntityMeta {
 		this.idProperties				= this.allPersistentProperties.stream()
 		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ID )
 		    .collect( Collectors.toList() );
+
+		// If we don't have a defined id property, check if this is a discriminated class
+		if ( this.idProperties.size() == 0
+		    &&
+		    this.annotations.containsKey( ORMKeys._extends )
+		    &&
+		    this.annotations.containsKey( ORMKeys.joinColumn ) ) {
+			IPropertyMeta parentIdProperty = this.parentPersistentProperties.stream()
+			    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ID
+			        &&
+			        prop.getName().equalsIgnoreCase( this.annotations.getAsString( ORMKeys.joinColumn ) )
+			    )
+			    .findFirst()
+			    .orElse( null );
+
+			if ( parentIdProperty != null ) {
+				this.idProperties.add( parentIdProperty );
+			}
+		}
 
 		// @TODO: Assume a property with name 'id' is the ID property.
 		if ( this.idProperties.size() == 0 ) {

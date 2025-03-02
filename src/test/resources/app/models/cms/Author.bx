@@ -1,0 +1,152 @@
+﻿/**
+ * Test Author!
+ */
+class
+	persistent="true"
+	entityname="cbAuthor"
+	table     ="cb_author"
+	batchsize ="25"
+	extends   ="BaseEntity"
+	cachename ="cbAuthor"
+	cacheuse  ="read-write"
+{
+
+	/* *********************************************************************
+	 **							PROPERTIES
+	 ********************************************************************* */
+
+	property
+		name     ="authorID"
+		column   ="authorID"
+		fieldtype="id"
+		generator="uuid"
+		length   ="36"
+		ormtype  ="string"
+		update   ="false";
+
+	property
+		name   ="firstName"
+		column ="firstName"
+		length ="100"
+		notnull="true"
+		default="";
+
+	property
+		name   ="lastName"
+		column ="lastName"
+		length ="100"
+		notnull="true"
+		default="";
+
+	property
+		name   ="email"
+		column ="email"
+		length ="255"
+		notnull="true"
+		index  ="idx_email"
+		default="";
+
+	property
+		name   ="username"
+		column ="username"
+		length ="100"
+		notnull="true"
+		index  ="idx_login"
+		unique ="true"
+		default="";
+
+	property
+		name   ="password"
+		column ="password"
+		length ="100"
+		notnull="true"
+		index  ="idx_login"
+		default="";
+
+	property
+		name   ="isActive"
+		column ="isActive"
+		ormtype="boolean"
+		notnull="true"
+		default="false"
+		index  ="idx_login,idx_activeAuthor";
+
+	property
+		name   ="lastLogin"
+		column ="lastLogin"
+		ormtype="timestamp"
+		notnull="false";
+
+	property
+		name   ="biography"
+		column ="biography"
+		ormtype="text"
+		notnull="false"
+		length ="8000"
+		default="";
+
+	property
+		name   ="preferences"
+		column ="preferences"
+		ormtype="text"
+		notnull="false"
+		length ="8000"
+		default="";
+
+	property
+		name   ="isPasswordReset"
+		column ="isPasswordReset"
+		ormtype="boolean"
+		notnull="true"
+		default="false"
+		index  ="idx_passwordReset";
+
+	property
+		name   ="is2FactorAuth"
+		column ="is2FactorAuth"
+		ormtype="boolean"
+		notnull="true"
+		default="false"
+		index  ="idx_2factorauth";
+
+	/* *********************************************************************
+	 **							RELATIONSHIPS
+	 ********************************************************************* */
+
+	// O2M -> Entries
+	property
+		name        ="entries"
+		singularName="entry"
+		type        ="array"
+		fieldtype   ="one-to-many"
+		cfc         ="Entry"
+		fkcolumn    ="FK_authorID"
+		inverse     ="true"
+		lazy        ="true"
+		cascade     ="save-update"
+		batchsize   ="10"
+		orderby     ="publishedDate DESC";
+
+	// O2M -> Pages
+	property
+		name        ="pages"
+		singularName="page"
+		type        ="array"
+		fieldtype   ="one-to-many"
+		cfc         ="Page"
+		fkcolumn    ="FK_authorID"
+		inverse     ="true"
+		lazy        ="true"
+		cascade     ="save-update"
+		batchsize   ="10"
+		orderby     ="publishedDate DESC";
+
+	// Non-persisted properties
+	property
+		name      ="loggedIn"
+		persistent="false"
+		default   ="false"
+		type      ="boolean";
+
+
+}

@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.types.util.ListUtil;
 import tools.BaseORMTest;
 
 public class EntityNameListTest extends BaseORMTest {
@@ -34,7 +35,7 @@ public class EntityNameListTest extends BaseORMTest {
 				result = entityNameList();
 		""", context );
 		// @formatter:on
-		assertThat( variables.get( result ) ).isEqualTo( "AlternateDS,Feature,Manufacturer,Vehicle" );
+		assertThat( ListUtil.asList( variables.getAsString( result ), "," ) ).containsAtLeast( "AlternateDS", "Feature", "Manufacturer", "Vehicle" );
 	}
 
 	@DisplayName( "It returns a list of entity names with a custom delimiter" )
@@ -45,7 +46,7 @@ public class EntityNameListTest extends BaseORMTest {
 				result = entityNameList( '|' );
 		""", context );
 		// @formatter:on
-		assertThat( variables.get( result ) ).isEqualTo( "AlternateDS|Feature|Manufacturer|Vehicle" );
+		assertThat( ListUtil.asList( variables.getAsString( result ), "|" ) ).containsAtLeast( "AlternateDS", "Feature", "Manufacturer", "Vehicle" );
 	}
 
 	@DisplayName( "It can get entities for a custom datasource name" )

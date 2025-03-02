@@ -1,0 +1,41 @@
+﻿/**
+ * Test ContentStore!
+ */
+class
+	persistent        ="true"
+	entityname        ="cbContentStore"
+	table             ="cb_contentStore"
+	batchsize         ="25"
+	cachename         ="cbContentStore"
+	cacheuse          ="read-write"
+	extends           ="BaseContent"
+	joinColumn        ="contentID"
+	discriminatorValue="ContentStore"
+{
+
+	/* *********************************************************************
+	 **							PROPERTIES
+	 ********************************************************************* */
+
+	/**
+	 * The internal description of the contentstore item
+	 */
+	property
+		name   ="description"
+		column ="description"
+		notnull="false"
+		length ="500"
+		default="";
+
+	/**
+	 * The ordering numeric sequence
+	 */
+	property
+		name     ="order"
+		column   ="order"
+		notnull  ="false"
+		ormtype  ="integer"
+		default  ="0"
+		dbdefault="0";
+
+}

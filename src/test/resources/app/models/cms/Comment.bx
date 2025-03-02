@@ -1,0 +1,77 @@
+﻿/**
+ * Test Comment!
+ */
+class
+	persistent="true"
+	entityname="cbComment"
+	table     ="cb_comment"
+	batchsize ="25"
+	extends   ="BaseEntity"
+	cachename ="cbComment"
+	cacheuse  ="read-write"
+{
+
+	/* *********************************************************************
+	 **							PROPERTIES
+	 ********************************************************************* */
+
+	property
+		name     ="commentID"
+		column   ="commentID"
+		fieldtype="id"
+		generator="uuid"
+		length   ="36"
+		ormtype  ="string"
+		update   ="false";
+
+	property
+		name   ="content"
+		ormtype="text"
+		notnull="true";
+
+	property
+		name   ="author"
+		length ="100"
+		notnull="true";
+
+	property
+		name   ="authorIP"
+		column ="authorIP"
+		length ="100"
+		notnull="true";
+
+	property
+		name   ="authorEmail"
+		column ="authorEmail"
+		length ="255"
+		notnull="true";
+
+	property
+		name   ="authorURL"
+		column ="authorURL"
+		length ="255"
+		notnull="false";
+
+	property
+		name   ="isApproved"
+		column ="isApproved"
+		notnull="true"
+		ormtype="boolean"
+		default="false"
+		index  ="idx_contentComment,idx_approved";
+
+	/* *********************************************************************
+	 **							RELATIONSHIPS
+	 ********************************************************************* */
+
+	// M20 -> Content loaded as a proxy
+	property
+		name     ="relatedContent"
+		notnull  ="true"
+		cfc      ="BaseContent"
+		fieldtype="many-to-one"
+		fkcolumn ="FK_contentID"
+		lazy     ="true"
+		index    ="idx_contentComment";
+
+}

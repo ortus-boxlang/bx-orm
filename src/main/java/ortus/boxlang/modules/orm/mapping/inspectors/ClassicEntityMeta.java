@@ -27,7 +27,7 @@ import ortus.boxlang.runtime.types.Struct;
 
 /**
  * A "Class", aka traditional, implementation of the entity metadata configuration.
- * 
+ *
  * i.e. handles translating traditional CFML component annotations like `persistent="true"` into the IPropertyMeta interface for consistent reference
  * by the HibernateXMLWriter.
  */
@@ -76,8 +76,9 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		    .map( IStruct.class::cast )
 		    .filter( ( IStruct prop ) -> {
 											    var annotations = prop.getAsStruct( Key.annotations );
-											    return !annotations.containsKey( ORMKeys.persistent )
-											        || BooleanCaster.cast( annotations.get( ORMKeys.persistent ), false );
+											    return BooleanCaster.cast(
+											        annotations.getOrDefault( ORMKeys.persistent, true )
+											    );
 										    } )
 		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop, this ) )
 		    .collect( Collectors.toList() );
@@ -85,6 +86,29 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		this.idProperties				= this.allPersistentProperties.stream()
 		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ID )
 		    .collect( Collectors.toList() );
+		if ( this.entityName.equalsIgnoreCase( "cbPage" ) ) {
+			System.out.println( "All Properties: " + this.allProperties );
+			System.out.println( "Persistent Properties: " + this.allPersistentProperties );
+		}
+
+		// If we don't have a defined id property, check if this is a discriminated class
+		if ( this.idProperties.size() == 0
+		    &&
+		    this.annotations.containsKey( ORMKeys._extends )
+		    &&
+		    this.annotations.containsKey( ORMKeys.joinColumn ) ) {
+			IPropertyMeta parentIdProperty = this.parentPersistentProperties.stream()
+			    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ID
+			        &&
+			        prop.getName().equalsIgnoreCase( this.annotations.getAsString( ORMKeys.joinColumn ) )
+			    )
+			    .findFirst()
+			    .orElse( null );
+
+			if ( parentIdProperty != null ) {
+				this.idProperties.add( parentIdProperty );
+			}
+		}
 
 		// @TODO: Assume a property with name 'id' is the ID property.
 		if ( this.idProperties.size() == 0 ) {
@@ -102,18 +126,14 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 			this.idProperties.forEach( ( IPropertyMeta prop ) -> prop.setFieldType( IPropertyMeta.FIELDTYPE.ID ) );
 		}
 
-		this.properties			= this.allPersistentProperties.stream()
-		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.COLUMN )
-		    .collect( Collectors.toList() );
+		this.properties			= this.allPersistentProperties.stream().filter( (
+		    IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.COLUMN ).collect( Collectors.toList() );
 
-		this.versionProperty	= this.allPersistentProperties.stream()
-		    .filter(
-		        ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.VERSION || prop.getFieldType() == IPropertyMeta.FIELDTYPE.TIMESTAMP )
-		    .findFirst()
-		    .orElse( null );
+		this.versionProperty	= this.allPersistentProperties.stream().filter( (
+		    IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.VERSION || prop.getFieldType() == IPropertyMeta.FIELDTYPE.TIMESTAMP )
+		    .findFirst().orElse( null );
 
-		this.associations		= this.allPersistentProperties.stream()
-		    .filter( ( IPropertyMeta prop ) -> prop.isAssociationType() )
-		    .collect( Collectors.toList() );
+		this.associations		= this.allPersistentProperties.stream().filter( (
+		    IPropertyMeta prop ) -> prop.isAssociationType() ).collect( Collectors.toList() );
 	}
 }

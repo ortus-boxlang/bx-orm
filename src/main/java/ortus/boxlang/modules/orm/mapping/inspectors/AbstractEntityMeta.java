@@ -19,11 +19,13 @@ package ortus.boxlang.modules.orm.mapping.inspectors;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
+import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
@@ -32,7 +34,7 @@ import ortus.boxlang.runtime.types.Struct;
 
 /**
  * Abstract (parent) entity metadata configuration class.
- * 
+ *
  * Useful for collecting entity metadata into a consistent interface, no matter whether the source is traditional CFML annotations or modern JPA-style
  * annotations.
  */
@@ -56,7 +58,12 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 * All properties of the entity, including transient properties and parent properties.
 	 */
 	protected Array					allProperties;
+
 	protected List<IPropertyMeta>	allPersistentProperties;
+
+	protected List<IPropertyMeta>	parentPersistentProperties;
+
+	protected List<IPropertyMeta>	parentDelegatedProperties;
 
 	protected List<IPropertyMeta>	idProperties;
 
@@ -147,6 +154,23 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 			if ( !isParentPersistent && isParentMappedSuperClass ) {
 				this.allProperties.addAll( this.parentMeta.getAsArray( Key.properties ) );
+			} else if ( isParentPersistent ) {
+				this.parentPersistentProperties	= this.parentMeta.getAsArray( Key.properties )
+				    .stream()
+				    .map( StructCaster::cast )
+				    .filter( ( IStruct prop ) -> {
+													    var annotations = prop.getAsStruct( Key.annotations );
+													    return BooleanCaster.cast(
+													        annotations.getOrDefault( ORMKeys.persistent, true )
+													    );
+												    } )
+				    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop, this ) )
+				    .collect( Collectors.toList() );
+
+				// These properties are the delegated entity properties to be included in the entity
+				this.parentDelegatedProperties	= this.parentPersistentProperties.stream()
+				    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() != IPropertyMeta.FIELDTYPE.ID )
+				    .collect( Collectors.toList() );
 			}
 		}
 
@@ -156,9 +180,9 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 	/**
 	 * Auto-discovers the entity metadata type (Modern or Classic) based on the presence of the `persistent` annotation.
-	 * 
+	 *
 	 * @param meta Struct of entity metadata to inspect.
-	 * 
+	 *
 	 * @return Instance of IEntityMeta, either ClassicEntityMeta or ModernEntityMeta.
 	 */
 	public static IEntityMeta autoDiscoverMetaType( IStruct meta ) {
@@ -391,7 +415,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 * Translate the table name using the configured table naming strategy.
 	 *
 	 * @param tableName Table name to translate, like 'owner'.
-	 * 
+	 *
 	 * @return Translated table name, like 'tblOwners'.
 	 */
 	protected String translateTableName( String tableName ) {
@@ -403,7 +427,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 * Translate the column name using the configured column naming strategy.
 	 *
 	 * @param columnName column name to translate, like 'owner'.
-	 * 
+	 *
 	 * @return Translated column name, like 'tblOwners'.
 	 */
 	protected String translateColumnName( String columnName ) {

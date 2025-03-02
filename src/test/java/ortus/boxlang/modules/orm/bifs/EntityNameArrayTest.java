@@ -37,7 +37,7 @@ public class EntityNameArrayTest extends BaseORMTest {
 		""", context );
 		// @formatter:on
 		assertInstanceOf( Array.class, variables.get( result ) );
-		assertThat( variables.getAsArray( result ) ).isEqualTo( Array.of( "AlternateDS", "Feature", "Manufacturer", "Vehicle" ) );
+		assertThat( variables.getAsArray( result ) ).containsAtLeast( "AlternateDS", "Feature", "Manufacturer", "Vehicle" );
 	}
 
 	@DisplayName( "It can get entities for a custom datasource name" )

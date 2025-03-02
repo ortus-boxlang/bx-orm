@@ -26,4 +26,4 @@ src/test/resources/modules/
 grapher/**
 
 ## HBXML Files
-src/test/resources/app/models/*.hbm*
+src/test/resources/app/models/**/*.hbm*

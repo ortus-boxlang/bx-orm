@@ -84,7 +84,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Create a new Hibernate XML writer for the given entity metadata.
-	 * 
+	 *
 	 * @param entity The entity metadata to generate XML for.
 	 */
 	public HibernateXMLWriter( IEntityMeta entity ) {
@@ -93,7 +93,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Create a new Hibernate XML writer for the given entity metadata, using the provided entity lookup function to find associated entities.
-	 * 
+	 *
 	 * @param entity       The entity metadata to generate XML for.
 	 * @param entityLookup A function that takes an entity name and returns an EntityRecord instance.
 	 */
@@ -103,7 +103,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Create a new Hibernate XML writer for the given entity metadata, using the provided entity lookup function to find associated entities.
-	 * 
+	 *
 	 * @param entity        The entity metadata to generate XML for.
 	 * @param entityLookup  A function that takes 1) an entity name, and 2) a datasource name, and returns an EntityRecord instance matching this combo
 	 *                      (or null.)
@@ -114,7 +114,7 @@ public class HibernateXMLWriter {
 		this.entity			= entity;
 		this.entityLookup	= entityLookup;
 		this.throwOnErrors	= throwOnErrors;
-
+		System.out.println( "Entity class: " + entity.getClass().getSimpleName() );
 		// Validation
 		if ( entity.getIdProperties().isEmpty() ) {
 			logger.error( "Entity {} has no ID properties. Hibernate requires at least one.", entity.getEntityName() );
@@ -128,7 +128,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Create a new XML document for populating with Hibernate mapping data.
-	 * 
+	 *
 	 * @return A new, empty XML document.
 	 */
 	public Document createDocument() {
@@ -160,7 +160,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Generate the Hibernate XML mapping document, beginning with the &lt;class /&gt; element.
-	 * 
+	 *
 	 * @return The complete Hibernate XML mapping document.
 	 */
 	public Document generateXML() {
@@ -220,9 +220,9 @@ public class HibernateXMLWriter {
 	 * 2. Add attributes to the collection element
 	 * 3. Add a key element
 	 * 4. Add a one-to-many or many-to-many element
-	 * 
+	 *
 	 * @param prop Property meta, containing association and column metadata
-	 * 
+	 *
 	 * @return
 	 */
 	public Element generateToManyAssociation( IPropertyMeta prop ) {
@@ -252,11 +252,11 @@ public class HibernateXMLWriter {
 	 * Create a bag or map collection element for the given property metadata.
 	 * <p>
 	 * May also create &lt;map-key&gt; &lt;element&gt; xml nodes.
-	 * 
+	 *
 	 * @param prop        Property meta, containing association and column metadata
 	 * @param association Association-specific metadata
 	 * @param columnInfo  Column-specific metadata
-	 * 
+	 *
 	 * @return The collection node of either bag or map type.
 	 */
 	private Element generateCollectionElement( IPropertyMeta prop, IStruct association, IStruct columnInfo ) {
@@ -479,7 +479,7 @@ public class HibernateXMLWriter {
 	formula="arbitrary sql expression"
 	/>
 	</code>
-	 * 
+	 *
 	 * Returns nothing - document mutation is done in place
 	 *
 	 * @param classEl Parent &lt;class&gt; element to add the &lt;discriminator&gt; element to
@@ -565,7 +565,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Generate the top-level &lt;class /&gt; element containing entity mapping metadata.
-	 * 
+	 *
 	 * @return A &lt;class /&gt; element containing entity keys, properties, and other Hibernate mapping metadata.
 	 */
 	public Element generateClassElement() {
@@ -744,7 +744,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Look up an entity from the entity map by class name and set it into the entity-name attribute on the provided node.
-	 * 
+	 *
 	 * @param theNode           XML node onw hich to populate entity-name attribute
 	 * @param relationClassName Class name of the associated entity. If null or empty, this method will do nothing.
 	 * @param prop              Property metadata, used for log messages if the entity lookup fails.
@@ -769,7 +769,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Convert a boolean value to a string representation of "true" or "false". Useful for XML-ifying booleans.
-	 * 
+	 *
 	 * @param value Boolean value to convert
 	 */
 	private String trueFalseFormat( Boolean value ) {
@@ -778,7 +778,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Populate simple string attributes on the given XML node for the given list of Keys existing in the given struct.
-	 * 
+	 *
 	 * @param theNode          XML node to populate
 	 * @param association      Struct containing the attribute values. Any null or empty values will be skipped.
 	 * @param stringProperties List of keys to populate as attributes on the XML node. i.e., `List.of( ORMKeys.table, ORMKeys.schema )`
@@ -796,9 +796,9 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Convert a BoxLang key name to a Hibernate XML attribute name.
-	 * 
+	 *
 	 * @param key BoxLang annotation name, like `sqltype` or `selectkey`
-	 * 
+	 *
 	 * @return Correct Hibernate XML attribute name, like `sql-type` or `key`
 	 */
 	private String toHibernateAttributeName( Key key ) {
@@ -826,9 +826,9 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Caster to convert a property `ormType` field value to a Hibernate type.
-	 * 
+	 *
 	 * @param propertyType Property type, like `datetime` or `string`
-	 * 
+	 *
 	 * @return The Hibernate-safe type, like `timestamp` or `string`
 	 */
 	public static String toHibernateType( String propertyType ) {

@@ -1,0 +1,314 @@
+/**
+ * Test Base Content!
+ */
+class
+	persistent         ="true"
+	entityname         ="cbContent"
+	table              ="cb_content"
+	extends            ="BaseEntityMethods"
+	cachename          ="cbContent"
+	cacheuse           ="read-write"
+	discriminatorColumn="contentType"
+{
+
+	property
+		name   ="createdDate"
+		column ="createdDate"
+		type   ="date"
+		ormtype="timestamp"
+		notnull="true"
+		update ="false";
+
+	property
+		name   ="modifiedDate"
+		column ="modifiedDate"
+		type   ="date"
+		ormtype="timestamp"
+		notnull="true";
+
+	property
+		name   ="isDeleted"
+		column ="isDeleted"
+		ormtype="boolean"
+		notnull="true"
+		default="false";
+
+	/**
+	 * --------------------------------------------------------------------------
+	 * PROPERTIES
+	 * --------------------------------------------------------------------------
+	 */
+
+	property
+		name     ="contentID"
+		column   ="contentID"
+		fieldtype="id"
+		generator="uuid"
+		length   ="36"
+		ormtype  ="string"
+		update   ="false";
+
+	property
+		name   ="contentType"
+		column ="contentType"
+		setter ="false"
+		update ="false"
+		insert ="false"
+		index  ="idx_discriminator,idx_published"
+		default="";
+
+	property
+		name   ="title"
+		column ="title"
+		notnull="true"
+		length ="500"
+		default=""
+		index  ="idx_search";
+
+	property
+		name   ="slug"
+		column ="slug"
+		notnull="true"
+		length ="500"
+		default=""
+		index  ="idx_slug,idx_publishedSlug";
+
+	property
+		name   ="publishedDate"
+		column ="publishedDate"
+		notnull="false"
+		ormtype="timestamp"
+		index  ="idx_publishedDate";
+
+	property
+		name   ="expireDate"
+		column ="expireDate"
+		notnull="false"
+		ormtype="timestamp"
+		default=""
+		index  ="idx_expireDate";
+
+	property
+		name   ="isPublished"
+		column ="isPublished"
+		notnull="true"
+		ormtype="boolean"
+		default="true"
+		index  ="idx_published,idx_search,idx_publishedSlug";
+
+	property
+		name   ="allowComments"
+		column ="allowComments"
+		notnull="true"
+		ormtype="boolean"
+		default="true";
+
+	property
+		name   ="passwordProtection"
+		column ="passwordProtection"
+		notnull="false"
+		length ="100"
+		default="";
+
+	property
+		name   ="HTMLKeywords"
+		column ="HTMLKeywords"
+		notnull="false"
+		length ="160"
+		default="";
+
+	property
+		name   ="HTMLDescription"
+		column ="HTMLDescription"
+		notnull="false"
+		length ="160"
+		default="";
+
+	property
+		name   ="HTMLTitle"
+		column ="HTMLTitle"
+		notnull="false"
+		length ="255"
+		default="";
+
+	property
+		name   ="cache"
+		column ="cache"
+		notnull="true"
+		ormtype="boolean"
+		default="true"
+		index  ="idx_cache";
+
+	property
+		name   ="cacheTimeout"
+		column ="cacheTimeout"
+		notnull="false"
+		ormtype="integer"
+		default="0"
+		index  ="idx_cachetimeout";
+
+	property
+		name   ="cacheLastAccessTimeout"
+		column ="cacheLastAccessTimeout"
+		notnull="false"
+		ormtype="integer"
+		default="0"
+		index  ="idx_cachelastaccesstimeout";
+
+	property
+		name   ="markup"
+		column ="markup"
+		notnull="true"
+		length ="100"
+		default="HTML";
+
+	property
+		name   ="showInSearch"
+		column ="showInSearch"
+		notnull="true"
+		ormtype="boolean"
+		default="true"
+		index  ="idx_showInSearch";
+
+	property
+		name   ="featuredImage"
+		column ="featuredImage"
+		notnull="false"
+		default=""
+		length ="500";
+
+	/**
+	 * --------------------------------------------------------------------------
+	 * RELATIONSHIPS
+	 * --------------------------------------------------------------------------
+	 */
+
+	// M20 -> creator loaded as a proxy and fetched immediately
+	property
+		name     ="creator"
+		notnull  ="true"
+		cfc      ="Author"
+		fieldtype="many-to-one"
+		fkcolumn ="FK_authorID"
+		lazy     ="true";
+
+	// O2M -> Comments
+	property
+		name        ="comments"
+		singularName="comment"
+		fieldtype   ="one-to-many"
+		type        ="array"
+		lazy        ="true"
+		batchsize   ="25"
+		orderby     ="createdDate"
+		cfc         ="Comment"
+		fkcolumn    ="FK_contentID"
+		inverse     ="true"
+		cascade     ="all-delete-orphan";
+
+	// O2M -> CustomFields
+	property
+		name        ="customFields"
+		singularName="customField"
+		fieldtype   ="one-to-many"
+		type        ="array"
+		lazy        ="extra"
+		batchsize   ="25"
+		cfc         ="CustomField"
+		fkcolumn    ="FK_contentID"
+		inverse     ="true"
+		cascade     ="all-delete-orphan";
+
+	// O2M -> ContentVersions
+	property
+		name        ="contentVersions"
+		singularName="contentVersion"
+		fieldtype   ="one-to-many"
+		type        ="array"
+		lazy        ="extra"
+		batchsize   ="25"
+		cfc         ="ContentVersion"
+		orderby     ="version desc"
+		fkcolumn    ="FK_contentID"
+		inverse     ="true"
+		cascade     ="all-delete-orphan";
+
+
+	// M20 -> Parent Page loaded as a proxy
+	property
+		name     ="parent"
+		cfc      ="BaseContent"
+		fieldtype="many-to-one"
+		fkcolumn ="FK_parentID"
+		lazy     ="true";
+
+	// O2M -> Sub Content Inverse
+	property
+		name        ="children"
+		singularName="child"
+		fieldtype   ="one-to-many"
+		type        ="array"
+		lazy        ="extra"
+		batchsize   ="25"
+		orderby     ="createdDate"
+		cfc         ="BaseContent"
+		fkcolumn    ="FK_parentID"
+		inverse     ="true"
+		cascade     ="all-delete-orphan";
+
+	// M2M -> Related Content - Content related from this content to other content
+	property
+		name             ="relatedContent"
+		fieldtype        ="many-to-many"
+		type             ="array"
+		lazy             ="true"
+		orderby          ="title"
+		cascade          ="save-update"
+		cfc              ="BaseContent"
+		fkcolumn         ="FK_contentID"
+		linktable        ="cb_relatedContent"
+		inversejoincolumn="FK_relatedContentID";
+
+	// M2M -> Linked Content - Content related to this content from other content
+	property
+		name             ="linkedContent"
+		fieldtype        ="many-to-many"
+		type             ="array"
+		lazy             ="true"
+		cascade          ="save-update"
+		inverse          ="true"
+		orderby          ="title"
+		cfc              ="BaseContent"
+		fkcolumn         ="FK_relatedContentID"
+		linktable        ="cb_relatedContent"
+		inversejoincolumn="FK_contentID";
+
+	/**
+	 * --------------------------------------------------------------------------
+	 * CALCULATED FIELDS
+	 * --------------------------------------------------------------------------
+	 */
+
+	property
+		name   ="numberOfHits"
+		formula="select cbStats.hits
+			from cb_stats cbStats
+			where cbStats.FK_contentID=contentID"
+		default="0";
+
+	property
+		name   ="numberOfChildren"
+		formula="select count(*) from cb_content content where content.FK_parentID=contentID"
+		default="0";
+
+	property
+		name   ="numberOfComments"
+		formula="select count(*) from cb_comment comment where comment.FK_contentID=contentID"
+		default="0";
+
+	property
+		name   ="numberOfVersions"
+		formula="select count(*) from cb_contentVersion versions where versions.FK_contentID=contentID"
+		default="0";
+
+}
