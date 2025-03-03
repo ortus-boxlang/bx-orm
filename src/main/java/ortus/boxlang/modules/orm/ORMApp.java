@@ -278,9 +278,12 @@ public class ORMApp {
 		org.hibernate.Criteria	criteria		= session.createCriteria( entityName );
 
 		if ( filter != null ) {
-			for ( Map.Entry<Key, Object> entry : filter.entrySet() ) {
-				criteria.add( org.hibernate.criterion.Restrictions.eq( entry.getKey().getName(), entry.getValue() ) );
-			}
+			entityRecord.getEntityMeta().getProperties()
+			    .stream()
+			    .filter( ( property ) -> filter.containsKey( property.getName() ) )
+			    .forEach( ( property ) -> {
+				    criteria.add( org.hibernate.criterion.Restrictions.eq( property.getName(), filter.get( property.getName() ) ) );
+			    } );
 		}
 
 		return Array.of(

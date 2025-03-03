@@ -79,6 +79,19 @@ public class EntityLoadTest extends BaseORMTest {
 		assertThat( ( ( IClassRunnable ) variables.get( result ) ).get( "vin" ) ).isEqualTo( "1HGCM82633A123456" );
 	}
 
+	@DisplayName( "It can specify UPPERCASE property names for cfml compat" )
+	@Test
+	public void testEntityLoadWrongCasedProperties() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityLoad( 'Vehicle', { VIN : '1HGCM82633A123456' }, true );
+		""", context );
+		// @formatter:on
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
+		assertThat( ( ( IClassRunnable ) variables.get( result ) ).get( "vin" ) ).isEqualTo( "1HGCM82633A123456" );
+	}
+
 	@DisplayName( "It can load array of entities by filter criteria" )
 	@Test
 	public void testEntityLoadFilterArray() {
