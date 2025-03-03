@@ -36,7 +36,7 @@ public class BoxEntityNameResolver implements EntityNameResolver {
 			String	result		= null;
 			if ( annotations.containsKey( ORMKeys.entity ) ) {
 				result = StringCaster.cast( annotations.get( ORMKeys.entity ) );
-			} else if ( annotations.containsKey( ORMKeys.entity ) ) {
+			} else if ( annotations.containsKey( ORMKeys.entityName ) ) {
 				result = StringCaster.cast( annotations.get( ORMKeys.entityName ) );
 			}
 			if ( result == null || result.isBlank() ) {
