@@ -22,7 +22,7 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 
 @BoxBIF
-public class GetHibernateVersion extends BaseORMBIF {
+public class ORMGetHibernateVersion extends BaseORMBIF {
 
 	/**
 	 * Giant code smell, but Hibernate tends to return "[WORKING]" as the version string in test builds and other instances.
