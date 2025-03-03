@@ -24,12 +24,12 @@ import org.junit.jupiter.api.Test;
 
 import tools.BaseORMTest;
 
-public class GetHibernateVersionTest extends BaseORMTest {
+public class ORMGetHibernateVersionTest extends BaseORMTest {
 
 	@DisplayName( "It can get the hibernate version" )
 	@Test
-	public void testGetHibernateVersion() {
-		instance.executeSource( "result = getHibernateVersion()", context );
+	public void testORMGetHibernateVersion() {
+		instance.executeSource( "result = ORMgetHibernateVersion()", context );
 		assertEquals( "5.6.15.Final", variables.get( result ) );
 	}
 
