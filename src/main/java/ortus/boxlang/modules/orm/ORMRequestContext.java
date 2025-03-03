@@ -79,8 +79,7 @@ public class ORMRequestContext {
 	public static ORMRequestContext getForContext( RequestBoxContext context ) {
 		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
 
-		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
-		    || !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
+		if ( !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
 		}
 
@@ -203,7 +202,8 @@ public class ORMRequestContext {
 		this.sessions.forEach( ( key, session ) -> {
 			logger.debug( "Closing session on datasource {}", key );
 			try {
-				closeSession( session );
+				closeSessionAndTransaction( session );
+				this.sessions.remove( key );
 			} catch ( Exception e ) {
 				logger.error( "Error closing session or session factory on datasource {}", key.getName(), e );
 				// ensure we continue to close other sessions
@@ -214,11 +214,27 @@ public class ORMRequestContext {
 	}
 
 	/**
-	 * Close a single Hibernate session on the given datasource.
+	 * Close the Hibernate session on the given datasource, and ensure it is removed from the session map.
+	 */
+	public ORMRequestContext closeSession( Key datasourceName ) {
+		Session session = null;
+		if ( datasourceName == null ) {
+			session			= getSession();
+			datasourceName	= this.config.datasource;
+		} else {
+			session = getSession( Key.of( datasourceName ) );
+		}
+		closeSessionAndTransaction( session );
+		this.sessions.remove( datasourceName );
+		return this;
+	}
+
+	/**
+	 * Close the Hibernate session on the given datasource.
 	 * <p>
 	 * Attempts a transaction commit prior to closing the session, if an active transaction is present.
 	 */
-	public ORMRequestContext closeSession( Session session ) {
+	private ORMRequestContext closeSessionAndTransaction( Session session ) {
 		var tx = session.getTransaction();
 		if ( tx.isActive() ) {
 			logger.warn( "Session has an active transaction; committing before flushing" );

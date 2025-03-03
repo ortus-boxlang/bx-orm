@@ -62,4 +62,15 @@ public class ORMCloseSessionTest extends BaseORMTest {
 		assertFalse( variables.getAsBoolean( Key.of( "result2" ) ) );
 	}
 
+	@DisplayName( "It removes the closed session so other code can do its thing." )
+	@Test
+	public void testSessionClearAfterClose() {
+		instance.executeSource(
+		    """
+		    ormCloseSession();
+		    ormClearSession();
+		    """,
+		    context
+		);
+	}
 }

@@ -19,8 +19,6 @@ package ortus.boxlang.modules.orm.bifs;
 
 import java.util.Set;
 
-import org.hibernate.Session;
-
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
@@ -56,15 +54,9 @@ public class ORMCloseSession extends BaseORMBIF {
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
-		Session				session;
 		String				datasourceName		= StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
-		if ( !datasourceName.isBlank() ) {
-			session = ormRequestContext.getSession( Key.of( datasourceName ) );
-		} else {
-			session = ormRequestContext.getSession();
-		}
-		ormRequestContext.closeSession( session );
 
+		ormRequestContext.closeSession( !datasourceName.isBlank() ? Key.of( datasourceName ) : null );
 		return null;
 	}
 
