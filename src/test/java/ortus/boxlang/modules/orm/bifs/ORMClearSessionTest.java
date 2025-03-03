@@ -19,7 +19,6 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -48,18 +47,17 @@ public class ORMClearSessionTest extends BaseORMTest {
 		    .isEqualTo( false );
 	}
 
-	@Disabled( "EntityNew fails on alternate datasource entities OR on .cfc files. To fix." )
 	@DisplayName( "It can clear the session on a named (alternate) datasource" )
 	@Test
 	public void testSessionClearOnNamedDatasource() {
 		instance.executeSource(
 		    """
-		    theEntity = entityNew( "AlternateDS", { name : "Testy McTesterson" } );
+		    theEntity = entityNew( "AlternateDS", { id: createUUID(), name : "Testy McTesterson" } );
 		    entitySave( theEntity );
 
-		    beforeClear = ormGetSession().contains( theEntity );
-		    ormClearSession();
-		    afterClear = ormGetSession().contains( theEntity );
+		    beforeClear = ormGetSession( "dsn2" ).contains( theEntity );
+		    ormClearSession( "dsn2" );
+		    afterClear = ormGetSession( "dsn2" ).contains( theEntity );
 		    """,
 		    context
 		);
