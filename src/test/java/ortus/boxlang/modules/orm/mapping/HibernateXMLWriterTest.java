@@ -199,18 +199,17 @@ public class HibernateXMLWriterTest {
 	// @formatter:on
 	@ParameterizedTest
 	public void testDiscriminator( String sourceCode ) {
-		IStruct		meta		= getClassMetaFromCode( sourceCode );
+		IStruct		meta				= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		IEntityMeta	entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc					= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
 
-		String		xml			= xmlToString( doc );
-
-		Node		classEL		= doc.getDocumentElement().getFirstChild();
-		Node		node		= classEL.getFirstChild();
+		Node		classEL				= doc.getDocumentElement().getFirstChild();
+		// lastChild is a bit brittle, but it's the simplest way to get the discriminator node
+		Node		discriminatorNode	= classEL.getLastChild();
 		assertThat( classEL.getAttributes().getNamedItem( "discriminator-value" ).getTextContent() )
 		    .isEqualTo( "Ford" );
-		assertThat( node.getAttributes().getNamedItem( "column" ).getTextContent() )
+		assertThat( discriminatorNode.getAttributes().getNamedItem( "column" ).getTextContent() )
 		    .isEqualTo( "autoType" );
 	}
 
@@ -329,14 +328,15 @@ public class HibernateXMLWriterTest {
 	} )
 	// @formatter:on
 	public void testPropertyTypeAnnotation( String sourceCode ) {
-		IStruct		meta		= getClassMetaFromCode( sourceCode );
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
 
-		Node		node		= doc.getDocumentElement().getFirstChild().getFirstChild();
+		Node		classEl			= doc.getDocumentElement().getFirstChild();
+		Node		propertyNode	= classEl.getLastChild();
 
-		assertThat( node.getAttributes().getNamedItem( "type" ).getTextContent() )
+		assertThat( propertyNode.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "string" );
 	}
 
