@@ -290,13 +290,6 @@ class
 	 */
 
 	property
-		name   ="numberOfHits"
-		formula="select cbStats.hits
-			from cb_stats cbStats
-			where cbStats.FK_contentID=contentID"
-		default="0";
-
-	property
 		name   ="numberOfChildren"
 		formula="select count(*) from cb_content content where content.FK_parentID=contentID"
 		default="0";
