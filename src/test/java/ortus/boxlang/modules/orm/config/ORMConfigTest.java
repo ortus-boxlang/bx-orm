@@ -56,7 +56,7 @@ public class ORMConfigTest extends BaseORMTest {
 
 	@Test
 	public void testGenericSettings() {
-		System.out.println( instance.getRuntimeContext().getClass() );
+		// System.out.println( instance.getRuntimeContext().getClass() );
 		Configuration config = new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB",
 		    ORMKeys.catalog, "foobar",

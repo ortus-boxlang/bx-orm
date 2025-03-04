@@ -165,7 +165,6 @@ public class HibernateXMLWriter {
 	public Document generateXML() {
 		// TODO: Track execution time and record in an XML comment prepended to the document.
 		// comment with: source, compilation-time, datasource
-		System.out.println( "generating xml:" );
 		this.document.getDocumentElement().appendChild( generateClassElement() );
 		return this.document;
 	}

@@ -69,7 +69,6 @@ public abstract class BaseORMTest {
 		} catch ( Throwable e ) {
 			Optional<ClassLocation> classLocator = instance.getClassLocator().getBoxResolver()
 			    .resolve( instance.getRuntimeContext(), "src.test.resources.app.models.cms.BaseContent", true );
-			System.out.println( "BaseContent class is present:" + classLocator.isPresent() );
 			if ( !classLocator.isPresent() ) {
 				System.out.println( "ClassLocator is null" );
 			} else {
