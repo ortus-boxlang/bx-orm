@@ -19,6 +19,7 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -114,6 +115,21 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( item ).isInstanceOf( IClassRunnable.class );
 		IClassRunnable vehicle = ( IClassRunnable ) item;
 		assertThat( vehicle.get( Key.of( "model" ) ) ).isEqualTo( "Accord" );
+	}
+
+	@DisplayName( "It can retrieve subclassed entities correctly" )
+	@Test
+	@Disabled( "This test is disabled the query results are current incorrect when querying the subclass entity." )
+	public void testHQLWithSubClasses() {
+		// @formatter:off
+		instance.executeSource( """
+		result = ormExecuteQuery( "FROM cbEntry WHERE slug=?", [ 'another-test' ], true );
+		println( "Created:" & result.getCreatedDate() );
+		println( "Slug:" & result.getSlug() );
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isInstanceOf( IClassRunnable.class );
 	}
 
 }
