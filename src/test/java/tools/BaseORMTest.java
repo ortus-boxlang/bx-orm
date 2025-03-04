@@ -20,6 +20,7 @@ package tools;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -35,6 +36,7 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
+import ortus.boxlang.runtime.loader.ClassLocation;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.scopes.IScope;
@@ -58,11 +60,23 @@ public abstract class BaseORMTest {
 	public void setUp() {
 		instance = BoxRuntime.getInstance( true );
 		// Load the module
-		loadModules( instance.getRuntimeContext() );
-		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
-		JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
-		JDBCTestUtils.resetAlternateTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDatasourceOrThrow( Key.of( "dsn2" ) ),
-		    context );
+		try {
+			loadModules( instance.getRuntimeContext() );
+			context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+			JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
+			JDBCTestUtils.resetAlternateTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDatasourceOrThrow( Key.of( "dsn2" ) ),
+			    context );
+		} catch ( Throwable e ) {
+			Optional<ClassLocation> classLocator = instance.getClassLocator().getBoxResolver()
+			    .resolve( instance.getRuntimeContext(), "src.test.resources.app.models.cms.BaseContent", true );
+			System.out.println( "BaseContent class is present:" + classLocator.isPresent() );
+			if ( !classLocator.isPresent() ) {
+				System.out.println( "ClassLocator is null" );
+			} else {
+				System.out.println( classLocator.get().toString() );
+			}
+			throw e;
+		}
 	}
 
 	@AfterAll

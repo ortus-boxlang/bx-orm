@@ -42,6 +42,7 @@ public class ORMKeys {
 	public static final Key	autoManageSession		= Key.of( "autoManageSession" );
 	public static final Key	cacheConfig				= Key.of( "cacheConfig" );
 	public static final Key	cacheProvider			= Key.of( "cacheProvider" );
+	public static final Key	classFQN				= Key.of( "classFQN" );
 	public static final Key	datasource				= Key.of( "datasource" );
 	public static final Key	dbcreate				= Key.of( "dbcreate" );
 	public static final Key	dialect					= Key.of( "dialect" );

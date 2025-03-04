@@ -62,7 +62,7 @@ public class EntityRecord {
 	private Path		xmlFilePath;
 	/**
 	 * Stores all generated entity metadata for a given entity.
-	 * 
+	 *
 	 * Used to construct the hibernate mapping XML.
 	 */
 	private IEntityMeta	entityMeta;
@@ -78,7 +78,7 @@ public class EntityRecord {
 
 	/**
 	 * Create a new entity record.
-	 * 
+	 *
 	 * @param entityName The name of the entity.
 	 * @param classFQN   The fully qualified class name of the entity, like `models.User`.
 	 * @param metadata   The parsed boxlang class metadata for the entity.
@@ -89,7 +89,7 @@ public class EntityRecord {
 
 	/**
 	 * Create a new entity record.
-	 * 
+	 *
 	 * @param entityName   The name of the entity.
 	 * @param classFQN     The fully qualified class name of the entity, like `models.User`.
 	 * @param metadata     The parsed boxlang class metadata for the entity.
