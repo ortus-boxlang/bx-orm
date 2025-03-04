@@ -36,6 +36,7 @@ import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.scopes.Key;
@@ -182,12 +183,14 @@ public class SessionFactoryBuilder {
 		Properties				properties		= new Properties();
 		Collection<ClassLoader>	classLoaders	= new ArrayList<>();
 		classLoaders.add( runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader );
+		classLoaders.add( runtime.getClass().getClassLoader() );
 
 		// Any configuration which needs a specific java type (such as the connection provider instance) goes here
 		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( context.getConnectionManager(), this.datasourceName ) );
 		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
 		properties.put( AvailableSettings.CLASSLOADERS, classLoaders );
 		properties.put( AvailableSettings.TC_CLASSLOADER, "org.hibernate.boot.registry.classloading.internal.AggregatedClassLoader" );
+		properties.put( AvailableSettings.GLOBALLY_QUOTED_IDENTIFIERS, StringCaster.cast( ormConfig.quoteIdentifiers ) );
 		properties.put( BOXLANG_CONTEXT, context );
 
 		// properties.put( AvailableSettings.SESSION_FACTORY_NAME, getAppName().toString() );

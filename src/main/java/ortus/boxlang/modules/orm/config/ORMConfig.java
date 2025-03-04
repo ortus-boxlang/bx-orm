@@ -233,6 +233,11 @@ public class ORMConfig {
 	public boolean						useDBForMapping			= false;
 
 	/**
+	 * Whether to quote identifiers. If turned off column and table names with reserved words will fail to be created/updated
+	 */
+	public boolean						quoteIdentifiers		= true;
+
+	/**
 	 * Enable or disable the use of threading for mapping multiple ORM entities concurrently.
 	 */
 	public boolean						enableThreadedMapping	= true;
