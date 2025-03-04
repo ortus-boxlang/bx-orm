@@ -48,7 +48,7 @@ public class HibernateXMLWriter {
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime			runtime				= BoxRuntime.getInstance();
+	private static final BoxRuntime			runtime	= BoxRuntime.getInstance();
 
 	/**
 	 * The logger for the ORM application.
@@ -81,8 +81,6 @@ public class HibernateXMLWriter {
 	 * Whether to throw an exception when an error occurs during XML generation.
 	 */
 	boolean									throwOnErrors;
-
-	private static final String				CFC_MAPPING_PREFIX	= "boxgenerated.boxclass.";
 
 	/**
 	 * Create a new Hibernate XML writer for the given entity metadata.
@@ -167,6 +165,7 @@ public class HibernateXMLWriter {
 	public Document generateXML() {
 		// TODO: Track execution time and record in an XML comment prepended to the document.
 		// comment with: source, compilation-time, datasource
+		System.out.println( "generating xml:" );
 		this.document.getDocumentElement().appendChild( generateClassElement() );
 		return this.document;
 	}
@@ -620,23 +619,6 @@ public class HibernateXMLWriter {
 		}
 		if ( entity.getOptimisticLock() != null ) {
 			classElement.setAttribute( "optimistic-lock", entity.getOptimisticLock() );
-			/**
-			 * [BoxLang]
-			 *
-			 * Copyright [2023] [Ortus Solutions, Corp]
-			 *
-			 * Licensed under the Apache License, Version 2.0 (the "License");
-			 * you may not use this file except in compliance with the License.
-			 * You may obtain a copy of the License at
-			 *
-			 * http://www.apache.org/licenses/LICENSE-2.0
-			 *
-			 * Unless required by applicable law or agreed to in writing, software
-			 * distributed under the License is distributed on an "AS IS" BASIS,
-			 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-			 * See the License for the specific language governing permissions and
-			 * limitations under the License.
-			 */
 		}
 
 		if ( entity.isImmutable() ) {
@@ -667,7 +649,7 @@ public class HibernateXMLWriter {
 		List<IPropertyMeta> idProperties = entity.getIdProperties();
 		if ( idProperties.size() == 1 ) {
 			entityElement.appendChild( generateIdElement( "id", idProperties.get( 0 ) ) );
-		} else if ( !entity.isSubclass() ) {
+		} else if ( !entity.isSubclass() && idProperties.size() > 1 ) {
 			Element compositeIdNode = this.document.createElement( "composite-id" );
 			idProperties.stream().forEach( ( prop ) -> {
 				compositeIdNode.appendChild( generateIdElement( "key-property", prop ) );
