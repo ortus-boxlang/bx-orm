@@ -584,8 +584,11 @@ public class HibernateXMLWriter {
 			if ( entity.getDiscriminator().get( Key._name ) != null ) {
 				classElement.setAttribute( "discriminator-value", entity.getDiscriminator().getAsString( Key._name ) );
 			}
-			classElement.setAttribute( "extends", CFC_MAPPING_PREFIX + entity.getParentMeta().getAsString( Key.fullname ) );
-			classElement.setAttribute( "name", CFC_MAPPING_PREFIX + entity.getMeta().getAsString( ORMKeys.classFQN ) );
+			// @TODO: This should be refactored to the parent entity's entityRecord.getEntityMeta().getEntityName(), so we take advantage of our entity name
+			// parsing / generation logic.
+			IStruct parentAnnotations = entity.getParentMeta().getAsStruct( Key.annotations );
+			classElement.setAttribute( "extends", parentAnnotations.getAsString( ORMKeys.entityName ) );
+			// classElement.setAttribute( "name", CFC_MAPPING_PREFIX + entity.getMeta().getAsString( ORMKeys.classFQN ) );
 			classElement.setAttribute( "lazy", "true" );
 			entityElement = this.document.createElement( "join" );
 			entityElement.setAttribute( "table", entity.getTableName() );
