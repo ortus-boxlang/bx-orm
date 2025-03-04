@@ -247,7 +247,7 @@ public class HibernateXMLWriterTest {
 		"""
 	    , """
 		class{
-			@Id property name="id1"; 
+			@Id property name="id1";
 			@Id property name="id2" sqltype="varchar(50)";
 		}
 		"""
@@ -613,10 +613,10 @@ public class HibernateXMLWriterTest {
 	@ValueSource( strings = {
 	    """
 		class persistent {
-			property 
-				length=12 
-				scale=10 
-				precision=2 
+			property
+				length=12
+				scale=10
+				precision=2
 				column="amountCol"
 				name="amount";
 		}
@@ -658,10 +658,10 @@ public class HibernateXMLWriterTest {
 	@ValueSource( strings = {
 	    """
 		class persistent {
-			property 
-				insert=false 
-				update=false 
-				unique=true 
+			property
+				insert=false
+				update=false
+				unique=true
 				table="foo"
 				notNull=true
 				dbDefault="test"
@@ -717,7 +717,7 @@ public class HibernateXMLWriterTest {
 	@ValueSource( strings = {
 	    """
 		class persistent {
-			property 
+			property
 				fieldtype="version"
 				generated="never"
 				column="itemVersion"
@@ -857,7 +857,6 @@ public class HibernateXMLWriterTest {
 		NamedNodeMap attrs = oneToOneNode.getAttributes();
 
 		assertEquals( "owner", attrs.getNamedItem( "name" ).getTextContent() );
-		assertEquals( "true", attrs.getNamedItem( "unique" ).getTextContent() );
 		assertEquals( "all", attrs.getNamedItem( "cascade" ).getTextContent() );
 		assertEquals( "fooID", attrs.getNamedItem( "foreign-key" ).getTextContent() );
 		assertEquals( "true", attrs.getNamedItem( "constrained" ).getTextContent() );

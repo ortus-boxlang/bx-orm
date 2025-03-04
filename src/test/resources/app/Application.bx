@@ -27,7 +27,8 @@ class{
 		"entityPaths"   : [ "src/test/resources/app/models" ],
 		"saveMapping"   : "true",
 		"logSQL"        : "true",
-		"dialect"       : "DerbyTenSevenDialect"
+		"dialect"       : "MySQLDialect",
+		"dbcreate"      : "dropcreate",
 		// , "namingStrategy": "src.test.resources.app.CustomNamingStrategy"
 	}
 	this.ormEnabled = "true";

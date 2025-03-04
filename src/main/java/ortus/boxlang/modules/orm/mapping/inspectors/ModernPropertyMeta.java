@@ -25,7 +25,7 @@ import ortus.boxlang.runtime.types.Struct;
 
 /**
  * A "Modern", aka JPA-style, implementation of the property metadata configuration.
- * 
+ *
  * i.e. handles translating JPA-style property annotations like `@Varchar` into the IPropertyMeta interface for consistent reference by the
  * HibernateXMLWriter.
  */
@@ -47,7 +47,6 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 				// behaves as many-to-one
 				this.fieldType = FIELDTYPE.MANY_TO_ONE;
 				this.getAssociation().put( Key.type, "many-to-one" );
-				this.getAssociation().put( ORMKeys.unique, true );
 			} else {
 				this.fieldType = FIELDTYPE.ONE_TO_ONE;
 			}
@@ -73,16 +72,16 @@ public class ModernPropertyMeta extends AbstractPropertyMeta {
 	 * Get all association metadata.
 	 * <p>
 	 * If none of these keys are present, the property is not an association and an empty struct will be returned:
-	 * 
+	 *
 	 * <ul>
 	 * <li>&#064;OneToOne</li>
 	 * <li>&#064;OneToMany</li>
 	 * <li>&#064;ManyToOne</li>
 	 * <li>&#064;ManyToMany</li>
 	 * </ul>
-	 * 
+	 *
 	 * Here's a quick example of an ORM property defined as a one-to-many relationship:
-	 * 
+	 *
 	 * <pre>
 	 * <code>
 	&#064;OneToMany {

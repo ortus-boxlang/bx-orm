@@ -85,7 +85,6 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( associationType.equalsIgnoreCase( "one-to-one" )
 		    && ( annotations.containsKey( ORMKeys.fkcolumn ) || annotations.containsKey( ORMKeys.linkTable ) ) ) {
 			associationType = "many-to-one";
-			association.put( ORMKeys.unique, true );
 			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.fkcolumn ) ) );
 		}
 		if ( associationType.equalsIgnoreCase( "one-to-many" ) && annotations.containsKey( ORMKeys.linkTable ) ) {

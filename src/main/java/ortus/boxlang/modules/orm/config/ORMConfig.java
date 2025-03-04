@@ -497,7 +497,7 @@ public class ORMConfig {
 		configuration.addProperties( sysEnvProps );
 
 		if ( this.dbcreate != null ) {
-			switch ( dbcreate ) {
+			switch ( this.dbcreate ) {
 				case "dropcreate" :
 					this.dbcreate = "drop-and-create";
 					break;

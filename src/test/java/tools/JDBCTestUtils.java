@@ -19,7 +19,6 @@ package tools;
 
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
-import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 
 /**
  * A collection of test utilities for assistance with JDBC tests, which are
@@ -27,21 +26,7 @@ import ortus.boxlang.runtime.types.exceptions.DatabaseException;
  */
 public class JDBCTestUtils {
 
-	/**
-	 * Remove the manufacturers table from the database.
-	 *
-	 * @param datasource
-	 */
-	public static void cleanupTables( DataSource datasource, IBoxContext context ) {
-		datasource.execute( "DROP TABLE manufacturers", context );
-	}
-
 	public static void resetAlternateTables( DataSource datasource, IBoxContext context ) {
-		try {
-			datasource.execute( "CREATE TABLE alternate_ds ( id VARCHAR(40), name VARCHAR(155) )", context );
-		} catch ( DatabaseException e ) {
-			// Ignore the exception if the table already exists
-		}
 		datasource.execute( "DELETE FROM alternate_ds", context );
 		datasource.execute(
 		    """
@@ -57,18 +42,6 @@ public class JDBCTestUtils {
 	 * @param datasource
 	 */
 	public static void resetTables( DataSource datasource, IBoxContext context ) {
-		try {
-			datasource.execute(
-			    "CREATE TABLE features ( id INTEGER PRIMARY KEY, name VARCHAR(50), description VARCHAR(155) )", context );
-			datasource.execute(
-			    "CREATE TABLE vehicle_features ( FK_vehicle VARCHAR(17), FK_feature INTEGER )", context );
-			datasource.execute( "CREATE TABLE manufacturers ( id INTEGER, name VARCHAR(155), address VARCHAR(155) )", context );
-			datasource.execute(
-			    "CREATE TABLE vehicles ( vin VARCHAR(17), make VARCHAR(155), model VARCHAR(155), FK_manufacturer INTEGER )", context );
-		} catch ( DatabaseException e ) {
-			// Ignore the exception if the table already exists
-			System.out.println( e.getMessage() );
-		}
 		datasource.execute( "DELETE FROM manufacturers", context );
 		datasource.execute( "DELETE FROM vehicles", context );
 		datasource.execute(
