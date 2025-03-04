@@ -143,6 +143,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		    ? this.meta.getAsStruct( Key._EXTENDS )
 		    : Struct.EMPTY;
 
+		this.isSimpleEntity			= true;
+
 		// @TODO: We need to reimplement or rethink this to work recursively upwards. i.e., this current logic only works for one level of inheritance. :/
 		if ( this.isExtended ) {
 			IStruct	parentAnnotations			= this.parentMeta.getAsStruct( Key.annotations );
@@ -163,8 +165,6 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 				this.isSubclass		= true;
 				this.joinColumn		= this.annotations.getAsString( ORMKeys.joinColumn );
 				this.isSimpleEntity	= false;
-			} else {
-				this.isSimpleEntity = true;
 			}
 		}
 
