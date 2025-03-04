@@ -430,6 +430,8 @@ public class MappingGenerator {
 	private String generateXML( EntityRecord entity ) {
 		try {
 			IStruct meta = entity.getMetadata();
+			// We need this for inheritance
+			meta.put( ORMKeys.classFQN, entity.getClassFQN() );
 			// ensure the 'datasource' key is populated with our default logic
 			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
 			IEntityMeta entityMeta = AbstractEntityMeta.autoDiscoverMetaType( meta );

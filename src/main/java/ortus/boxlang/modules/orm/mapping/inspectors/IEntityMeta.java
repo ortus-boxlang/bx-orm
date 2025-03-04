@@ -34,9 +34,16 @@ public interface IEntityMeta {
 	public String getEntityName();
 
 	/**
+	 * Returns the meta struct of the entity.
+	 *
+	 * @return
+	 */
+	public IStruct getMeta();
+
+	/**
 	 * Determining whether thisEntity is "direct" or "derived". Aka, is the table name explicitly defined in the entity
 	 * metadata, or is it derived from a parent class plus discriminator metadata.
-	 * 
+	 *
 	 * @return true if the entity is simple and NOT derived from a parent class, a join, or discriminator metadata; else false.
 	 */
 	public boolean isSimpleEntity();
@@ -45,10 +52,17 @@ public interface IEntityMeta {
 	 * Determining whether this entity is "extended" or not. Aka, does this entity have a parent class.
 	 * <p>
 	 * Parent metadata can be retrieved via {@link #getParentMeta()}.
-	 * 
+	 *
 	 * @return True if the entity is extended via `extends="SomeParentClass"`, else false.
 	 */
 	public boolean isExtended();
+
+	/**
+	 * Determines whether an entity is a subclass of another entity.
+	 *
+	 * @return
+	 */
+	public boolean isSubclass();
 
 	public boolean isImmutable();
 
@@ -68,7 +82,7 @@ public interface IEntityMeta {
 
 	/**
 	 * Get the discriminator info for this entity.
-	 * 
+	 *
 	 * @return A struct of discriminator info - EMPTY if none defined, else a struct with the following keys (any of which may be null):
 	 *         <ul>
 	 *         <li>{@link Key#value} - The value of the discriminator column</li>
@@ -83,7 +97,7 @@ public interface IEntityMeta {
 
 	/**
 	 * Get the second-level cache properties for this entity.
-	 * 
+	 *
 	 * @return A struct of cache properties - EMPTY if none defined, else a struct with the following keys (any of which may be null):
 	 *         <ul>
 	 *         <li>{@link Key#region} - The cache region to use</li>
@@ -105,10 +119,17 @@ public interface IEntityMeta {
 
 	/**
 	 * Retrieve the parent metadata for this entity, if it exists.
-	 * 
+	 *
 	 * @return Struct of parent metadata, or EMPTY if no parent metadata exists.
 	 */
 	public IStruct getParentMeta();
+
+	/**
+	 * Retrieve the join column used to connect to the parent identifier column for this entity, if it exists.
+	 *
+	 * @return Column name of the join column, or null if no join column exists.
+	 */
+	public String getJoinColumn();
 
 	/**
 	 * Property methods
@@ -116,7 +137,7 @@ public interface IEntityMeta {
 
 	/**
 	 * Retrieve a list of all persistent (ORM) properties
-	 * 
+	 *
 	 * Includes:
 	 * <ul>
 	 * <li>ID properties</li>

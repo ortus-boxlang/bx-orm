@@ -48,7 +48,7 @@ public class HibernateXMLWriter {
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime			runtime	= BoxRuntime.getInstance();
+	private static final BoxRuntime			runtime				= BoxRuntime.getInstance();
 
 	/**
 	 * The logger for the ORM application.
@@ -82,6 +82,8 @@ public class HibernateXMLWriter {
 	 */
 	boolean									throwOnErrors;
 
+	private static final String				CFC_MAPPING_PREFIX	= "boxgenerated.boxclass.";
+
 	/**
 	 * Create a new Hibernate XML writer for the given entity metadata.
 	 *
@@ -114,9 +116,8 @@ public class HibernateXMLWriter {
 		this.entity			= entity;
 		this.entityLookup	= entityLookup;
 		this.throwOnErrors	= throwOnErrors;
-		System.out.println( "Entity class: " + entity.getClass().getSimpleName() );
 		// Validation
-		if ( entity.getIdProperties().isEmpty() ) {
+		if ( !entity.isSubclass() && entity.getIdProperties().isEmpty() ) {
 			logger.error( "Entity {} has no ID properties. Hibernate requires at least one.", entity.getEntityName() );
 			if ( throwOnErrors ) {
 				throw new BoxRuntimeException( "Entity %s has no ID properties. Hibernate requires at least one.".formatted( entity.getEntityName() ) );
@@ -569,12 +570,36 @@ public class HibernateXMLWriter {
 	 * @return A &lt;class /&gt; element containing entity keys, properties, and other Hibernate mapping metadata.
 	 */
 	public Element generateClassElement() {
-		Element classElement = this.document.createElement( "class" );
+		Element	classElement	= !entity.isSubclass()
+		    ? this.document.createElement( "class" )
+		    : this.document.createElement( "subclass" );
+
+		Element	entityElement	= classElement;
 
 		// general class attributes:
 		if ( entity.getEntityName() != null && !entity.getEntityName().isEmpty() ) {
 			classElement.setAttribute( "entity-name", entity.getEntityName() );
 		}
+		if ( entity.isSubclass() ) {
+			if ( entity.getDiscriminator().get( Key._name ) != null ) {
+				classElement.setAttribute( "discriminator-value", entity.getDiscriminator().getAsString( Key._name ) );
+			}
+			classElement.setAttribute( "extends", CFC_MAPPING_PREFIX + entity.getParentMeta().getAsString( Key.fullname ) );
+			classElement.setAttribute( "name", CFC_MAPPING_PREFIX + entity.getMeta().getAsString( ORMKeys.classFQN ) );
+			classElement.setAttribute( "lazy", "true" );
+			entityElement = this.document.createElement( "join" );
+			entityElement.setAttribute( "table", entity.getTableName() );
+			classElement.appendChild( entityElement );
+			Element keyElement = this.document.createElement( "key" );
+			keyElement.setAttribute( "column", entity.getJoinColumn() );
+			entityElement.appendChild( keyElement );
+
+		}
+
+		if ( !entity.getCache().isEmpty() && !entity.isSubclass() ) {
+			classElement.appendChild( generateCacheElement( entity.getCache() ) );
+		}
+
 		if ( entity.isDynamicInsert() ) {
 			classElement.setAttribute( "dynamic-insert", "true" );
 		}
@@ -635,55 +660,49 @@ public class HibernateXMLWriter {
 			}
 		}
 
-		if ( !entity.getCache().isEmpty() ) {
-			classElement.appendChild( generateCacheElement( entity.getCache() ) );
-		}
-
 		// generate keys, aka <id> elements
 		List<IPropertyMeta> idProperties = entity.getIdProperties();
-		if ( idProperties.size() == 0 ) {
-			// we've already logged an error in the constructor.
-		} else if ( idProperties.size() == 1 ) {
-			classElement.appendChild( generateIdElement( "id", idProperties.get( 0 ) ) );
-		} else {
+		if ( idProperties.size() == 1 ) {
+			entityElement.appendChild( generateIdElement( "id", idProperties.get( 0 ) ) );
+		} else if ( !entity.isSubclass() ) {
 			Element compositeIdNode = this.document.createElement( "composite-id" );
 			idProperties.stream().forEach( ( prop ) -> {
 				compositeIdNode.appendChild( generateIdElement( "key-property", prop ) );
 			} );
-			classElement.appendChild( compositeIdNode );
+			entityElement.appendChild( compositeIdNode );
 		}
 
-		addDiscriminatorData( classElement, entity.getDiscriminator() );
+		if ( !entity.isSubclass() ) {
+			addDiscriminatorData( entityElement, entity.getDiscriminator() );
+		}
 
 		// Both fieldtype=version and fieldtype=timestamp translate to a single <version> xml node.
 		IPropertyMeta versionProperty = entity.getVersionProperty();
 		if ( versionProperty != null ) {
-			classElement.appendChild( generateVersionElement( versionProperty ) );
+			entityElement.appendChild( generateVersionElement( versionProperty ) );
 		}
 
 		// generate properties, aka <property> elements
-		entity.getProperties().stream().forEach( ( propertyMeta ) -> {
-			classElement.appendChild( generatePropertyElement( propertyMeta ) );
-		} );
+		entity.getProperties().stream()
+		    .map( ( propertyMeta ) -> generatePropertyElement( propertyMeta ) )
+		    .forEach( entityElement::appendChild );
 
 		// generate associations, aka <one-to-one>, <one-to-many>, etc.
-		entity.getAssociations().stream().forEach( ( propertyMeta ) -> {
+		entity.getAssociations().stream().map( ( propertyMeta ) -> {
 			switch ( propertyMeta.getFieldType() ) {
 				case ONE_TO_ONE :
 				case MANY_TO_ONE :
-					classElement.appendChild( generateToOneAssociation( propertyMeta ) );
-					break;
+					return generateToOneAssociation( propertyMeta );
 				case ONE_TO_MANY :
 				case MANY_TO_MANY :
-					classElement.appendChild( generateToManyAssociation( propertyMeta ) );
-					break;
+					return generateToManyAssociation( propertyMeta );
 				default :
 					logger.warn( "Unhandled association/field type: {} on property {}", propertyMeta.getFieldType(), propertyMeta.getName() );
+					return null;
 			}
+		} ).filter( node -> node != null )
+		    .forEach( entityElement::appendChild );
 
-		} );
-
-		// @TODO: generate <subclass> elements
 		// @TODO: generate <joined-subclass> elements
 		// @TODO: generate <union-subclass> elements
 		// @TODO: generate/handle optimistic lock

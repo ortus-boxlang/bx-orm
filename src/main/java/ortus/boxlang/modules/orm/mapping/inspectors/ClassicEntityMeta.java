@@ -36,9 +36,6 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 	public ClassicEntityMeta( IStruct entityMeta ) {
 		super( entityMeta );
 
-		// @TODO: Implement extended/join/discriminator check
-		this.isSimpleEntity = true;
-
 		this.annotations.computeIfAbsent( ORMKeys.entityName, key -> this.meta.getAsString( Key._name ) );
 		this.entityName = this.annotations.getAsString( ORMKeys.entityName );
 
@@ -86,32 +83,8 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		this.idProperties				= this.allPersistentProperties.stream()
 		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ID )
 		    .collect( Collectors.toList() );
-		if ( this.entityName.equalsIgnoreCase( "cbPage" ) ) {
-			System.out.println( "All Properties: " + this.allProperties );
-			System.out.println( "Persistent Properties: " + this.allPersistentProperties );
-		}
 
-		// If we don't have a defined id property, check if this is a discriminated class
-		if ( this.idProperties.size() == 0
-		    &&
-		    this.annotations.containsKey( ORMKeys._extends )
-		    &&
-		    this.annotations.containsKey( ORMKeys.joinColumn ) ) {
-			IPropertyMeta parentIdProperty = this.parentPersistentProperties.stream()
-			    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ID
-			        &&
-			        prop.getName().equalsIgnoreCase( this.annotations.getAsString( ORMKeys.joinColumn ) )
-			    )
-			    .findFirst()
-			    .orElse( null );
-
-			if ( parentIdProperty != null ) {
-				this.idProperties.add( parentIdProperty );
-			}
-		}
-
-		// @TODO: Assume a property with name 'id' is the ID property.
-		if ( this.idProperties.size() == 0 ) {
+		if ( !this.isSubclass && this.idProperties.size() == 0 ) {
 			this.idProperties = this.allPersistentProperties.stream()
 			    .filter( ( IPropertyMeta prop ) -> prop.getName().equalsIgnoreCase( "id" ) )
 			    .collect( Collectors.toList() );

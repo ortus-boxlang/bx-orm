@@ -52,7 +52,7 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Manages a single ORM application and persists the lifetime of the boxlang application.
- * 
+ *
  * Stores ORM configuration, datasources, session factories, and other until the ORM application is shut down or reloaded.
  */
 public class ORMApp {
@@ -266,7 +266,7 @@ public class ORMApp {
 
 	/**
 	 * Load an array of entities by filter criteria.
-	 * 
+	 *
 	 * @param context    Context in which the BIF was invoked.
 	 * @param entityName The name of the entity to load.
 	 * @param filter     Struct of filter criteria.
@@ -296,7 +296,7 @@ public class ORMApp {
 
 	/**
 	 * Execute a Criteria query with various options.
-	 * 
+	 *
 	 * @param criteria The criteria to execute.
 	 * @param options  Struct of options, including maxResults, offset, order, etc.
 	 */

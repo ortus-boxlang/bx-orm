@@ -19,13 +19,11 @@ package ortus.boxlang.modules.orm.mapping.inspectors;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
-import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
@@ -63,8 +61,6 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 	protected List<IPropertyMeta>	parentPersistentProperties;
 
-	protected List<IPropertyMeta>	parentDelegatedProperties;
-
 	protected List<IPropertyMeta>	idProperties;
 
 	protected List<IPropertyMeta>	properties;
@@ -80,6 +76,10 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	protected boolean				isSimpleEntity;
 
 	protected boolean				isExtended;
+
+	protected boolean				isSubclass;
+
+	protected String				joinColumn;
 
 	protected boolean				isImmutable;
 
@@ -97,7 +97,10 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 	protected String				catalogName;
 
-	protected Integer				batchsize;
+	/**
+	 * Default batch size is 25 limit the number of entities initially in memory
+	 */
+	protected Integer				batchsize		= 25;
 
 	protected String				optimisticLock;
 
@@ -110,6 +113,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	protected IStruct				cache			= Struct.EMPTY;
 
 	public AbstractEntityMeta( IStruct entityMeta ) {
+
 		this.logger					= runtime.getLoggingService().getLogger( "orm" );
 
 		// Setup the basic entity metadata
@@ -154,23 +158,13 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 			if ( !isParentPersistent && isParentMappedSuperClass ) {
 				this.allProperties.addAll( this.parentMeta.getAsArray( Key.properties ) );
-			} else if ( isParentPersistent ) {
-				this.parentPersistentProperties	= this.parentMeta.getAsArray( Key.properties )
-				    .stream()
-				    .map( StructCaster::cast )
-				    .filter( ( IStruct prop ) -> {
-													    var annotations = prop.getAsStruct( Key.annotations );
-													    return BooleanCaster.cast(
-													        annotations.getOrDefault( ORMKeys.persistent, true )
-													    );
-												    } )
-				    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop, this ) )
-				    .collect( Collectors.toList() );
-
-				// These properties are the delegated entity properties to be included in the entity
-				this.parentDelegatedProperties	= this.parentPersistentProperties.stream()
-				    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() != IPropertyMeta.FIELDTYPE.ID )
-				    .collect( Collectors.toList() );
+				this.isSimpleEntity = true;
+			} else if ( isParentPersistent && this.annotations.containsKey( ORMKeys.joinColumn ) ) {
+				this.isSubclass		= true;
+				this.joinColumn		= this.annotations.getAsString( ORMKeys.joinColumn );
+				this.isSimpleEntity	= false;
+			} else {
+				this.isSimpleEntity = true;
 			}
 		}
 
@@ -229,6 +223,28 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 */
 	public boolean isExtended() {
 		return this.isExtended;
+	}
+
+	/**
+	 * Returns the meta struct of the entity.
+	 *
+	 * @return
+	 */
+	public IStruct getMeta() {
+		return this.meta;
+	}
+
+	/**
+	 * Returns whether an entity is a discriminated subclass of another entity
+	 *
+	 * @return
+	 */
+	public boolean isSubclass() {
+		return this.isSubclass;
+	}
+
+	public String getJoinColumn() {
+		return this.joinColumn;
 	}
 
 	/**
