@@ -19,7 +19,6 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -119,7 +118,6 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 
 	@DisplayName( "It can retrieve subclassed entities correctly" )
 	@Test
-	@Disabled( "Enable once the hibernate proxy implementation is complete." )
 	public void testHQLWithSubClasses() {
 		// @formatter:off
 		instance.executeSource( """
