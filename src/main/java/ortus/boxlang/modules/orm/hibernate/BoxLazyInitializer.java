@@ -2,52 +2,54 @@ package ortus.boxlang.modules.orm.hibernate;
 
 import java.io.Serializable;
 
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.proxy.AbstractLazyInitializer;
+import org.hibernate.tuple.entity.EntityMetamodel;
 
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
-import ortus.boxlang.runtime.interop.DynamicObject;
-import ortus.boxlang.runtime.loader.ClassLocator;
+import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.runnables.IBoxRunnable;
-import ortus.boxlang.runtime.runnables.IClassRunnable;
-import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.types.Struct;
 
 public class BoxLazyInitializer extends AbstractLazyInitializer implements Serializable {
 
 	private final Serializable			id;
 	private final String				entityName;
 	private final PersistentClass		mappingInfo;
-	private static final ClassLocator	CLASS_LOCATOR	= BoxRuntime.getInstance().getClassLocator();
+	private final EntityMetamodel		entityMetamodel;
+	private final ORMApp				ormApp;
+	private RequestBoxContext			context;
+	private final EntityRecord			entityRecord;
+	private final BoxClassInstantiator	boxClassInstantiator;
 
 	public BoxLazyInitializer( String entityName, Serializable id, SharedSessionContractImplementor session, PersistentClass mappingInfo ) {
 		super( entityName, id, session );
 		this.id				= id;
 		this.entityName		= entityName;
 		this.mappingInfo	= mappingInfo;
+
+		this.context		= RequestBoxContext.getCurrent();
+		if ( context == null ) {
+			context = new ScriptingRequestBoxContext( BoxRuntime.getInstance().getRuntimeContext() );
+		}
+		this.ormApp			= ORMRequestContext.getForContext( context ).getORMApp();
+		this.entityRecord	= ormApp.lookupEntity( entityName, true );
+
+		SessionFactoryImplementor sessionFactoryImpl = ( SessionFactoryImplementor ) ormApp.getSessionFactoryOrThrow( this.entityRecord.getDatasource() );
+		this.entityMetamodel		= sessionFactoryImpl.getMetamodel()
+		    .entityPersister( this.entityRecord.getEntityName() )
+		    .getEntityMetamodel();
+		this.boxClassInstantiator	= new BoxClassInstantiator( entityMetamodel, this.mappingInfo );
 	}
 
 	public IBoxRunnable getEntity() {
-		RequestBoxContext context = RequestBoxContext.getCurrent();
-		if ( context == null ) {
-			throw new BoxRuntimeException( "No request box context could be found" );
-		}
-		ORMApp			ormApp			= ORMRequestContext.getForContext( context ).getORMApp();
-		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
-		DynamicObject	entity			= CLASS_LOCATOR.load(
-		    context,
-		    entityRecord.getClassName(),
-		    entityRecord.getResolverPrefix(),
-		    true,
-		    context.getCurrentImports()
-		);
-		IClassRunnable	classRunnable	= ( IClassRunnable ) entity.unWrapBoxLangClass();
-		// now we do BoxClassInstantiator to generate association methods, etc.
-		return classRunnable;
+		return boxClassInstantiator.instantiate( context, entityRecord, Struct.EMPTY );
 	}
 
 	@Override
