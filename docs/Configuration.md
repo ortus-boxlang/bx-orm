@@ -62,4 +62,5 @@ The following CFML interface names/paths have been changed as well:
 
 The following ORM settings are brand-new for BoxLang and do not exist in either Adobe ColdFusion or Lucee Server:
 
-* `enableThreadedMapping` - Enable the use of threading to process ORM entities in parallel, greatly speeding up an ORM load.
+* `enableThreadedMapping` - Enable the use of threading to process ORM entities in parallel, greatly speeding up an ORM load. Default `true`.
+* `quoteIdentifiers` - Enable quoted identifiers (table names, column names, etc.) to avoid erroring on reserved words. Default `true`.

@@ -338,15 +338,15 @@ public class ORMConfig {
 		if ( properties.containsKey( ORMKeys.autoGenMap ) && properties.get( ORMKeys.autoGenMap ) != null ) {
 			autoGenMap = BooleanCaster.cast( properties.get( ORMKeys.autoGenMap ) );
 		}
-
 		if ( properties.containsKey( ORMKeys.autoManageSession ) && properties.get( ORMKeys.autoManageSession ) != null ) {
 			autoManageSession = BooleanCaster.cast( properties.get( ORMKeys.autoManageSession ) );
 		}
-
 		if ( properties.containsKey( ORMKeys.eventHandling ) && properties.get( ORMKeys.eventHandling ) != null ) {
 			eventHandling = BooleanCaster.cast( properties.get( ORMKeys.eventHandling ) );
 		}
-
+		if ( properties.containsKey( ORMKeys.quoteIdentifiers ) && properties.get( ORMKeys.quoteIdentifiers ) != null ) {
+			quoteIdentifiers = BooleanCaster.cast( properties.get( ORMKeys.quoteIdentifiers ) );
+		}
 		if ( properties.containsKey( ORMKeys.flushAtRequestEnd ) && properties.get( ORMKeys.flushAtRequestEnd ) != null ) {
 			flushAtRequestEnd = BooleanCaster.cast( properties.get( ORMKeys.flushAtRequestEnd ) );
 		}
