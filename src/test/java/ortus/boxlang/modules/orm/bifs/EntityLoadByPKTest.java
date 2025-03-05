@@ -154,4 +154,36 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		// @formatter:on
 		assertEquals( "Honda", variables.get( result ) );
 	}
+
+	@DisplayName( "It can load a subclass entity from the parent" )
+	@Test
+	public void testSubclassLoadThroughParent() {
+		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
+
+		// @formatter:off
+		instance.executeSource(
+			"""
+				result = entityLoadByPK( "cbContent", "779cc4e2-a444-11eb-ab6f-0290cc502ae3" ).getSlug();
+			""",
+			context
+		);
+		// @formatter:on
+		assertEquals( "another-test", variables.get( result ) );
+	}
+
+	@DisplayName( "It can load a subclass entity from the parent" )
+	@Test
+	public void testSubClassLoadThroughChild() {
+		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
+
+		// @formatter:off
+		instance.executeSource(
+			"""
+				result = entityLoadByPK( "cbEntry", "779cc4e2-a444-11eb-ab6f-0290cc502ae3" ).getSlug();
+			""",
+			context
+		);
+		// @formatter:on
+		assertEquals( "another-test", variables.get( result ) );
+	}
 }

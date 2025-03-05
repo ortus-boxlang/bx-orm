@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.dynamic.casters.ArrayCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
@@ -128,6 +129,44 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		// @formatter:on
 		Object item = variables.get( result );
 		assertThat( item ).isInstanceOf( IClassRunnable.class );
+	}
+
+	@DisplayName( "It can effectively loop a query of subclassed entities" )
+	@Test
+	public void testHQLCollection() {
+		// @formatter:off
+		instance.executeSource( """
+		results = ormExecuteQuery( "FROM cbEntry");
+		result = results.map( ( entity ) => getMetadata( entity ).name );
+
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isInstanceOf( Array.class );
+		assertThat( ArrayCaster.cast( item ).size() ).isEqualTo( 15 );
+		ArrayCaster.cast( item ).forEach( ( className ) -> {
+			assertThat( className ).isInstanceOf( String.class );
+		} );
+	}
+
+	@DisplayName( "It can retrieve the relationships of subclassed entities" )
+	@Test
+	public void testHQLRelationships() {
+		// @formatter:off
+		instance.executeSource( """
+		results = ormExecuteQuery( "FROM cbEntry WHERE contentID = ?", [ "779cc4e2-a444-11eb-ab6f-0290cc502ae3" ] );
+		result = results.map( ( entity ) => entity.getContentVersions().map( ( version ) -> version.getContentVersionId() ) );
+
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isInstanceOf( Array.class );
+		assertThat( ArrayCaster.cast( item ).size() ).isEqualTo( 1 );
+		Array versions = ArrayCaster.cast( ArrayCaster.cast( item ).get( 0 ) );
+		assertThat( versions.size() ).isEqualTo( 2 );
+		versions.forEach( ( version ) -> {
+			assertThat( version ).isInstanceOf( String.class );
+		} );
 	}
 
 }
