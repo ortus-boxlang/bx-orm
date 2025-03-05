@@ -119,7 +119,7 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 
 	@DisplayName( "It can retrieve subclassed entities correctly" )
 	@Test
-	@Disabled( "This test is disabled the query results are current incorrect when querying the subclass entity." )
+	@Disabled( "Enable once the hibernate proxy implementation is complete." )
 	public void testHQLWithSubClasses() {
 		// @formatter:off
 		instance.executeSource( """
