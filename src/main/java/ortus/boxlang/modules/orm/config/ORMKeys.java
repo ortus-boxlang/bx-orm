@@ -67,6 +67,7 @@ public class ORMKeys {
 	public static final Key	ignoreParseErrors		= Key.of( "ignoreParseErrors" );
 	public static final Key	ignoreExtras			= Key.of( "ignoreExtras" );
 	public static final Key	enableThreadedMapping	= Key.of( "enableThreadedMapping" );
+	public static final Key	quoteIdentifiers		= Key.of( "quoteIdentifiers" );
 
 	/**
 	 * OLD setting name. Deprecated. Use {@link ignoreParseErrors} instead.
