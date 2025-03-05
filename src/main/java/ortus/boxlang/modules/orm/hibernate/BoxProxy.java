@@ -17,24 +17,51 @@
  */
 package ortus.boxlang.modules.orm.hibernate;
 
+import java.io.Serializable;
+
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
+import org.hibernate.mapping.PersistentClass;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.LazyInitializer;
+
+import ortus.boxlang.runtime.types.Struct;
 
 /**
  * Boxlang class proxy.
  */
-public class BoxProxy implements HibernateProxy {
+public class BoxProxy extends Struct implements HibernateProxy {
 
-	@Override
-	public Object writeReplace() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'writeReplace'" );
+	private BoxLazyInitializer lazyInitializer;
+
+	/**
+	 * Constructor.
+	 * 
+	 * @param entityName
+	 * @param id
+	 * @param session
+	 */
+	public BoxProxy( String entityName, Serializable id, SharedSessionContractImplementor session, PersistentClass mappingInfo ) {
+		this.lazyInitializer = new BoxLazyInitializer( entityName, id, session, mappingInfo );
 	}
 
+	/**
+	 * Perform serialization-time write-replacement of this proxy.
+	 *
+	 * @return The serializable proxy replacement.
+	 */
+	@Override
+	public Object writeReplace() {
+		return this;
+	}
+
+	/**
+	 * Get the underlying lazy initialization handler.
+	 *
+	 * @return The lazy initializer.
+	 */
 	@Override
 	public LazyInitializer getHibernateLazyInitializer() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getHibernateLazyInitializer'" );
+		return this.lazyInitializer;
 	}
 
 }

@@ -35,14 +35,18 @@ import org.hibernate.type.CompositeType;
  */
 public class BoxProxyFactory implements ProxyFactory {
 
-	public PersistentClass	mappingInfo;
-	public Getter			idGetter;
-	public Setter			idSetter;
+	private String			className;
+	private String			entityName;
+	private PersistentClass	mappingInfo;
+	private Getter			idGetter;
+	private Setter			idSetter;
 
 	public BoxProxyFactory( PersistentClass mappingInfo, Getter idGetter, Setter idSetter ) {
 		this.mappingInfo	= mappingInfo;
 		this.idGetter		= idGetter;
 		this.idSetter		= idSetter;
+		this.className		= mappingInfo.getClassName();
+		this.entityName		= mappingInfo.getEntityName();
 	}
 
 	@Override
@@ -56,8 +60,7 @@ public class BoxProxyFactory implements ProxyFactory {
 	@Override
 	public HibernateProxy getProxy( Serializable id, SharedSessionContractImplementor session )
 	    throws HibernateException {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getProxy'" );
+		return new BoxProxy( entityName, id, session, mappingInfo );
 	}
 
 }

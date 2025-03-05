@@ -438,7 +438,6 @@ public class ORMConfig {
 	 * Read the default datasource name from application settings.
 	 */
 	private Key getAppDefaultDatasource() {
-		// @TODO: Read the default datasource
 		Key		defaultDatasource	= Key.of( ( String ) this.requestContext.getConfigItems( new Key[] { Key.defaultDatasource } ) );
 		IStruct	configDatasources	= ( IStruct ) this.requestContext.getConfigItems( new Key[] { Key.datasources } );
 		if ( !defaultDatasource.isEmpty() && configDatasources.containsKey( defaultDatasource ) ) {
