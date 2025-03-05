@@ -17,7 +17,6 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -27,7 +26,6 @@ import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StructCaster;
-import ortus.boxlang.runtime.jdbc.QueryParameter;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
@@ -95,12 +93,5 @@ public class ORMExecuteQuery extends BaseORMBIF {
 			return results.isEmpty() ? null : results.getFirst();
 		}
 		return Array.fromList( results );
-	}
-
-	private List<QueryParameter> processBindings( Array bindings ) {
-		if ( bindings == null ) {
-			return new ArrayList<>();
-		}
-		return new ArrayList<>();
 	}
 }
