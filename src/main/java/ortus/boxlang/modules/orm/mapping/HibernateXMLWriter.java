@@ -579,8 +579,8 @@ public class HibernateXMLWriter {
 			classElement.setAttribute( "entity-name", entity.getEntityName() );
 		}
 		if ( entity.isSubclass() ) {
-			if ( entity.getDiscriminator().get( Key._name ) != null ) {
-				classElement.setAttribute( "discriminator-value", entity.getDiscriminator().getAsString( Key._name ) );
+			if ( entity.getDiscriminator().get( Key.value ) != null ) {
+				classElement.setAttribute( "discriminator-value", entity.getDiscriminator().getAsString( Key.value ) );
 			}
 			// @TODO: This should be refactored to the parent entity's entityRecord.getEntityMeta().getEntityName(), so we take advantage of our entity name
 			// parsing / generation logic.
