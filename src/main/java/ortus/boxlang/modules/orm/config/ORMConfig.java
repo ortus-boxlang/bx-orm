@@ -235,7 +235,7 @@ public class ORMConfig {
 	/**
 	 * Whether to quote identifiers. If turned off column and table names with reserved words will fail to be created/updated
 	 */
-	public boolean						quoteIdentifiers		= true;
+	public boolean						quoteIdentifiers		= false;
 
 	/**
 	 * Enable or disable the use of threading for mapping multiple ORM entities concurrently.
@@ -344,8 +344,8 @@ public class ORMConfig {
 		if ( properties.containsKey( ORMKeys.eventHandling ) && properties.get( ORMKeys.eventHandling ) != null ) {
 			eventHandling = BooleanCaster.cast( properties.get( ORMKeys.eventHandling ) );
 		}
-		if ( properties.containsKey( ORMKeys.quoteIdentifiers ) && properties.get( ORMKeys.quoteIdentifiers ) != null ) {
-			quoteIdentifiers = BooleanCaster.cast( properties.get( ORMKeys.quoteIdentifiers ) );
+		if ( properties.containsKey( ORMKeys.quoteIdentifiers ) ) {
+			quoteIdentifiers = BooleanCaster.cast( properties.getOrDefault( ORMKeys.quoteIdentifiers, false ) );
 		}
 		if ( properties.containsKey( ORMKeys.flushAtRequestEnd ) && properties.get( ORMKeys.flushAtRequestEnd ) != null ) {
 			flushAtRequestEnd = BooleanCaster.cast( properties.get( ORMKeys.flushAtRequestEnd ) );
