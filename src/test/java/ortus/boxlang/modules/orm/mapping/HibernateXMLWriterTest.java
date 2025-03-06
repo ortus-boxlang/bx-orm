@@ -138,26 +138,26 @@ public class HibernateXMLWriterTest {
 	} )
 	@ParameterizedTest
 	public void testEntityAttributes( String sourceCode ) {
-		IStruct			meta		= getClassMetaFromCode( sourceCode );
+		IStruct			meta			= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta		entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document		doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
-		Node			classEl		= doc.getDocumentElement().getFirstChild();
-		NamedNodeMap	attrs		= classEl.getAttributes();
+		IEntityMeta		entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document		doc				= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Node			classEl			= doc.getDocumentElement().getFirstChild();
+		NamedNodeMap	classAttributes	= classEl.getAttributes();
 
-		assertThat( attrs.getNamedItem( "entity-name" ).getTextContent() )
+		assertThat( classAttributes.getNamedItem( "entity-name" ).getTextContent() )
 		    .isEqualTo( "Car" );
 
-		assertThat( attrs.getNamedItem( "table" ).getTextContent() )
+		assertThat( classAttributes.getNamedItem( "table" ).getTextContent() )
 		    .isEqualTo( "vehicles" );
 
-		assertThat( attrs.getNamedItem( "schema" ).getTextContent() )
+		assertThat( classAttributes.getNamedItem( "schema" ).getTextContent() )
 		    .isEqualTo( "foo" );
 
-		assertThat( attrs.getNamedItem( "catalog" ).getTextContent() )
+		assertThat( classAttributes.getNamedItem( "catalog" ).getTextContent() )
 		    .isEqualTo( "morefoo" );
 
-		assertThat( attrs.getNamedItem( "optimistic-lock" ).getTextContent() )
+		assertThat( classAttributes.getNamedItem( "optimistic-lock" ).getTextContent() )
 		    .isEqualTo( "all" );
 	}
 
@@ -552,6 +552,46 @@ public class HibernateXMLWriterTest {
 		Node columnNode = propertyNode.getFirstChild();
 		assertEquals( "varchar", columnNode.getAttributes().getNamedItem( "sql-type" ).getTextContent() );
 		assertEquals( "NameColumn", columnNode.getAttributes().getNamedItem( "name" ).getTextContent() );
+	}
+
+	@DisplayName( "It escapes reserved words in class and property names" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent table="case" {
+	    	property name="order" column="order";
+	    }
+	    """,
+	    """
+	    @Entity
+	    @Table({ "name" : "case" })
+	    class {
+	    	@Column({
+	    		name="order"
+	    	})
+	     	property name="order";
+	    }
+	    """
+	} )
+	public void testReservedWordEscaping( String sourceCode ) {
+		IStruct			meta			= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta		entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document		doc				= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+
+		Node			classEL			= doc.getDocumentElement().getFirstChild();
+		NamedNodeMap	classAttributes	= classEL.getAttributes();
+		assertThat( classAttributes.getNamedItem( "table" ).getTextContent() )
+		    .isEqualTo( "`case`" );
+
+		Node			propertyNode		= classEL.getFirstChild();
+		NamedNodeMap	propertyAttributes	= propertyNode.getAttributes();
+
+		assertThat( propertyAttributes.getNamedItem( "name" ).getTextContent() ).isEqualTo( "order" );
+		assertThat( propertyAttributes.getNamedItem( "type" ).getTextContent() ).isEqualTo( "string" );
+
+		Node columnNode = propertyNode.getFirstChild();
+		assertThat( columnNode.getAttributes().getNamedItem( "name" ).getTextContent() ).isEqualTo( "`order`" );
 	}
 
 	@DisplayName( "It does not map properties annotated with @Persistent false" )

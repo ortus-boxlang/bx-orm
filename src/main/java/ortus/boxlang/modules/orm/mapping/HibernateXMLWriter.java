@@ -18,6 +18,7 @@
 package ortus.boxlang.modules.orm.mapping;
 
 import java.util.List;
+import java.util.Set;
 import java.util.function.BiFunction;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -48,7 +49,7 @@ public class HibernateXMLWriter {
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime			runtime	= BoxRuntime.getInstance();
+	private static final BoxRuntime			runtime			= BoxRuntime.getInstance();
 
 	/**
 	 * The logger for the ORM application.
@@ -81,6 +82,71 @@ public class HibernateXMLWriter {
 	 * Whether to throw an exception when an error occurs during XML generation.
 	 */
 	boolean									throwOnErrors;
+
+	/**
+	 * Set of SQL reserved words (any SQL dialect) that need to be escaped when used in identifiers.
+	 */
+	private static final Set<String>		RESERVED_WORDS	= Set.of( "absolute", "access", "accessible", "action", "add", "after", "alias",
+	    "all", "allocate", "allow", "alter", "analyze", "and", "any", "application", "are", "array", "as", "asc",
+	    "asensitive", "assertion", "associate", "asutime", "asymmetric", "at", "atomic", "audit", "authorization", "aux",
+	    "auxiliary", "avg", "backup", "before", "begin", "between", "bigint", "binary", "bit", "bit_length", "blob",
+	    "boolean", "both", "breadth", "break", "browse", "bufferpool", "bulk", "by", "cache", "call", "called", "capture",
+	    "cardinality", "cascade", "cascaded", "case", "cast", "catalog", "ccsid", "change", "char", "char_length",
+	    "character", "character_length", "check", "checkpoint", "clob", "close", "cluster", "clustered", "coalesce",
+	    "collate", "collation", "collection", "collid", "column", "comment", "commit", "compress", "compute", "concat",
+	    "condition", "connect", "connection", "constraint", "constraints", "constructor", "contains", "containstable",
+	    "continue", "convert", "corresponding", "count", "count_big", "create", "cross", "cube", "current", "current_date",
+	    "current_default_transform_group", "current_lc_ctype", "current_path", "current_role", "current_server",
+	    "current_time", "current_timestamp", "current_timezone", "current_transform_group_for_type", "current_user", "cursor",
+	    "cycle", "data", "database", "databases", "date", "day", "day_hour", "day_microsecond", "day_minute", "day_second",
+	    "days", "db2general", "db2genrl", "db2sql", "dbcc", "dbinfo", "deallocate", "dec", "decimal", "declare", "default",
+	    "defaults", "deferrable", "deferred", "delayed", "delete", "deny", "depth", "deref", "desc", "describe", "descriptor",
+	    "deterministic", "diagnostics", "disallow", "disconnect", "disk", "distinct", "distinctrow", "distributed", "div",
+	    "do", "domain", "double", "drop", "dsnhattr", "dssize", "dual", "dummy", "dump", "dynamic", "each", "editproc",
+	    "else", "elseif", "enclosed", "encoding", "end", "end-exec", "end-exec1", "endexec", "equals", "erase", "errlvl",
+	    "escape", "escaped", "except", "exception", "excluding", "exclusive", "exec", "execute", "exists", "exit", "explain",
+	    "external", "extract", "false", "fenced", "fetch", "fieldproc", "file", "fillfactor", "filter", "final", "first",
+	    "float", "float4", "float8", "for", "force", "foreign", "found", "free", "freetext", "freetexttable", "from", "full",
+	    "fulltext", "function", "general", "generated", "get", "get_current_connection", "global", "go", "goto", "grant",
+	    "graphic", "group", "grouping", "handler", "having", "high_priority", "hold", "holdlock", "hour", "hour_microsecond",
+	    "hour_minute", "hour_second", "hours", "identified", "identity", "identity_insert", "identitycol", "if", "ignore",
+	    "immediate", "in", "including", "increment", "index", "indicator", "infile", "inherit", "initial", "initially",
+	    "inner", "inout", "input", "insensitive", "insert", "int", "int1", "int2", "int3", "int4", "int8", "integer",
+	    "integrity", "intersect", "interval", "into", "is", "isobid", "isolation", "iterate", "jar", "java", "join", "key",
+	    "keys", "kill", "language", "large", "last", "lateral", "leading", "leave", "left", "level", "like", "limit",
+	    "linear", "lineno", "lines", "linktype", "load", "local", "locale", "localtime", "localtimestamp", "locator",
+	    "locators", "lock", "lockmax", "locksize", "long", "longblob", "longint", "longtext", "loop", "low_priority", "lower",
+	    "ltrim", "map", "master_ssl_verify_server_cert", "match", "max", "maxextents", "maxvalue", "mediumblob", "mediumint",
+	    "mediumtext", "method", "microsecond", "microseconds", "middleint", "min", "minus", "minute", "minute_microsecond",
+	    "minute_second", "minutes", "minvalue", "mlslabel", "mod", "mode", "modifies", "modify", "module", "month", "months",
+	    "names", "national", "natural", "nchar", "nclob", "new", "new_table", "next", "no", "no_write_to_binlog", "noaudit",
+	    "nocache", "nocheck", "nocompress", "nocycle", "nodename", "nodenumber", "nomaxvalue", "nominvalue", "nonclustered",
+	    "none", "noorder", "not", "nowait", "null", "nullif", "nulls", "number", "numeric", "numparts", "nvarchar", "obid",
+	    "object", "octet_length", "of", "off", "offline", "offsets", "old", "old_table", "on", "online", "only", "open",
+	    "opendatasource", "openquery", "openrowset", "openxml", "optimization", "optimize", "option", "optionally", "or",
+	    "order", "ordinality", "out", "outer", "outfile", "output", "over", "overlaps", "overriding", "package", "pad",
+	    "parameter", "part", "partial", "partition", "path", "pctfree", "percent", "piecesize", "plan", "position",
+	    "precision", "prepare", "preserve", "primary", "print", "prior", "priqty", "privileges", "proc", "procedure",
+	    "program", "psid", "public", "purge", "queryno", "raiserror", "range", "raw", "read", "read_write", "reads",
+	    "readtext", "real", "reconfigure", "recovery", "recursive", "ref", "references", "referencing", "regexp", "relative",
+	    "release", "rename", "repeat", "replace", "replication", "require", "resignal", "resource", "restart", "restore",
+	    "restrict", "result", "result_set_locator", "return", "returns", "revoke", "right", "rlike", "role", "rollback",
+	    "rollup", "routine", "row", "rowcount", "rowguidcol", "rowid", "rownum", "rows", "rrn", "rtrim", "rule", "run",
+	    "runtimestatistics", "save", "savepoint", "schema", "schemas", "scope", "scratchpad", "scroll", "search", "second",
+	    "second_microsecond", "seconds", "secqty", "section", "security", "select", "sensitive", "separator", "session",
+	    "session_user", "set", "sets", "setuser", "share", "show", "shutdown", "signal", "similar", "simple", "size",
+	    "smallint", "some", "source", "space", "spatial", "specific", "specifictype", "sql", "sql_big_result",
+	    "sql_calc_found_rows", "sql_small_result", "sqlcode", "sqlerror", "sqlexception", "sqlid", "sqlstate", "sqlwarning",
+	    "ssl", "standard", "start", "starting", "state", "static", "statistics", "stay", "stogroup", "stores",
+	    "straight_join", "style", "subpages", "substr", "substring", "successful", "sum", "symmetric", "synonym", "sysdate",
+	    "sysfun", "sysibm", "sysproc", "system", "system_user", "table", "tablespace", "temporary", "terminated", "textsize",
+	    "then", "time", "timestamp", "timezone_hour", "timezone_minute", "tinyblob", "tinyint", "tinytext", "to", "top",
+	    "trailing", "tran", "transaction", "translate", "translation", "treat", "trigger", "trim", "true", "truncate",
+	    "tsequal", "type", "uid", "under", "undo", "union", "unique", "unknown", "unlock", "unnest", "unsigned", "until",
+	    "update", "updatetext", "upper", "usage", "use", "user", "using", "utc_date", "utc_time", "utc_timestamp", "validate",
+	    "validproc", "value", "values", "varbinary", "varchar", "varchar2", "varcharacter", "variable", "variant", "varying",
+	    "vcat", "view", "volumes", "waitfor", "when", "whenever", "where", "while", "window", "with", "within", "without",
+	    "wlm", "work", "write", "writetext", "xor", "year", "year_month", "zerofill", "zone" );
 
 	/**
 	 * Create a new Hibernate XML writer for the given entity metadata.
@@ -238,7 +304,7 @@ public class HibernateXMLWriter {
 		Element toManyNode = this.document.createElement( association.getAsString( Key.type ) );
 		if ( association.containsKey( ORMKeys.inverseJoinColumn ) ) {
 			// @TODO: Loop over all column values and create multiple <column> elements.
-			toManyNode.setAttribute( "column", association.getAsString( ORMKeys.inverseJoinColumn ) );
+			toManyNode.setAttribute( "column", escapeReservedWords( association.getAsString( ORMKeys.inverseJoinColumn ) ) );
 		}
 		if ( association.containsKey( Key._CLASS ) ) {
 			setEntityName( toManyNode, association.getAsString( Key._CLASS ), prop );
@@ -268,7 +334,7 @@ public class HibernateXMLWriter {
 				Element mapKeyNode = this.document.createElement( "map-key" );
 				theNode.appendChild( mapKeyNode );
 				// Note that Lucee doesn't support comma-delimited values in structKeyColumn
-				mapKeyNode.setAttribute( "column", association.getAsString( ORMKeys.structKeyColumn ) );
+				mapKeyNode.setAttribute( "column", escapeReservedWords( association.getAsString( ORMKeys.structKeyColumn ) ) );
 				if ( association.containsKey( ORMKeys.structKeyType ) ) {
 					mapKeyNode.setAttribute( "type", association.getAsString( ORMKeys.structKeyType ) );
 				}
@@ -282,7 +348,7 @@ public class HibernateXMLWriter {
 			Element elementNode = this.document.createElement( "element" );
 			theNode.appendChild( elementNode );
 			// Note that Lucee doesn't support comma-delimited values in elementColumn
-			elementNode.setAttribute( "column", association.getAsString( ORMKeys.elementColumn ) );
+			elementNode.setAttribute( "column", escapeReservedWords( association.getAsString( ORMKeys.elementColumn ) ) );
 			if ( association.containsKey( ORMKeys.elementType ) ) {
 				elementNode.setAttribute( "type", association.getAsString( ORMKeys.elementType ) );
 			}
@@ -311,7 +377,7 @@ public class HibernateXMLWriter {
 		if ( association.containsKey( Key.column ) ) {
 			Element keyNode = this.document.createElement( "key" );
 			// @TODO: Loop over all column values and create multiple <column> elements.
-			keyNode.setAttribute( "column", association.getAsString( Key.column ) );
+			keyNode.setAttribute( "column", escapeReservedWords( association.getAsString( Key.column ) ) );
 
 			if ( association.containsKey( ORMKeys.mappedBy ) ) {
 				keyNode.setAttribute( "property-ref", association.getAsString( ORMKeys.mappedBy ) );
@@ -358,9 +424,9 @@ public class HibernateXMLWriter {
 		if ( association.containsKey( Key.column ) ) {
 			// @TODO: Loop over all column values and create multiple <column> elements.
 			// Element columnNode = this.document.createElement( "column" );
-			// columnNode.setAttribute( "name", association.getAsString( Key.column ) );
+			// columnNode.setAttribute( "name", escapeReservedWords( association.getAsString( Key.column ) ) );
 			// theNode.appendChild( columnNode );
-			theNode.setAttribute( "column", association.getAsString( Key.column ) );
+			theNode.setAttribute( "column", escapeReservedWords( association.getAsString( Key.column ) ) );
 		}
 
 		// for attributes specific to each association type
@@ -395,10 +461,16 @@ public class HibernateXMLWriter {
 		Element		theNode				= this.document.createElement( "column" );
 		IStruct		columnInfo			= prop.getColumn();
 
-		List<Key>	stringProperties	= List.of( Key._DEFAULT, Key._name, Key.sqltype, ORMKeys.length, ORMKeys.precision, ORMKeys.scale );
+		List<Key>	stringProperties	= List.of( Key._DEFAULT, Key.sqltype, ORMKeys.length, ORMKeys.precision, ORMKeys.scale );
 		populateStringAttributes( theNode, columnInfo, stringProperties );
 
 		// non-simple attributes
+		if ( columnInfo.containsKey( Key._name ) ) {
+			String value = columnInfo.getAsString( Key._name );
+			if ( value != null && !value.isBlank() ) {
+				theNode.setAttribute( "name", escapeReservedWords( value ) );
+			}
+		}
 		if ( columnInfo.containsKey( ORMKeys.nullable ) ) {
 			theNode.setAttribute( "not-null", trueFalseFormat( !columnInfo.getAsBoolean( ORMKeys.nullable ) ) );
 		}
@@ -494,7 +566,7 @@ public class HibernateXMLWriter {
 		}
 		if ( data.containsKey( Key._name ) ) {
 			Element theNode = this.document.createElement( "discriminator" );
-			theNode.setAttribute( "column", data.getAsString( Key._name ) );
+			theNode.setAttribute( "column", escapeReservedWords( data.getAsString( Key._name ) ) );
 
 			// set conditional attributes
 			if ( data.containsKey( Key.type ) ) {
@@ -589,10 +661,10 @@ public class HibernateXMLWriter {
 			// classElement.setAttribute( "name", CFC_MAPPING_PREFIX + entity.getMeta().getAsString( ORMKeys.classFQN ) );
 			classElement.setAttribute( "lazy", "true" );
 			entityElement = this.document.createElement( "join" );
-			entityElement.setAttribute( "table", entity.getTableName() );
+			entityElement.setAttribute( "table", escapeReservedWords( entity.getTableName() ) );
 			classElement.appendChild( entityElement );
 			Element keyElement = this.document.createElement( "key" );
-			keyElement.setAttribute( "column", entity.getJoinColumn() );
+			keyElement.setAttribute( "column", escapeReservedWords( entity.getJoinColumn() ) );
 			entityElement.appendChild( keyElement );
 
 		}
@@ -634,7 +706,7 @@ public class HibernateXMLWriter {
 		if ( entity.isSimpleEntity() ) {
 			String tableName = entity.getTableName();
 			if ( tableName != null ) {
-				classElement.setAttribute( "table", tableName );
+				classElement.setAttribute( "table", escapeReservedWords( tableName ) );
 			}
 			if ( entity.getSchema() != null ) {
 				classElement.setAttribute( "schema", entity.getSchema() );
@@ -734,7 +806,7 @@ public class HibernateXMLWriter {
 		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
 		// COLUMN name
 		if ( columnInfo.containsKey( Key._NAME ) ) {
-			theNode.setAttribute( "column", columnInfo.getAsString( Key._NAME ) );
+			theNode.setAttribute( "column", escapeReservedWords( columnInfo.getAsString( Key._NAME ) ) );
 		}
 		if ( prop.getUnsavedValue() != null ) {
 			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );
@@ -743,6 +815,21 @@ public class HibernateXMLWriter {
 			theNode.setAttribute( "insert", trueFalseFormat( columnInfo.getAsBoolean( ORMKeys.insertable ) ) );
 		}
 		return theNode;
+	}
+
+	/**
+	 * Escape SQL reserved words in a table or column name.
+	 * 
+	 * @param value The table or column name to escape
+	 */
+	private String escapeReservedWords( String value ) {
+		if ( value == null || value.isBlank() ) {
+			return value;
+		}
+		if ( RESERVED_WORDS.contains( value.toLowerCase() ) ) {
+			return "`" + value + "`";
+		}
+		return value;
 	}
 
 	/**
