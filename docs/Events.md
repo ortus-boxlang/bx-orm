@@ -75,6 +75,11 @@ class{
 
 ## BoxLang Interception Points
 
+These interception points can be used for advanced, deep integration with bx-orm:
+
+* ORMPreConfigLoad - Allows modification of ORM configuration immediately *before* the configuration is parsed.
+* ORMPreConfigLoad - Allows modification of ORM configuration immediately *after* the configuration is parsed.
+
 Coming soon:
 
 * `on_save`

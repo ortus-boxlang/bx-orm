@@ -259,8 +259,19 @@ public class ORMConfig {
 			properties = new Struct();
 		}
 		this.requestContext = context;
+
+		runtime.getInterceptorService().announce( ORMKeys.EVENT_ORM_PRE_CONFIG_LOAD, Struct.of(
+		    Key.properties, properties,
+		    "context", context
+		) );
+
 		implementBackwardsCompatibility( properties );
 		process( properties );
+
+		runtime.getInterceptorService().announce( ORMKeys.EVENT_ORM_POST_CONFIG_LOAD, Struct.of(
+		    Key.properties, properties,
+		    "context", context
+		) );
 	}
 
 	/**
@@ -296,13 +307,14 @@ public class ORMConfig {
 	 * <li><code>skipCFCWithError</code> -> <code>ignoreParseErrors</code></li>
 	 * <li><code>cfclocation</code> -> <code>entityPaths</code></li>
 	 * </ul>
+	 * 
+	 * @deprecated This entire method should move to the bx-compat-cfml module.
 	 *
 	 * @param properties Struct of ORM configuration properties.
 	 */
 	public void implementBackwardsCompatibility( IStruct properties ) {
 
 		// backwards compatibility for `skipCFCWithError`
-		// TODO: Handle 'skipCFCWithError' true-by-default setting for backwards compatibility?
 		if ( properties.containsKey( ORMKeys.skipCFCWithError ) && properties.get( ORMKeys.skipCFCWithError ) != null ) {
 			properties.computeIfAbsent(
 			    ORMKeys.ignoreParseErrors,
@@ -316,8 +328,9 @@ public class ORMConfig {
 			    key -> properties.get( ORMKeys.cfclocation )
 			);
 		}
-		// TODO: Handle 'autoManageSession' true-by-default setting for backwards compatibility?
-		// TODO: Handle 'flushAtRequestEnd' true-by-default setting for backwards compatibility?
+		// TODO: Handle 'skipCFCWithError' true-by-default setting for backwards compatibility
+		// TODO: Handle 'autoManageSession' true-by-default setting for backwards compatibility
+		// TODO: Handle 'flushAtRequestEnd' true-by-default setting for backwards compatibility
 	}
 
 	/**
