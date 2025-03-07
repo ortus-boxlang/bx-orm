@@ -78,23 +78,15 @@ public class ORMExecuteQuery extends BaseORMBIF {
 			if ( paramsArg instanceof Boolean || paramsArg instanceof String ) {
 				isUnique = BooleanCaster.cast( paramsArg );
 			} else if ( paramsArg instanceof Array paramsArray ) {
-				params = paramsArray.stream().map( param -> {
-					if ( param instanceof String ) {
-						CastAttempt<LocalTime> timeCastAttempt = TimeCaster.attempt( param );
-						if ( timeCastAttempt.wasSuccessful() ) {
-							return timeCastAttempt.get();
-						}
-						CastAttempt<DateTime> dateCastAttempt = DateTimeCaster.attempt( param );
-						if ( dateCastAttempt.wasSuccessful() ) {
-							System.out.println( "Original: " + param );
-							System.out.println( "Cast date: " + dateCastAttempt.get().toISOString() );
-							return dateCastAttempt.get().toDate();
-						}
-						return param;
-					} else {
-						return param;
-					}
-				} ).collect( BLCollector.toArray() );
+				params = paramsArray.stream().map( param -> castParam( param ) ).collect( BLCollector.toArray() );
+			} else if ( paramsArg instanceof Struct paramsStruct ) {
+				params = paramsStruct.entrySet().stream()
+				    .map( entry -> {
+					    entry.setValue( castParam( entry.getValue() ) );
+					    return entry;
+				    } ).collect( BLCollector.toStruct() );
+			} else {
+				params = paramsArg;
 			}
 		}
 
@@ -115,5 +107,23 @@ public class ORMExecuteQuery extends BaseORMBIF {
 			return results.isEmpty() ? null : results.getFirst();
 		}
 		return Array.fromList( results );
+	}
+
+	private Object castParam( Object param ) {
+		if ( param instanceof String ) {
+			CastAttempt<LocalTime> timeCastAttempt = TimeCaster.attempt( param );
+			if ( timeCastAttempt.wasSuccessful() ) {
+				return timeCastAttempt.get();
+			}
+			CastAttempt<DateTime> dateCastAttempt = DateTimeCaster.attempt( param );
+			if ( dateCastAttempt.wasSuccessful() ) {
+				System.out.println( "Original: " + param );
+				System.out.println( "Cast date: " + dateCastAttempt.get().toISOString() );
+				return dateCastAttempt.get().toDate();
+			}
+			return param;
+		} else {
+			return param;
+		}
 	}
 }
