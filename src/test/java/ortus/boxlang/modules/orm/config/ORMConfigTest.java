@@ -122,7 +122,7 @@ public class ORMConfigTest extends BaseORMTest {
 		// cache config
 		assertTrue( config.secondaryCacheEnabled );
 		assertEquals( "ehCache", config.cacheProvider );
-		assertEquals( "/cbapp/config/ehcache.xml", config.cacheConfig );
+		assertEquals( "/cbapp/config/ehcache.xml", config.cacheConfigFile );
 
 		// logging
 		assertTrue( config.logSQL );

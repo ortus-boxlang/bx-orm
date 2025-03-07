@@ -169,4 +169,22 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		} );
 	}
 
+	@DisplayName( "It can retrieve and re-retrieve cache cache-enabled entries" )
+	@Test
+	public void getRetrieveSubClassCacheEntity() {
+		// @formatter:off
+		instance.executeSource( """
+		result = ormExecuteQuery( "FROM AbstractCategory WHERE category = ?", [ "general" ] );
+		ormClearSession();
+		categoriesReloaded = result.map( ( cat ) => EntityLoadByPK( "AbstractCategory", cat.getcatid() ) )
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isInstanceOf( Array.class );
+		assertThat( ArrayCaster.cast( item ).size() ).isEqualTo( 2 );
+		Object reloaded = variables.get( Key.of( "categoriesReloaded" ) );
+		assertThat( reloaded ).isInstanceOf( Array.class );
+		assertThat( ArrayCaster.cast( reloaded ).size() ).isEqualTo( 2 );
+	}
+
 }

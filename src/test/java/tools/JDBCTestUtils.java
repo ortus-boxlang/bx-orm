@@ -335,6 +335,27 @@ public class JDBCTestUtils {
 			('Another test comment','Luis Majano','127.0.0.1','lmajano@gmail.com','','2021-05-05 15:15:06',b'1','2021-05-05 15:15:06',b'0','ff808081793cf2c801793e2b749b002a','779cd234-a444-11eb-ab6f-0290cc502ae3'),
 			('My comment is meant to test your limits','Joe Hacker','127.0.0.1','joe@hacker.com','','2021-05-05 15:15:29',b'0','2021-05-05 15:15:42',b'0','ff808081793cf2c801793e2bcd53002b','779cd234-a444-11eb-ab6f-0290cc502ae3');
 		""");
+
+		datasource.execute( """
+			INSERT INTO `abstract_categories` (`category_id`, `category`, `description`, `modifydate`, `testValue`)
+			VALUES
+				('3A2C516C-41CE-41D3-A9224EA690ED1128','Presentations','<p style=\"margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Lucida Grande; color: #333333\">Presso</p>','2011-02-18 00:00:00',NULL),
+				('40288110380cda3301382644c7f90008','LM','LM<br>','2012-06-10 23:00:00',NULL),
+				('402881882814615e012826481061000c','Marc','This is marcs category<br>','2010-04-21 22:00:00',NULL),
+				('402881882814615e01282bb047fd001e','Cool Wow','A cool wow category<br>','2010-04-22 22:00:00',NULL),
+				('402881882b89b49b012b9201bda80002','PascalNews','PascalNews','2010-10-09 00:00:00',NULL),
+				('402881a144f57bfd0144fa47bf040007','ads','asdf','2014-01-25 00:00:00',NULL),
+				('5898F818-A9B6-4F5D-96FE70A31EBB78AC','Release','<p style=\"margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Lucida Grande; color: #333333\">Releases</p>','2009-04-18 11:48:53',NULL),
+				('88B689EA-B1C0-8EEF-143A84813ACADA35','general','A general category','2010-03-31 12:53:21',NULL),
+				('88B689EA-B1C0-8EEF-143A84813BCADA35','general','A second test general category','2010-03-31 12:53:21',NULL),
+				('88B6C087-F37E-7432-A13A84D45A0F703B','News','A news cateogyr','2009-04-18 11:48:53',NULL),
+				('99fc94fd3b98c834013b98c9b2140002','Fancy','Fancy Editor<br>','2012-12-14 00:00:00',NULL),
+				('99fc94fd3b9a459d013b9db89c060002','Markus','Hello Markus<br>','2012-12-14 15:00:00',NULL),
+				('A13C0DB0-0CBC-4D85-A5261F2E3FCBEF91','Training','unittest','2014-05-07 19:05:21',NULL),
+				('ff80808128c9fa8b0128cc3af5d90007','Geeky Stuff','Geeky Stuff','2010-05-25 16:00:00',NULL),
+				('ff80808128c9fa8b0128cc3b20bf0008','ColdBox','ColdBox','2010-05-23 16:00:00',NULL),
+				('ff80808128c9fa8b0128cc3b7cdd000a','ColdFusion','ColdFusion','2010-05-23 16:00:00',NULL);
+		""");
 		// @formatter:on
 	}
 }

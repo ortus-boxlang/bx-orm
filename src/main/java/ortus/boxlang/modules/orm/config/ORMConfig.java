@@ -33,6 +33,7 @@ import org.hibernate.tool.schema.Action;
 import ortus.boxlang.modules.orm.config.naming.BoxLangClassNamingStrategy;
 import ortus.boxlang.modules.orm.config.naming.MacroCaseNamingStrategy;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.config.segments.CacheConfig;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.interop.DynamicObject;
@@ -52,6 +53,8 @@ public class ORMConfig {
 	 * Class locator for loading boxlang classes.
 	 */
 	private static final ClassLocator	CLASS_LOCATOR			= BoxRuntime.getInstance().getClassLocator();
+
+	private static final String			DEFAULT_CACHEPROVIDER	= "BoxCacheProvider";
 
 	/**
 	 * Runtime
@@ -83,7 +86,12 @@ public class ORMConfig {
 	 * Specify a string path to the secondary cache configuration file. This configuration file must be formatted to the specification of the jCache
 	 * provider specified in the `cacheProvider` setting.
 	 */
-	public String						cacheConfig;
+	public String						cacheConfigFile;
+
+	/**
+	 * A structure of properties to configure the secondary cache provider
+	 */
+	public IStruct						cacheConfigProperties	= CacheConfig.DEFAULTS;
 
 	/**
 	 * Specify the alias name OR full class path of a jCache provider to use for the second-level cache. Must be one of the following:
@@ -92,7 +100,7 @@ public class ORMConfig {
 	 * <li><code>com.foo.MyJCacheProvider</code> - String path to a custom jCache provider loaded into your BoxLang application.</li>
 	 * </ul>
 	 */
-	public String						cacheProvider;
+	public String						cacheProvider			= DEFAULT_CACHEPROVIDER;
 
 	/**
 	 * Specifies the directory (or array of directories) that should be used to
@@ -378,9 +386,14 @@ public class ORMConfig {
 
 		// String properties: Check key existence, check for null, and check for empty
 		// or blank (whitespace-only) strings
-		if ( properties.containsKey( ORMKeys.cacheConfig ) && properties.get( ORMKeys.cacheConfig ) != null ) {
-			cacheConfig = properties.getAsString( ORMKeys.cacheConfig );
+		if ( properties.containsKey( ORMKeys.cacheConfig ) && properties.get( ORMKeys.cacheConfig ) != null
+		    && properties.get( ORMKeys.cacheConfig ) instanceof String ) {
+			cacheConfigFile = properties.getAsString( ORMKeys.cacheConfig );
+		} else if ( properties.containsKey( ORMKeys.cacheConfig ) && properties.get( ORMKeys.cacheConfig ) != null
+		    && properties.get( ORMKeys.cacheConfig ) instanceof IStruct configStruct ) {
+			cacheConfigProperties = configStruct;
 		}
+
 		if ( properties.containsKey( ORMKeys.cacheProvider ) && properties.get( ORMKeys.cacheProvider ) != null
 		    && !properties.getAsString( ORMKeys.cacheProvider ).isBlank() ) {
 			cacheProvider = properties.getAsString( ORMKeys.cacheProvider );
@@ -537,8 +550,8 @@ public class ORMConfig {
 			configuration.setProperty( AvailableSettings.USE_QUERY_CACHE, "true" );
 			configuration.setProperty( AvailableSettings.CACHE_REGION_FACTORY, "jcache" );
 			configuration.setProperty( "hibernate.javax.cache.provider", this.getJCacheProviderClassPath() );
-			if ( this.cacheConfig != null && !this.cacheConfig.isEmpty() ) {
-				configuration.setProperty( "hibernate.javax.cache.uri", this.cacheConfig );
+			if ( this.cacheConfigFile != null && !this.cacheConfigFile.isEmpty() ) {
+				configuration.setProperty( "hibernate.javax.cache.uri", this.cacheConfigFile );
 			}
 		}
 
@@ -656,34 +669,14 @@ public class ORMConfig {
 	 * Get the `cacheProvider` setting as a path to a JCache provider.
 	 */
 	public String getJCacheProviderClassPath() {
-		String upperAliasName = cacheProvider.toUpperCase();
-		return JCacheProvider.contains( upperAliasName ) ? JCacheProvider.valueOf( upperAliasName ).toClassPath()
-		    : cacheProvider;
+		return "ortus.boxlang.modules.orm.hibernate.cache.BoxHibernateCachingProvider";
 	}
 
-	/**
-	 * Enumeration of possible values for the `cacheProvider` configuration setting.
-	 * <p>
-	 * Each value must be a JCache provider.
-	 */
-	private enum JCacheProvider {
-
-		EHCACHE;
-
-		public String toClassPath() {
-			return switch ( this ) {
-				case EHCACHE -> "org.ehcache.jsr107.EhcacheCachingProvider";
-			};
-		}
-
-		/**
-		 * Check if the provided alias is a valid JCache provider.
-		 *
-		 * @param alias String alias name to look for in the JCacheProvider enum.
-		 */
-		public static boolean contains( String alias ) {
-			return Arrays.stream( JCacheProvider.values() ).anyMatch( provider -> provider.name().equals( alias ) );
-		}
+	public Properties getJCacheDefaultProperties() {
+		Properties properties = new Properties();
+		properties.setProperty( "hibernate.cache.region_prefix", datasource.getName() + "_" );
+		properties.setProperty( "hibernate.javax.cache.provider", getJCacheProviderClassPath() );
+		return properties;
 	}
 
 	/**

@@ -29,6 +29,8 @@ class{
 		"logSQL"        : "true",
 		"dialect"       : "MySQLDialect",
 		"dbcreate"      : "dropcreate",
+		"cacheprovider" : "ConcurrentHashMap",
+		"secondarycacheenabled" : true
 		// , "namingStrategy": "src.test.resources.app.CustomNamingStrategy"
 	}
 	this.ormEnabled = "true";
