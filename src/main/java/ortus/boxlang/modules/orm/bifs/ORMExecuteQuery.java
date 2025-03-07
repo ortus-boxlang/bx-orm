@@ -17,6 +17,7 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
 
@@ -25,13 +26,18 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.dynamic.casters.CastAttempt;
+import ortus.boxlang.runtime.dynamic.casters.DateTimeCaster;
 import ortus.boxlang.runtime.dynamic.casters.StructCaster;
+import ortus.boxlang.runtime.dynamic.casters.TimeCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.Array;
+import ortus.boxlang.runtime.types.DateTime;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.util.BLCollector;
 import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
@@ -71,8 +77,24 @@ public class ORMExecuteQuery extends BaseORMBIF {
 		if ( paramsArg != null ) {
 			if ( paramsArg instanceof Boolean || paramsArg instanceof String ) {
 				isUnique = BooleanCaster.cast( paramsArg );
-			} else {
-				params = paramsArg;
+			} else if ( paramsArg instanceof Array paramsArray ) {
+				params = paramsArray.stream().map( param -> {
+					if ( param instanceof String ) {
+						CastAttempt<LocalTime> timeCastAttempt = TimeCaster.attempt( param );
+						if ( timeCastAttempt.wasSuccessful() ) {
+							return timeCastAttempt.get();
+						}
+						CastAttempt<DateTime> dateCastAttempt = DateTimeCaster.attempt( param );
+						if ( dateCastAttempt.wasSuccessful() ) {
+							System.out.println( "Original: " + param );
+							System.out.println( "Cast date: " + dateCastAttempt.get().toISOString() );
+							return dateCastAttempt.get().toDate();
+						}
+						return param;
+					} else {
+						return param;
+					}
+				} ).collect( BLCollector.toArray() );
 			}
 		}
 

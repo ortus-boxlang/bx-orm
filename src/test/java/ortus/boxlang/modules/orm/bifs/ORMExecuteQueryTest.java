@@ -187,4 +187,27 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( ArrayCaster.cast( reloaded ).size() ).isEqualTo( 2 );
 	}
 
+	@DisplayName( "It can can query by a date range" )
+	@Test
+	public void testStringDateRangeQuery() {
+		// @formatter:off
+		instance.executeSource( """
+		result = ormExecuteQuery(
+			"FROM cbContent where createdDate BETWEEN ? AND ?",
+			[ "2013-07-11", "2013-07-13" ],
+			false
+		);
+		creators = result.map( ( entity ) => entity.getCreator() );
+
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isInstanceOf( Array.class );
+		assertThat( ArrayCaster.cast( item ).size() ).isEqualTo( 2 );
+
+		Object creators = variables.get( Key.of( "creators" ) );
+		assertThat( creators ).isInstanceOf( Array.class );
+		assertThat( ArrayCaster.cast( creators ).size() ).isEqualTo( 2 );
+	}
+
 }
