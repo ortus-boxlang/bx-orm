@@ -4,7 +4,8 @@
 class
 	persistent="true"
 	entityname="cbAuthor"
-	table     ="cb_author"
+	// we are using a reserved word here for testing
+	table     ="users"
 	batchsize ="25"
 	extends   ="BaseEntity"
 	cachename ="cbAuthor"

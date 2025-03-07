@@ -819,10 +819,10 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Escape SQL reserved words in a table or column name.
-	 * 
+	 *
 	 * @param value The table or column name to escape
 	 */
-	private String escapeReservedWords( String value ) {
+	public static String escapeReservedWords( String value ) {
 		if ( value == null || value.isBlank() ) {
 			return value;
 		}
@@ -830,6 +830,10 @@ public class HibernateXMLWriter {
 			return "`" + value + "`";
 		}
 		return value;
+	}
+
+	public static String unescapeReservedWords( String value ) {
+		return value.replaceAll( "`", "" );
 	}
 
 	/**

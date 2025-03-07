@@ -44,12 +44,28 @@ public class ORMGetSessionFactoryTest extends BaseORMTest {
 		// assertInstanceOf( SessionFactoryImpl.class, variables.get( result ) );
 	}
 
+	@DisplayName( "It can get the entity metadata record through the session factor" )
+	@Test
+	public void testEntitySessionMetadata() {
+		// @formatter:off
+		instance.executeSource( """
+			result = ormGetSessionFactory().getClassMetaData( "cbAuthor" );
+			result2 = ormGetSessionFactory().getClassMetaData( "cbContent" );
+			tableName = result.getTableName();
+			discriminatorColumn = result2.getDiscriminatorColumnName();
+		""", context );
+		// @formatter:on
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.getAsString( Key.of( "tableName" ) ) ).isEqualTo( "users" );
+		assertThat( variables.getAsString( Key.of( "discriminatorColumn" ) ) ).isEqualTo( "contentType" );
+	}
+
 	@DisplayName( "It throws if the named datasource does not exist" )
 	@Test
 	public void testBadDSN() {
 		assertThrows(
 		    DatabaseException.class,
-		    () -> instance.executeSource( "result = ormGetSessionFactory( 'nonexistentDSN' ) ", context )
+		    () -> instance.executeSource( "result = ormGetSessionFactory( 'nonexistentDSN' )", context )
 		);
 	}
 

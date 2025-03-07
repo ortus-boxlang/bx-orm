@@ -63,7 +63,7 @@ public class JDBCTestUtils {
 
 		//@formatter:off
 		datasource.execute("""
-		INSERT INTO `cb_author` (`firstName`, `lastName`, `email`, `username`, `password`, `isActive`, `lastLogin`, `createdDate`, `biography`, `preferences`, `modifiedDate`, `isDeleted`, `isPasswordReset`, `is2FactorAuth`, `authorID`)
+		INSERT INTO `users` (`firstName`, `lastName`, `email`, `username`, `password`, `isActive`, `lastLogin`, `createdDate`, `biography`, `preferences`, `modifiedDate`, `isDeleted`, `isPasswordReset`, `is2FactorAuth`, `authorID`)
 		VALUES
 			('Luis','Majano','lmajano@gmail.com','lmajano','$2a$12$KU4n4ZQf3cd/ULCuvc8PIO9VrQKi7eKbcEuQaILTJ/sdcjXvT31YK',b'1','2021-02-18 17:54:10','2013-07-11 11:06:39','','{\"sidemenuCollapse\":\"yes\",\"linkedin\":\"\",\"sidebarState\":\"yes\",\"markup\":\"HTML\",\"website\":\"\",\"editor\":\"ckeditor\",\"twitter\":\"http://twitter.com/lmajano\",\"facebook\":\"http://facebook.com/lmajano\"}','2021-02-18 17:54:10',b'0',b'0',b'0','77abddba-a444-11eb-ab6f-0290cc502ae3'),
 			('Lui','Majano','lmajano@ortussolutions.com','luismajano','$2a$12$KU4n4ZQf3cd/ULCuvc8PIO9VrQKi7eKbcEuQaILTJ/sdcjXvT31YK',b'1','2015-07-29 14:38:46','2013-07-11 11:07:23','','{\"GOOGLE\":\"\",\"EDITOR\":\"ckeditor\",\"TWITTER\":\"http:\\/\\/twitter.com\\/lmajano\",\"FACEBOOK\":\"http:\\/\\/facebook.com\\/lmajano\"}','2017-06-21 18:29:30',b'0',b'0',b'0','77abdf9a-a444-11eb-ab6f-0290cc502ae3'),

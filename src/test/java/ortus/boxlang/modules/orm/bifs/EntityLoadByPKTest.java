@@ -179,7 +179,8 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
-				result = entityLoadByPK( "cbEntry", "779cc4e2-a444-11eb-ab6f-0290cc502ae3" ).getSlug();
+				entry = entityLoadByPK( "cbEntry", "779cc4e2-a444-11eb-ab6f-0290cc502ae3" );
+				result = entry.getSlug();
 			""",
 			context
 		);
