@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
 public class EntitySaveTest extends BaseORMTest {
@@ -61,6 +62,56 @@ public class EntitySaveTest extends BaseORMTest {
 		// @formatter:on
 		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
 		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Toyota" );
+	}
+
+	@DisplayName( "It tests the dirty states a of a new and saved entity" )
+	@Test
+	public void testDirtyStates() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			function isDirty( entity ){
+					var sessionFactory = ormGetSessionFactory();
+					var session = ormGetSession();
+					var md = sessionFactory.getClassMetaData( "AbstractCategory" );
+					println( "Identifier: " & md.getIdentifier( arguments.entity ) );
+					var snapshot = md.getDatabaseSnapshot( md.getIdentifier( arguments.entity ), session );
+					var currentState = md.getPropertyValues( arguments.entity );
+					if( isNull( snapshot ) ){
+						println( "Snapshot is null" );
+						return false;
+					}
+					var modified = md.findModified(
+						snapshot,
+						currentState,
+						arguments.entity,
+						session
+					);
+					var dirtyArray = !isNull( local.modified ) ? modified : [];
+
+					return ( arrayLen( dirtyArray ) > 0 );
+			}
+			transaction {
+				try {
+					category = entityNew( "AbstractCategory", { category : "Testing", description: "foo" } );
+					preSaveDirty = isDirty( category );
+					entitySave( category, true );
+					ormFlush();
+					postSaveDirty = isDirty( category );
+					category.setDescription( "bar" );
+					postModifyDirty = isDirty( category );
+				} finally {
+					transactionRollback();
+				}
+			}
+			ormClearSession();
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsBoolean( Key.of( "preSaveDirty" ) ) ).isFalse();
+		assertThat( variables.getAsBoolean( Key.of( "postSaveDirty" ) ) ).isFalse();
+		assertThat( variables.getAsBoolean( Key.of( "postModifyDirty" ) ) ).isTrue();
 	}
 
 }
