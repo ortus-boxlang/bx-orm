@@ -102,11 +102,15 @@ public class ORMExecuteQuery extends BaseORMBIF {
 		if ( isUnique ) {
 			options.put( ORMKeys.maxResults, 1 );
 		}
-		List<?> results = new HQLQuery( context, arguments.getAsString( ORMKeys.hql ), params, options ).execute();
-		if ( options.getAsBoolean( ORMKeys.unique ) ) {
-			return results.isEmpty() ? null : results.getFirst();
+		Object results = new HQLQuery( context, arguments.getAsString( ORMKeys.hql ), params, options ).execute();
+		if ( results instanceof List<?> castList ) {
+			if ( options.getAsBoolean( ORMKeys.unique ) ) {
+				return castList.isEmpty() ? null : castList.getFirst();
+			}
+			return Array.fromList( castList );
+		} else {
+			return results;
 		}
-		return Array.fromList( results );
 	}
 
 	private Object castParam( Object param ) {

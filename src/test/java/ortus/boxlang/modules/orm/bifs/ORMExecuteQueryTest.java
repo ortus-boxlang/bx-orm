@@ -210,4 +210,52 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( ArrayCaster.cast( creators ).size() ).isEqualTo( 2 );
 	}
 
+	@DisplayName( "It can can delete a record" )
+	@Test
+	public void testDelete() {
+		// @formatter:off
+		instance.executeSource( """
+		transaction {
+			try{
+				result = ormExecuteQuery(
+					"DELETE FROM AbstractCategory WHERE category = ?",
+					[ "Training" ]
+				);
+			} catch( any e ){
+				rethrow;
+			} finally {
+				transactionRollback();
+			}
+		}
+
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "It can can update a record" )
+	@Test
+	public void canUpdateARecord() {
+		// @formatter:off
+		instance.executeSource( """
+		transaction {
+			try{
+				result = ormExecuteQuery(
+					"UPDATE AbstractCategory SET description = ? WHERE category = ?",
+					[ "unittest updates", "Training" ]
+				);
+			} catch( any e ){
+				rethrow;
+			} finally {
+				transactionRollback();
+			}
+		}
+
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isEqualTo( 1 );
+	}
+
 }
