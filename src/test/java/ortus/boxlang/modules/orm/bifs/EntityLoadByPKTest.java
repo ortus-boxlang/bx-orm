@@ -187,4 +187,21 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		// @formatter:on
 		assertEquals( "another-test", variables.get( result ) );
 	}
+
+	@DisplayName( "It can load an entity with a case-insensitive entity name" )
+	@Test
+	public void canLoadAnEntityCaseInsensitively() {
+		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
+
+		// @formatter:off
+		instance.executeSource(
+			"""
+				entry = entityLoadByPK( "cbentry", "779cc4e2-a444-11eb-ab6f-0290cc502ae3" );
+				result = entry.getSlug();
+			""",
+			context
+		);
+		// @formatter:on
+		assertEquals( "another-test", variables.get( result ) );
+	}
 }

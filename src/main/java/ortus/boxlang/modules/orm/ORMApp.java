@@ -259,7 +259,7 @@ public class ORMApp {
 		// @TODO: Support composite keys.
 		String			keyType			= getKeyJavaType( session, entityName ).getSimpleName();
 		Serializable	id				= ( Serializable ) GenericCaster.cast( context, keyValue, keyType );
-		var				entity			= session.get( entityName, id );
+		var				entity			= session.get( entityRecord.getEntityName(), id );
 		// @TODO: announce postLoad event
 		return ( IClassRunnable ) entity;
 	}
@@ -275,7 +275,7 @@ public class ORMApp {
 	public Array loadEntitiesByFilter( RequestBoxContext context, String entityName, IStruct filter, IStruct options ) {
 		EntityRecord			entityRecord	= this.lookupEntity( entityName, true );
 		Session					session			= ORMRequestContext.getForContext( context ).getSession( entityRecord.getDatasource() );
-		org.hibernate.Criteria	criteria		= session.createCriteria( entityName );
+		org.hibernate.Criteria	criteria		= session.createCriteria( entityRecord.getEntityName() );
 
 		if ( filter != null ) {
 			entityRecord.getEntityMeta().getProperties()
@@ -343,7 +343,8 @@ public class ORMApp {
 	 * TODO: We're using Hibernate's deprecated metamodel. Refactor to use JPA metamodel.
 	 */
 	public Class<?> getKeyJavaType( Session session, String entityName ) {
-		ClassMetadata metadata = session.getSessionFactory().getClassMetadata( entityName );
+		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
+		ClassMetadata	metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
 		return metadata.getIdentifierType().getReturnedClass();
 	}
 
