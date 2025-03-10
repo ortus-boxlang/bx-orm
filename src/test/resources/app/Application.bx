@@ -1,6 +1,8 @@
 class{
 	this.name = "BXORMTest";
 
+	this.mappings[ "/root" ] = "src/test/resources/app";
+
 	this.datasources={
 		"TestDB" = {
 			"driver"                 = "mysql",
@@ -22,9 +24,14 @@ class{
 		}
 	};
 	this.datasource = "TestDB";
+
+	println( "root expanded: " & this.mappings[ "/root" ] );
+	println( "expanded expansion: " & expandPath( "/root/models" ) );
+
 	this.ormSettings={
 		"datasource"    : "TestDB",
-		"entityPaths"   : [ "src/test/resources/app/models" ],
+		// we use the mapping here to make sure class resolver issues and path walking are handled
+		"entityPaths"   : [ "/root/models" ],
 		"saveMapping"   : "true",
 		"logSQL"        : "true",
 		"dialect"       : "MySQLDialect",

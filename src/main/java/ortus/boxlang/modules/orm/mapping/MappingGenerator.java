@@ -106,7 +106,7 @@ public class MappingGenerator {
 	/**
 	 * List of paths to search for entities.
 	 */
-	private List<Path>				entityPaths					= new ArrayList<>();
+	private List<IStruct>			entityPaths					= new ArrayList<IStruct>();
 
 	/**
 	 * ALL ORM configuration.
@@ -134,7 +134,6 @@ public class MappingGenerator {
 		this.config					= config;
 		this.saveAlongsideEntity	= config.saveMapping;
 		this.context				= context;
-		// this.appDirectory = context.getParentOfType( ApplicationBoxContext.class ).getApplication().getApplicationDirectory();
 
 		if ( !this.saveAlongsideEntity ) {
 			this.saveDirectory = Path.of( FileSystemUtil.getTempDirectory(), ENTITY_TEMP_FOLDER, String.valueOf( config.hashCode() ) ).toString();
@@ -142,11 +141,19 @@ public class MappingGenerator {
 		}
 
 		for ( String entityPath : config.entityPaths ) {
-			this.entityPaths.add( FileSystemUtil.expandPath( context, entityPath ).absolutePath() );
+			this.entityPaths.add( Struct.of(
+			    ORMKeys.mappedPath, entityPath,
+			    ORMKeys.expandedPath, FileSystemUtil.expandPath( context, entityPath ).absolutePath().toString()
+			) );
 		}
 
 		if ( this.entityPaths.isEmpty() ) {
-			this.entityPaths.add( FileSystemUtil.expandPath( context, "." ).absolutePath() );
+			this.entityPaths.add(
+			    Struct.of(
+			        ORMKeys.mappedPath, "/",
+			        ORMKeys.expandedPath, FileSystemUtil.expandPath( context, "." ).absolutePath().toString()
+			    )
+			);
 			logger.warn(
 			    "No entity paths found in ORM configuration; defaulting to app root. Which makes things REAALLLLYYYY SLOW!! (You should STRONGLY consider setting an 'entityPaths' array in your ORM settings.)"
 			);
@@ -224,10 +231,12 @@ public class MappingGenerator {
 	 *
 	 * @return A list of structs containing the location and file name of each discovered entity.
 	 */
-	private ArrayList<IStruct> discoverBLClasses( List<Path> entityPaths ) {
+	private ArrayList<IStruct> discoverBLClasses( List<IStruct> entityPaths ) {
 		return entityPaths
 		    .stream()
-		    .flatMap( path -> {
+		    .flatMap( record -> {
+			    String mappedPath = record.getAsString( ORMKeys.mappedPath );
+			    Path path		= Path.of( record.getAsString( ORMKeys.expandedPath ) );
 			    try {
 				    // TODO: Return path.parent() alongside each discovered entity file so we know the entity location / mapping and can get a correct FQN.
 				    return Files.walk( path )
@@ -237,13 +246,17 @@ public class MappingGenerator {
 				        .filter( file -> StringUtils.endsWithAny( file.toString(), ENTITY_EXTENSIONS ) )
 				        // map to a struct instance containing the location and file name. We need both to generate the FQN.
 				        .map( file -> Struct.of(
-				            ORMKeys.location, path.toString(),
+				            // The base path to use for the class name
+				            ORMKeys.basePath, mappedPath,
+				            // The full path to the class file
+				            Key.path, file.toAbsolutePath().toString(),
+				            // The file name
 				            Key.file, file.toString()
 				        ) );
 			    } catch ( IOException e ) {
 				    if ( config.ignoreParseErrors ) {
 					    e.printStackTrace();
-					    logger.error( "Failed to walk path: [{}]", path, e );
+					    logger.error( "Failed to walk path: [{}]", path.toString(), e );
 				    } else {
 					    throw new BoxRuntimeException( String.format( "Failed to walk path: [%s]", path ), e );
 				    }
@@ -308,11 +321,14 @@ public class MappingGenerator {
 	 * @return EntityRecord instance.
 	 */
 	private EntityRecord toEntityRecord( IStruct theEntity ) {
-		IStruct				meta			= theEntity.getAsStruct( Key.metadata );
-		IStruct				annotations		= meta.getAsStruct( Key.annotations );
-		String				entityName		= readEntityName( meta );
-		ResolvedFilePath	entityRootPath	= FileSystemUtil.contractPath( context, meta.getAsString( Key.path ) );
-		String				fqn				= entityRootPath.getBoxFQN().toString();
+		IStruct	meta				= theEntity.getAsStruct( Key.metadata );
+		IStruct	annotations			= meta.getAsStruct( Key.annotations );
+		String	entityName			= readEntityName( meta );
+		String	basePath			= theEntity.getAsString( ORMKeys.basePath );
+		String	expandedBasePath	= FileSystemUtil.expandPath( context, theEntity.getAsString( ORMKeys.basePath ) ).absolutePath().toString();
+		// Make sure our FQN remains the same at all times
+		String	fqn					= ResolvedFilePath.of( Path.of( meta.getAsString( Key.path ).replace( expandedBasePath, basePath ) ) ).getBoxFQN()
+		    .toString();
 		if ( fqn == null || fqn.isBlank() ) {
 			throw new BoxRuntimeException( "Failed to generate FQN for entity: " + entityName );
 		}
