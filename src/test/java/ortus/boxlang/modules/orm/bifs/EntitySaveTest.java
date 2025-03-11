@@ -73,7 +73,7 @@ public class EntitySaveTest extends BaseORMTest {
 			function isDirty( entity ){
 					var sessionFactory = ormGetSessionFactory();
 					var session = ormGetSession();
-					var md = sessionFactory.getClassMetaData( "AbstractCategory" );
+					var md = sessionFactory.getClassMetaData( "Category" );
 					println( "Identifier: " & md.getIdentifier( arguments.entity ) );
 					var snapshot = md.getDatabaseSnapshot( md.getIdentifier( arguments.entity ), session );
 					var currentState = md.getPropertyValues( arguments.entity );
@@ -93,7 +93,7 @@ public class EntitySaveTest extends BaseORMTest {
 			}
 			transaction {
 				try {
-					category = entityNew( "AbstractCategory", { category : "Testing", description: "foo" } );
+					category = entityNew( "Category", { category : "Testing", description: "foo" } );
 					preSaveDirty = isDirty( category );
 					entitySave( category, true );
 					ormFlush();
