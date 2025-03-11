@@ -17,23 +17,43 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.runnables.IBoxRunnable;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Array;
 import tools.BaseORMTest;
 
 // TODO implement test
-@Disabled
 public class EntityLoadByExampleTest extends BaseORMTest {
 
-	@DisplayName( "It can test the ExampleBIF" )
+	@DisplayName( "Tests the function returning an array" )
 	@Test
-	public void testTestBIF() {
-		instance.executeSource( "result = ORMTestBIF()", context );
-		assertEquals( "Hello from an ORMTestBIF!", variables.get( result ) );
+	public void testEntityLoadByExample() {
+		instance.executeSource( """
+		                        	example = entityNew( "Category" );
+		                        	example.setCategory( "general" );
+		                        	result = entityLoadByExample( example );
+		                        """, context );
+		assertThat( variables.get( result ) ).isInstanceOf( Array.class );
+		variables.getAsArray( result ).stream()
+		    .forEach( entity -> assertThat( ( ( IClassRunnable ) entity ).get( Key.of( "category" ) ) ).isEqualTo( "general" ) );
+	}
+
+	@DisplayName( "Tests the function with a unique flag" )
+	@Test
+	public void testEntityLoadByExampleUnique() {
+		instance.executeSource( """
+		                        	example = entityNew( "Category" );
+		                        	example.setCategory( "general" );
+		                        	result = entityLoadByExample( example, true );
+		                        """, context );
+		assertThat( variables.get( result ) ).isInstanceOf( IBoxRunnable.class );
+		assertThat( variables.getAsClassRunnable( result ).get( Key.of( "category" ) ) ).isEqualTo( "general" );
 	}
 
 }

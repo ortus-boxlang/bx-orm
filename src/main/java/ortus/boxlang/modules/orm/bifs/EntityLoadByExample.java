@@ -17,14 +17,35 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import org.apache.commons.lang3.NotImplementedException;
+import java.util.List;
 
+import org.hibernate.Criteria;
+import org.hibernate.Session;
+import org.hibernate.criterion.Example;
+
+import ortus.boxlang.modules.orm.ORMApp;
+import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.types.Array;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 @BoxBIF
 public class EntityLoadByExample extends BaseORMBIF {
+
+	public EntityLoadByExample() {
+		super();
+		declaredArguments = new Argument[] {
+		    new Argument( true, "any", ORMKeys.sampleEntity ),
+		    new Argument( false, "boolean", ORMKeys.unique, false )
+		};
+	}
 
 	/**
 	 * ExampleBIF
@@ -32,9 +53,33 @@ public class EntityLoadByExample extends BaseORMBIF {
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 */
-	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		// TODO implement BIF
-		throw new NotImplementedException();
+	@SuppressWarnings( { "deprecation", "unchecked" } )
+	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		RequestBoxContext	requestContext	= context.getRequestContext();
+		ORMApp				ormApp			= ORMRequestContext.getForContext( requestContext ).getORMApp();
+		Object				sampleEntity	= arguments.get( ORMKeys.sampleEntity );
+		Boolean				unique			= arguments.getAsBoolean( ORMKeys.unique );
+		if ( ! ( sampleEntity instanceof IClassRunnable ) ) {
+			throw new BoxRuntimeException( "Sample entity must be a valid entity" );
+		}
+		IClassRunnable	workingEntity	= ( IClassRunnable ) sampleEntity;
+		String			entityName		= getEntityName( workingEntity );
+		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
+		Session			session			= ORMRequestContext.getForContext( requestContext ).getSession( entityRecord.getDatasource() );
+		Criteria		criteria		= session.createCriteria( entityName );
+		Example			example			= Example.create( workingEntity );
+		criteria.add( example );
+
+		if ( unique ) {
+			criteria.setMaxResults( 1 );
+		}
+		List<? extends IClassRunnable> results = criteria.list();
+
+		if ( unique ) {
+			return results.isEmpty() ? null : results.get( 0 );
+		} else {
+			return Array.fromList( results );
+		}
 	}
 
 }

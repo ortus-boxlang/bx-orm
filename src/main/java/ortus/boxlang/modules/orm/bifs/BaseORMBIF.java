@@ -35,7 +35,7 @@ public abstract class BaseORMBIF extends BIF {
 
 	/**
 	 * Pull the entity name from the provided boxlang class
-	 * 
+	 *
 	 * @param entity Instance of IClassRunnable, aka the compiled/parsed entity.
 	 */
 	protected String getEntityName( IClassRunnable entity ) {
@@ -52,7 +52,7 @@ public abstract class BaseORMBIF extends BIF {
 
 	/**
 	 * Retrieve the last portion of the FQN as the class name.
-	 * 
+	 *
 	 * @param fqn Boxlang class FQN, like models.orm.foo
 	 */
 	protected String getClassNameFromFQN( String fqn ) {
