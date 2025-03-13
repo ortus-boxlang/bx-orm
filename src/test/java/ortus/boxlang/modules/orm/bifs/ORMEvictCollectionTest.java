@@ -37,7 +37,7 @@ public class ORMEvictCollectionTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			// isPresentBeforeEvict = ...
-			
+
 			ORMEvictCollection( "manufacturer", "vehicles" );
 			// isPresentAfterEvict = ...
 			""",
@@ -55,7 +55,7 @@ public class ORMEvictCollectionTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			// isPresentBeforeEvict = ...
-			
+
 			ORMEvictCollection( "manufacturer", "vehicles", record.getId() );
 			// isPresentAfterEvict = ...
 			""",

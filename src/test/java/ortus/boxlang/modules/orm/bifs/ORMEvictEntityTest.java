@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 
 import tools.BaseORMTest;
 
-// @Disabled
 public class ORMEvictEntityTest extends BaseORMTest {
 
 	@DisplayName( "It can evict entities from the second-level cache" )
@@ -33,7 +32,7 @@ public class ORMEvictEntityTest extends BaseORMTest {
 			"""
 			record = entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } );
 			isPresentBeforeEvict = ORMGetSessionFactory().getCache().containsEntity( "Manufacturer", record.getId() );
-			
+
 			ORMEvictEntity( "manufacturer" );
 			isPresentAfterEvict = ORMGetSessionFactory().getCache().containsEntity( "Manufacturer", record.getId() );
 			""",

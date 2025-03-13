@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.runtime.types.Array;
@@ -32,7 +31,6 @@ import tools.BaseORMTest;
 
 public class ORMConfigTest extends BaseORMTest {
 
-	@Disabled( "Dialect mapping is broken and disabled; must fix!" )
 	@Test
 	public void testDialectTranslation() {
 		Configuration config = new ORMConfig( Struct.of(
@@ -43,7 +41,6 @@ public class ORMConfigTest extends BaseORMTest {
 		assertEquals( "org.hibernate.dialect.DerbyTenSevenDialect", config.getProperty( AvailableSettings.DIALECT ) );
 	}
 
-	@Disabled( "Dialect mapping is broken and disabled; must fix!" )
 	@Test
 	public void testDialectNormalization() {
 		Configuration config = new ORMConfig( Struct.of(

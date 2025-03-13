@@ -30,7 +30,6 @@ import tools.BaseORMTest;
 
 public class EntityEventsTest extends BaseORMTest {
 
-	@Disabled( "Tofix" )
 	@DisplayName( "It fires preLoad,postLoad" )
 	@Test
 	public void testEntityLoadEvents() {
@@ -106,8 +105,14 @@ public class EntityEventsTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			transaction {
-				deleteEntity = entityLoadByPK( "Vehicle", '1HGCM82633A123456' );
-				entityDelete( deleteEntity );
+				try{
+					deleteEntity = entityLoadByPK( "Vehicle", '1HGCM82633A123456' );
+					entityDelete( deleteEntity );
+				} catch (e) {
+					rethrow;
+				} finally {
+					transactionRollback();
+				}
 			}
 			result = deleteEntity.getEventLog();
 			""",
