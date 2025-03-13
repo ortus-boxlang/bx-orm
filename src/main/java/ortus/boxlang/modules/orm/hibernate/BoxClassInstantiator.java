@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import org.hibernate.EntityNameResolver;
 import org.hibernate.collection.internal.PersistentBag;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.tuple.Instantiator;
@@ -71,6 +72,7 @@ public class BoxClassInstantiator implements Instantiator {
 	private PersistentClass				mappingInfo;
 	private String						entityName;
 	private List<String>				subclassClassNames	= new ArrayList<>();
+	private EntityNameResolver			entityNameResolver	= new BoxEntityNameResolver();
 
 	private static final ClassLocator	CLASS_LOCATOR		= BoxRuntime.getInstance().getClassLocator();
 
@@ -159,9 +161,9 @@ public class BoxClassInstantiator implements Instantiator {
 
 	/**
 	 * Assemble a method name for the association, like `addManufacturer` for the association `manufacturer`.
-	 * 
+	 *
 	 * Will use the singular name, if it exists, otherwise it will use the property name.
-	 * 
+	 *
 	 * @param operationPrefix Operation type as a string, like "has", "add", or "remove"
 	 * @param associationMeta The metadata for the association.
 	 */
@@ -192,13 +194,13 @@ public class BoxClassInstantiator implements Instantiator {
 
 	@Override
 	public boolean isInstance( Object object ) {
+		System.out.println( "Received instance of:" + object.getClass().getName() );
+		System.out.println( "Is runnnable:" + ( object instanceof IClassRunnable ) );
 		if ( object instanceof IClassRunnable theClass ) {
-			logger.trace( "Checking to see if {} is an instance of {}", theClass.getClass().getName(), this.entityName );
+			logger.debug( "Checking to see if {} is an instance of {}", theClass.getClass().getName(), this.entityName );
 			IStruct	annotations			= theClass.getAnnotations();
-			String	objectEntityName	= annotations.containsKey( ORMKeys.entityName )
-			    ? annotations.getAsString( ORMKeys.entityName )
-			    : annotations.getAsString( ORMKeys.entity );
-			logger.trace( "Looking at annotations, found entity name {}", objectEntityName );
+			String	objectEntityName	= entityNameResolver.resolveEntityName( theClass );
+			logger.debug( "Looking at annotations, found entity name {}", objectEntityName );
 			return this.entityName.equals( objectEntityName )
 			    || subclassClassNames.contains( objectEntityName );
 		}
@@ -428,7 +430,7 @@ public class BoxClassInstantiator implements Instantiator {
 
 	/**
 	 * Load a BoxLang class from the class locator.
-	 * 
+	 *
 	 * @param context The current BoxLang context.
 	 * @param fqn     The fully qualified name of the class to load, like "models.orm.Manufacturer".
 	 */

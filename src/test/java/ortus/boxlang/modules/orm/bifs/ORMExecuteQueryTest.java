@@ -19,7 +19,6 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -243,8 +242,6 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 
 	@DisplayName( "It can retrieve and re-retrieve cache cache-enabled entries" )
 	@Test
-	@Disabled( "Disabled due to BLMODULES-12" )
-	// TODO: Make me pass
 	public void getRetrieveSubClassCacheEntity() {
 		// @formatter:off
 		instance.executeSource( """
@@ -262,8 +259,6 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 
 	@DisplayName( "It can can execute a query with all options" )
 	@Test
-	@Disabled( "Disabled due to BLMODULES-12" )
-	// TODO: Make me pass
 	public void canUseCacheOptionsWithMultipleQueries() {
 		// @formatter:off
 		instance.executeSource( """
