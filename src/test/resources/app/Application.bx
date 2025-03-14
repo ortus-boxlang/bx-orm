@@ -37,7 +37,8 @@ class{
 		"dialect"       : "MySQLDialect",
 		"dbcreate"      : "dropcreate",
 		"cacheprovider" : "ConcurrentHashMap",
-		"secondarycacheenabled" : true
+		"secondarycacheenabled" : true,
+		"eventHandler" : "root.models.events.EventHandler",
 		// , "namingStrategy": "src.test.resources.app.CustomNamingStrategy"
 	}
 	this.ormEnabled = "true";

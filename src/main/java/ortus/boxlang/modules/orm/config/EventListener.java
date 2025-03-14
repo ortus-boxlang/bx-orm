@@ -64,6 +64,7 @@ import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
+import ortus.boxlang.runtime.runnables.BoxClassSupport;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -288,13 +289,21 @@ public class EventListener
 	}
 
 	private void announceGlobalEvent( Key eventType, AbstractEvent event, IStruct args ) {
+		if ( globalListener == null ) {
+			return;
+		}
+		boolean hasMethod = false;
 
-		if ( globalListener != null && globalListener.hasMethodNoCase( eventType.getNameNoCase() ) ) {
+		if ( IClassRunnable.class.isAssignableFrom( globalListener.getTargetClass() ) ) {
+			hasMethod = BoxClassSupport.getStaticScope( getCurrentContext(), globalListener ).containsKey( eventType );
+		} else {
+			hasMethod = globalListener.hasMethodNoCase( eventType.getNameNoCase() );
+		}
 
+		if ( hasMethod ) {
 			if ( logger.isDebugEnabled() ) {
 				logger.debug( "Ready to invoke {} on global EventHandler with args {}", eventType.getName(), args.toString() );
 			}
-
 			// Fire the method on the global event handler
 			this.globalListener.dereferenceAndInvoke( getCurrentContext(), eventType, args, false );
 		}
