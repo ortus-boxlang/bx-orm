@@ -294,7 +294,7 @@ public class EventListener
 		boolean hasMethod = false;
 
 		if ( IClassRunnable.class.isAssignableFrom( globalListener.getTargetClass() ) ) {
-			hasMethod = ( ( IClassRunnable ) globalListener.unWrapBoxLangClass() ).containsKey( eventType );
+			hasMethod = ( ( IClassRunnable ) globalListener.unWrapBoxLangClass() ).getThisScope().containsKey( eventType );
 		} else {
 			hasMethod = globalListener.hasMethodNoCase( eventType.getNameNoCase() );
 		}
