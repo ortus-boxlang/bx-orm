@@ -64,7 +64,6 @@ import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
-import ortus.boxlang.runtime.runnables.BoxClassSupport;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -295,7 +294,7 @@ public class EventListener
 		boolean hasMethod = false;
 
 		if ( IClassRunnable.class.isAssignableFrom( globalListener.getTargetClass() ) ) {
-			hasMethod = BoxClassSupport.getStaticScope( getCurrentContext(), globalListener ).containsKey( eventType );
+			hasMethod = ( ( IClassRunnable ) globalListener.unWrapBoxLangClass() ).containsKey( eventType );
 		} else {
 			hasMethod = globalListener.hasMethodNoCase( eventType.getNameNoCase() );
 		}

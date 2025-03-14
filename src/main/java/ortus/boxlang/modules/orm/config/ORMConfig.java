@@ -315,7 +315,7 @@ public class ORMConfig {
 	 * <li><code>skipCFCWithError</code> -> <code>ignoreParseErrors</code></li>
 	 * <li><code>cfclocation</code> -> <code>entityPaths</code></li>
 	 * </ul>
-	 * 
+	 *
 	 * @deprecated This entire method should move to the bx-compat-cfml module.
 	 *
 	 * @param properties Struct of ORM configuration properties.
@@ -498,9 +498,12 @@ public class ORMConfig {
 	 */
 	public Configuration toHibernateConfig() {
 		// Load the event handler class if it is specified, else null
-		DynamicObject				eventHandlerClass	= this.eventHandler != null
+		DynamicObject eventHandlerClass = this.eventHandler != null
 		    ? loadBoxLangClassByFQN( this.requestContext, this.eventHandler )
 		    : null;
+		if ( eventHandlerClass != null ) {
+			eventHandlerClass.invokeConstructor( requestContext );
+		}
 		BootstrapServiceRegistry	bootstrapRegistry	= new BootstrapServiceRegistryBuilder()
 		    .applyIntegrator( new EventListener( eventHandlerClass ) )
 		    .build();
