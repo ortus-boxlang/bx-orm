@@ -119,8 +119,13 @@ public class BoxProxy extends Struct implements HibernateProxy {
 		return BoxClassSupport.dereferenceAndInvoke( getRunnable(), context, name, namedArguments, safe );
 	}
 
+	/**
+	 * Private method to get the instantiated targer from the initializer.
+	 * 
+	 * @return
+	 */
 	private IClassRunnable getRunnable() {
-		return ( IClassRunnable ) lazyInitializer.getEntity();
+		return lazyInitializer.getInstantiatedEntity();
 	}
 
 }

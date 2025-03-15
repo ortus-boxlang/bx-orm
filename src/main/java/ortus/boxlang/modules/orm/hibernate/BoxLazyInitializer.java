@@ -15,6 +15,7 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.runnables.IBoxRunnable;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.types.Struct;
 
 public class BoxLazyInitializer extends AbstractLazyInitializer implements Serializable {
@@ -55,6 +56,15 @@ public class BoxLazyInitializer extends AbstractLazyInitializer implements Seria
 	@Override
 	public Class getPersistentClass() {
 		throw new UnsupportedOperationException( "dynamic-map entity representation" );
+	}
+
+	/**
+	 * Convenience method to get the actual instantiated target
+	 *
+	 * @return
+	 */
+	public IClassRunnable getInstantiatedEntity() {
+		return ( IClassRunnable ) getTarget();
 	}
 
 }
