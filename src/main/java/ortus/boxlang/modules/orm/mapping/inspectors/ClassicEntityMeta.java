@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.dynamic.casters.IntegerCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
@@ -60,6 +61,10 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 			// copy the old-school discriminatorColumn and discriminatorValue annotations into the new struct
 			this.discriminator.computeIfAbsent( Key._name, key -> this.annotations.getAsString( ORMKeys.discriminatorColumn ) );
 			this.discriminator.computeIfAbsent( Key.value, key -> this.annotations.getAsString( ORMKeys.discriminatorValue ) );
+		}
+
+		if ( this.annotations.containsKey( ORMKeys.batchsize ) ) {
+			batchsize = IntegerCaster.cast( this.annotations.get( ORMKeys.batchsize ) );
 		}
 
 		if ( this.annotations.containsKey( ORMKeys.cacheUse ) ) {
