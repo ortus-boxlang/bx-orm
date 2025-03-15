@@ -9,7 +9,7 @@ class
 	cachename         ="cbEntry"
 	cacheuse          ="read-write"
 	extends           ="BaseContent"
-	joinColumn        ="contentID"
+	// We are leaving the join column off of this entity to ensure no regresions related to BLMODULES-18
 	discriminatorValue="Entry"
 {
 
