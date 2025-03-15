@@ -20,7 +20,9 @@ import ortus.boxlang.runtime.types.Struct;
 
 public class BoxLazyInitializer extends AbstractLazyInitializer implements Serializable {
 
+	@SuppressWarnings( "unused" ) // needed for compilation
 	private final Serializable			id;
+	@SuppressWarnings( "unused" ) // needed for compilation
 	private final String				entityName;
 	private final PersistentClass		mappingInfo;
 	private final EntityMetamodel		entityMetamodel;
@@ -53,6 +55,7 @@ public class BoxLazyInitializer extends AbstractLazyInitializer implements Seria
 		return boxClassInstantiator.instantiate( context, entityRecord, Struct.EMPTY );
 	}
 
+	@SuppressWarnings( "rawtypes" )
 	@Override
 	public Class getPersistentClass() {
 		throw new UnsupportedOperationException( "dynamic-map entity representation" );

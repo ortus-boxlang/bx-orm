@@ -100,7 +100,6 @@ public class TransactionManager extends BaseInterceptor {
 		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
 		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
-		ORMConfig			config				= ormRequestContext.getConfig();
 
 		ormApp.getDatasources().forEach( datasource -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
@@ -171,7 +170,6 @@ public class TransactionManager extends BaseInterceptor {
 		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
 		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
-		ORMConfig			config				= ormRequestContext.getConfig();
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormRequestContext.getSession( datasource );

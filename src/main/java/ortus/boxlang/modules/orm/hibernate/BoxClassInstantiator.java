@@ -69,6 +69,7 @@ public class BoxClassInstantiator implements Instantiator {
 	protected BoxLangLogger				logger;
 
 	private EntityMetamodel				entityMetamodel;
+	@SuppressWarnings( "unused" ) // This throws a warning but the declaratio is needed for compilation
 	private PersistentClass				mappingInfo;
 	private String						entityName;
 	private List<String>				subclassClassNames	= new ArrayList<>();
@@ -112,7 +113,6 @@ public class BoxClassInstantiator implements Instantiator {
 
 	public IClassRunnable instantiate( IBoxContext context, EntityRecord entityRecord, IStruct properties ) {
 		RequestBoxContext	requestContext	= RequestBoxContext.getCurrent();
-		ORMApp				ormApp			= ORMRequestContext.getForContext( requestContext ).getORMApp();
 		IClassRunnable		theEntity		= loadBoxClass( requestContext, entityRecord.getClassFQN() );
 
 		entityRecord.getEntityMeta().getAssociations().stream()
@@ -198,8 +198,7 @@ public class BoxClassInstantiator implements Instantiator {
 		System.out.println( "Is runnnable:" + ( object instanceof IClassRunnable ) );
 		if ( object instanceof IClassRunnable theClass ) {
 			logger.debug( "Checking to see if {} is an instance of {}", theClass.getClass().getName(), this.entityName );
-			IStruct	annotations			= theClass.getAnnotations();
-			String	objectEntityName	= entityNameResolver.resolveEntityName( theClass );
+			String objectEntityName = entityNameResolver.resolveEntityName( theClass );
 			logger.debug( "Looking at annotations, found entity name {}", objectEntityName );
 			return this.entityName.equals( objectEntityName )
 			    || subclassClassNames.contains( objectEntityName );
@@ -254,6 +253,7 @@ public class BoxClassInstantiator implements Instantiator {
 	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
+	@SuppressWarnings( "unchecked" )
 	public DynamicFunction getToManyHasMethod( String collectionType, IStruct associationMeta ) {
 		// uses the singular name, if it exists
 		Key	methodName		= getMethodName( "has", associationMeta );

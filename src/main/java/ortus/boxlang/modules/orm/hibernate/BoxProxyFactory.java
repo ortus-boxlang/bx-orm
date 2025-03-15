@@ -35,11 +35,14 @@ import org.hibernate.type.CompositeType;
  */
 public class BoxProxyFactory implements ProxyFactory {
 
-	private String			className;
+	@SuppressWarnings( "unused" )
+	private String			className; // needed for compilation
 	private String			entityName;
 	private PersistentClass	mappingInfo;
-	private Getter			idGetter;
-	private Setter			idSetter;
+	@SuppressWarnings( "unused" )
+	private Getter			idGetter;  // needed for compilation
+	@SuppressWarnings( "unused" )
+	private Setter			idSetter;  // needed for compilation
 
 	public BoxProxyFactory( PersistentClass mappingInfo, Getter idGetter, Setter idSetter ) {
 		this.mappingInfo	= mappingInfo;

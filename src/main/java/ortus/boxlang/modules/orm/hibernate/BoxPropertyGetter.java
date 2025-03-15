@@ -48,6 +48,7 @@ public class BoxPropertyGetter implements Getter {
 
 	private Property				mappedProperty;
 	private PersistentClass			mappedEntity;
+	@SuppressWarnings( "unused" ) // needed for compilation
 	private IBoxContext				context;
 
 	public BoxPropertyGetter( IBoxContext context, Property mappedProperty, PersistentClass mappedEntity ) {
