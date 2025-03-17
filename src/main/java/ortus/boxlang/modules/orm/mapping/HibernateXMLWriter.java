@@ -663,12 +663,18 @@ public class HibernateXMLWriter {
 			classElement.setAttribute( "extends", parentAnnotations.getAsString( ORMKeys.entityName ) );
 			// classElement.setAttribute( "name", CFC_MAPPING_PREFIX + entity.getMeta().getAsString( ORMKeys.classFQN ) );
 			classElement.setAttribute( "lazy", "true" );
-			entityElement = this.document.createElement( "join" );
-			entityElement.setAttribute( "table", escapeReservedWords( entity.getTableName() ) );
-			classElement.appendChild( entityElement );
-			Element keyElement = this.document.createElement( "key" );
-			keyElement.setAttribute( "column", escapeReservedWords( entity.getJoinColumn() ) );
-			entityElement.appendChild( keyElement );
+
+			entityElement = parentAnnotations.getAsString( ORMKeys.table ).equals( entity.getTableName() ) ? classElement
+			    : this.document.createElement( "join" );
+
+			// Single-table subclases do not have a separate join element or key
+			if ( !parentAnnotations.getAsString( ORMKeys.table ).equals( entity.getTableName() ) ) {
+				entityElement.setAttribute( "table", escapeReservedWords( entity.getTableName() ) );
+				classElement.appendChild( entityElement );
+				Element keyElement = this.document.createElement( "key" );
+				keyElement.setAttribute( "column", escapeReservedWords( entity.getJoinColumn() ) );
+				entityElement.appendChild( keyElement );
+			}
 
 		}
 

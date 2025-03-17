@@ -194,8 +194,6 @@ public class BoxClassInstantiator implements Instantiator {
 
 	@Override
 	public boolean isInstance( Object object ) {
-		System.out.println( "Received instance of:" + object.getClass().getName() );
-		System.out.println( "Is runnnable:" + ( object instanceof IClassRunnable ) );
 		if ( object instanceof IClassRunnable theClass ) {
 			logger.debug( "Checking to see if {} is an instance of {}", theClass.getClass().getName(), this.entityName );
 			String objectEntityName = entityNameResolver.resolveEntityName( theClass );

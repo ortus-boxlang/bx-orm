@@ -1,0 +1,37 @@
+/**
+ * Cool menu subclass
+ */
+class
+	persistent        ="true"
+	entityName        ="cbContentMenuItem"
+	table             ="cb_menuItem"
+	extends           ="BaseMenuItem"
+	discriminatorValue="Content"
+{
+
+	/* *********************************************************************
+	 **                          PROPERTIES
+	 ********************************************************************* */
+
+	property
+		name   ="contentSlug"
+		column ="contentSlug"
+		notnull="false"
+		ormtype="string"
+		default="";
+
+	property
+		name   ="target"
+		column ="target"
+		notnull="false"
+		ormtype="string"
+		default="";
+
+	property
+		name   ="urlClass"
+		column ="urlClass"
+		notnull="false"
+		ormtype="string"
+		default="";
+
+}

@@ -1,0 +1,42 @@
+/**
+ * ContentBox - A Modular Content Platform
+ * Copyright since 2012 by Ortus Solutions, Corp
+ * www.ortussolutions.com/products/contentbox
+ * ---
+ * A Media-based Menu Item
+ */
+class
+	persistent        ="true"
+	entityName        ="cbMediaMenuItem"
+	table             ="cb_menuItem"
+	extends           ="BaseMenuItem"
+	discriminatorValue="Media"
+{
+
+	/* *********************************************************************
+	 **                          PROPERTIES
+	 ********************************************************************* */
+
+	property
+		name   ="mediaPath"
+		column ="mediaPath"
+		notnull="false"
+		ormtype="string"
+		default="";
+
+	property
+		name   ="target"
+		column ="target"
+		notnull="false"
+		ormtype="string"
+		default="";
+
+	property
+		name   ="urlClass"
+		column ="urlClass"
+		notnull="false"
+		ormtype="string"
+		default="";
+
+
+}

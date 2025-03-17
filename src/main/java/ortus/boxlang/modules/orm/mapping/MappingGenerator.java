@@ -391,7 +391,11 @@ public class MappingGenerator {
 			throw new ParseException( result.getIssues(), "" );
 		}
 		ClassMetadataVisitor visitor = new ClassMetadataVisitor( this.context );
-		result.getRoot().accept( visitor );
+		try {
+			result.getRoot().accept( visitor );
+		} catch ( Throwable e ) {
+			throw new BoxRuntimeException( "Failed to get metadata for class: " + clazzPath.toString(), e );
+		}
 		return visitor.getMetadata();
 	}
 

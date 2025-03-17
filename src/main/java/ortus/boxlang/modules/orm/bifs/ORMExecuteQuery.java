@@ -121,8 +121,6 @@ public class ORMExecuteQuery extends BaseORMBIF {
 			}
 			CastAttempt<DateTime> dateCastAttempt = DateTimeCaster.attempt( param );
 			if ( dateCastAttempt.wasSuccessful() ) {
-				System.out.println( "Original: " + param );
-				System.out.println( "Cast date: " + dateCastAttempt.get().toISOString() );
 				return dateCastAttempt.get().toDate();
 			}
 			return param;

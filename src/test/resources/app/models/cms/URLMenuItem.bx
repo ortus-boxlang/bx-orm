@@ -1,0 +1,41 @@
+/**
+ * ContentBox - A Modular Content Platform
+ * Copyright since 2012 by Ortus Solutions, Corp
+ * www.ortussolutions.com/products/contentbox
+ * ---
+ * A URL-based Menu Item
+ */
+class
+	persistent        ="true"
+	entityName        ="cbURLMenuItem"
+	table             ="cb_menuItem"
+	extends           ="BaseMenuItem"
+	discriminatorValue="URL"
+{
+
+	/* *********************************************************************
+	 **                          PROPERTIES
+	 ********************************************************************* */
+
+	property
+		name   ="url"
+		column ="url"
+		notnull="false"
+		ormtype="string"
+		default="";
+
+	property
+		name   ="target"
+		column ="target"
+		notnull="false"
+		ormtype="string"
+		default="";
+
+	property
+		name   ="urlClass"
+		column ="urlClass"
+		notnull="false"
+		ormtype="string"
+		default="";
+
+}
