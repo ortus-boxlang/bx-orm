@@ -19,6 +19,7 @@ package ortus.boxlang.modules.orm.hibernate;
 
 import org.hibernate.EntityNameResolver;
 
+import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
@@ -40,7 +41,7 @@ public class BoxEntityNameResolver implements EntityNameResolver {
 				result = StringCaster.cast( annotations.get( ORMKeys.entityName ) );
 			}
 			if ( result == null || result.isBlank() ) {
-				result = boxClass.getClass().getSimpleName().replace( "$bx", "" ).replace( "$cfc", "" );
+				result = boxClass.getClass().getSimpleName().replace( ORMService.BX_CLASS_SUFFIX, "" ).replace( ORMService.CFC_CLASS_SUFFIX, "" );
 			}
 			return result.trim();
 		}

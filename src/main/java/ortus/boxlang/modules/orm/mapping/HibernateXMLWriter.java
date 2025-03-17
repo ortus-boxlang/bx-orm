@@ -308,7 +308,10 @@ public class HibernateXMLWriter {
 		}
 		if ( association.containsKey( Key._CLASS ) ) {
 			setEntityName( toManyNode, association.getAsString( Key._CLASS ), prop );
+		} else {
+			throw new BoxRuntimeException( "Missing required class name for relationship [%s] on entity".formatted( prop.getName() ) );
 		}
+
 		collectionNode.appendChild( toManyNode );
 		return collectionNode;
 	}

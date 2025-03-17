@@ -65,6 +65,7 @@ public class BoxPropertyGetter implements Getter {
 		return ( ( IClassRunnable ) owner ).getVariablesScope().get( mappedProperty.getName() );
 	}
 
+	@SuppressWarnings( "rawtypes" )
 	@Override
 	public Object getForInsert( Object owner, Map mergeMap, SharedSessionContractImplementor session ) {
 		return get( owner );

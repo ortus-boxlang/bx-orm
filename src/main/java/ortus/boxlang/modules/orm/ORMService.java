@@ -46,6 +46,9 @@ import ortus.boxlang.runtime.types.IStruct;
  */
 public class ORMService extends BaseService {
 
+	public static final String	BX_CLASS_SUFFIX			= "$bx";
+	public static final String	CFC_CLASS_SUFFIX		= "$cfc";
+
 	/**
 	 * The logger for the ORMEngine.
 	 */

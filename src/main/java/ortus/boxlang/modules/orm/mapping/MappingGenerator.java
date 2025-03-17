@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -39,6 +40,7 @@ import org.w3c.dom.Document;
 import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
 import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
+import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
@@ -46,6 +48,8 @@ import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.interop.DynamicObject;
+import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -64,34 +68,36 @@ public class MappingGenerator {
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime						= BoxRuntime.getInstance();
+	private static final BoxRuntime		runtime						= BoxRuntime.getInstance();
+
+	private static final ClassLocator	classLocator				= runtime.getClassLocator();
 
 	/**
 	 * The temp folder to save the generated XML mapping files.
 	 */
-	private static final String		ENTITY_TEMP_FOLDER			= "orm_mappings";
+	private static final String			ENTITY_TEMP_FOLDER			= "orm_mappings";
 
 	/**
 	 * The valid file extensions for entity files.
 	 */
-	private static final String[]	ENTITY_EXTENSIONS			= { ".bx", ".cfc" };
+	private static final String[]		ENTITY_EXTENSIONS			= { ".bx", ".cfc" };
 
 	/**
 	 * The maximum number of entities to process synchronously.
 	 */
-	private static final int		MAX_SYNCHRONOUS_ENTITIES	= 20;
+	private static final int			MAX_SYNCHRONOUS_ENTITIES	= 20;
 
 	/**
 	 * The logger for the ORM application.
 	 */
-	protected BoxLangLogger			logger;
+	protected BoxLangLogger				logger;
 
 	/**
 	 * The location to save the generated XML mapping files.
 	 * <p>
 	 * This could be a temporary directory, or (when `savemapping` is enabled) the same as the entity directory.
 	 */
-	private String					saveDirectory				= null;
+	private String						saveDirectory				= null;
 
 	/**
 	 * Whether to save the mapping files alongside the entity files. (Default: false)
@@ -101,27 +107,27 @@ public class MappingGenerator {
 	 * <p>
 	 * If true, the mapping files will be saved in the same directory as the entity files and {@link #xmlMappingLocation} will be ignored.
 	 */
-	private boolean					saveAlongsideEntity;
+	private boolean						saveAlongsideEntity;
 
 	/**
 	 * List of paths to search for entities.
 	 */
-	private List<IStruct>			entityPaths					= new ArrayList<IStruct>();
+	private List<IStruct>				entityPaths					= new ArrayList<IStruct>();
 
 	/**
 	 * ALL ORM configuration.
 	 */
-	private ORMConfig				config;
+	private ORMConfig					config;
 
 	/**
 	 * List of discovered entities.
 	 */
-	private List<EntityRecord>		entities					= new ArrayList<>();
+	private List<EntityRecord>			entities					= new ArrayList<>();
 
 	/**
 	 * The JDBC-capable boxlang context, used to look up datasources referenced in the ORM config or on the entities themselves.
 	 */
-	private IJDBCCapableContext		context;
+	private IJDBCCapableContext			context;
 
 	/**
 	 * Construct a new MappingGenerator instance.
@@ -491,11 +497,29 @@ public class MappingGenerator {
 	 * @return EntityRecord instance or null.
 	 */
 	public EntityRecord entityLookup( String className, Key datasourceName ) {
+		Optional<DynamicObject>	runnableLookup	= classLocator.safeLoad( context, className, ClassLocator.BX_PREFIX,
+		    context.getCurrentImports() );
+		String					lookupClassName	= runnableLookup.isPresent()
+		    ? runnableLookup.get().getTargetClass().getName().replace( ORMService.BX_CLASS_SUFFIX, "" ).replace( ORMService.CFC_CLASS_SUFFIX, "" )
+		    : null;
 		return this.entities
 		    .stream()
 		    .filter( ( EntityRecord e ) -> {
-			    return e.getClassName().equalsIgnoreCase( className )
-			        && ( datasourceName == null || e.getDatasource().equals( datasourceName ) );
+			    // Cover the three schenarios:
+			    // 1. The class name matches the entity name
+			    // 2. The FQN name matches the entity's class name
+			    // 3. The class name matches the entity's lookup class or entity name
+			// @formatter:off
+			    return (
+					e.getClassName().equalsIgnoreCase( className )
+			        ||
+			        e.getClassFQN().equalsIgnoreCase( className )
+			        ||
+			        ( lookupClassName != null && e.getClassName().substring( e.getClassName().lastIndexOf( "." ) + 1 ).equalsIgnoreCase( lookupClassName.substring( lookupClassName.lastIndexOf( "." ) + 1 ) ) )
+				)
+				&&
+				( datasourceName == null || e.getDatasource().equals( datasourceName ) );
+			// @formatter:on
 		    } )
 		    .findFirst()
 		    .orElse( null );

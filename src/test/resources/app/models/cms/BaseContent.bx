@@ -201,7 +201,8 @@ class
 		lazy        ="true"
 		batchsize   ="25"
 		orderby     ="createdDate"
-		cfc         ="Comment"
+		// using a different mapping for the comments
+		cfc         ="root.models.cms.Comment"
 		fkcolumn    ="FK_contentID"
 		inverse     ="true"
 		cascade     ="all-delete-orphan";
@@ -214,7 +215,8 @@ class
 		type        ="array"
 		lazy        ="extra"
 		batchsize   ="25"
-		cfc         ="CustomField"
+		// And a totally different mapping for the custom fields
+		class         ="src.test.resources.app.models.cms.CustomField"
 		fkcolumn    ="FK_contentID"
 		inverse     ="true"
 		cascade     ="all-delete-orphan";
