@@ -6,7 +6,7 @@ class
 	entityName         ="cbMenuItem"
 	table              ="cb_menuItem"
 	cachename          ="cbMenuItem"
-	extends            ="BaseEntityMethods"
+	extends            ="root.models.cms.BaseEntityMethods"
 	cacheuse           ="read-write"
 	discriminatorColumn="menuType"
 {
