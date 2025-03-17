@@ -505,7 +505,7 @@ public class MappingGenerator {
 		return this.entities
 		    .stream()
 		    .filter( ( EntityRecord e ) -> {
-			    // Cover the three schenarios:
+			    // Cover the three scenarios:
 			    // 1. The class name matches the entity name
 			    // 2. The FQN name matches the entity's class name
 			    // 3. The class name matches the entity's lookup class or entity name
