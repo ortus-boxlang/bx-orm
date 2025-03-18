@@ -46,6 +46,8 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.ConfigOverrideBoxContext;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.interop.DynamicObject;
@@ -195,14 +197,17 @@ public class MappingGenerator {
 	public MappingGenerator generateMappings() {
 		ArrayList<IStruct>	classes		= discoverBLClasses( this.entityPaths );
 		boolean				doParallel	= config.enableThreadedMapping && classes.size() > MAX_SYNCHRONOUS_ENTITIES;
-
 		if ( doParallel ) {
 
 			logger.debug( "Found more than {} entities; parallelizing metadata introspection", MAX_SYNCHRONOUS_ENTITIES );
 
 			this.entities = classes.parallelStream()
 			    // Parse class metadata
-			    .map( this::readMeta )
+			    .map( c -> {
+				    // In parallel, we need to use a new context for each entity so they can push their
+				    // "current template" to the stack without collisions
+				    return readMeta( c, new ConfigOverrideBoxContext( context, config -> config ) );
+			    } )
 			    // Filter out non-persistent entities
 			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
 			    // Convert to EntityRecord
@@ -311,12 +316,23 @@ public class MappingGenerator {
 	 *
 	 * @return The entity struct with the metadata added.
 	 */
-	private IStruct readMeta( IStruct possibleEntity ) {
+	private IStruct readMeta( IStruct possibleEntity, IBoxContext context ) {
 		if ( logger.isDebugEnabled() )
 			logger.debug( "Loading metadata for class {}", possibleEntity.getAsString( Key.file ) );
 
-		possibleEntity.put( Key.metadata, getClassMeta( Path.of( possibleEntity.getAsString( Key.file ) ) ) );
+		possibleEntity.put( Key.metadata, getClassMeta( Path.of( possibleEntity.getAsString( Key.file ) ), context ) );
 		return possibleEntity;
+	}
+
+	/**
+	 * Parse the given class file and load metadata for the entity.
+	 *
+	 * @param possibleEntity The entity struct to read metadata for.
+	 *
+	 * @return The entity struct with the metadata added.
+	 */
+	private IStruct readMeta( IStruct possibleEntity ) {
+		return readMeta( possibleEntity, this.context );
 	}
 
 	/**
@@ -382,7 +398,7 @@ public class MappingGenerator {
 	 *
 	 * @return The entity metadata struct.
 	 */
-	private IStruct getClassMeta( Path clazzPath ) {
+	private IStruct getClassMeta( Path clazzPath, IBoxContext context ) {
 		if ( logger.isDebugEnabled() )
 			logger.debug( "Parsing class file: [{}]", clazzPath );
 
@@ -390,7 +406,7 @@ public class MappingGenerator {
 		if ( !result.isCorrect() ) {
 			throw new ParseException( result.getIssues(), "" );
 		}
-		ClassMetadataVisitor visitor = new ClassMetadataVisitor( this.context );
+		ClassMetadataVisitor visitor = new ClassMetadataVisitor( context );
 		try {
 			result.getRoot().accept( visitor );
 		} catch ( Throwable e ) {

@@ -248,7 +248,7 @@ public class ORMConfig {
 	/**
 	 * Enable or disable the use of threading for mapping multiple ORM entities concurrently.
 	 */
-	public boolean						enableThreadedMapping	= false;
+	public boolean						enableThreadedMapping	= true;
 
 	/**
 	 * Application context used for class lookups in naming strategies, event handlers, etc.
