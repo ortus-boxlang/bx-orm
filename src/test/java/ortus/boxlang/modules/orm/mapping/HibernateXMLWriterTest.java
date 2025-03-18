@@ -48,6 +48,7 @@ import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
 import ortus.boxlang.compiler.parser.BoxSourceType;
 import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
+import ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -366,7 +367,7 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "string" );
 
 		assertThat( fooNode.getAttributes().getNamedItem( "type" ).getTextContent() )
-		    .isEqualTo( "timestamp" );
+		    .isEqualTo( "converted::" + DateTimeConverter.class.getName() );
 	}
 
 	// @formatter:off

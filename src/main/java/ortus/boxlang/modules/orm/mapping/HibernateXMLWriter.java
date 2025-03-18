@@ -30,6 +30,13 @@ import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.hibernate.converters.BigDecimalConverter;
+import ortus.boxlang.modules.orm.hibernate.converters.BigIntegerConverter;
+import ortus.boxlang.modules.orm.hibernate.converters.BooleanConverter;
+import ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter;
+import ortus.boxlang.modules.orm.hibernate.converters.DoubleConverter;
+import ortus.boxlang.modules.orm.hibernate.converters.IntegerConverter;
+import ortus.boxlang.modules.orm.hibernate.converters.TimeConverter;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -948,17 +955,20 @@ public class HibernateXMLWriter {
 
 		return switch ( propertyType ) {
 			case "blob", "byte[]" -> "binary";
-			case "bit", "bool" -> "boolean";
+			case "bit", "bool" -> "converted::" + BooleanConverter.class.getName();
 			case "yes-no", "yesno", "yes_no" -> "yes_no";
 			case "true-false", "truefalse", "true_false" -> "true_false";
-			case "big-decimal", "bigdecimal" -> "big_decimal";
-			case "big-integer", "bigint", "biginteger" -> "big_integer";
-			case "int" -> "integer";
-			case "numeric", "number", "decimal" -> "double";
-			case "datetime", "eurodate", "usdate" -> "timestamp";
+			case "big-decimal", "bigdecimal" -> "converted::" + BigDecimalConverter.class.getName();
+			case "big-integer", "bigint", "biginteger" -> "converted::" + BigIntegerConverter.class.getName();
+			case "int" -> "converted::" + IntegerConverter.class.getName();
+			case "numeric", "number", "decimal" -> "converted::" + DoubleConverter.class.getName();
+			case "datetime", "eurodate", "usdate" -> "converted::" + DateTimeConverter.class.getName();
 			case "char", "nchar" -> "character";
 			case "varchar", "nvarchar" -> "string";
 			case "clob" -> "text";
+			case "boolean" -> "converted::" + BooleanConverter.class.getName();
+			case "timestamp" -> "converted::" + DateTimeConverter.class.getName();
+			case "time" -> "converted::" + TimeConverter.class.getName();
 			default -> propertyType;
 		};
 	}

@@ -64,6 +64,43 @@ public class EntitySaveTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Toyota" );
 	}
 
+	@DisplayName( "It can save new entities populated with DateTime objects" )
+	@Test
+	public void testEntitySaveDateTime() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction{
+				try{
+				author = entityNew(
+					"cbAuthor",
+					{
+						firstName : "Jon",
+						lastName: "Clausen",
+						email : "jc@ortussolutions.com",
+						username : "jclausen",
+						password : "password",
+						lastLogin: now(),
+						createdDate :now(),
+						modifiedDate : now()
+					}
+				);
+				entitySave( author, true );
+				ormFlush();
+				result = ORMExecuteQuery( "FROM cbAuthor WHERE username='jclausen'" );
+				} catch( any e ){
+					rethrow;
+				} finally {
+					transactionRollback();
+				}
+			}
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsArray( result ).size() ).isEqualTo( 1 );
+	}
+
 	@DisplayName( "It tests the dirty states a of a new and saved entity" )
 	@Test
 	public void testDirtyStates() {
