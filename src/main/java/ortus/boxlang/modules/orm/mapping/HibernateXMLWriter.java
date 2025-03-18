@@ -645,7 +645,7 @@ public class HibernateXMLWriter {
 	public Element generateClassElement() {
 		Element	classElement	= !entity.isSubclass()
 		    ? this.document.createElement( "class" )
-		    : this.document.createElement( "subclass" );
+		    : this.document.createElement( entity.getDiscriminator().get( Key.value ) != null ? "subclass" : "joined-subclass" );
 
 		Element	entityElement	= classElement;
 
@@ -654,7 +654,9 @@ public class HibernateXMLWriter {
 			classElement.setAttribute( "entity-name", entity.getEntityName() );
 		}
 		if ( entity.isSubclass() ) {
-			if ( entity.getDiscriminator().get( Key.value ) != null ) {
+			boolean isDiscriminated = entity.getDiscriminator().get( Key.value ) != null;
+
+			if ( isDiscriminated ) {
 				classElement.setAttribute( "discriminator-value", entity.getDiscriminator().getAsString( Key.value ) );
 			}
 			// @TODO: This should be refactored to the parent entity's entityRecord.getEntityMeta().getEntityName(), so we take advantage of our entity name
@@ -664,16 +666,18 @@ public class HibernateXMLWriter {
 			// classElement.setAttribute( "name", CFC_MAPPING_PREFIX + entity.getMeta().getAsString( ORMKeys.classFQN ) );
 			classElement.setAttribute( "lazy", "true" );
 
-			entityElement = parentAnnotations.getAsString( ORMKeys.table ).equals( entity.getTableName() ) ? classElement
+			entityElement = !isDiscriminated || parentAnnotations.getAsString( ORMKeys.table ).equals( entity.getTableName() ) ? classElement
 			    : this.document.createElement( "join" );
 
 			// Single-table subclases do not have a separate join element or key
-			if ( !parentAnnotations.getAsString( ORMKeys.table ).equals( entity.getTableName() ) ) {
+			if ( !isDiscriminated || !parentAnnotations.getAsString( ORMKeys.table ).equals( entity.getTableName() ) ) {
 				entityElement.setAttribute( "table", escapeReservedWords( entity.getTableName() ) );
-				classElement.appendChild( entityElement );
 				Element keyElement = this.document.createElement( "key" );
 				keyElement.setAttribute( "column", escapeReservedWords( entity.getJoinColumn() ) );
 				entityElement.appendChild( keyElement );
+				if ( !classElement.equals( entityElement ) ) {
+					classElement.appendChild( entityElement );
+				}
 			}
 
 		}
