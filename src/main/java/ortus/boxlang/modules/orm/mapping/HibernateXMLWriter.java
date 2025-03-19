@@ -471,7 +471,7 @@ public class HibernateXMLWriter {
 		Element		theNode				= this.document.createElement( "column" );
 		IStruct		columnInfo			= prop.getColumn();
 
-		List<Key>	stringProperties	= List.of( Key._DEFAULT, Key.sqltype, ORMKeys.length, ORMKeys.precision, ORMKeys.scale );
+		List<Key>	stringProperties	= List.of( Key._DEFAULT, Key.sqltype, ORMKeys.length, ORMKeys.precision, ORMKeys.scale, ORMKeys.uniqueKey );
 		populateStringAttributes( theNode, columnInfo, stringProperties );
 
 		// non-simple attributes
@@ -492,10 +492,6 @@ public class HibernateXMLWriter {
 		// }
 		// if ( prop.hasPropertyAnnotation( prop, ORMKeys.check ) ) {
 		// columnNode.setAttribute( "check", prop.getPropertyAnnotation( prop, ORMKeys.check ) );
-		// }
-		// String uniqueKey = prop.getPropertyUniqueKey( prop );
-		// if ( uniqueKey != null ) {
-		// columnNode.setAttribute( "unique-key", uniqueKey );
 		// }
 		return theNode;
 	}
@@ -933,6 +929,8 @@ public class HibernateXMLWriter {
 				return "embed-xml";
 			case "orderby" :
 				return "order-by";
+			case "uniquekey" :
+				return "unique-key";
 			default :
 				return name;
 		}

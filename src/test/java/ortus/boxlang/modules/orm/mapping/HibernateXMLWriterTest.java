@@ -703,6 +703,7 @@ public class HibernateXMLWriterTest {
 				insert=false
 				update=false
 				unique=true
+				uniqueKey="beMoreUnique"
 				table="foo"
 				notNull=true
 				dbDefault="test"
@@ -718,7 +719,8 @@ public class HibernateXMLWriterTest {
 				"nullable"   : false,
 				"insertable" : false,
 				"updateable" : false,
-				"default"    : "test"
+				"default"    : "test",
+				"uniqueKey"  : "beMoreUnique"
 			})
 			property name="title";
 		}
@@ -749,6 +751,8 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "true" );
 		assertThat( columnAttributes.getNamedItem( "default" ).getTextContent() )
 		    .isEqualTo( "test" );
+		assertThat( columnAttributes.getNamedItem( "unique-key" ).getTextContent() )
+		    .isEqualTo( "beMoreUnique" );
 		// assertThat( columnAttributes.getNamedItem( "table" ).getTextContent() )
 		// .isEqualTo( "foo" );
 	}
@@ -1168,7 +1172,6 @@ public class HibernateXMLWriterTest {
 	/**
 	 * TODO: The following ORM annotations are still lacking tests at either the entity level, the property level, or both:
 	 * embedXml
-	 * uniqueKey
 	 * missingRowIgnored
 	 * joinColumn
 	 * inverse
