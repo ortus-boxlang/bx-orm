@@ -20,7 +20,6 @@ package ortus.boxlang.modules.orm.bifs;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +29,6 @@ import tools.BaseORMTest;
 
 public class EntityReloadTest extends BaseORMTest {
 
-	@Disabled( "Context and variable names are colliding, which only allows the first test to pass. All tests run fine individually." )
 	@DisplayName( "It can reload entities using a string variable name, for compat" )
 	@Test
 	public void testEntityRefreshByVariableName() {
@@ -38,15 +36,16 @@ public class EntityReloadTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 				myEntity = entityLoadByPK( "Manufacturer", 1 );
-				result = myEntity.getAddress();
+				originalAddress = myEntity.getAddress();
 				
 				queryExecute( "UPDATE manufacturers SET address='101 Ford Circle, Detroit MI' WHERE id=1" );
 				reloadedAddress = entityReload( "myEntity" ).getAddress();
+				queryExecute( "UPDATE manufacturers SET address='#originalAddress#' WHERE id=1" );
 			""",
 			context
 		);
 		// @formatter:on
-		assertEquals( "202 Ford Way, Dearborn MI", variables.get( result ) );
+		assertEquals( "202 Ford Way, Dearborn MI", variables.get( Key.of( "originalAddress" ) ) );
 		assertEquals( "101 Ford Circle, Detroit MI", variables.get( Key.of( "reloadedAddress" ) ) );
 	}
 
@@ -57,15 +56,16 @@ public class EntityReloadTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 				manufacturer = entityLoadByPK( "Manufacturer", 1 );
-				result = manufacturer.getAddress();
+				originalAddress = manufacturer.getAddress();
 				
 				queryExecute( "UPDATE manufacturers SET address='101 Ford Circle, Detroit MI' WHERE id=1" );
 				reloadedAddress = entityReload( manufacturer ).getAddress();
+				queryExecute( "UPDATE manufacturers SET address='#originalAddress#' WHERE id=1" );
 			""",
 			context
 		);
 		// @formatter:on
-		assertEquals( "202 Ford Way, Dearborn MI", variables.get( result ) );
+		assertEquals( "202 Ford Way, Dearborn MI", variables.get( Key.of( "originalAddress" ) ) );
 		assertEquals( "101 Ford Circle, Detroit MI", variables.get( Key.of( "reloadedAddress" ) ) );
 	}
 
