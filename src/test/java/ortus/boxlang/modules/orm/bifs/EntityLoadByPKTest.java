@@ -2,7 +2,6 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -99,7 +98,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertTrue( variables.getAsBoolean( result ) );
 	}
 
-	@Disabled( "Tofix" )
 	@DisplayName( "It will add remove* methods for associations" )
 	@Test
 	public void testEntityRemoveMethod() {
@@ -108,22 +106,18 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		instance.executeSource( """
 			honda = entityLoadByPK( 'Manufacturer', 1 );
 
-			myVehicle = entityLoadByPK( 'Vehicle', '1HGCM82633A123456' );
-			honda.addVehicle( myVehicle );
-			result = honda.hasVehicle();
-
-			honda.removeVehicle( myVehicle );
-			hasVehicleAfterRemove = honda.hasVehicle();
+			hasVehiclePreRemove = honda.hasVehicle();
+			myVehicle = honda.getVehicles().each( ( vehicle ) => {
+				honda.removeVehicle( vehicle );
+			})
+			hasVehiclePostRemove = honda.hasVehicle();
 			""", context );
 		// @formatter:on
+		assertThat( variables.get( Key.of( "hasVehiclePreRemove" ) ) ).isInstanceOf( Boolean.class );
+		assertThat( variables.getAsBoolean( Key.of( "hasVehiclePreRemove" ) ) ).isTrue();
 
-		// has vehicle after add: yep!
-		assertTrue( variables.get( result ) instanceof Boolean );
-		assertTrue( variables.getAsBoolean( result ) );
-
-		// has vehicle after add: nope!
-		assertTrue( variables.get( Key.of( "hasVehicleAfterRemove" ) ) instanceof Boolean );
-		assertFalse( variables.getAsBoolean( Key.of( "hasVehicleAfterRemove" ) ) );
+		assertThat( variables.get( Key.of( "hasVehiclePostRemove" ) ) ).isInstanceOf( Boolean.class );
+		assertThat( variables.getAsBoolean( Key.of( "hasVehiclePostRemove" ) ) ).isFalse();
 	}
 
 	@DisplayName( "It can load an entity by varchar key" )
