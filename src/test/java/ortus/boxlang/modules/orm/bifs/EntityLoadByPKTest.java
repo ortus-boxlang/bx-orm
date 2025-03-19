@@ -73,12 +73,16 @@ public class EntityLoadByPKTest extends BaseORMTest {
 	@Test
 	public void testEntityHasMethod() {
 
-		instance.executeStatement( "result = entityLoadByPK( 'Vehicle', '1HGCM82633A123456' ).hasManufacturer()", context );
+		// @formatter:off
+		instance.executeStatement( """
+			vehicle = entityLoadByPK( 'Vehicle', '1HGCM82633A123456' );
+			result = vehicle.hasManufacturer()
+			""", context );
+		// @formatter:on
 		assertTrue( variables.get( result ) instanceof Boolean );
 		assertTrue( variables.getAsBoolean( result ) );
 	}
 
-	@Disabled( "Context and variable names are colliding, which only allows the first test to pass. These tests run fine individually." )
 	@DisplayName( "It will add add* methods for *-to-many associations" )
 	@Test
 	public void testEntityAddMethod() {
@@ -95,7 +99,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertTrue( variables.getAsBoolean( result ) );
 	}
 
-	@Disabled( "Context and variable names are colliding, which only allows the first test to pass. These tests run fine individually." )
+	@Disabled( "Tofix" )
 	@DisplayName( "It will add remove* methods for associations" )
 	@Test
 	public void testEntityRemoveMethod() {

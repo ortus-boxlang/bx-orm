@@ -122,6 +122,33 @@ public class EntityNewTest extends BaseORMTest {
 		assertThat( variables.getAsBoolean( hasManufacturerInternalAccessPost ) ).isTrue();
 	}
 
+	@DisplayName( "It supports hasManufacturer() with NO value argument comparison" )
+	@Test
+	public void testHasMethodNoValue() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+				vehicle = entityNew( 'Vehicle', { name : 'Dodge Powerwagon' } );
+				feature = entityNew( "Feature", { name : "Windshield wipers", description : "Do I really need to describe this to you?" } );
+				
+				beforeSet = vehicle.hasFeature();
+				vehicle.addFeature( feature );
+				afterSet = vehicle.hasFeature();
+			""",
+			context
+		);
+		// @formatter:on
+
+		Key	beforeSet	= Key.of( "beforeSet" );
+		Key	afterSet	= Key.of( "afterSet" );
+
+		assertThat( variables.get( beforeSet ) ).isInstanceOf( Boolean.class );
+		assertThat( variables.get( afterSet ) ).isInstanceOf( Boolean.class );
+
+		assertThat( variables.getAsBoolean( beforeSet ) ).isFalse();
+		assertThat( variables.getAsBoolean( afterSet ) ).isTrue();
+	}
+
 	@DisplayName( "It supports hasManufacturer() with value argument comparison" )
 	@Test
 	public void testHasValueComparison() {

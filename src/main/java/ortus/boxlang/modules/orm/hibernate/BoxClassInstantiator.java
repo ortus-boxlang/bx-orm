@@ -270,11 +270,23 @@ public class BoxClassInstantiator implements Instantiator {
 
 			    if ( collectionType == "bag" ) {
 				    if ( collection instanceof PersistentBag bagCollection ) {
-					    return bagCollection.stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
+					    if ( itemToCheck != null ) {
+						    return bagCollection.stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
+					    } else {
+						    return bagCollection.size() > 0;
+					    }
 				    }
-				    return ( ( Array ) collection ).stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
+				    if ( itemToCheck != null ) {
+					    return ( ( Array ) collection ).stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
+				    } else {
+					    return ( ( Array ) collection ).size() > 0;
+				    }
 			    } else {
-				    return scope.getAsStruct( collectionKey ).containsKey( itemToCheck );
+				    if ( itemToCheck != null ) {
+					    return scope.getAsStruct( collectionKey ).containsKey( itemToCheck );
+				    } else {
+					    return scope.getAsStruct( collectionKey ).size() > 0;
+				    }
 			    }
 		    },
 		    new Argument[] {
