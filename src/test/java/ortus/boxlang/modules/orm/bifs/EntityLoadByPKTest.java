@@ -179,11 +179,13 @@ public class EntityLoadByPKTest extends BaseORMTest {
 			"""
 				entry = entityLoadByPK( "cbEntry", "779cc4e2-a444-11eb-ab6f-0290cc502ae3" );
 				result = entry.getSlug();
+				hasContentVersion = entry.hasContentVersion();
 			""",
 			context
 		);
 		// @formatter:on
 		assertEquals( "another-test", variables.get( result ) );
+		assertEquals( true, variables.getAsBoolean( Key.of( "hasContentVersion" ) ) );
 	}
 
 	@DisplayName( "It can load an entity with a case-insensitive entity name" )
