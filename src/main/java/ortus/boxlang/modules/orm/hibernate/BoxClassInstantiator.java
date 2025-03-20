@@ -33,10 +33,13 @@ import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.modules.orm.mapping.inspectors.ClassicPropertyMeta;
+import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
+import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
@@ -119,7 +122,6 @@ public class BoxClassInstantiator implements Instantiator {
 		    .forEach( prop -> {
 			    IStruct		association		= prop.getAssociation();
 			    String		collectionType	= association.getAsString( ORMKeys.collectionType );
-
 			    // hasX(), used on all associations
 			    DynamicFunction hasUDF		= null;
 			    String		associationType	= association.getAsString( Key.type );
@@ -151,6 +153,48 @@ public class BoxClassInstantiator implements Instantiator {
 				    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
 			    }
 		    } );
+
+		if ( entityRecord.getEntityMeta().isSubclass() ) {
+			entityRecord.getEntityMeta().getParentMeta().getAsArray( Key.properties )
+			    .stream()
+			    .map( StructCaster::cast )
+			    .filter( prop -> prop.getAsStruct( Key.annotations ).get( ORMKeys.fkcolumn ) != null )
+			    .forEach( prop -> {
+				    DynamicFunction hasUDF		= null;
+				    IStruct		annotations		= prop.getAsStruct( Key.annotations );
+				    String		associationType	= annotations.getAsString( ORMKeys.fieldtype );
+				    IPropertyMeta tempMeta		= new ClassicPropertyMeta( entityRecord.getEntityName(), prop, entityRecord.getEntityMeta() );
+				    IStruct		association		= tempMeta.getAssociation();
+				    String		collectionType	= association.getAsString( ORMKeys.collectionType );
+				    if ( associationType.endsWith( "to-many" ) ) {
+					    hasUDF = getToManyHasMethod( collectionType, association );
+				    } else {
+					    hasUDF = getSimpleHasMethod( collectionType, association );
+				    }
+				    logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
+				        prop.getAsString( Key._name ), entityRecord.getEntityName() );
+				    theEntity.getThisScope().put( hasUDF.getName(), hasUDF );
+				    theEntity.getVariablesScope().put( hasUDF.getName(), hasUDF );
+
+				    // @TODO: I'm not sure this conditional is correct at all... but without more & better testing, I don't want to change it.
+				    boolean isCollectionType = association.containsKey( ORMKeys.collectionType );
+				    if ( isCollectionType ) {
+					    // addX(), used on to-many associations
+					    DynamicFunction addUDF = getAddMethod( collectionType, association );
+					    logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getAsString( Key._name ),
+					        entityRecord.getEntityName() );
+					    theEntity.getThisScope().put( addUDF.getName(), addUDF );
+					    theEntity.getVariablesScope().put( addUDF.getName(), addUDF );
+
+					    // removeX(), used on to-many associations
+					    DynamicFunction removeUDF = getRemoveMethod( collectionType, association );
+					    logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
+					        prop.getAsString( Key._name ), entityRecord.getEntityName() );
+					    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
+					    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
+				    }
+			    } );
+		}
 
 		if ( properties != null && !properties.isEmpty() ) {
 			theEntity.getVariablesScope().putAll( properties );
