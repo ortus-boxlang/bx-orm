@@ -26,7 +26,7 @@ public class ORMGetHibernateVersion extends BaseORMBIF {
 
 	/**
 	 * Giant code smell, but Hibernate tends to return "[WORKING]" as the version string in test builds and other instances.
-	 * 
+	 *
 	 * @TODO: Consider embedding a .properties file into the built module to set this dynamically from the gradle build.
 	 */
 	private static final String fallback = "5.6.15.Final";
@@ -39,7 +39,7 @@ public class ORMGetHibernateVersion extends BaseORMBIF {
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String version = org.hibernate.Version.getVersionString();
-		if ( version != "[WORKING]" ) {
+		if ( !version.trim().toUpperCase().equals( "[WORKING]" ) ) {
 			return version;
 		}
 		return fallback;
