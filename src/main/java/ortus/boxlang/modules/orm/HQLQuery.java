@@ -38,8 +38,8 @@ public class HQLQuery {
 	private String					hql;
 	private List<String>			HQLWithParamTokens	= new ArrayList<>();
 
-	private static final String		UPDATE_PREFIX		= "UPDATE ";
-	private static final String		DELETE_PREFIX		= "DELETE ";
+	private static final String		UPDATE_PREFIX		= "UPDATE";
+	private static final String		DELETE_PREFIX		= "DELETE";
 
 	public HQLQuery( IBoxContext context, String hql, Object bindings, IStruct options ) {
 		this.options			= options;
@@ -314,7 +314,8 @@ public class HQLQuery {
 	}
 
 	public Object execute() {
-		boolean							isUpdate	= this.hql.toUpperCase().startsWith( UPDATE_PREFIX ) || this.hql.toUpperCase().startsWith( DELETE_PREFIX );
+		boolean							isUpdate	= this.hql.trim().toUpperCase().startsWith( UPDATE_PREFIX )
+		    || this.hql.trim().toUpperCase().startsWith( DELETE_PREFIX );
 
 		org.hibernate.query.Query<?>	hqlQuery	= session.createQuery( this.hql );
 
