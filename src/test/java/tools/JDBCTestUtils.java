@@ -356,6 +356,11 @@ public class JDBCTestUtils {
 				('ff80808128c9fa8b0128cc3b20bf0008','ColdBox','ColdBox','2010-05-23 16:00:00',NULL),
 				('ff80808128c9fa8b0128cc3b7cdd000a','ColdFusion','ColdFusion','2010-05-23 16:00:00',NULL);
 		""");
+
+		// This is necessary for our advanced map query test in ORMExecuteQueryTest
+		datasource.execute("""
+			set session sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
+		""");
 		// @formatter:on
 	}
 }

@@ -149,6 +149,35 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		} );
 	}
 
+	@DisplayName( "It can query using a date restriction and an HQL map" )
+	@Test
+	public void testHQLAdvancedMap() {
+		// @formatter:off
+		instance.executeSource( """
+		results = ormExecuteQuery( "
+			SELECT new map(
+				count(*) as count,
+				YEAR( publishedDate ) as year,
+				MONTH( publishedDate ) as month
+			)
+			FROM cbEntry
+			WHERE isPublished = true
+			AND passwordProtection = ''
+			AND publishedDate <= :now",
+			{ now : now() }
+		);
+		result = results.map( ( entity ) => getMetadata( entity ).name );
+
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isInstanceOf( Array.class );
+		assertThat( ArrayCaster.cast( item ).size() ).isEqualTo( 1 );
+		ArrayCaster.cast( item ).forEach( ( className ) -> {
+			assertThat( className ).isInstanceOf( String.class );
+		} );
+	}
+
 	@DisplayName( "It can retrieve the relationships of subclassed entities" )
 	@Test
 	public void testHQLRelationships() {
