@@ -4,19 +4,18 @@ import javax.persistence.AttributeConverter;
 import javax.persistence.Converter;
 
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
-import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 
 @Converter( autoApply = true )
-public class BooleanConverter implements AttributeConverter<String, Boolean> {
+public class BooleanConverter implements AttributeConverter<Object, Boolean> {
 
 	@Override
-	public Boolean convertToDatabaseColumn( String attribute ) {
+	public Boolean convertToDatabaseColumn( Object attribute ) {
 		return BooleanCaster.cast( attribute );
 	}
 
 	@Override
-	public String convertToEntityAttribute( Boolean dbData ) {
-		return StringCaster.cast( dbData );
+	public Object convertToEntityAttribute( Boolean dbData ) {
+		return dbData != null ? BooleanCaster.cast( dbData ) : null;
 	}
 
 }

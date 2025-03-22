@@ -153,6 +153,7 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 	@Test
 	public void testHQLAdvancedMap() {
 		// @formatter:off
+		// TODO: We need to add support for a raw `WHERE isPublished = true` which currently throws a strict type error
 		instance.executeSource( """
 		results = ormExecuteQuery( "
 			SELECT new map(
@@ -161,10 +162,10 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 				MONTH( publishedDate ) as month
 			)
 			FROM cbEntry
-			WHERE isPublished = true
+			WHERE isPublished = :isPublished
 			AND passwordProtection = ''
 			AND publishedDate <= :now",
-			{ now : now() }
+			{ isPublished: true, now : now() }
 		);
 		result = results.map( ( entity ) => getMetadata( entity ).name );
 
@@ -267,6 +268,18 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		// @formatter:on
 		Object item = variables.get( result );
 		assertThat( item ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "It can perform an IN query on the discriminator value" )
+	@Test
+	public void getDiscriminatorInQuery() {
+		// @formatter:off
+		instance.executeSource( """
+		result = ormExecuteQuery( "FROM cbContent WHERE contentType IN ( 'Entry', 'Page' )" );
+		""", context );
+		// @formatter:on
+		Object entities = variables.get( result );
+		assertThat( entities ).isInstanceOf( Array.class );
 	}
 
 	@DisplayName( "It can retrieve and re-retrieve cache cache-enabled entries" )
