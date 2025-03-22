@@ -21,6 +21,7 @@ import java.util.Map;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
@@ -108,6 +109,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				}
 				return propertyType.equalsIgnoreCase( "array" ) ? "bag" : "map";
 			} );
+			if ( annotations.containsKey( ORMKeys.batchsize ) ) {
+				association.put( ORMKeys.batchsize, StringCaster.cast( annotations.get( ORMKeys.batchsize ) ) );
+			}
 			if ( association.get( ORMKeys.collectionType ).equals( "map" ) ) {
 				if ( annotations.containsKey( ORMKeys.structKeyColumn ) ) {
 					association.put( ORMKeys.structKeyColumn, translateColumnName( annotations.getAsString( ORMKeys.structKeyColumn ) ) );
