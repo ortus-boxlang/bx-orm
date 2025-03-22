@@ -375,6 +375,11 @@ public class HibernateXMLWriter {
 		}
 
 		theNode.setAttribute( "name", prop.getName() );
+
+		if ( association.containsKey( ORMKeys.batchsize ) ) {
+			theNode.setAttribute( "batch-size", association.getAsString( ORMKeys.batchsize ) );
+		}
+
 		// non-string, non-simple attributes
 		if ( association.containsKey( ORMKeys.inverse ) ) {
 			theNode.setAttribute( "inverse", trueFalseFormat( association.getAsBoolean( ORMKeys.inverse ) ) );
