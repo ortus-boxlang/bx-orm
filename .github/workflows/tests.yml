@@ -51,6 +51,7 @@ jobs:
       - name: Setup Database and Fixtures
         run: |
           sudo systemctl start mysql.service
+          mysql -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }} -e "set global sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';"
           mysql -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }} -e 'CREATE DATABASE test;'
           mysql -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }} -e 'CREATE DATABASE dsn2;'
 
