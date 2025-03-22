@@ -309,6 +309,13 @@ public class HibernateXMLWriter {
 
 		// <one-to-many> or <many-to-many>
 		Element toManyNode = this.document.createElement( association.getAsString( Key.type ) );
+		if ( association.containsKey( ORMKeys.orderBy ) ) {
+			switch ( prop.getFieldType() ) {
+				case MANY_TO_MANY -> toManyNode.setAttribute( "order-by", association.getAsString( ORMKeys.orderBy ) );
+				default -> collectionNode.setAttribute( "order-by", association.getAsString( ORMKeys.orderBy ) );
+			}
+
+		}
 		if ( association.containsKey( ORMKeys.inverseJoinColumn ) ) {
 			// @TODO: Loop over all column values and create multiple <column> elements.
 			toManyNode.setAttribute( "column", escapeReservedWords( association.getAsString( ORMKeys.inverseJoinColumn ) ) );
@@ -379,8 +386,8 @@ public class HibernateXMLWriter {
 			theNode.setAttribute( "optimistic-lock", "false" );
 		}
 
-		List<Key> stringProperties = List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.lazy, ORMKeys.cascade, ORMKeys.orderBy, ORMKeys.where,
-		    ORMKeys.fetch, ORMKeys.embedXML, ORMKeys.orderBy );
+		List<Key> stringProperties = List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.lazy, ORMKeys.cascade, ORMKeys.where,
+		    ORMKeys.fetch, ORMKeys.embedXML );
 		populateStringAttributes( theNode, association, stringProperties );
 
 		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys
