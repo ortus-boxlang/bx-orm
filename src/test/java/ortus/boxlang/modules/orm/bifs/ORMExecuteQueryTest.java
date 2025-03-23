@@ -158,8 +158,8 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		results = ormExecuteQuery( "
 			SELECT new map(
 				count(*) as count,
-				YEAR( publishedDate ) as year,
-				MONTH( publishedDate ) as month
+				YEAR( MAX( publishedDate ) ) as year,
+				MONTH( MAX( publishedDate ) ) as month
 			)
 			FROM cbEntry
 			WHERE isPublished = :isPublished
