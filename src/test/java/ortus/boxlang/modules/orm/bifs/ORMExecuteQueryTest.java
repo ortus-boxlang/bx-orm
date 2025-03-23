@@ -153,7 +153,6 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 	@Test
 	public void testHQLAdvancedMap() {
 		// @formatter:off
-		// TODO: We need to add support for a raw `WHERE isPublished = true` which currently throws a strict type error
 		instance.executeSource( """
 		results = ormExecuteQuery( "
 			SELECT new map(
@@ -162,10 +161,10 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 				MONTH( MAX( publishedDate ) ) as month
 			)
 			FROM cbEntry
-			WHERE isPublished = :isPublished
+			WHERE isPublished = true
 			AND passwordProtection = ''
 			AND publishedDate <= :now",
-			{ isPublished: true, now : now() }
+			{ now : now() }
 		);
 		result = results.map( ( entity ) => getMetadata( entity ).name );
 

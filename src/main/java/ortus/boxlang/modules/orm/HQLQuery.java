@@ -122,7 +122,7 @@ public class HQLQuery {
 		}
 
 		boolean			isPositional		= positionalParameters != null;
-		String			HQL					= this.hql;
+		String			HQL					= sanitizeHQL( this.hql );
 		// This is the HQL string with the named parameters replaced with positional placeholders
 		StringBuilder	newHQL				= new StringBuilder();
 		// This is the name of the current named parameter being processed
@@ -347,6 +347,19 @@ public class HQLQuery {
 		} else {
 			return hqlQuery.list();
 		}
+
+	}
+
+	/**
+	 * Sanitize the HQL string to ensure that common strings are cast correctly
+	 *
+	 * @param hql
+	 *
+	 * @return
+	 */
+	private String sanitizeHQL( String hql ) {
+		return hql.replaceAll( "= true", "= cast( true as boolean )" )
+		    .replaceAll( "= false", "= cast( true as boolean )" );
 
 	}
 }
