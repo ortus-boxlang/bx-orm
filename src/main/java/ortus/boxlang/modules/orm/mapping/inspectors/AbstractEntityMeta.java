@@ -204,7 +204,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 			return new ClassicEntityMeta( meta );
 		}
 		// logger.debug( "Using ModernEntityMeta: [{}]", meta.getAsString( Key.path ) );
-		return new ModernEntityMeta( meta );
+		return new ClassicEntityMeta( meta );
 	}
 
 	/**

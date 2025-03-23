@@ -1,29 +1,7 @@
-@Entity
-@Table ({
-    "name" : "manufacturers"
-})
-class accessors=true {
-    @id
-    @ORMType("integer")
-    @GeneratedValue({
-        "strategy" : "increment"
-    })
-    property name="id";
-
-    @Column
-    @ORMType("string")
-    property name="name";
-
-    @Column
-    @ORMType("string")
-    property name="address";
-
-    @OneToMany({
-        "singularname" : "Vehicle",
-        // "mappedBy" : "manufacturer",
-        "class"    : "Vehicle",
-        "fkcolumn" : "FK_manufacturer"
-    })
-    property name="vehicles";
+class accessors=true persistent="true" table="manufacturers" {
+    property name="id" generator="increment" fieldtype="id" ormType="integer";
+    property name="name" ormType="string";
+    property name="address" ormType="string";
+    property name="vehicles" fieldtype="one-to-many" singularname="Vehicle" fkcolumn="FK_manufacturer" cfc="Vehicle";
 
 }

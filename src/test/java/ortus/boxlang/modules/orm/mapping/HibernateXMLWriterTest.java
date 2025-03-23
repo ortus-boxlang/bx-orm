@@ -125,16 +125,6 @@ public class HibernateXMLWriterTest {
 	    	catalog="morefoo"
 	    	optimisticLock="all"
 	    {}
-	    """,
-	    """
-	    @Entity ("Car")
-	    @Table({
-	    	"name"   : "vehicles",
-	    	"schema" : "foo",
-	    	"catalog": "morefoo"
-	    })
-	    @OptimisticLock("all")
-	    class {}
 	    """
 	} )
 	@ParameterizedTest
@@ -164,8 +154,7 @@ public class HibernateXMLWriterTest {
 
 	@DisplayName( "It recognizes immutable entities" )
 	@ValueSource( strings = {
-	    "class persistent readonly=\"true\" {}",
-	    "@Immutable \r\nclass {}"
+	    "class persistent readonly=\"true\" {}"
 	} )
 	@ParameterizedTest
 	public void testImmutableEntities( String sourceCode ) {
@@ -183,19 +172,7 @@ public class HibernateXMLWriterTest {
 	// @formatter:off
 	@DisplayName( "It maps discriminator info" )
 	@ValueSource( strings = {
-	    "class persistent discriminatorValue=\"Ford\" discriminatorColumn=\"autoType\" {}",
-		// Note we can't test the `type`, `formula`, `force`, and `insert` keys with the parameterized test, as the older annotation style doesn't support them
-	    """
-			@Discriminator({
-				"name"    : "autoType",
-				"value"   : "Ford",
-				"type"    : "string",
-				"formula" : "foo",
-				"force"   : "false",
-				"insert"  : "true",
-			})
-			class {}
-		"""
+	    "class persistent discriminatorValue=\"Ford\" discriminatorColumn=\"autoType\" {}"
 	} )
 	// @formatter:on
 	@ParameterizedTest
@@ -220,8 +197,7 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It generates an id element from the Id annotation" )
 	@ParameterizedTest
 	@ValueSource( strings = {
-	    "class persistent{ property name=\"the_id\" fieldtype=\"id\"; }",
-	    "class{ @Id property name=\"the_id\"; }"
+	    "class persistent{ property name=\"the_id\" fieldtype=\"id\"; }"
 	} )
 	public void testIDAnnotation( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
@@ -244,12 +220,6 @@ public class HibernateXMLWriterTest {
 		class persistent{
 			property name="id1" fieldtype="id";
 			property name="id2" fieldtype="id" sqltype="varchar(50)";
-		}
-		"""
-	    , """
-		class{
-			@Id property name="id1";
-			@Id property name="id2" sqltype="varchar(50)";
 		}
 		"""
 	} )
@@ -288,13 +258,6 @@ public class HibernateXMLWriterTest {
 	    		fieldtype="id"
 	    		ormtype="integer";
 	    }
-	    """,
-	    """
-	    class {
-	    	@Id
-	    	@ORMType("integer")
-	    	property name="the_id";
-	    }
 	    """
 	} )
 	public void testIDTypeAnnotation( String sourceCode ) {
@@ -317,13 +280,6 @@ public class HibernateXMLWriterTest {
 	    """
 	    class persistent {
 		    property name="the_name";
-	    }
-	    """,
-	    """
-	    @Entity
-	    class {
-	    	@Column
-			property name="the_name";
 	    }
 	    """
 	} )
@@ -381,17 +337,7 @@ public class HibernateXMLWriterTest {
 	    		fieldtype="id"
 	    		generator="increment";
 	    }
-	    """,
-		"""
-		@Entity
-		class {
-			@Id
-			@GeneratedValue({
-				"strategy" : "increment"
-			})
-			property name="the_id";
-		}
-		"""
+	    """
 	} )
 	// @formatter:on
 	@ParameterizedTest
@@ -427,19 +373,7 @@ public class HibernateXMLWriterTest {
 				generated="insert"
 				selectKey="foo";
 	    }
-	    """,
-		"""
-		@Entity
-		class {
-			@Id
-			@GeneratedValue({
-				"strategy"  : "select",
-				"selectKey" : "foo",
-				"generated" : "insert"
-			})
-			property name="the_id";
-		}
-		"""
+	    """
 	} )
 	// @formatter:on
 	@ParameterizedTest
@@ -488,15 +422,6 @@ public class HibernateXMLWriterTest {
 	    	name="the_name"
 	    	formula="SELECT TOP 1 name from theNames";
 	    }
-	    """,
-	    """
-	    @Entity
-	    class {
-	    	@Column({
-	    		formula="SELECT TOP 1 name from theNames"
-	    	})
-	     	property name="the_name";
-	    }
 	    """
 	} )
 	public void testPropertyFormula( String sourceCode ) {
@@ -526,16 +451,6 @@ public class HibernateXMLWriterTest {
 	    		column="NameColumn"
 	    		sqltype="varchar";
 	    }
-	    """,
-	    """
-	    @Entity
-	    class {
-	    	@Column({
-	    		sqltype="varchar",
-	    		name="NameColumn"
-	    	})
-	     	property name="the_name";
-	    }
 	    """
 	} )
 	public void testProperty( String sourceCode ) {
@@ -562,16 +477,6 @@ public class HibernateXMLWriterTest {
 	    class persistent table="case" {
 	    	property name="order" column="order";
 	    }
-	    """,
-	    """
-	    @Entity
-	    @Table({ "name" : "case" })
-	    class {
-	    	@Column({
-	    		name="order"
-	    	})
-	     	property name="order";
-	    }
 	    """
 	} )
 	public void testReservedWordEscaping( String sourceCode ) {
@@ -597,8 +502,7 @@ public class HibernateXMLWriterTest {
 
 	@DisplayName( "It does not map properties annotated with @Persistent false" )
 	@ValueSource( strings = {
-	    "class persistent { property name=\"name\"; property name=\"notMapped\" persistent=\"false\"; }",
-	    "class { @Column property name=\"name\"; @Transient property name=\"notMapped\"; }"
+	    "class persistent { property name=\"name\"; property name=\"notMapped\" persistent=\"false\"; }"
 	} )
 	@ParameterizedTest
 	public void testPersistentFalseAnnotation( String sourceCode ) {
@@ -623,15 +527,7 @@ public class HibernateXMLWriterTest {
 	    		insert=false
 	    		update=false;
 	    }
-	    """,
 	    """
-	    @Entity
-	    class {
-	    	@Immutable
-	    	@Column
-	    	property name="name";
-	    }
-	    """,
 	} )
 	@ParameterizedTest
 	public void testImmutableProperties( String sourceCode ) {
@@ -660,18 +556,6 @@ public class HibernateXMLWriterTest {
 				precision=2
 				column="amountCol"
 				name="amount";
-		}
-		""",
-	    """
-		@Entity
-		class {
-			@Column({
-				name      : "amountCol",
-				length    : 12,
-				scale     : 10,
-				precision : 2
-			})
-			property name="amount";
 		}
 		"""
 	} )
@@ -708,21 +592,6 @@ public class HibernateXMLWriterTest {
 				notNull=true
 				dbDefault="test"
 				name="title";
-		}
-		""",
-	    """
-		@Entity
-		class {
-			@Column({
-				"table"      : "foo",
-				"unique"     : true,
-				"nullable"   : false,
-				"insertable" : false,
-				"updateable" : false,
-				"default"    : "test",
-				"uniqueKey"  : "beMoreUnique"
-			})
-			property name="title";
 		}
 		"""
 	} )
@@ -771,18 +640,6 @@ public class HibernateXMLWriterTest {
 				name="version";
 		}
 		"""
-		// 	@TODO: simplified modern syntax
-	    // ,"""
-		// @Entity
-		// class {
-		// 	@Version{
-		// 		"column" : "itemVersion",
-		// 		"insertable" : false
-		// 		"generated": "never"
-		// 	}
-		// 	property name="version" ormType="integer";
-		// }
-		// """
 	} )
 	// @formatter:on
 	@ParameterizedTest
@@ -820,20 +677,6 @@ public class HibernateXMLWriterTest {
 				lazy="extra";
 		}
 		"""
-		// , """
-		// @Entity
-		// class {
-		// 	@OneToOne{
-		// 	  	"mappedBy"   : "id",
-		// 		"foreignKey" : "fooID",
-		// 		"cascade"    : "all-delete-orphan",
-		// 		"constrained": true,
-		// 		"fetch"      : "join",
-		// 		"lazy"       : "extra"
-		// 	}
-		// 	property name="owner";
-		// }
-		// """
 		} )
 	// @formatter:on
 	public void testOneToOne( String sourceCode ) {
@@ -870,21 +713,6 @@ public class HibernateXMLWriterTest {
 	    		foreignKey  = "fooID"
 	    		cascade     = "all"
 	    		constrained = "true";
-	    }
-	    """,
-	    """
-	    @Entity
-	    class {
-	    	@OneToOne ({
-	    		// "mappedBy" : "id",
-	    		"fkcolumn"   : "FK_owner",
-	    		"foreignKey" : "fooID",
-	    		"cascade"    : "all",
-	    		"constrained": true,
-	    		"fetch"      : "join",
-	    		"lazy"       : "extra"
-	    	})
-	    	property name="owner";
 	    }
 	    """
 	} )
@@ -928,8 +756,6 @@ public class HibernateXMLWriterTest {
 	    		orderBy="name";
 	    }
 	    """
-	// , """
-	// """
 	} )
 	// @formatter:on
 	public void testManyToManyLinkTable( String sourceCode ) {
@@ -988,21 +814,6 @@ public class HibernateXMLWriterTest {
 	    		where="Age IS NOT NULL"
 	    		optimisticLock="false";
 	    }
-	    """,
-	    """
-	    @Entity
-	    class {
-	    	@OneToMany ({
-	    		"mappedBy"       : "owners",
-	    		"orderBy"        : "name DESC",
-	    		"where"          : "Age IS NOT NULL",
-	    		"optimisticLock" : false,
-	    		"fkcolumn"       : "FK_owner",
-	    		"cascade"        : "all",
-	    		"class"          : "Person"
-	    	})
-	    	property name="owners" type="array";
-	    }
 	    """
 	} )
 	// @formatter:on
@@ -1011,18 +822,6 @@ public class HibernateXMLWriterTest {
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), false ).generateXML();
-
-		String		xml			= xmlToString( doc );
-		// @formatter:off
-		// <hibernate-mapping>
-		// 	<class table="">
-		// 		<bag cascade="all" name="owners" optimistic-lock="false">
-		// 			<key column="FK_owner" property-ref="owners"/>
-		// 			<one-to-many entity-name="Person"/>
-		// 		</bag>
-		// 	</class>
-		// </hibernate-mapping>
-		// @formatter:on
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 
@@ -1106,15 +905,6 @@ public class HibernateXMLWriterTest {
 	@ValueSource( strings = {
 	    """
 	    class persistent cacheuse="transactional" cacheName="foo" cacheInclude="non-lazy" {}
-	    """,
-	    """
-	    @Cache({
-	    	strategy: "transactional",
-	    	region  : "foo",
-	    	include   : "non-lazy"
-	    })
-	    @Entity
-	    class {}
 	    """
 	} )
 	// @formatter:on
@@ -1150,8 +940,6 @@ public class HibernateXMLWriterTest {
 	    		fkcolumn="name,dob,phone";
 	    }
 	    """
-	// , """
-	// """
 	} )
 	// @formatter:on
 	public void testMultipleFKColumns( String sourceCode ) {
