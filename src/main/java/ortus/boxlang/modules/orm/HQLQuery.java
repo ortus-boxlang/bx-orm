@@ -358,8 +358,13 @@ public class HQLQuery {
 	 * @return
 	 */
 	private String sanitizeHQL( String hql ) {
-		return hql.replaceAll( "= true", "= cast( true as boolean )" )
-		    .replaceAll( "= false", "= cast( true as boolean )" );
+		final String	EQUALS_FALSE	= "= false";
+		final String	EQUALS_TRUE		= "= true";
+		final String	CAST_TRUE		= "= cast( %s as boolean )";
+		final String	TRUE			= String.format( CAST_TRUE, "true" );
+		final String	FALSE			= String.format( CAST_TRUE, "false" );
+		return hql.replaceAll( EQUALS_TRUE, TRUE )
+		    .replaceAll( EQUALS_FALSE, FALSE );
 
 	}
 }
