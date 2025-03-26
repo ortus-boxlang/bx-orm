@@ -48,6 +48,7 @@ import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
 import ortus.boxlang.compiler.parser.BoxSourceType;
 import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
+import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
@@ -58,6 +59,7 @@ import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.types.exceptions.ParseException;
 
@@ -67,6 +69,7 @@ public class HibernateXMLWriterTest {
 	IBoxContext			context;
 	IScope				variables;
 	static Key			result	= new Key( "result" );
+	ORMConfig			ormConfig;
 
 	@BeforeAll
 	public static void setUp() {
@@ -94,6 +97,9 @@ public class HibernateXMLWriterTest {
 		 */
 		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
 		variables	= context.getScopeNearby( VariablesScope.name );
+		IStruct properties = new Struct();
+		properties.put( "ignoreParseErrors", "true" );
+		ormConfig = new ORMConfig( properties, context.getRequestContext() );
 	}
 
 	/**********************
@@ -106,7 +112,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromFile( "src/test/resources/app/models/Manufacturer.bx" );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Vehicle", "models.Vehicle" ), false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Vehicle", "models.Vehicle" ), ormConfig ).generateXML();
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 
@@ -132,7 +138,7 @@ public class HibernateXMLWriterTest {
 		IStruct			meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta		entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document		doc				= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document		doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 		Node			classEl			= doc.getDocumentElement().getFirstChild();
 		NamedNodeMap	classAttributes	= classEl.getAttributes();
 
@@ -161,7 +167,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 
@@ -180,7 +186,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta				= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc					= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc					= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node		classEL				= doc.getDocumentElement().getFirstChild();
 		// lastChild is a bit brittle, but it's the simplest way to get the discriminator node
@@ -203,7 +209,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		Node		node		= classEl.getFirstChild();
@@ -228,7 +234,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		String		xml			= xmlToString( doc );
 
@@ -264,7 +270,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		Node		node		= classEl.getFirstChild();
@@ -288,7 +294,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node		classEl			= doc.getDocumentElement().getFirstChild();
 		Node		propertyNode	= classEl.getLastChild();
@@ -313,7 +319,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		Node		nameNode	= classEl.getFirstChild();
@@ -345,7 +351,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		Node		idNode		= classEl.getFirstChild();
@@ -381,7 +387,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		String		xml				= xmlToString( doc );
 
@@ -428,7 +434,7 @@ public class HibernateXMLWriterTest {
 		IStruct			meta				= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document		doc					= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		String			xml					= xmlToString( doc );
 
@@ -457,7 +463,7 @@ public class HibernateXMLWriterTest {
 		IStruct			meta				= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document		doc					= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node			propertyNode		= doc.getDocumentElement().getFirstChild().getFirstChild();
 		NamedNodeMap	propertyAttributes	= propertyNode.getAttributes();
@@ -483,7 +489,7 @@ public class HibernateXMLWriterTest {
 		IStruct			meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta		entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document		doc				= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document		doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node			classEL			= doc.getDocumentElement().getFirstChild();
 		NamedNodeMap	classAttributes	= classEL.getAttributes();
@@ -509,7 +515,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 		Node		node		= classEL.getChildNodes().item( 1 );
@@ -534,7 +540,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 		Node		node		= classEL.getFirstChild();
@@ -565,7 +571,7 @@ public class HibernateXMLWriterTest {
 		IStruct			meta				= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document		doc					= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node			classEL				= doc.getDocumentElement().getFirstChild();
 		Node			propertyNode		= classEL.getFirstChild();
@@ -601,7 +607,7 @@ public class HibernateXMLWriterTest {
 		IStruct			meta				= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document		doc					= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node			classEL				= doc.getDocumentElement().getFirstChild();
 		Node			propertyNode		= classEL.getFirstChild();
@@ -647,7 +653,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 		Node		versionNode	= classEL.getFirstChild();
@@ -683,7 +689,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), false ).generateXML();
+		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), ormConfig ).generateXML();
 
 		Node		classEL			= doc.getDocumentElement().getFirstChild();
 		Node		oneToOneNode	= classEL.getFirstChild();
@@ -721,7 +727,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), false ).generateXML();
+		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), ormConfig ).generateXML();
 
 		Node		classEL			= doc.getDocumentElement().getFirstChild();
 		Node		oneToOneNode	= classEL.getFirstChild();
@@ -762,7 +768,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), ormConfig ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 
@@ -821,7 +827,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), ormConfig ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 
@@ -879,7 +885,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Manufacturer", "models.Manufacturer" ), false )
+		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Manufacturer", "models.Manufacturer" ), ormConfig )
 		    .generateXML();
 
 		Node		classEL			= doc.getDocumentElement().getFirstChild();
@@ -912,7 +918,7 @@ public class HibernateXMLWriterTest {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, false ).generateXML();
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
 		Node		classEL		= doc.getDocumentElement().getFirstChild();
 		Node		cacheNode	= classEL.getFirstChild();
@@ -958,18 +964,18 @@ public class HibernateXMLWriterTest {
 	}
 
 	/**
-	 * TODO: The following ORM annotations are still lacking tests at either the entity level, the property level, or both:
-	 * embedXml
-	 * missingRowIgnored
-	 * joinColumn
-	 * inverse
-	 * structkeycolumn
-	 * structkeytype
-	 * structkeydatatype ?? ACF only?
-	 * elementcolumn
-	 * elementtype
-	 * index
-	 * unSavedValue - deprecated
+	 * @TODO: The following ORM annotations are still lacking tests at either the entity level, the property level, or both:
+	 *        embedXml
+	 *        missingRowIgnored
+	 *        joinColumn
+	 *        inverse
+	 *        structkeycolumn
+	 *        structkeytype
+	 *        structkeydatatype ?? ACF only?
+	 *        elementcolumn
+	 *        elementtype
+	 *        index
+	 *        unSavedValue - deprecated
 	 */
 
 	private IStruct getClassMetaFromFile( String entityFile ) {

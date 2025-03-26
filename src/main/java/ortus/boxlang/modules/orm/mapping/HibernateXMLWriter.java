@@ -29,6 +29,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
 
+import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.hibernate.converters.BigDecimalConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.BigIntegerConverter;
@@ -86,9 +87,9 @@ public class HibernateXMLWriter {
 	BiFunction<String, Key, EntityRecord>	entityLookup;
 
 	/**
-	 * Whether to throw an exception when an error occurs during XML generation.
+	 * ORM configuration settings.
 	 */
-	boolean									throwOnErrors;
+	ORMConfig								ormConfig;
 
 	/**
 	 * Set of SQL reserved words (any SQL dialect) that need to be escaped when used in identifiers.
@@ -159,29 +160,19 @@ public class HibernateXMLWriter {
 	 * Create a new Hibernate XML writer for the given entity metadata, using the provided entity lookup function to find associated entities.
 	 *
 	 * @param entity       The entity metadata to generate XML for.
-	 * @param entityLookup A function that takes an entity name and returns an EntityRecord instance.
+	 * @param entityLookup A function that takes 1) an entity name, and 2) a datasource name, and returns an EntityRecord instance matching this combo
+	 *                     (or null.)
+	 * @param ormConfig    Whether to throw an exception when an error occurs during XML generation.
 	 */
-	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, Key, EntityRecord> entityLookup ) {
-		this( entity, entityLookup, true );
-	}
-
-	/**
-	 * Create a new Hibernate XML writer for the given entity metadata, using the provided entity lookup function to find associated entities.
-	 *
-	 * @param entity        The entity metadata to generate XML for.
-	 * @param entityLookup  A function that takes 1) an entity name, and 2) a datasource name, and returns an EntityRecord instance matching this combo
-	 *                      (or null.)
-	 * @param throwOnErrors Whether to throw an exception when an error occurs during XML generation.
-	 */
-	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, Key, EntityRecord> entityLookup, boolean throwOnErrors ) {
+	public HibernateXMLWriter( IEntityMeta entity, BiFunction<String, Key, EntityRecord> entityLookup, ORMConfig ormConfig ) {
 		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 		this.entity			= entity;
 		this.entityLookup	= entityLookup;
-		this.throwOnErrors	= throwOnErrors;
+		this.ormConfig		= ormConfig;
 		// Validation
 		if ( !entity.isSubclass() && entity.getIdProperties().isEmpty() ) {
 			logger.error( "Entity {} has no ID properties. Hibernate requires at least one.", entity.getEntityName() );
-			if ( throwOnErrors ) {
+			if ( !this.ormConfig.ignoreParseErrors ) {
 				throw new BoxRuntimeException( "Entity %s has no ID properties. Hibernate requires at least one.".formatted( entity.getEntityName() ) );
 			}
 		}
@@ -214,9 +205,10 @@ public class HibernateXMLWriter {
 			), rootDocument.getDocumentElement() );
 			return rootDocument;
 		} catch ( ParserConfigurationException e ) {
-			// @TODO: Check ORMConfig.ignoreParseErrors and throw if false.
-			e.printStackTrace();
 			logger.error( "Error creating Hibernate XML document: {}", e.getMessage(), e );
+			if ( this.ormConfig.ignoreParseErrors ) {
+				return null;
+			}
 			throw new BoxRuntimeException( "Error creating Hibernate XML document: " + e.getMessage(), e );
 		}
 	}
@@ -778,7 +770,6 @@ public class HibernateXMLWriter {
 		} ).filter( node -> node != null )
 		    .forEach( entityElement::appendChild );
 
-		// @TODO: generate <joined-subclass> elements
 		// @TODO: generate <union-subclass> elements
 		// @TODO: generate/handle optimistic lock
 
@@ -872,7 +863,7 @@ public class HibernateXMLWriter {
 			String message = String.format( "Could not find entity '%s' referenced in property '%s' on entity '%s'", relationClassName, prop.getName(),
 			    prop.getDefiningEntity().getEntityName() );
 			logger.error( message );
-			if ( this.throwOnErrors ) {
+			if ( !this.ormConfig.ignoreParseErrors ) {
 				throw new BoxRuntimeException( message );
 			}
 		} else {

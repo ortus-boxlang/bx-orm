@@ -600,19 +600,14 @@ public class ORMConfig {
 			}
 		}
 
-		// @TODO: Implement the remaining configuration settings:
-		// - cacheConfig
-		// - cacheProvider
-		// - eventHandling
-		// - eventHandler
-		// - flushAtRequestEnd
-		// - ormConfig
-
 		// These properties are only used in the SessionFactoryBuilder, and do not need
 		// copying into the Hibernate configuration:
 		// - skipCFCWithError
 		// - useDBForMapping
 		// - saveMapping
+
+		// @TODO: Implement the remaining configuration settings:
+		// - ormConfig
 
 		// Session and transaction management settings:
 		configuration.setProperty( AvailableSettings.FLUSH_BEFORE_COMPLETION, "false" )
