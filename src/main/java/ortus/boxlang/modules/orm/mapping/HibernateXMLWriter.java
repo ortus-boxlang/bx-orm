@@ -156,15 +156,6 @@ public class HibernateXMLWriter {
 	    "wlm", "work", "write", "writetext", "xor", "year", "year_month", "zerofill", "zone" );
 
 	/**
-	 * Create a new Hibernate XML writer for the given entity metadata.
-	 *
-	 * @param entity The entity metadata to generate XML for.
-	 */
-	public HibernateXMLWriter( IEntityMeta entity ) {
-		this( entity, null, true );
-	}
-
-	/**
 	 * Create a new Hibernate XML writer for the given entity metadata, using the provided entity lookup function to find associated entities.
 	 *
 	 * @param entity       The entity metadata to generate XML for.
