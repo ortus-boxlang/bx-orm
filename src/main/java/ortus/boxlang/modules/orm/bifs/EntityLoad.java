@@ -79,6 +79,8 @@ public class EntityLoad extends BaseORMBIF {
 			// If the uniqueOrOrder is a struct, we need to move it to options
 			arguments.put( ORMKeys.options, arguments.get( ORMKeys.uniqueOrOrder ) );
 			arguments.remove( ORMKeys.uniqueOrOrder );
+		} else {
+			arguments.put( ORMKeys.options, StringCaster.cast( arguments.get( ORMKeys.options ) ) );
 		}
 		if ( arguments.containsKey( ORMKeys.idOrFilter ) ) {
 			boolean idIsSimpleValue = StringCaster.attempt( arguments.get( ORMKeys.idOrFilter ) ).wasSuccessful();
