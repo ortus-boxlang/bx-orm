@@ -60,10 +60,10 @@ public class EntityLoad extends BaseORMBIF {
 	public EntityLoad() {
 		super();
 		declaredArguments = new Argument[] {
-		    new Argument( true, "String", ORMKeys.entityName ),
-		    new Argument( false, "Any", ORMKeys.idOrFilter ),
-		    new Argument( false, "String", ORMKeys.uniqueOrOrder ),
-		    new Argument( false, "Struct", ORMKeys.options )
+		    new Argument( true, "string", ORMKeys.entityName ),
+		    new Argument( false, "any", ORMKeys.idOrFilter ),
+		    new Argument( false, "any", ORMKeys.uniqueOrOrder ),
+		    new Argument( false, "struct", ORMKeys.options )
 		};
 	}
 
@@ -74,6 +74,12 @@ public class EntityLoad extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		if ( arguments.get( ORMKeys.uniqueOrOrder ) != null && arguments.get( ORMKeys.options ) == null
+		    && arguments.get( ORMKeys.uniqueOrOrder ) instanceof IStruct ) {
+			// If the uniqueOrOrder is a struct, we need to move it to options
+			arguments.put( ORMKeys.options, arguments.get( ORMKeys.uniqueOrOrder ) );
+			arguments.remove( ORMKeys.uniqueOrOrder );
+		}
 		if ( arguments.containsKey( ORMKeys.idOrFilter ) ) {
 			boolean idIsSimpleValue = StringCaster.attempt( arguments.get( ORMKeys.idOrFilter ) ).wasSuccessful();
 			if ( idIsSimpleValue ) {
@@ -87,7 +93,7 @@ public class EntityLoad extends BaseORMBIF {
 
 	/**
 	 * Load an entity or array of entities by ID.
-	 * 
+	 *
 	 * @param context   Context in which the BIF was invoked.
 	 * @param arguments Arguments scope of the BIF.
 	 */
@@ -103,7 +109,7 @@ public class EntityLoad extends BaseORMBIF {
 
 	/**
 	 * Load an array of entities by filter criteria.
-	 * 
+	 *
 	 * @param context   Context in which the BIF was invoked.
 	 * @param arguments Arguments scope of the BIF.
 	 */
