@@ -214,6 +214,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			association.put( ORMKeys.schema, annotations.getAsString( ORMKeys.linkSchema ) );
 			association.put( ORMKeys.catalog, annotations.getAsString( ORMKeys.linkCatalog ) );
 		}
+		if ( annotations.containsKey( ORMKeys.notNull ) ) {
+			association.put( ORMKeys.nullable, Boolean.FALSE.equals( BooleanCaster.cast( annotations.getOrDefault( ORMKeys.notNull, true ) ) ) );
+		}
 		association.putIfAbsent( Key.table, translateTableName( annotations.getAsString( Key.table ) ) );
 		association.putIfAbsent( ORMKeys.schema, annotations.getAsString( ORMKeys.schema ) );
 		association.putIfAbsent( ORMKeys.catalog, annotations.getAsString( ORMKeys.catalog ) );

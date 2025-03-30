@@ -33,6 +33,7 @@ public class BoxLazyInitializer extends AbstractLazyInitializer implements Seria
 
 	public BoxLazyInitializer( String entityName, Serializable id, SharedSessionContractImplementor session, PersistentClass mappingInfo ) {
 		super( entityName, id, session );
+		System.out.println( "Contract implementor: " + session.getClass().getName() );
 		this.id				= id;
 		this.entityName		= entityName;
 		this.mappingInfo	= mappingInfo;
@@ -67,7 +68,7 @@ public class BoxLazyInitializer extends AbstractLazyInitializer implements Seria
 	 * @return
 	 */
 	public IClassRunnable getInstantiatedEntity() {
-		return ( IClassRunnable ) getTarget();
+		return ( IClassRunnable ) getImplementation();
 	}
 
 }

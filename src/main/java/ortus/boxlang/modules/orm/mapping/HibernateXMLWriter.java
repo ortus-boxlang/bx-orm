@@ -415,10 +415,13 @@ public class HibernateXMLWriter {
 		if ( association.containsKey( ORMKeys.insertable ) ) {
 			theNode.setAttribute( "insert", trueFalseFormat( association.getAsBoolean( ORMKeys.insertable ) ) );
 		}
+
 		if ( association.containsKey( ORMKeys.updateable ) ) {
 			theNode.setAttribute( "update", trueFalseFormat( association.getAsBoolean( ORMKeys.updateable ) ) );
 		}
-
+		if ( association.containsKey( ORMKeys.nullable ) ) {
+			theNode.setAttribute( "not-null", trueFalseFormat( !association.getAsBoolean( ORMKeys.nullable ) ) );
+		}
 		// non-simple attributes
 		if ( association.containsKey( ORMKeys.constrained ) && association.getAsBoolean( ORMKeys.constrained ) ) {
 			theNode.setAttribute( "constrained", "true" );

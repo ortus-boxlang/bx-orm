@@ -106,12 +106,12 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		instance.executeSource( """
 			Manufacturer = entityNew( 'Manufacturer' );
 			vehicle = entityLoadByPK( 'Vehicle', '1HGCM82633A123456' );
-			
+
 			vehicleCountPreAdd = manufacturer.getVehicles().len() ?: 0;
-			
+
 			Manufacturer.addVehicle( vehicle );
 			vehicleCountPostAdd1 = manufacturer.getVehicles().len();
-			
+
 			Manufacturer.addVehicle( vehicle );
 			vehicleCountPostAdd2 = manufacturer.getVehicles().len();
 			""", context );
@@ -227,5 +227,22 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		);
 		// @formatter:on
 		assertEquals( "another-test", variables.get( result ) );
+	}
+
+	@DisplayName( "It can load an entity an fetch relationships" )
+	@Test
+	public void canLoadEntityRelationships() {
+		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
+
+		// @formatter:off
+		instance.executeSource(
+			"""
+				comment = entityLoadByPK( "cbComment", "77d9a240-a444-11eb-ab6f-0290cc502ae3" );
+				result = comment.getRelatedContent().getContentType();
+			""",
+			context
+		);
+		// @formatter:on
+		assertEquals( "Entry", variables.get( result ) );
 	}
 }
