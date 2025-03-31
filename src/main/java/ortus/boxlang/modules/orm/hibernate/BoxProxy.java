@@ -36,7 +36,9 @@ import ortus.boxlang.runtime.types.Struct;
  */
 public class BoxProxy extends Struct implements HibernateProxy {
 
-	private BoxLazyInitializer lazyInitializer;
+	private BoxLazyInitializer	lazyInitializer;
+
+	private IClassRunnable		runnable;
 
 	/**
 	 * Constructor.
@@ -125,7 +127,10 @@ public class BoxProxy extends Struct implements HibernateProxy {
 	 * @return
 	 */
 	private IClassRunnable getRunnable() {
-		return lazyInitializer.getInstantiatedEntity();
+		if ( runnable == null ) {
+			runnable = lazyInitializer.getInstantiatedEntity();
+		}
+		return runnable;
 	}
 
 }
