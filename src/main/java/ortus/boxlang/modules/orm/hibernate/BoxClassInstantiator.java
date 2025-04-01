@@ -103,7 +103,7 @@ public class BoxClassInstantiator implements Instantiator {
 			Iterator<PersistentClass> itr = mappingInfo.getSubclassClosureIterator();
 			while ( itr.hasNext() ) {
 				final PersistentClass subclassInfo = itr.next();
-				subclassClassNames.add( subclassInfo.getClassName() );
+				subclassClassNames.add( subclassInfo.getEntityName() );
 			}
 		}
 	}
@@ -242,9 +242,6 @@ public class BoxClassInstantiator implements Instantiator {
 			logger.debug( "Checking to see if {} is an instance of {}", theClass.getClass().getName(), this.entityName );
 			String objectEntityName = entityNameResolver.resolveEntityName( theClass );
 			logger.debug( "Looking at annotations, found entity name {}", objectEntityName );
-			System.out.println( "Entity name: " + this.entityName );
-			System.out.println( "Resolved Entity name: " + objectEntityName );
-			System.out.println( "Subclass names: " + subclassClassNames );
 			return this.entityName.equals( objectEntityName )
 			    || subclassClassNames.contains( objectEntityName );
 		}
