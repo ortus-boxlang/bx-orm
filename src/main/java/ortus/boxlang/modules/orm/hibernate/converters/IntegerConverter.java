@@ -10,7 +10,7 @@ public class IntegerConverter implements AttributeConverter<Object, Integer> {
 
 	@Override
 	public Integer convertToDatabaseColumn( Object attribute ) {
-		return IntegerCaster.cast( attribute );
+		return attribute != null ? IntegerCaster.cast( attribute ) : null;
 	}
 
 	@Override

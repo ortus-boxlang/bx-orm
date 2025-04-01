@@ -10,7 +10,7 @@ public class DoubleConverter implements AttributeConverter<Object, Double> {
 
 	@Override
 	public Double convertToDatabaseColumn( Object attribute ) {
-		return DoubleCaster.cast( attribute );
+		return attribute != null ? DoubleCaster.cast( attribute ) : null;
 	}
 
 	@Override

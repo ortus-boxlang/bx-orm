@@ -12,7 +12,7 @@ public class BigIntegerConverter implements AttributeConverter<Object, BigIntege
 
 	@Override
 	public BigInteger convertToDatabaseColumn( Object attribute ) {
-		return BigIntegerCaster.cast( attribute );
+		return attribute != null ? BigIntegerCaster.cast( attribute ) : null;
 	}
 
 	@Override
