@@ -419,7 +419,7 @@ public class HibernateXMLWriter {
 		if ( association.containsKey( ORMKeys.updateable ) ) {
 			theNode.setAttribute( "update", trueFalseFormat( association.getAsBoolean( ORMKeys.updateable ) ) );
 		}
-		if ( association.containsKey( ORMKeys.nullable ) ) {
+		if ( !type.equals( "one-to-one" ) && association.containsKey( ORMKeys.nullable ) ) {
 			theNode.setAttribute( "not-null", trueFalseFormat( !association.getAsBoolean( ORMKeys.nullable ) ) );
 		}
 		// non-simple attributes
