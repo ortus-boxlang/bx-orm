@@ -15,13 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ortus.boxlang.modules.orm.tools;
+package ortus.boxlang.modules.orm.cli;
 
 import java.nio.file.Path;
 import java.util.HashMap;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
@@ -48,7 +49,7 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  * first run, but this may be helpful in debugging mapping errors.</li>
  * </ul>
  */
-public class MappingGenerator {
+public class GenerateMappings {
 
 	public static void main( String[] args ) {
 		BoxRuntime		runtime	= BoxRuntime.getInstance();
@@ -59,8 +60,6 @@ public class MappingGenerator {
 			Boolean					failFast	= false;
 			Array					entityPaths	= new Array();
 			HashMap<String, String>	mappings	= new HashMap<>();
-
-			logger.info( "Parsing arguments" );
 
 			for ( int i = 0; i < args.length; i++ ) {
 				if ( args[ i ].equalsIgnoreCase( "--path" ) ) {
@@ -93,13 +92,13 @@ public class MappingGenerator {
 
 			if ( mappings.size() > 0 ) {
 				for ( String key : mappings.keySet() ) {
-					if ( logger.isInfoEnabled() ) {
-						logger.info( "Mapping: [{}] -> [{}]", key, mappings.get( key ) );
+					if ( logger.isDebugEnabled() ) {
+						logger.debug( "Mapping: [{}] -> [{}]", key, mappings.get( key ) );
 					}
 					runtime.getConfiguration().registerMapping( key, Path.of( mappings.get( key ) ).toAbsolutePath().toString() );
 				}
 			}
-			ORMConfig											ormConfig	= new ORMConfig(
+			ORMConfig			ormConfig	= new ORMConfig(
 			    Struct.of(
 			        // required that the user pass the correct path to their entity locations.
 			        ORMKeys.entityPaths, entityPaths,
@@ -114,13 +113,11 @@ public class MappingGenerator {
 			// @TODO: Add a custom toString() to ORMConfig for logging purposes.
 			// log.info( "Using ORM Config: {}", ormConfig );
 
-			ortus.boxlang.modules.orm.mapping.MappingGenerator	generator	= new ortus.boxlang.modules.orm.mapping.MappingGenerator(
+			MappingGenerator	generator	= new MappingGenerator(
 			    new ScriptingRequestBoxContext( runtime.getRuntimeContext() ),
 			    ormConfig );
 
-			logger.info( "========= Generating XML mappings! " );
 			generator.generateMappings();
-			logger.info( "========= Done! " );
 
 			System.exit( 0 );
 		} finally {

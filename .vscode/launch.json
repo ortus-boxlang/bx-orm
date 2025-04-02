@@ -15,7 +15,7 @@
 			"type": "java",
 			"name": "MappingGenerator",
 			"request": "launch",
-			"mainClass": "ortus.boxlang.modules.orm.tools.MappingGenerator",
+			"mainClass": "ortus.boxlang.modules.orm.cli.GenerateMappings",
 			"projectName": "bx-orm"
 		}
 	]
