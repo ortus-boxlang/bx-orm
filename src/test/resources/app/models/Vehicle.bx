@@ -1,22 +1,22 @@
 class entityName="Vehicle" table="vehicles" persistent="true" {
 
-    property 
-        name="vin" 
-        type="string" 
-        fieldtype="id" 
-        ormtype="string" 
+    property
+        name="vin"
+        type="string"
+        fieldtype="id"
+        ormtype="string"
         generator="assigned";
-        
-    property 
-        name="make" 
+
+    property
+        name="make"
         type="string";
 
-    property 
-        name="model" 
+    property
+        name="model"
         type="string";
 
-    property 
-        name="features" 
+    property
+        name="features"
         singularName="feature"
         type="array"
         fieldtype="many-to-many"
@@ -27,12 +27,12 @@ class entityName="Vehicle" table="vehicles" persistent="true" {
         lazy="false"
         cascade="all";
 
-    property 
-        name="manufacturer" 
-        fieldtype="one-to-one"
+    property
+        name="manufacturer"
+        fieldtype="many-to-one"
         cfc="Manufacturer"
         fkcolumn="FK_manufacturer"
-        lazy="false";
+        lazy="true";
 
     property name="eventLog" type="array" persistent="false";
 

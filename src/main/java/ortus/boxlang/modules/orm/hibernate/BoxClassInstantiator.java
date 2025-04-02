@@ -280,16 +280,7 @@ public class BoxClassInstantiator implements Instantiator {
 		    ( context, function ) -> {
 			    VariablesScope scope	= context.getThisClass().getVariablesScope();
 			    Object		collection	= scope.get( collectionKey );
-			    if ( collection == null ) {
-				    return false;
-			    }
-			    if ( collectionType == "bag" ) {
-				    if ( collection instanceof PersistentBag bagCollection ) {
-					    return bagCollection.size() > 0;
-				    }
-				    return ( ( Array ) collection ).size() > 0;
-			    }
-			    return scope.getAsStruct( collectionKey ).size() > 0;
+			    return collection != null;
 		    },
 		    new Argument[] {},
 		    "boolean",
