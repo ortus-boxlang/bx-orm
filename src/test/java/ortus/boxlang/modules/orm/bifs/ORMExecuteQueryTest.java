@@ -281,6 +281,22 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( entities ).isInstanceOf( Array.class );
 	}
 
+	@DisplayName( "It can query by the relationship discrimator value" )
+	@Test
+	public void getByRelationshipDiscrimator() {
+		// @formatter:off
+		instance.executeSource( """
+		// using both variations of the reationship discriminator
+		result1 = ormExecuteQuery( "FROM cbComment WHERE relatedContent.class = 'Entry'" );
+		result = ormExecuteQuery( "FROM cbComment WHERE relatedContent.contentType = 'Entry'" );
+		resultsRelated = result.map( ( entity ) => entity.getRelatedContent().getSlug() );
+		""", context );
+		// @formatter:on
+		Object entities = variables.get( result );
+		assertThat( entities ).isInstanceOf( Array.class );
+		assertThat( ArrayCaster.cast( entities ).size() ).isGreaterThan( 0 );
+	}
+
 	@DisplayName( "It can retrieve and re-retrieve cache cache-enabled entries" )
 	@Test
 	public void getRetrieveSubClassCacheEntity() {

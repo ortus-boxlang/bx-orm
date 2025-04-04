@@ -67,7 +67,8 @@ public class BoxLazyInitializer extends AbstractLazyInitializer implements Seria
 	 * @return
 	 */
 	public IClassRunnable getInstantiatedEntity() {
-		return ( IClassRunnable ) getTarget();
+		initializeWithoutLoadIfPossible();
+		return ( IClassRunnable ) getImplementation();
 	}
 
 }

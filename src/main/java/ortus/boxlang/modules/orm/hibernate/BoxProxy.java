@@ -36,7 +36,9 @@ import ortus.boxlang.runtime.types.Struct;
  */
 public class BoxProxy extends Struct implements HibernateProxy {
 
-	private BoxLazyInitializer lazyInitializer;
+	private BoxLazyInitializer	lazyInitializer;
+
+	private IClassRunnable		runnable;
 
 	/**
 	 * Constructor.
@@ -103,7 +105,7 @@ public class BoxProxy extends Struct implements HibernateProxy {
 	 * @return The requested object
 	 */
 	public Object dereferenceAndInvoke( IBoxContext context, Key name, Object[] positionalArguments, Boolean safe ) {
-		return BoxClassSupport.dereferenceAndInvoke( getRunnable(), context, name, EMPTY, safe );
+		return BoxClassSupport.dereferenceAndInvoke( getRunnable(), context, name, positionalArguments, safe );
 	}
 
 	/**
@@ -121,11 +123,14 @@ public class BoxProxy extends Struct implements HibernateProxy {
 
 	/**
 	 * Private method to get the instantiated targer from the initializer.
-	 * 
+	 *
 	 * @return
 	 */
 	private IClassRunnable getRunnable() {
-		return lazyInitializer.getInstantiatedEntity();
+		if ( runnable == null ) {
+			runnable = lazyInitializer.getInstantiatedEntity();
+		}
+		return runnable;
 	}
 
 }

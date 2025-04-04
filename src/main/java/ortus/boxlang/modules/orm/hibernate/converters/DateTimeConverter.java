@@ -29,7 +29,7 @@ public class DateTimeConverter implements AttributeConverter<Object, Date> {
 
 	@Override
 	public Date convertToDatabaseColumn( Object attribute ) {
-		return DateTimeCaster.cast( attribute ).toDate();
+		return attribute != null ? DateTimeCaster.cast( attribute ).toDate() : null;
 	}
 
 	@Override

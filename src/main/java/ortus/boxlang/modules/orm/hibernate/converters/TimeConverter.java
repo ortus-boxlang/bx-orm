@@ -30,7 +30,7 @@ public class TimeConverter implements AttributeConverter<Object, LocalTime> {
 
 	@Override
 	public LocalTime convertToDatabaseColumn( Object attribute ) {
-		return TimeCaster.cast( attribute );
+		return attribute != null ? TimeCaster.cast( attribute ) : null;
 	}
 
 	@Override

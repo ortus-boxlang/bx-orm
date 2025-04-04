@@ -80,7 +80,7 @@ public class EventListener
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime	= BoxRuntime.getInstance();
+	private static final BoxRuntime	runtime			= BoxRuntime.getInstance();
 
 	/**
 	 * The logger for the ORM application.
@@ -91,6 +91,11 @@ public class EventListener
 	 * Global listener for this event handler.
 	 */
 	private DynamicObject			globalListener;
+
+	/**
+	 * Flag so that we can lazy instantiate the listener on first use
+	 */
+	private boolean					listenerReady	= false;
 
 	/**
 	 * Constructor
@@ -291,6 +296,11 @@ public class EventListener
 		if ( globalListener == null ) {
 			return;
 		}
+		if ( !listenerReady ) {
+			globalListener.invokeConstructor( RequestBoxContext.getCurrent() );
+			listenerReady = true;
+		}
+
 		boolean hasMethod = false;
 
 		if ( IClassRunnable.class.isAssignableFrom( globalListener.getTargetClass() ) ) {

@@ -426,7 +426,7 @@ public class ORMApp {
 	 * Shut down the ORM application, including shutting down all Hibernate resources - session factories, open sessions and connections, etc.
 	 */
 	public void shutdown() {
-		logger.info( "ORMApp shutdown" );
+		logger.debug( "Shutting down ORM App: " + this.name );
 		// @TODO: "It is the responsibility of the application to ensure that there are
 		// no open sessions before calling this method as the impact on those
 		// sessions is indeterminate."

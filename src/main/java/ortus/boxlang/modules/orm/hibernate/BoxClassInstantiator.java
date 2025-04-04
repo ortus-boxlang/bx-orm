@@ -103,7 +103,7 @@ public class BoxClassInstantiator implements Instantiator {
 			Iterator<PersistentClass> itr = mappingInfo.getSubclassClosureIterator();
 			while ( itr.hasNext() ) {
 				final PersistentClass subclassInfo = itr.next();
-				subclassClassNames.add( subclassInfo.getClassName() );
+				subclassClassNames.add( subclassInfo.getEntityName() );
 			}
 		}
 	}
@@ -130,27 +130,33 @@ public class BoxClassInstantiator implements Instantiator {
 			    } else {
 				    hasUDF = getSimpleHasMethod( collectionType, association );
 			    }
-			    logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
-			        prop.getName(), entityRecord.getEntityName() );
-			    theEntity.getThisScope().put( hasUDF.getName(), hasUDF );
-			    theEntity.getVariablesScope().put( hasUDF.getName(), hasUDF );
+			    if ( !theEntity.getThisScope().containsKey( hasUDF.getName() ) ) {
+				    logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
+				        prop.getName(), entityRecord.getEntityName() );
+				    theEntity.getThisScope().put( hasUDF.getName(), hasUDF );
+				    theEntity.getVariablesScope().put( hasUDF.getName(), hasUDF );
+			    }
 
 			    // @TODO: I'm not sure this conditional is correct at all... but without more & better testing, I don't want to change it.
 			    boolean isCollectionType = association.containsKey( ORMKeys.collectionType );
 			    if ( isCollectionType ) {
 				    // addX(), used on to-many associations
 				    DynamicFunction addUDF = getAddMethod( collectionType, association );
-				    logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getName(),
-				        entityRecord.getEntityName() );
-				    theEntity.getThisScope().put( addUDF.getName(), addUDF );
-				    theEntity.getVariablesScope().put( addUDF.getName(), addUDF );
+				    if ( !theEntity.getThisScope().containsKey( addUDF.getName() ) ) {
+					    logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getName(),
+					        entityRecord.getEntityName() );
+					    theEntity.getThisScope().put( addUDF.getName(), addUDF );
+					    theEntity.getVariablesScope().put( addUDF.getName(), addUDF );
+				    }
 
 				    // removeX(), used on to-many associations
 				    DynamicFunction removeUDF = getRemoveMethod( collectionType, association );
-				    logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
-				        prop.getName(), entityRecord.getEntityName() );
-				    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
-				    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
+				    if ( !theEntity.getThisScope().containsKey( removeUDF.getName() ) ) {
+					    logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
+					        prop.getName(), entityRecord.getEntityName() );
+					    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
+					    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
+				    }
 			    }
 		    } );
 
@@ -171,27 +177,33 @@ public class BoxClassInstantiator implements Instantiator {
 				    } else {
 					    hasUDF = getSimpleHasMethod( collectionType, association );
 				    }
-				    logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
-				        prop.getAsString( Key._name ), entityRecord.getEntityName() );
-				    theEntity.getThisScope().put( hasUDF.getName(), hasUDF );
-				    theEntity.getVariablesScope().put( hasUDF.getName(), hasUDF );
+				    if ( !theEntity.getThisScope().containsKey( hasUDF.getName() ) ) {
+					    logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
+					        prop.getAsString( Key._name ), entityRecord.getEntityName() );
+					    theEntity.getThisScope().put( hasUDF.getName(), hasUDF );
+					    theEntity.getVariablesScope().put( hasUDF.getName(), hasUDF );
+				    }
 
 				    // @TODO: I'm not sure this conditional is correct at all... but without more & better testing, I don't want to change it.
 				    boolean isCollectionType = association.containsKey( ORMKeys.collectionType );
 				    if ( isCollectionType ) {
 					    // addX(), used on to-many associations
 					    DynamicFunction addUDF = getAddMethod( collectionType, association );
-					    logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getAsString( Key._name ),
-					        entityRecord.getEntityName() );
-					    theEntity.getThisScope().put( addUDF.getName(), addUDF );
-					    theEntity.getVariablesScope().put( addUDF.getName(), addUDF );
+					    if ( !theEntity.getThisScope().containsKey( addUDF.getName() ) ) {
+						    logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getAsString( Key._name ),
+						        entityRecord.getEntityName() );
+						    theEntity.getThisScope().put( addUDF.getName(), addUDF );
+						    theEntity.getVariablesScope().put( addUDF.getName(), addUDF );
+					    }
 
 					    // removeX(), used on to-many associations
 					    DynamicFunction removeUDF = getRemoveMethod( collectionType, association );
-					    logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
-					        prop.getAsString( Key._name ), entityRecord.getEntityName() );
-					    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
-					    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
+					    if ( !theEntity.getThisScope().containsKey( removeUDF.getName() ) ) {
+						    logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
+						        prop.getAsString( Key._name ), entityRecord.getEntityName() );
+						    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
+						    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
+					    }
 				    }
 			    } );
 		}
@@ -268,16 +280,7 @@ public class BoxClassInstantiator implements Instantiator {
 		    ( context, function ) -> {
 			    VariablesScope scope	= context.getThisClass().getVariablesScope();
 			    Object		collection	= scope.get( collectionKey );
-			    if ( collection == null ) {
-				    return false;
-			    }
-			    if ( collectionType == "bag" ) {
-				    if ( collection instanceof PersistentBag bagCollection ) {
-					    return bagCollection.size() > 0;
-				    }
-				    return ( ( Array ) collection ).size() > 0;
-			    }
-			    return scope.getAsStruct( collectionKey ).size() > 0;
+			    return collection != null;
 		    },
 		    new Argument[] {},
 		    "boolean",

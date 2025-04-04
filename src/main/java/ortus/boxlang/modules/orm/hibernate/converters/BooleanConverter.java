@@ -10,7 +10,7 @@ public class BooleanConverter implements AttributeConverter<Object, Boolean> {
 
 	@Override
 	public Boolean convertToDatabaseColumn( Object attribute ) {
-		return BooleanCaster.cast( attribute );
+		return attribute != null ? BooleanCaster.cast( attribute ) : null;
 	}
 
 	@Override

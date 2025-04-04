@@ -82,7 +82,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertTrue( variables.getAsBoolean( result ) );
 	}
 
-	@DisplayName( "It will add add* methods for *-to-many associations" )
+	@DisplayName( "addVehicle() - It will add the association" )
 	@Test
 	public void testEntityAddMethod() {
 
@@ -96,6 +96,30 @@ public class EntityLoadByPKTest extends BaseORMTest {
 
 		assertTrue( variables.get( result ) instanceof Boolean );
 		assertTrue( variables.getAsBoolean( result ) );
+	}
+
+	@DisplayName( "AddVehicle() - It will happily add duplicate items to an array collection" )
+	@Test
+	public void testEntityAddWithDuplicate() {
+
+		// @formatter:off
+		instance.executeSource( """
+			Manufacturer = entityNew( 'Manufacturer' );
+			vehicle = entityLoadByPK( 'Vehicle', '1HGCM82633A123456' );
+
+			vehicleCountPreAdd = manufacturer.getVehicles().len() ?: 0;
+
+			Manufacturer.addVehicle( vehicle );
+			vehicleCountPostAdd1 = manufacturer.getVehicles().len();
+
+			Manufacturer.addVehicle( vehicle );
+			vehicleCountPostAdd2 = manufacturer.getVehicles().len();
+			""", context );
+		// @formatter:on
+
+		assertThat( variables.get( Key.of( "vehicleCountPreAdd" ) ) ).isEqualTo( 0 );
+		assertThat( variables.get( Key.of( "vehicleCountPostAdd1" ) ) ).isEqualTo( 1 );
+		assertThat( variables.get( Key.of( "vehicleCountPostAdd2" ) ) ).isEqualTo( 2 );
 	}
 
 	@DisplayName( "It will add remove* methods for associations" )
@@ -203,5 +227,22 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		);
 		// @formatter:on
 		assertEquals( "another-test", variables.get( result ) );
+	}
+
+	@DisplayName( "It can load an entity an fetch relationships" )
+	@Test
+	public void canLoadEntityRelationships() {
+		assertNotNull( context.getParentOfType( ApplicationBoxContext.class ) );
+
+		// @formatter:off
+		instance.executeSource(
+			"""
+				comment = entityLoadByPK( "cbComment", "77d9a240-a444-11eb-ab6f-0290cc502ae3" );
+				result = comment.getRelatedContent().getContentType();
+			""",
+			context
+		);
+		// @formatter:on
+		assertEquals( "Entry", variables.get( result ) );
 	}
 }

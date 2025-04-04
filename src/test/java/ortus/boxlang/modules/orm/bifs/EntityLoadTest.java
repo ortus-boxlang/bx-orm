@@ -152,4 +152,20 @@ public class EntityLoadTest extends BaseORMTest {
 		assertThat( second.get( "model" ) ).isEqualTo( "Ridgeline" );
 	}
 
+	@DisplayName( "It can take options as the third argument" )
+	@Test
+	public void testEntityLoadOptionsThird() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityLoad( "Vehicle", { "make" : "Honda" }, { maxResults : 2, offset: 1 } )
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Array.class );
+
+		Array vehicles = variables.getAsArray( result );
+		assertThat( vehicles.size() ).isEqualTo( 2 );
+	}
+
 }

@@ -12,7 +12,7 @@ public class BigDecimalConverter implements AttributeConverter<Object, BigDecima
 
 	@Override
 	public BigDecimal convertToDatabaseColumn( Object attribute ) {
-		return BigDecimalCaster.cast( attribute );
+		return attribute != null ? BigDecimalCaster.cast( attribute ) : null;
 	}
 
 	@Override

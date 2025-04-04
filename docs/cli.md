@@ -4,7 +4,7 @@ Test your entity mapping capabilities via this command:
 
 ```sh
 java -cp /path/to/bx-orm-1.0.0-all.jar:/path/to/boxlang-1.0.0-snapshot-all.jar \
-    ortus.boxlang.modules.orm.tools.MappingGenerator \
+    ortus.boxlang.modules.orm.cli.GenerateMappings \
     --path /my/app/models/orm
 ```
 
@@ -21,7 +21,7 @@ Here's a full example:
 
 ```
 java -cp /path/to/bx-orm-1.0.0-all.jar:/path/to/boxlang-1.0.0-snapshot-all.jar \
-    ortus.boxlang.modules.orm.tools.MappingGenerator \
+    ortus.boxlang.modules.orm.cli.GenerateMappings \
     --mapping MYMODULE:./modules/MYMODULE/ \
     --mapping cborm:./modules/cborm \
     --path ./models/orm \
