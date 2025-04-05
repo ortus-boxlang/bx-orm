@@ -26,15 +26,15 @@ import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.LazyInitializer;
 
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.dynamic.IReferenceable;
 import ortus.boxlang.runtime.runnables.BoxClassSupport;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.types.Struct;
 
 /**
  * Boxlang class proxy.
  */
-public class BoxProxy extends Struct implements HibernateProxy {
+public class BoxProxy implements IReferenceable, HibernateProxy {
 
 	private BoxLazyInitializer	lazyInitializer;
 
