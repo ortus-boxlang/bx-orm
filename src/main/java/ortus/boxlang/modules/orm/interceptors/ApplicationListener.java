@@ -79,6 +79,22 @@ public class ApplicationListener extends BaseInterceptor {
 	}
 
 	/**
+	 * Listens for an application startup. If the application has been shutdown due to timeout we reload the app
+	 *
+	 * @param args
+	 */
+	@InterceptionPoint
+	public void onApplicationStart( IStruct args ) {
+		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( Key.listener );
+		RequestBoxContext		requestContext		= RequestBoxContext.getCurrent();
+		if ( requestContext == null ) {
+			return;
+		} else if ( this.ormService.getORMAppByContext( requestContext ) == null ) {
+			this.ormService.startupApp( requestContext, ORMConfig.loadFromContext( requestContext ), startingListener );
+		}
+	}
+
+	/**
 	 * Listen for application shutdown and clean up application-specific Hibernate resources.
 	 */
 	@InterceptionPoint
