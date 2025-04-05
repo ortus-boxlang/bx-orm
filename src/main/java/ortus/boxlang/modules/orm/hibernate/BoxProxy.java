@@ -26,19 +26,21 @@ import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.LazyInitializer;
 
 import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.dynamic.IReferenceable;
 import ortus.boxlang.runtime.runnables.BoxClassSupport;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Struct;
 
 /**
  * Boxlang class proxy.
  */
-public class BoxProxy implements IReferenceable, HibernateProxy {
+public class BoxProxy extends Struct implements HibernateProxy {
 
 	private BoxLazyInitializer	lazyInitializer;
 
 	private IClassRunnable		runnable;
+
+	private final Key			PROXY_KEY	= new Key( "BoxProxy" );
 
 	/**
 	 * Constructor.
@@ -49,6 +51,8 @@ public class BoxProxy implements IReferenceable, HibernateProxy {
 	 */
 	public BoxProxy( String entityName, Serializable id, SharedSessionContractImplementor session, PersistentClass mappingInfo ) {
 		this.lazyInitializer = new BoxLazyInitializer( entityName, id, session, mappingInfo );
+		// This is a workaround to ensure that the struct is not seen as empty
+		put( PROXY_KEY, true );
 	}
 
 	/**
