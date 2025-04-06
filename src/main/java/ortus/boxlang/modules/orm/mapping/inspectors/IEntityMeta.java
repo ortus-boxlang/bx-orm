@@ -1,3 +1,4 @@
+
 /**
  * [BoxLang]
  *
@@ -21,6 +22,7 @@ import java.util.List;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 
 /**
@@ -178,4 +180,11 @@ public interface IEntityMeta {
 	 * </ul>
 	 */
 	public List<IPropertyMeta> getAssociations();
+
+	/**
+	 * Gets all persistent property names as an Array of Keys for comparison
+	 *
+	 * @return An Array containing keys of the names of all persistent properties.
+	 */
+	public Array getPropertyNamesArray();
 }

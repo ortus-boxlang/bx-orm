@@ -23,6 +23,7 @@ import java.util.List;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.dynamic.casters.KeyCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
@@ -30,6 +31,7 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.util.BLCollector;
 
 /**
  * Abstract (parent) entity metadata configuration class.
@@ -467,5 +469,24 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	protected String translateColumnName( String columnName ) {
 		// TODO: Translate the column name using the configured column naming strategy.
 		return columnName;
+	}
+
+	/**
+	 * Gets all persistent property names as an Array of Keys for comparison
+	 *
+	 * @return An Array containing keys of the names of all persistent properties.
+	 */
+	public Array getPropertyNamesArray() {
+		Array	properties	= getAllPersistentProperties().stream().map( property -> KeyCaster.cast( property.getName() ) )
+		    .collect( BLCollector.toArray() );
+
+		Array	parentMeta	= getParentMeta().getAsArray( Key.properties );
+		if ( parentMeta != null ) {
+			properties.addAll(
+			    parentMeta.stream().map( StructCaster::cast )
+			        .map( prop -> KeyCaster.cast( prop.getAsStruct( Key.annotations ).get( Key._NAME ) ) ).collect( BLCollector.toArray() )
+			);
+		}
+		return properties;
 	}
 }

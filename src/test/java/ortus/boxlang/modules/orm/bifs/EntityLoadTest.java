@@ -168,4 +168,52 @@ public class EntityLoadTest extends BaseORMTest {
 		assertThat( vehicles.size() ).isEqualTo( 2 );
 	}
 
+	@DisplayName( "It can load a subclass entity by a parent property value" )
+	@Test
+	public void testEntityLoadParentProperty() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityLoad(
+				'cbEntry',
+				{ slug : 'copy-of-copy-of-another-test' },
+				"",
+				{
+					ignorecase : true,
+					timeout    : 0
+				}
+				);
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Array.class );
+
+		Array	entries	= variables.getAsArray( result );
+		var		first	= ( ( IClassRunnable ) entries.getAt( 1 ) );
+
+		assertThat( first.get( "slug" ) ).isEqualTo( "copy-of-copy-of-another-test" );
+	}
+
+	@DisplayName( "It can load an entity by a relationship" )
+	@Test
+	public void testEntityLoadRelationship() {
+		// @formatter:off
+		instance.executeSource( """
+			author = entityLoadByPK( "cbAuthor", "77abddba-a444-11eb-ab6f-0290cc502ae3" );
+			result = entityLoad(
+				'cbContent',
+				{ "creator" : author }
+				);
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Array.class );
+
+		Array	entries	= variables.getAsArray( result );
+		var		first	= ( ( IClassRunnable ) entries.getAt( 1 ) );
+
+		assertThat( ( ( IClassRunnable ) first.get( "creator" ) ).get( "username" ) ).isEqualTo( "lmajano" );
+	}
+
 }
