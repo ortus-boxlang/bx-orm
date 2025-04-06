@@ -287,6 +287,9 @@ public class MappingGenerator {
 	 * @return True if the entity is marked as persistent.
 	 */
 	private boolean isPersistentEntity( IStruct entityMeta ) {
+		if ( entityMeta.isEmpty() ) {
+			return false;
+		}
 		IStruct annotations = entityMeta.getAsStruct( Key.annotations );
 		if ( annotations.containsKey( ORMKeys.entity ) ||
 		    ( annotations.containsKey( ORMKeys.persistent ) &&
@@ -410,6 +413,10 @@ public class MappingGenerator {
 		try {
 			result.getRoot().accept( visitor );
 		} catch ( Throwable e ) {
+			if ( config.ignoreParseErrors ) {
+				logger.error( "Failed to parse class metadata for [{}]: {}", clazzPath, e.getMessage() );
+				return Struct.EMPTY; // return empty struct if ignoreParseErrors is true
+			}
 			throw new BoxRuntimeException( "Failed to get metadata for class: " + clazzPath.toString(), e );
 		}
 		return visitor.getMetadata();
