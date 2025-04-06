@@ -23,6 +23,7 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.ArrayCaster;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
+import ortus.boxlang.runtime.dynamic.casters.StringCasterStrict;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.Array;
@@ -83,7 +84,7 @@ public class EntityLoad extends BaseORMBIF {
 			arguments.put( ORMKeys.uniqueOrOrder, StringCaster.cast( arguments.get( ORMKeys.uniqueOrOrder ) ) );
 		}
 		if ( arguments.containsKey( ORMKeys.idOrFilter ) ) {
-			boolean idIsSimpleValue = StringCaster.attempt( arguments.get( ORMKeys.idOrFilter ) ).wasSuccessful();
+			boolean idIsSimpleValue = StringCasterStrict.attempt( arguments.get( ORMKeys.idOrFilter ) ).wasSuccessful();
 			if ( idIsSimpleValue ) {
 				return loadEntityById( context, arguments );
 			}

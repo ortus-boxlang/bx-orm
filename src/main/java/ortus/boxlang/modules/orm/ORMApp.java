@@ -42,6 +42,8 @@ import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
+import ortus.boxlang.runtime.dynamic.casters.KeyCaster;
+import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
@@ -50,6 +52,7 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.types.util.BLCollector;
 
 /**
  * Manages a single ORM application and persists the lifetime of the boxlang application.
@@ -282,11 +285,40 @@ public class ORMApp {
 		org.hibernate.Criteria	criteria		= session.createCriteria( entityRecord.getEntityName() );
 
 		if ( filter != null ) {
-			entityRecord.getEntityMeta().getProperties()
+
+			Array properties = entityRecord.getEntityMeta().getProperties().stream().map( property -> KeyCaster.cast( property.getName() ) )
+			    .collect( BLCollector.toArray() );
+
+			properties.addAll( entityRecord.getEntityMeta().getIdProperties().stream().map( property -> KeyCaster.cast( property.getName() ) )
+			    .collect( BLCollector.toArray() ) );
+
+			Array parentMeta = entityRecord.getEntityMeta().getParentMeta().getAsArray( Key.properties );
+			if ( parentMeta != null ) {
+				properties.addAll(
+				    parentMeta.stream().map( StructCaster::cast )
+				        .map( prop -> KeyCaster.cast( prop.getAsStruct( Key.annotations ).get( Key._NAME ) ) ).collect( BLCollector.toArray() )
+				);
+			}
+
+			// Ensure that all filter keys are valid properties of the entity or its parent
+			filter.keySet()
 			    .stream()
-			    .filter( ( property ) -> filter.containsKey( property.getName() ) )
-			    .forEach( ( property ) -> {
-				    criteria.add( org.hibernate.criterion.Restrictions.eq( property.getName(), filter.get( property.getName() ) ) );
+			    .filter( key -> !properties.contains( key ) )
+			    .findFirst()
+			    .ifPresent( key -> {
+				    throw new BoxRuntimeException(
+				        "No persistent filter property found with the name of '" + key.getName() + "' in entity '" + entityName + "'" );
+			    } );
+
+			filter.entrySet().stream()
+			    .forEach( entry -> {
+				    int propertyIndex = properties.indexOf( KeyCaster.cast( entry.getKey() ) );
+				    criteria.add(
+				        org.hibernate.criterion.Restrictions.eq(
+				            KeyCaster.cast( properties.get( propertyIndex ) ).getName(),
+				            entry.getValue()
+				        )
+				    );
 			    } );
 		}
 

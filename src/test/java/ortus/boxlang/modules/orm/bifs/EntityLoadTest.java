@@ -168,4 +168,30 @@ public class EntityLoadTest extends BaseORMTest {
 		assertThat( vehicles.size() ).isEqualTo( 2 );
 	}
 
+	@DisplayName( "It can load array of entities by filter criteria, sorting by custom order clause" )
+	@Test
+	public void testEntityLoadPrecision() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityLoad(
+				'cbEntry',
+				{ slug : 'copy-of-copy-of-another-test' },
+				"",
+				{
+					ignorecase : true,
+					timeout    : 0
+				}
+				);
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Array.class );
+
+		Array	entries	= variables.getAsArray( result );
+		var		first	= ( ( IClassRunnable ) entries.getAt( 1 ) );
+
+		assertThat( first.get( "slug" ) ).isEqualTo( "copy-of-copy-of-another-test" );
+	}
+
 }
