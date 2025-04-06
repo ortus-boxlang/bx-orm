@@ -130,7 +130,7 @@ public class BoxProxy extends Struct implements HibernateProxy {
 	 *
 	 * @return
 	 */
-	private IClassRunnable getRunnable() {
+	public IClassRunnable getRunnable() {
 		if ( runnable == null ) {
 			runnable = lazyInitializer.getInstantiatedEntity();
 		}

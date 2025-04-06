@@ -33,6 +33,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.hibernate.BoxProxy;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -260,8 +261,11 @@ public class ORMApp {
 		String			keyType			= getKeyJavaType( session, entityName ).getSimpleName();
 		Serializable	id				= ( Serializable ) GenericCaster.cast( context, keyValue, keyType );
 		var				entity			= session.get( entityRecord.getEntityName(), id );
-		// @TODO: announce postLoad event
-		return ( IClassRunnable ) entity;
+		if ( entity instanceof BoxProxy castProxy ) {
+			return castProxy.getRunnable();
+		} else {
+			return ( IClassRunnable ) entity;
+		}
 	}
 
 	/**
