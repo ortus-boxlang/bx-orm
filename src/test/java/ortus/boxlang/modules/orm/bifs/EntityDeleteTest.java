@@ -43,4 +43,21 @@ public class EntityDeleteTest extends BaseORMTest {
 		assertEquals( 0, variables.getAsQuery( result ).size() );
 	}
 
+	@DisplayName( "It can delete child entities with all-delete-orphan" )
+	@Test
+	public void testEntityDeleteOrphan() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction {
+				entityDelete( entityLoadByPK( "cbContentStore", '779ccbb8-a444-11eb-ab6f-0290cc502ae3' ) );
+			}
+			result = queryExecute( "SELECT * FROM cb_contentVersion WHERE FK_contentID = '779ccbb8-a444-11eb-ab6f-0290cc502ae3'" );
+			""",
+			context
+		);
+		// @formatter:on
+		assertEquals( 0, variables.getAsQuery( result ).size() );
+	}
+
 }
