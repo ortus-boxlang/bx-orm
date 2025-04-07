@@ -55,8 +55,6 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionBegin( IStruct args ) {
-		logger.debug( "onTransactionBegin fired" );
-
 		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
 		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
@@ -66,11 +64,13 @@ public class TransactionManager extends BaseInterceptor {
 			Session ormSession = ormRequestContext.getSession( datasource );
 			if ( config.autoManageSession ) {
 
-				logger.debug(
-				    "'autoManageSession' is enabled; flushing ORM session [{}] for datasource [{}] prior to transaction begin.",
-				    ormSession,
-				    datasource.getOriginalValue()
-				);
+				if ( logger.isDebugEnabled() ) {
+					logger.debug(
+					    "'autoManageSession' is enabled; flushing ORM session [{}] for datasource [{}] prior to transaction begin.",
+					    ormSession,
+					    datasource.getOriginalValue()
+					);
+				}
 
 				ormSession.flush();
 			}
@@ -83,10 +83,12 @@ public class TransactionManager extends BaseInterceptor {
 
 			if ( ormSession.isJoinedToTransaction() ) {
 				// May want to put this behind some kind of compatibility flag...
-				logger.debug(
-				    "Session [{}] is already joined to a transaction, closing transaction and beginning anew",
-				    ormSession
-				);
+				if ( logger.isDebugEnabled() ) {
+					logger.debug(
+					    "Session [{}] is already joined to a transaction, closing transaction and beginning anew",
+					    ormSession
+					);
+				}
 				ormSession.getTransaction().commit();
 			}
 			ormSession.beginTransaction();
@@ -95,8 +97,6 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionCommit( IStruct args ) {
-		logger.debug( "onTransactionCommit fired" );
-
 		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
 		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
@@ -104,28 +104,21 @@ public class TransactionManager extends BaseInterceptor {
 		ormApp.getDatasources().forEach( datasource -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
 
-			logger.debug(
-			    "Committing ORM transaction on session [{}] for datasource [{}]",
-			    ormSession,
-			    datasource.getOriginalValue()
-			);
+			if ( logger.isDebugEnabled() ) {
+				logger.debug(
+				    "Committing ORM transaction and beginning NEW transaction on session [{}] for datasource [{}]",
+				    ormSession,
+				    datasource.getOriginalValue()
+				);
+			}
 
 			ormSession.getTransaction().commit();
-
-			logger.debug(
-			    "Beginning new ORM transaction on session [{}] for datasource [{}]",
-			    ormSession,
-			    datasource.getOriginalValue()
-			);
-
 			ormSession.beginTransaction();
 		} );
 	}
 
 	@InterceptionPoint
 	public void onTransactionRollback( IStruct args ) {
-		logger.debug( "onTransactionRollback fired" );
-
 		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
 		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
@@ -135,16 +128,17 @@ public class TransactionManager extends BaseInterceptor {
 			// FYI: Lucee's implementation actually waits until transaction END to rollback and clear the session.
 			Session ormSession = ormRequestContext.getSession( datasource );
 
-			logger.debug(
-			    "Rolling back ORM transaction on session [{}] for datasource [{}]",
-			    ormSession,
-			    datasource.getOriginalValue()
-			);
+			if ( logger.isDebugEnabled() ) {
+				logger.debug(
+				    "Rolling back ORM transaction on session [{}] for datasource [{}]",
+				    ormSession,
+				    datasource.getOriginalValue()
+				);
+			}
 
 			ormSession.getTransaction().rollback();
 			if ( config.autoManageSession ) {
 				if ( logger.isDebugEnabled() ) {
-
 					logger.debug(
 					    "'autoManageSession' is enabled; clearing ORM session [{}] for datasource [{}] after transaction rollback.",
 					    ormSession,
@@ -165,8 +159,6 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionEnd( IStruct args ) {
-		logger.debug( "onTransactionEnd fired" );
-
 		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
 		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
@@ -174,11 +166,13 @@ public class TransactionManager extends BaseInterceptor {
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
 
-			logger.debug(
-			    "Ending ORM transaction on session [{}] for datasource [{}]",
-			    ormSession,
-			    datasource.getOriginalValue()
-			);
+			if ( logger.isDebugEnabled() ) {
+				logger.debug(
+				    "Ending ORM transaction on session [{}] for datasource [{}]",
+				    ormSession,
+				    datasource.getOriginalValue()
+				);
+			}
 
 			ormSession.getTransaction().commit();
 			ormSession.flush();
