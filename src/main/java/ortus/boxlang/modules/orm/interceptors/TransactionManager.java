@@ -181,6 +181,7 @@ public class TransactionManager extends BaseInterceptor {
 			);
 
 			ormSession.getTransaction().commit();
+			ormSession.flush();
 		} );
 	}
 }
