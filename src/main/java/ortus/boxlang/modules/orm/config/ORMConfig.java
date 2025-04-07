@@ -352,10 +352,6 @@ public class ORMConfig {
 			return;
 		}
 
-		System.out.println(
-		    "ORM Properties: " + properties.asString() // For debugging purposes
-		);
-
 		/**
 		 * Boolean properties: Check key existence, check for null, then cast to
 		 * boolean.
