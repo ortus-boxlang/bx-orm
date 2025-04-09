@@ -28,6 +28,8 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -680,7 +682,6 @@ public class HibernateXMLWriter {
 					classElement.appendChild( entityElement );
 				}
 			}
-
 		}
 
 		if ( !entity.getCache().isEmpty() && !entity.isSubclass() ) {
@@ -753,25 +754,56 @@ public class HibernateXMLWriter {
 		}
 
 		// generate properties, aka <property> elements
-		entity.getProperties().stream()
+		entity.getProperties()
+		    .stream()
 		    .map( ( propertyMeta ) -> generatePropertyElement( propertyMeta ) )
 		    .forEach( entityElement::appendChild );
 
 		// generate associations, aka <one-to-one>, <one-to-many>, etc.
-		entity.getAssociations().stream().map( ( propertyMeta ) -> {
-			switch ( propertyMeta.getFieldType() ) {
-				case ONE_TO_ONE :
-				case MANY_TO_ONE :
-					return generateToOneAssociation( propertyMeta );
-				case ONE_TO_MANY :
-				case MANY_TO_MANY :
-					return generateToManyAssociation( propertyMeta );
-				default :
-					logger.warn( "Unhandled association/field type: {} on property {}", propertyMeta.getFieldType(), propertyMeta.getName() );
-					return null;
-			}
-		} ).filter( node -> node != null )
-		    .forEach( classElement::appendChild );
+		final Element entityElementFinal = entityElement;
+		entity.getAssociations()
+		    .stream()
+		    .map( ( propertyMeta ) -> {
+			    switch ( propertyMeta.getFieldType() ) {
+				    case ONE_TO_ONE :
+				    case MANY_TO_ONE :
+					    return generateToOneAssociation( propertyMeta );
+				    case ONE_TO_MANY :
+				    case MANY_TO_MANY :
+					    return generateToManyAssociation( propertyMeta );
+				    default :
+					    logger.warn( "Unhandled association/field type: {} on property {}", propertyMeta.getFieldType(), propertyMeta.getName() );
+					    return null;
+			    }
+		    } )
+		    .filter( node -> node != null )
+		    .forEach( node -> {
+			    if ( entity.isSubclass() ) {
+				    NodeList children	= classElement.getChildNodes();
+				    Node	keyNode		= null;
+
+				    // Find the <key> node, Hibernate is very picky about the order of these elements.
+				    // If we don't find it, append to the end of the class element.
+				    // If we do find it, insert the new node after the <key> node.
+				    for ( int i = 0; i < children.getLength(); i++ ) {
+					    Node child = children.item( i );
+					    if ( "key".equals( child.getNodeName() ) ) {
+						    keyNode = child;
+						    break;
+					    }
+				    }
+
+				    if ( keyNode != null && keyNode.getNextSibling() != null ) {
+					    // Insert after <key> and before next sibling
+					    classElement.insertBefore( node, keyNode.getNextSibling() );
+				    } else {
+					    // If no sibling, append after <key>
+					    classElement.appendChild( node );
+				    }
+			    } else {
+				    entityElementFinal.appendChild( node );
+			    }
+		    } );
 
 		// @TODO: generate <union-subclass> elements
 		// @TODO: generate/handle optimistic lock
