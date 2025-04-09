@@ -132,7 +132,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			association.compute( ORMKeys.lazy, ( key, object ) -> {
 				// TODO: figure out what "extra" maps to in Hibernate 5.
 				// helpx.adobe.com/coldfusion/developing-applications/coldfusion-orm/performance-optimization/lazy-loading.html
-				String lazy = annotations.getAsString( ORMKeys.lazy ).trim().toLowerCase();
+				String lazy = StringCaster.cast( annotations.get( ORMKeys.lazy ) ).trim().toLowerCase();
 				if ( "true".equals( lazy ) ) {
 					lazy = finalAssociationType.endsWith( "-to-many" )
 					    && ( association.get( ORMKeys.collectionType ).equals( "map" ) || association.get( ORMKeys.collectionType ).equals( "bag" ) )
