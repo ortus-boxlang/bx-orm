@@ -28,8 +28,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -778,33 +776,7 @@ public class HibernateXMLWriter {
 			    }
 		    } )
 		    .filter( node -> node != null )
-		    .forEach( node -> {
-			    if ( entity.isSubclass() ) {
-				    NodeList children	= classElement.getChildNodes();
-				    Node	keyNode		= null;
-
-				    // Find the <key> node, Hibernate is very picky about the order of these elements.
-				    // If we don't find it, append to the end of the class element.
-				    // If we do find it, insert the new node after the <key> node.
-				    for ( int i = 0; i < children.getLength(); i++ ) {
-					    Node child = children.item( i );
-					    if ( "key".equals( child.getNodeName() ) ) {
-						    keyNode = child;
-						    break;
-					    }
-				    }
-
-				    if ( keyNode != null && keyNode.getNextSibling() != null ) {
-					    // Insert after <key> and before next sibling
-					    classElement.insertBefore( node, keyNode.getNextSibling() );
-				    } else {
-					    Node firstChild = classElement.getFirstChild();
-					    classElement.insertBefore( node, firstChild );
-				    }
-			    } else {
-				    entityElementFinal.appendChild( node );
-			    }
-		    } );
+		    .forEach( classElement::appendChild );
 
 		// @TODO: generate <union-subclass> elements
 		// @TODO: generate/handle optimistic lock
