@@ -771,7 +771,7 @@ public class HibernateXMLWriter {
 					return null;
 			}
 		} ).filter( node -> node != null )
-		    .forEach( entityElement::appendChild );
+		    .forEach( classElement::appendChild );
 
 		// @TODO: generate <union-subclass> elements
 		// @TODO: generate/handle optimistic lock
