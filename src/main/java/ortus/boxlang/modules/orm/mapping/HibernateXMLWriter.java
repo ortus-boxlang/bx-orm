@@ -797,8 +797,8 @@ public class HibernateXMLWriter {
 					    // Insert after <key> and before next sibling
 					    classElement.insertBefore( node, keyNode.getNextSibling() );
 				    } else {
-					    // If no sibling, append after <key>
-					    classElement.appendChild( node );
+					    Node firstChild = classElement.getFirstChild();
+					    classElement.insertBefore( node, firstChild );
 				    }
 			    } else {
 				    entityElementFinal.appendChild( node );
