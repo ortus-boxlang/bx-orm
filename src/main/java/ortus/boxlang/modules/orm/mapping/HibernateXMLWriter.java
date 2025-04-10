@@ -976,8 +976,8 @@ public class HibernateXMLWriter {
 			case "bit", "bool" -> "converted::" + BooleanConverter.class.getName();
 			case "yes-no", "yesno", "yes_no" -> "yes_no";
 			case "true-false", "truefalse", "true_false" -> "true_false";
-			case "big-decimal", "bigdecimal" -> "converted::" + BigDecimalConverter.class.getName();
-			case "big-integer", "bigint", "biginteger" -> "converted::" + BigIntegerConverter.class.getName();
+			case "big-decimal", "bigdecimal", "big_decimal" -> "converted::" + BigDecimalConverter.class.getName();
+			case "big-integer", "bigint", "biginteger", "big_integer" -> "converted::" + BigIntegerConverter.class.getName();
 			case "int" -> "converted::" + IntegerConverter.class.getName();
 			case "numeric", "number", "decimal" -> "converted::" + DoubleConverter.class.getName();
 			case "datetime", "eurodate", "usdate" -> "converted::" + DateTimeConverter.class.getName();
