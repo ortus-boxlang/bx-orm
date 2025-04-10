@@ -781,8 +781,7 @@ public class HibernateXMLWriter {
 		    .forEach( node -> {
 			    // If this class is a subclass then we need to do things differently.
 			    if ( entity.isSubclass() ) {
-				    System.out.println( "Adding to entity" + entity.getEntityName() );
-				    // Prepende the node to the <join> element which is the entityElement
+				    // Prepend the node to the <join> element which is the entityElement
 				    // Insert the node before <join> (i.e., entityElement) in its parent
 				    Node parent = entityElementFinal.getParentNode();
 				    if ( parent == null ) {
