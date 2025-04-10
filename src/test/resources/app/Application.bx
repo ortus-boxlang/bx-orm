@@ -8,7 +8,7 @@ class{
 			"driver"                 = "mysql",
 			"database"               = "test",
 			"host"                   = "${env.DB_HOST:127.0.0.1}",
-			"port"                   = "${env.DB_PORT:33306}",
+			"port"                   = "${env.DB_PORT:3306}",
 			"username"               = "${env.DB_USER:root}",
 			"password"               = "${env.DB_PASSWORD:root}",
 			"LeakDetectionThreshold" = 3
@@ -17,7 +17,7 @@ class{
 			"driver"                 = "mysql",
 			"database"               = "dsn2",
 			"host"                   = "${env.DB_HOST:127.0.0.1}",
-			"port"                   = "${env.DB_PORT:33306}",
+			"port"                   = "${env.DB_PORT:3306}",
 			"username"               = "${env.DB_USER:root}",
 			"password"               = "${env.DB_PASSWORD:root}",
 			"LeakDetectionThreshold" = 3
