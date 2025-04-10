@@ -980,7 +980,7 @@ public class HibernateXMLWriter {
 			case "big-integer", "bigint", "biginteger", "big_integer" -> "converted::" + BigIntegerConverter.class.getName();
 			case "int" -> "converted::" + IntegerConverter.class.getName();
 			case "numeric", "number", "decimal" -> "converted::" + DoubleConverter.class.getName();
-			case "datetime", "eurodate", "usdate" -> "converted::" + DateTimeConverter.class.getName();
+			case "datetime", "eurodate", "usdate", "date" -> "converted::" + DateTimeConverter.class.getName();
 			case "char", "nchar" -> "character";
 			case "varchar", "nvarchar" -> "string";
 			case "clob" -> "text";
