@@ -28,6 +28,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -776,7 +777,25 @@ public class HibernateXMLWriter {
 			    }
 		    } )
 		    .filter( node -> node != null )
-		    .forEach( classElement::appendChild );
+		    // .forEach( classElement::appendChild );
+		    .forEach( node -> {
+			    // If this class is a subclass then we need to do things differently.
+			    if ( entity.isSubclass() ) {
+				    System.out.println( "Adding to entity" + entity.getEntityName() );
+				    // Prepende the node to the <join> element which is the entityElement
+				    // Insert the node before <join> (i.e., entityElement) in its parent
+				    Node parent = entityElementFinal.getParentNode();
+				    if ( parent == null ) {
+					    // This is the use case where the inheritance has a key element and we must add ourselves after it
+					    entityElementFinal.appendChild( node );
+				    } else {
+					    // This is the discriminator based inheritance, so we must add all relationships BEFORE the <join> element
+					    parent.insertBefore( node, entityElementFinal );
+				    }
+			    } else {
+				    classElement.appendChild( node );
+			    }
+		    } );
 
 		// @TODO: generate <union-subclass> elements
 		// @TODO: generate/handle optimistic lock
