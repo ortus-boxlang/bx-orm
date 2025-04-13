@@ -256,6 +256,11 @@ public class ORMConfig {
 	private RequestBoxContext			requestContext;
 
 	/**
+	 * The instantiated naming strategy object.
+	 */
+	private PhysicalNamingStrategy		instantiatedNamingStrategy;
+
+	/**
 	 * Constructor
 	 *
 	 * @param properties Struct of ORM configuration properties.
@@ -423,6 +428,10 @@ public class ORMConfig {
 		    && !properties.getAsString( ORMKeys.catalog ).isBlank() ) {
 			catalog = properties.getAsString( ORMKeys.catalog );
 		}
+
+		if ( this.namingStrategy != null ) {
+			this.instantiatedNamingStrategy = getNamingStrategyForName( this.namingStrategy );
+		}
 	}
 
 	/**
@@ -491,6 +500,9 @@ public class ORMConfig {
 		}
 		configuration.addProperties( sysEnvProps );
 
+		// Performance improvement.
+		configuration.setProperty( "hibernate.temp.use_jdbc_metadata_defaults", "false" );
+
 		if ( this.dbcreate != null ) {
 			switch ( this.dbcreate ) {
 				case "dropcreate" :
@@ -502,12 +514,8 @@ public class ORMConfig {
 			configuration.setProperty( AvailableSettings.HBM2DDL_AUTO, Action.interpretHbm2ddlSetting( dbcreate ).getExternalHbm2ddlName() );
 		}
 
-		if ( this.namingStrategy != null ) {
-			PhysicalNamingStrategy loadedNamingStrategy = getNamingStrategyForName(
-			    this.namingStrategy );
-			if ( namingStrategy != null ) {
-				configuration.setPhysicalNamingStrategy( loadedNamingStrategy );
-			}
+		if ( this.instantiatedNamingStrategy != null ) {
+			configuration.setPhysicalNamingStrategy( this.instantiatedNamingStrategy );
 		}
 
 		configuration.setProperty( AvailableSettings.USE_SECOND_LEVEL_CACHE, Boolean.toString( this.secondaryCacheEnabled ) );
@@ -805,5 +813,9 @@ public class ORMConfig {
 			default :
 				return dialectName;
 		}
+	}
+
+	public PhysicalNamingStrategy getNamingStrategyInstance() {
+		return instantiatedNamingStrategy;
 	}
 }

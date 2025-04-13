@@ -934,6 +934,72 @@ public class HibernateXMLWriterTest {
 	public void testMultipleFKColumns( String sourceCode ) {
 	}
 
+	@DisplayName( "It can customize the table and column names with a naming strategy" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent entityName="PersonAddress" {
+	    	property
+	    		name="PersonID"
+	    		fieldtype="id"
+	    		ormtype="integer";
+	    }
+	    """
+	} )
+	public void testNamingStrategy( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+
+		IStruct		properties	= new Struct();
+		properties.put( "ignoreParseErrors", "true" );
+		properties.put( "namingStrategy", "src.test.resources.app.CustomNamingStrategy" );
+		ORMConfig		configWithNamingStrategy	= new ORMConfig( properties, context.getRequestContext() );
+		Document		doc							= new HibernateXMLWriter( entityMeta, null, configWithNamingStrategy ).generateXML();
+
+		Node			classEL						= doc.getDocumentElement().getFirstChild();
+		NamedNodeMap	classAttributes				= classEL.getAttributes();
+		assertThat( classAttributes.getNamedItem( "table" ).getTextContent() )
+		    .isEqualTo( "tbl_PersonAddress" );
+
+		Node	propertyNode	= classEL.getFirstChild();
+		Node	columnNode		= propertyNode.getFirstChild();
+		assertThat( columnNode.getAttributes().getNamedItem( "name" ).getTextContent() ).isEqualTo( "col_PersonID" );
+	}
+
+	@DisplayName( "It can customize the table and column names with the 'smart' naming strategy" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent entityName="PersonAddress" {
+	    	property
+	    		name="PersonId"
+	    		fieldtype="id"
+	    		ormtype="integer";
+	    }
+	    """
+	} )
+	public void testMacroNamingStrategy( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+
+		IStruct		properties	= new Struct();
+		properties.put( "ignoreParseErrors", "true" );
+		properties.put( "namingStrategy", "smart" );
+		ORMConfig		configWithNamingStrategy	= new ORMConfig( properties, context.getRequestContext() );
+		Document		doc							= new HibernateXMLWriter( entityMeta, null, configWithNamingStrategy ).generateXML();
+
+		Node			classEL						= doc.getDocumentElement().getFirstChild();
+		NamedNodeMap	classAttributes				= classEL.getAttributes();
+		assertThat( classAttributes.getNamedItem( "table" ).getTextContent() )
+		    .isEqualTo( "PERSON_ADDRESS" );
+
+		Node	propertyNode	= classEL.getFirstChild();
+		Node	columnNode		= propertyNode.getFirstChild();
+		assertThat( columnNode.getAttributes().getNamedItem( "name" ).getTextContent() ).isEqualTo( "PERSON_ID" );
+	}
+
 	@Disabled( "Unimplemented" )
 	@DisplayName( "It can map an array/bag collection" )
 	@Test

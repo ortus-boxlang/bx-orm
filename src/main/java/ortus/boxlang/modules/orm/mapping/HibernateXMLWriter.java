@@ -25,6 +25,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.hibernate.boot.model.naming.Identifier;
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
@@ -91,6 +93,11 @@ public class HibernateXMLWriter {
 	 * ORM configuration settings.
 	 */
 	ORMConfig								ormConfig;
+
+	/**
+	 * The physical naming strategy to use for customizing table names, column names, and other DB identifiers.
+	 */
+	PhysicalNamingStrategy					namingStrategy;
 
 	/**
 	 * Set of SQL reserved words (any SQL dialect) that need to be escaped when used in identifiers.
@@ -170,6 +177,7 @@ public class HibernateXMLWriter {
 		this.entity			= entity;
 		this.entityLookup	= entityLookup;
 		this.ormConfig		= ormConfig;
+		this.namingStrategy	= ormConfig.getNamingStrategyInstance();
 		// Validation
 		if ( !entity.isSubclass() && entity.getIdProperties().isEmpty() ) {
 			logger.error( "Entity {} has no ID properties. Hibernate requires at least one.", entity.getEntityName() );
@@ -302,7 +310,7 @@ public class HibernateXMLWriter {
 		}
 		if ( association.containsKey( ORMKeys.inverseJoinColumn ) ) {
 			// @TODO: Loop over all column values and create multiple <column> elements.
-			toManyNode.setAttribute( "column", escapeReservedWords( association.getAsString( ORMKeys.inverseJoinColumn ) ) );
+			toManyNode.setAttribute( "column", escapeReservedWords( translateColumnName( association.getAsString( ORMKeys.inverseJoinColumn ) ) ) );
 		}
 		if ( association.containsKey( Key._CLASS ) ) {
 			setEntityName( toManyNode, association.getAsString( Key._CLASS ), prop );
@@ -335,7 +343,7 @@ public class HibernateXMLWriter {
 				Element mapKeyNode = this.document.createElement( "map-key" );
 				theNode.appendChild( mapKeyNode );
 				// Note that Lucee doesn't support comma-delimited values in structKeyColumn
-				mapKeyNode.setAttribute( "column", escapeReservedWords( association.getAsString( ORMKeys.structKeyColumn ) ) );
+				mapKeyNode.setAttribute( "column", escapeReservedWords( translateColumnName( association.getAsString( ORMKeys.structKeyColumn ) ) ) );
 				if ( association.containsKey( ORMKeys.structKeyType ) ) {
 					mapKeyNode.setAttribute( "type", association.getAsString( ORMKeys.structKeyType ) );
 				}
@@ -349,7 +357,7 @@ public class HibernateXMLWriter {
 			Element elementNode = this.document.createElement( "element" );
 			theNode.appendChild( elementNode );
 			// Note that Lucee doesn't support comma-delimited values in elementColumn
-			elementNode.setAttribute( "column", escapeReservedWords( association.getAsString( ORMKeys.elementColumn ) ) );
+			elementNode.setAttribute( "column", escapeReservedWords( translateColumnName( association.getAsString( ORMKeys.elementColumn ) ) ) );
 			if ( association.containsKey( ORMKeys.elementType ) ) {
 				elementNode.setAttribute( "type", association.getAsString( ORMKeys.elementType ) );
 			}
@@ -383,7 +391,7 @@ public class HibernateXMLWriter {
 		if ( association.containsKey( Key.column ) ) {
 			Element keyNode = this.document.createElement( "key" );
 			// @TODO: Loop over all column values and create multiple <column> elements.
-			keyNode.setAttribute( "column", escapeReservedWords( association.getAsString( Key.column ) ) );
+			keyNode.setAttribute( "column", escapeReservedWords( ( association.getAsString( Key.column ) ) ) );
 
 			if ( association.containsKey( ORMKeys.mappedBy ) ) {
 				keyNode.setAttribute( "property-ref", association.getAsString( ORMKeys.mappedBy ) );
@@ -433,9 +441,9 @@ public class HibernateXMLWriter {
 		if ( association.containsKey( Key.column ) ) {
 			// @TODO: Loop over all column values and create multiple <column> elements.
 			// Element columnNode = this.document.createElement( "column" );
-			// columnNode.setAttribute( "name", escapeReservedWords( association.getAsString( Key.column ) ) );
+			// columnNode.setAttribute( "name", escapeReservedWords( translateColumnName( association.getAsString( Key.column ) ) ) );
 			// theNode.appendChild( columnNode );
-			theNode.setAttribute( "column", escapeReservedWords( association.getAsString( Key.column ) ) );
+			theNode.setAttribute( "column", escapeReservedWords( translateColumnName( association.getAsString( Key.column ) ) ) );
 		}
 
 		// for attributes specific to each association type
@@ -477,7 +485,7 @@ public class HibernateXMLWriter {
 		if ( columnInfo.containsKey( Key._name ) ) {
 			String value = columnInfo.getAsString( Key._name );
 			if ( value != null && !value.isBlank() ) {
-				theNode.setAttribute( "name", escapeReservedWords( value ) );
+				theNode.setAttribute( "name", escapeReservedWords( translateColumnName( value ) ) );
 			}
 		}
 		if ( columnInfo.containsKey( ORMKeys.nullable ) ) {
@@ -571,7 +579,7 @@ public class HibernateXMLWriter {
 		}
 		if ( data.containsKey( Key._name ) ) {
 			Element theNode = this.document.createElement( "discriminator" );
-			theNode.setAttribute( "column", escapeReservedWords( data.getAsString( Key._name ) ) );
+			theNode.setAttribute( "column", escapeReservedWords( translateColumnName( data.getAsString( Key._name ) ) ) );
 
 			// set conditional attributes
 			if ( data.containsKey( Key.type ) ) {
@@ -674,9 +682,9 @@ public class HibernateXMLWriter {
 
 			// Single-table subclases do not have a separate join element or key
 			if ( !isDiscriminated || !parentAnnotations.getAsString( ORMKeys.table ).equals( entity.getTableName() ) ) {
-				entityElement.setAttribute( "table", escapeReservedWords( entity.getTableName() ) );
+				entityElement.setAttribute( "table", escapeReservedWords( translateTableName( entity.getTableName() ) ) );
 				Element keyElement = this.document.createElement( "key" );
-				keyElement.setAttribute( "column", escapeReservedWords( entity.getJoinColumn() ) );
+				keyElement.setAttribute( "column", escapeReservedWords( translateColumnName( entity.getJoinColumn() ) ) );
 				entityElement.appendChild( keyElement );
 				if ( !classElement.equals( entityElement ) ) {
 					classElement.appendChild( entityElement );
@@ -721,7 +729,7 @@ public class HibernateXMLWriter {
 		if ( entity.isSimpleEntity() ) {
 			String tableName = entity.getTableName();
 			if ( tableName != null ) {
-				classElement.setAttribute( "table", escapeReservedWords( tableName ) );
+				classElement.setAttribute( "table", escapeReservedWords( translateTableName( tableName ) ) );
 			}
 			if ( entity.getSchema() != null ) {
 				classElement.setAttribute( "schema", entity.getSchema() );
@@ -842,7 +850,7 @@ public class HibernateXMLWriter {
 		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
 		// COLUMN name
 		if ( columnInfo.containsKey( Key._NAME ) ) {
-			theNode.setAttribute( "column", escapeReservedWords( columnInfo.getAsString( Key._NAME ) ) );
+			theNode.setAttribute( "column", escapeReservedWords( translateColumnName( columnInfo.getAsString( Key._NAME ) ) ) );
 		}
 		if ( prop.getUnsavedValue() != null ) {
 			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );
@@ -918,6 +926,11 @@ public class HibernateXMLWriter {
 			if ( association.containsKey( propertyName ) ) {
 				String value = association.getAsString( propertyName );
 				if ( value != null && !value.isBlank() ) {
+					if ( propertyName == ORMKeys.table ) {
+						value = escapeReservedWords( translateTableName( value ) );
+					} else if ( propertyName == Key.column ) {
+						value = escapeReservedWords( translateColumnName( value ) );
+					}
 					theNode.setAttribute( toHibernateAttributeName( propertyName ), value.trim() );
 				}
 			}
@@ -989,5 +1002,33 @@ public class HibernateXMLWriter {
 			case "time" -> "converted::" + TimeConverter.class.getName();
 			default -> propertyType;
 		};
+	}
+
+	/**
+	 * Translate the table name using the configured table naming strategy.
+	 *
+	 * @param tableName Table name to translate, like 'owner'.
+	 *
+	 * @return Translated table name, like 'tblOwners'.
+	 */
+	protected String translateTableName( String tableName ) {
+		if ( this.namingStrategy == null ) {
+			return tableName;
+		}
+		return this.namingStrategy.toPhysicalTableName( Identifier.toIdentifier( tableName ), null ).getText();
+	}
+
+	/**
+	 * Translate the column name using the configured column naming strategy.
+	 *
+	 * @param columnName column name to translate, like 'owner'.
+	 *
+	 * @return Translated column name, like 'tblOwners'.
+	 */
+	protected String translateColumnName( String columnName ) {
+		if ( this.namingStrategy == null ) {
+			return columnName;
+		}
+		return this.namingStrategy.toPhysicalColumnName( Identifier.toIdentifier( columnName ), null ).getText();
 	}
 }
