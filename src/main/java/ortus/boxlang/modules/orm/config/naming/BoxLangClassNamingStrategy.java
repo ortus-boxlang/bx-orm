@@ -87,17 +87,14 @@ public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 	 * @param theIdentifier The original identifier (like "autos") which the method should transform.
 	 */
 	private Identifier fireImplementation( Key methodName, Key argumentName, Identifier theIdentifier ) {
-		if ( this.wrappedBLClass.hasMethodNoCase( methodName.getNameNoCase() ) ) {
-			return Identifier.toIdentifier(
-			    ( String ) this.wrappedBLClass.dereferenceAndInvoke(
-			        getContextForInvocation(),
-			        methodName,
-			        Struct.of( argumentName, theIdentifier.getText() ),
-			        true // throw on not found
-			    )
-			);
-		}
-		return theIdentifier;
+		return Identifier.toIdentifier(
+		    ( String ) this.wrappedBLClass.dereferenceAndInvoke(
+		        getContextForInvocation(),
+		        methodName,
+		        Struct.of( argumentName, theIdentifier.getText() ),
+		        true // throw on not found
+		    )
+		);
 	}
 
 	private IBoxContext getContextForInvocation() {

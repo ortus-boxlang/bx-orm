@@ -624,7 +624,7 @@ public class ORMConfig {
 		    ClassLocator.BX_PREFIX,
 		    true,
 		    context.getCurrentImports()
-		);
+		).invokeConstructor( context );
 	}
 
 	/**
