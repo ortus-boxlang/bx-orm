@@ -88,9 +88,6 @@ public class ORMConnectionProvider implements ConnectionProvider {
 
 	@Override
 	public boolean supportsAggressiveRelease() {
-		// We probably shouldn't support this, although it may be possible and improve
-		// performance.
-		// https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/engine/jdbc/connections/spi/ConnectionProvider.html#supportsAggressiveRelease()
 		return false;
 	}
 
