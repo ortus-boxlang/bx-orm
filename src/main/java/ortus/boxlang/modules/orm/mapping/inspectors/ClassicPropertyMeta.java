@@ -50,7 +50,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
 		// General property annotations
 		if ( this.annotations.containsKey( ORMKeys.lazy ) ) {
-			this.lazy = this.annotations.getAsString( ORMKeys.lazy );
+			this.lazy = StringCaster.cast( this.annotations.get( ORMKeys.lazy ) );
 		}
 		if ( this.annotations.containsKey( ORMKeys.readOnly ) ) {
 			this.isImmutable = BooleanCaster.cast( this.annotations.get( ORMKeys.readOnly ) );
