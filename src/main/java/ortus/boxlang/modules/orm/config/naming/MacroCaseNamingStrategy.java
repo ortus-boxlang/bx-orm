@@ -71,11 +71,13 @@ public class MacroCaseNamingStrategy implements PhysicalNamingStrategy {
 		String			text	= identifier.getText();
 		StringBuilder	result	= new StringBuilder();
 
+		int				i		= 0;
 		for ( char c : text.toCharArray() ) {
-			if ( Character.isUpperCase( c ) ) {
+			if ( Character.isUpperCase( c ) && i > 0 ) {
 				result.append( "_" );
 			}
 			result.append( c );
+			i++;
 		}
 
 		return new Identifier( result.toString().toUpperCase(), identifier.isQuoted() );

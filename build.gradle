@@ -39,7 +39,13 @@ dependencies {
 	// Look for it in the local build directory
 	// You must run `./gradle build -x test` in the BoxLang project
 	// compileOnly files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '.jar' )
-    compileOnly files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
+	if ( file( '../../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' ).exists() ) {
+		compileOnly files( '../../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
+		testImplementation files( '../../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
+	} else {
+		compileOnly files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
+		testImplementation files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
+	}
 
 	// Implementation Dependencies
 	// IMPORTANT: If updating Hibernate, please change the static version number in `src/main/java/ortus/boxlang/modules/orm/bifs/GetHibernateVersion.java` to match.
@@ -53,8 +59,6 @@ dependencies {
 	implementation 'org.ehcache:ehcache:3.10.8'
 
     // Testing Dependencies
-	// testImplementation files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '.jar' )
-	testImplementation files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
     // Pinning this because the next version up breaks our tests
     testImplementation "org.junit.jupiter:junit-jupiter:5.+"
 	testImplementation "org.mockito:mockito-core:5.+"

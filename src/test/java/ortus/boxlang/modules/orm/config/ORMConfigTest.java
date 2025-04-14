@@ -17,6 +17,7 @@
  */
 package ortus.boxlang.modules.orm.config;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -84,7 +85,7 @@ public class ORMConfigTest extends BaseORMTest {
 	public void testDefaultOpposites() {
 		ORMConfig config = new ORMConfig( Struct.of(
 		    // common settings
-		    ORMKeys.cfclocation, Array.fromString( "/foo/models" ),
+		    ORMKeys.entityPaths, Array.fromString( "/foo/models" ),
 		    ORMKeys.dialect, "org.hibernate.dialect.SQLServer2008Dialect",
 		    ORMKeys.dbcreate, "update",
 
@@ -107,33 +108,33 @@ public class ORMConfigTest extends BaseORMTest {
 		    // mapping generation
 		    ORMKeys.saveMapping, true,
 		    ORMKeys.autoGenMap, false,
-		    ORMKeys.skipCFCWithError, true
+		    ORMKeys.ignoreParseErrors, true
 		), context );
 
 		// common settings
-		assertEquals( "/foo/models", String.join( "", config.entityPaths ) );
-		assertEquals( "org.hibernate.dialect.SQLServer2008Dialect", config.dialect );
-		assertEquals( "update", config.dbcreate );
+		assertThat( String.join( "", config.entityPaths ) ).isEqualTo( "/foo/models" );
+		assertThat( config.dialect ).isEqualTo( "org.hibernate.dialect.SQLServer2008Dialect" );
+		assertThat( config.dbcreate ).isEqualTo( "update" );
 
 		// cache config
-		assertTrue( config.secondaryCacheEnabled );
-		assertEquals( "ehCache", config.cacheProvider );
-		assertEquals( "/cbapp/config/ehcache.xml", config.cacheConfigFile );
+		assertThat( config.secondaryCacheEnabled ).isTrue();
+		assertThat( config.cacheProvider ).isEqualTo( "ehCache" );
+		assertThat( config.cacheConfigFile ).isEqualTo( "/cbapp/config/ehcache.xml" );
 
 		// logging
-		assertTrue( config.logSQL );
+		assertThat( config.logSQL ).isTrue();
 
 		// session management
-		assertTrue( config.flushAtRequestEnd );
-		assertTrue( config.autoManageSession );
+		assertThat( config.flushAtRequestEnd ).isTrue();
+		assertThat( config.autoManageSession ).isTrue();
 
 		// event handling
-		assertTrue( config.eventHandling );
-		assertEquals( "cborm.models.EventHandler", config.eventHandler );
+		assertThat( config.eventHandling ).isTrue();
+		assertThat( config.eventHandler ).isEqualTo( "cborm.models.EventHandler" );
 
 		// mapping generation
-		assertTrue( config.saveMapping );
+		assertThat( config.saveMapping ).isTrue();
 		assertFalse( config.autoGenMap );
-		assertTrue( config.ignoreParseErrors );
+		assertThat( config.ignoreParseErrors ).isTrue();
 	}
 }

@@ -78,23 +78,6 @@ public class HibernateXMLWriterTest {
 
 	@BeforeEach
 	public void setupEach() {
-		/**
-		 * [BoxLang]
-		 *
-		 * Copyright [2023] [Ortus Solutions, Corp]
-		 *
-		 * Licensed under the Apache License, Version 2.0 (the "License");
-		 * you may not use this file except in compliance with the License.
-		 * You may obtain a copy of the License at
-		 *
-		 * http://www.apache.org/licenses/LICENSE-2.0
-		 *
-		 * Unless required by applicable law or agreed to in writing, software
-		 * distributed under the License is distributed on an "AS IS" BASIS,
-		 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-		 * See the License for the specific language governing permissions and
-		 * limitations under the License.
-		 */
 		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
 		variables	= context.getScopeNearby( VariablesScope.name );
 		IStruct properties = new Struct();
@@ -949,6 +932,72 @@ public class HibernateXMLWriterTest {
 	} )
 	// @formatter:on
 	public void testMultipleFKColumns( String sourceCode ) {
+	}
+
+	@DisplayName( "It can customize the table and column names with a naming strategy" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent entityName="PersonAddress" {
+	    	property
+	    		name="PersonID"
+	    		fieldtype="id"
+	    		ormtype="integer";
+	    }
+	    """
+	} )
+	public void testNamingStrategy( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+
+		IStruct		properties	= new Struct();
+		properties.put( "ignoreParseErrors", "true" );
+		properties.put( "namingStrategy", "src.test.resources.app.CustomNamingStrategy" );
+		ORMConfig		configWithNamingStrategy	= new ORMConfig( properties, context.getRequestContext() );
+		Document		doc							= new HibernateXMLWriter( entityMeta, null, configWithNamingStrategy ).generateXML();
+
+		Node			classEL						= doc.getDocumentElement().getFirstChild();
+		NamedNodeMap	classAttributes				= classEL.getAttributes();
+		assertThat( classAttributes.getNamedItem( "table" ).getTextContent() )
+		    .isEqualTo( "tbl_PersonAddress" );
+
+		Node	propertyNode	= classEL.getFirstChild();
+		Node	columnNode		= propertyNode.getFirstChild();
+		assertThat( columnNode.getAttributes().getNamedItem( "name" ).getTextContent() ).isEqualTo( "col_PersonID" );
+	}
+
+	@DisplayName( "It can customize the table and column names with the 'smart' naming strategy" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent entityName="PersonAddress" {
+	    	property
+	    		name="PersonId"
+	    		fieldtype="id"
+	    		ormtype="integer";
+	    }
+	    """
+	} )
+	public void testMacroNamingStrategy( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+
+		IStruct		properties	= new Struct();
+		properties.put( "ignoreParseErrors", "true" );
+		properties.put( "namingStrategy", "smart" );
+		ORMConfig		configWithNamingStrategy	= new ORMConfig( properties, context.getRequestContext() );
+		Document		doc							= new HibernateXMLWriter( entityMeta, null, configWithNamingStrategy ).generateXML();
+
+		Node			classEL						= doc.getDocumentElement().getFirstChild();
+		NamedNodeMap	classAttributes				= classEL.getAttributes();
+		assertThat( classAttributes.getNamedItem( "table" ).getTextContent() )
+		    .isEqualTo( "PERSON_ADDRESS" );
+
+		Node	propertyNode	= classEL.getFirstChild();
+		Node	columnNode		= propertyNode.getFirstChild();
+		assertThat( columnNode.getAttributes().getNamedItem( "name" ).getTextContent() ).isEqualTo( "PERSON_ID" );
 	}
 
 	@Disabled( "Unimplemented" )

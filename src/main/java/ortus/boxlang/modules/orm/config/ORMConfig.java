@@ -256,6 +256,11 @@ public class ORMConfig {
 	private RequestBoxContext			requestContext;
 
 	/**
+	 * The instantiated naming strategy object.
+	 */
+	private PhysicalNamingStrategy		instantiatedNamingStrategy;
+
+	/**
 	 * Constructor
 	 *
 	 * @param properties Struct of ORM configuration properties.
@@ -273,7 +278,6 @@ public class ORMConfig {
 		    "context", context
 		) );
 
-		implementBackwardsCompatibility( properties );
 		process( properties );
 
 		runtime.getInterceptorService().announce( ORMKeys.EVENT_ORM_POST_CONFIG_LOAD, Struct.of(
@@ -305,40 +309,6 @@ public class ORMConfig {
 		}
 
 		return new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), context );
-	}
-
-	/**
-	 * Implement backwards compatible with renamed configuration property names by aliasing them in this method.
-	 * <p>
-	 * Implements backwards-compatibility for the following properties:
-	 * <ul>
-	 * <li><code>skipCFCWithError</code> -> <code>ignoreParseErrors</code></li>
-	 * <li><code>cfclocation</code> -> <code>entityPaths</code></li>
-	 * </ul>
-	 *
-	 * @deprecated This entire method should move to the bx-compat-cfml module.
-	 *
-	 * @param properties Struct of ORM configuration properties.
-	 */
-	public void implementBackwardsCompatibility( IStruct properties ) {
-
-		// backwards compatibility for `skipCFCWithError`
-		if ( properties.containsKey( ORMKeys.skipCFCWithError ) && properties.get( ORMKeys.skipCFCWithError ) != null ) {
-			properties.computeIfAbsent(
-			    ORMKeys.ignoreParseErrors,
-			    key -> BooleanCaster.cast( properties.get( ORMKeys.skipCFCWithError ) )
-			);
-		}
-		// backwards compatibility for `cfclocation`
-		if ( properties.containsKey( ORMKeys.cfclocation ) ) {
-			properties.computeIfAbsent(
-			    ORMKeys.entityPaths,
-			    key -> properties.get( ORMKeys.cfclocation )
-			);
-		}
-		// TODO: Handle 'skipCFCWithError' true-by-default setting for backwards compatibility
-		// TODO: Handle 'autoManageSession' true-by-default setting for backwards compatibility
-		// TODO: Handle 'flushAtRequestEnd' true-by-default setting for backwards compatibility
 	}
 
 	/**
@@ -458,6 +428,10 @@ public class ORMConfig {
 		    && !properties.getAsString( ORMKeys.catalog ).isBlank() ) {
 			catalog = properties.getAsString( ORMKeys.catalog );
 		}
+
+		if ( this.namingStrategy != null ) {
+			this.instantiatedNamingStrategy = getNamingStrategyForName( this.namingStrategy );
+		}
 	}
 
 	/**
@@ -526,6 +500,9 @@ public class ORMConfig {
 		}
 		configuration.addProperties( sysEnvProps );
 
+		// Performance improvement.
+		configuration.setProperty( "hibernate.temp.use_jdbc_metadata_defaults", "false" );
+
 		if ( this.dbcreate != null ) {
 			switch ( this.dbcreate ) {
 				case "dropcreate" :
@@ -537,12 +514,8 @@ public class ORMConfig {
 			configuration.setProperty( AvailableSettings.HBM2DDL_AUTO, Action.interpretHbm2ddlSetting( dbcreate ).getExternalHbm2ddlName() );
 		}
 
-		if ( this.namingStrategy != null ) {
-			PhysicalNamingStrategy loadedNamingStrategy = getNamingStrategyForName(
-			    this.namingStrategy );
-			if ( namingStrategy != null ) {
-				configuration.setPhysicalNamingStrategy( loadedNamingStrategy );
-			}
+		if ( this.instantiatedNamingStrategy != null ) {
+			configuration.setPhysicalNamingStrategy( this.instantiatedNamingStrategy );
 		}
 
 		configuration.setProperty( AvailableSettings.USE_SECOND_LEVEL_CACHE, Boolean.toString( this.secondaryCacheEnabled ) );
@@ -596,12 +569,6 @@ public class ORMConfig {
 				    "ORM Configuration `sqlScript` is only valid with `dbcreate=dropcreate`. Ignoring for now." );
 			}
 		}
-
-		// These properties are only used in the SessionFactoryBuilder, and do not need
-		// copying into the Hibernate configuration:
-		// - skipCFCWithError
-		// - useDBForMapping
-		// - saveMapping
 
 		// @TODO: Implement the remaining configuration settings:
 		// - ormConfig
@@ -657,7 +624,7 @@ public class ORMConfig {
 		    ClassLocator.BX_PREFIX,
 		    true,
 		    context.getCurrentImports()
-		);
+		).invokeConstructor( context );
 	}
 
 	/**
@@ -846,5 +813,9 @@ public class ORMConfig {
 			default :
 				return dialectName;
 		}
+	}
+
+	public PhysicalNamingStrategy getNamingStrategyInstance() {
+		return instantiatedNamingStrategy;
 	}
 }

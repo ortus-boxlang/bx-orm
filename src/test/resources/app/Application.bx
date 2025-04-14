@@ -40,7 +40,6 @@ class{
 		"secondarycacheenabled" : true,
 		"eventHandler" : "root.models.events.EventHandler",
 		"ignoreParseErrors" : true
-		// , "namingStrategy": "src.test.resources.app.CustomNamingStrategy"
 	}
 	this.ormEnabled = "true";
 }

@@ -149,6 +149,12 @@ public class MappingGenerator {
 		}
 
 		for ( String entityPath : config.entityPaths ) {
+			System.out.println( "Received Entity path: " + entityPath );
+			// Contract the mapping path if it coming in as absolute drive path
+			if ( Path.of( entityPath ).isAbsolute() && FileSystemUtil.exists( entityPath ) ) {
+				entityPath = FileSystemUtil.contractPath( context, entityPath ).relativePath().toString();
+			}
+			System.out.println( "Entity path: " + entityPath );
 			this.entityPaths.add( Struct.of(
 			    ORMKeys.mappedPath, entityPath,
 			    ORMKeys.expandedPath, FileSystemUtil.expandPath( context, entityPath ).absolutePath().toString()

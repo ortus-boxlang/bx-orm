@@ -269,28 +269,4 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	public String getSqlType() {
 		return this.sqlType;
 	}
-
-	/**
-	 * Translate the table name using the configured table naming strategy.
-	 *
-	 * @param tableName Table name to translate, like 'owner'.
-	 * 
-	 * @return Translated table name, like 'tblOwners'.
-	 */
-	protected String translateTableName( String tableName ) {
-		// TODO: Translate the table name using the configured table naming strategy.
-		return tableName;
-	}
-
-	/**
-	 * Translate the column name using the configured column naming strategy.
-	 *
-	 * @param columnName column name to translate, like 'owner'.
-	 * 
-	 * @return Translated column name, like 'tblOwners'.
-	 */
-	protected String translateColumnName( String columnName ) {
-		// TODO: Translate the column name using the configured column naming strategy.
-		return columnName;
-	}
 }

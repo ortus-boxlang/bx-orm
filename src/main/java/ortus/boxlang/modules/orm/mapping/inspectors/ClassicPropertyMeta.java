@@ -86,12 +86,12 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( associationType.equalsIgnoreCase( "one-to-one" )
 		    && ( annotations.containsKey( ORMKeys.fkcolumn ) || annotations.containsKey( ORMKeys.linkTable ) ) ) {
 			associationType = "many-to-one";
-			association.put( Key.column, translateColumnName( annotations.getAsString( ORMKeys.fkcolumn ) ) );
+			association.put( Key.column, annotations.getAsString( ORMKeys.fkcolumn ) );
 		}
 		if ( associationType.equalsIgnoreCase( "one-to-many" ) && annotations.containsKey( ORMKeys.linkTable ) ) {
 			associationType = "many-to-many";
 			association.put( ORMKeys.unique, true );
-			association.put( ORMKeys.inverseJoinColumn, translateColumnName( annotations.getAsString( ORMKeys.inverseJoinColumn ) ) );
+			association.put( ORMKeys.inverseJoinColumn, annotations.getAsString( ORMKeys.inverseJoinColumn ) );
 		}
 		association.put( Key.type, associationType.toLowerCase().trim() );
 
@@ -114,7 +114,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			}
 			if ( association.get( ORMKeys.collectionType ).equals( "map" ) ) {
 				if ( annotations.containsKey( ORMKeys.structKeyColumn ) ) {
-					association.put( ORMKeys.structKeyColumn, translateColumnName( annotations.getAsString( ORMKeys.structKeyColumn ) ) );
+					association.put( ORMKeys.structKeyColumn, annotations.getAsString( ORMKeys.structKeyColumn ) );
 				}
 				if ( annotations.containsKey( ORMKeys.structKeyType ) ) {
 					association.put( ORMKeys.structKeyType, annotations.getAsString( ORMKeys.structKeyType ) );
@@ -132,7 +132,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			association.compute( ORMKeys.lazy, ( key, object ) -> {
 				// TODO: figure out what "extra" maps to in Hibernate 5.
 				// helpx.adobe.com/coldfusion/developing-applications/coldfusion-orm/performance-optimization/lazy-loading.html
-				String lazy = annotations.getAsString( ORMKeys.lazy ).trim().toLowerCase();
+				String lazy = StringCaster.cast( annotations.get( ORMKeys.lazy ) ).trim().toLowerCase();
 				if ( "true".equals( lazy ) ) {
 					lazy = finalAssociationType.endsWith( "-to-many" )
 					    && ( association.get( ORMKeys.collectionType ).equals( "map" ) || association.get( ORMKeys.collectionType ).equals( "bag" ) )
@@ -209,7 +209,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			association.put( ORMKeys.inverse, BooleanCaster.cast( annotations.get( ORMKeys.inverse ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.linkTable ) ) {
-			association.putIfAbsent( Key.table, translateTableName( annotations.getAsString( ORMKeys.linkTable ) ) );
+			association.putIfAbsent( Key.table, annotations.getAsString( ORMKeys.linkTable ) );
 			// if there's a linkTable, we need to set the schema and catalog
 			association.put( ORMKeys.schema, annotations.getAsString( ORMKeys.linkSchema ) );
 			association.put( ORMKeys.catalog, annotations.getAsString( ORMKeys.linkCatalog ) );
@@ -217,20 +217,20 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.notNull ) ) {
 			association.put( ORMKeys.nullable, Boolean.FALSE.equals( BooleanCaster.cast( annotations.getOrDefault( ORMKeys.notNull, true ) ) ) );
 		}
-		association.putIfAbsent( Key.table, translateTableName( annotations.getAsString( Key.table ) ) );
+		association.putIfAbsent( Key.table, annotations.getAsString( Key.table ) );
 		association.putIfAbsent( ORMKeys.schema, annotations.getAsString( ORMKeys.schema ) );
 		association.putIfAbsent( ORMKeys.catalog, annotations.getAsString( ORMKeys.catalog ) );
 
 		// Fire up the translator for all column name properties
-		association.computeIfPresent( ORMKeys.inverseJoinColumn, ( key, value ) -> translateColumnName( ( String ) value ) );
-		association.computeIfPresent( Key.column, ( key, value ) -> translateColumnName( ( String ) value ) );
+		association.computeIfPresent( ORMKeys.inverseJoinColumn, ( key, value ) -> ( String ) value );
+		association.computeIfPresent( Key.column, ( key, value ) -> ( String ) value );
 		return association;
 	}
 
 	protected IStruct parseColumnAnnotations( IStruct annotations ) {
 		IStruct column = new Struct();
 		if ( annotations.containsKey( Key.column ) ) {
-			column.put( Key._name, translateColumnName( annotations.getAsString( Key.column ) ) );
+			column.put( Key._name, annotations.getAsString( Key.column ) );
 		}
 		if ( annotations.containsKey( Key.length ) ) {
 			column.put( Key.length, annotations.getAsString( Key.length ) );
@@ -254,7 +254,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			column.put( ORMKeys.updateable, BooleanCaster.cast( annotations.get( ORMKeys.update ) ) );
 		}
 		if ( annotations.containsKey( Key.table ) ) {
-			column.put( Key.table, translateTableName( annotations.getAsString( Key.table ) ) );
+			column.put( Key.table, annotations.getAsString( Key.table ) );
 		}
 		if ( annotations.containsKey( ORMKeys.schema ) ) {
 			column.put( ORMKeys.schema, annotations.getAsString( ORMKeys.schema ) );
@@ -270,7 +270,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		}
 
 		// Column should ALWAYS have a name.
-		column.putIfAbsent( Key._NAME, translateColumnName( this.name ) );
+		column.putIfAbsent( Key._NAME, this.name );
 		return column;
 	}
 

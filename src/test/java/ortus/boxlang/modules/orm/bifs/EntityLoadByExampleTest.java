@@ -28,7 +28,6 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import tools.BaseORMTest;
 
-// TODO implement test
 public class EntityLoadByExampleTest extends BaseORMTest {
 
 	@DisplayName( "Tests the function returning an array" )
