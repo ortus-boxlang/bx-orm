@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.7] - 2025-04-14
+
 ## [1.0.6] - 2025-04-14
 
 ## [1.0.5] - 2025-04-07
@@ -25,7 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - First iteration of this module
 
-[Unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.6...HEAD
+[Unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.7...HEAD
+
+[1.0.7]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.6...v1.0.7
 
 [1.0.6]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.5...v1.0.6
 
