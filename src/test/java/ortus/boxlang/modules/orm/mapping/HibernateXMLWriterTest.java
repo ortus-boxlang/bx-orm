@@ -219,8 +219,6 @@ public class HibernateXMLWriterTest {
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
-		String		xml			= xmlToString( doc );
-
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		assertThat( classEl.getNodeName() ).isEqualTo( "class" );
 		Node compositeNode = classEl.getFirstChild();
@@ -356,11 +354,11 @@ public class HibernateXMLWriterTest {
 	    """
 	    class persistent {
 	    	property
-	    		name="the_id"
-	    		fieldtype="id"
-	    		generator="select"
-				generated="insert"
-				selectKey="foo";
+				name      = "the_id"
+				fieldtype = "id"
+				generator = "select"
+				generated = "insert"
+				selectKey = "foo";
 	    }
 	    """
 	} )
@@ -371,8 +369,6 @@ public class HibernateXMLWriterTest {
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
-
-		String		xml				= xmlToString( doc );
 
 		Node		classEl			= doc.getDocumentElement().getFirstChild();
 		Node		idNode			= classEl.getFirstChild();
@@ -399,6 +395,72 @@ public class HibernateXMLWriterTest {
 		assertThat( paramNode.getTextContent() ).isEqualTo( "foo" );
 	}
 
+	// @formatter:off
+	@DisplayName( "It can use a struct of generator params" )
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+	    	property
+				name      = "the_id"
+				fieldtype = "id"
+				generator = "foreign"
+				params    = { property :"user"};
+	    }
+	    """,
+	    """
+	    class persistent {
+	    	property
+				name      = "the_id"
+				fieldtype = "id"
+				generator = "foreign"
+				params    = '{"property":"user"}';
+	    }
+	    """,
+	    """
+	    class persistent {
+	    	property
+				name      = "the_id"
+				fieldtype = "id"
+				generator = "foreign"
+				params    = "{property='user'}";
+	    }
+	    """
+	} )
+	// @formatter:on
+	@ParameterizedTest
+	public void testGeneratorParams( String sourceCode ) {
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+
+		String		xml				= xmlToString( doc );
+
+		Node		classEl			= doc.getDocumentElement().getFirstChild();
+		Node		idNode			= classEl.getFirstChild();
+		Node		generatorNode	= idNode.getLastChild();
+
+		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
+		    .isEqualTo( "foreign" );
+
+		NodeList	paramNodes	= generatorNode.getChildNodes();
+		Node		paramNode	= null;
+
+		for ( int i = 0; i < paramNodes.getLength(); i++ ) {
+			Node node = paramNodes.item( i );
+			if ( node.getNodeType() == Node.ELEMENT_NODE ) {
+				Node nameAttr = node.getAttributes().getNamedItem( "name" );
+				if ( nameAttr != null && "property".equals( nameAttr.getTextContent() ) ) {
+					paramNode = node;
+					break;
+				}
+			}
+		}
+
+		assertNotNull( paramNode );
+		assertThat( paramNode.getTextContent() ).isEqualTo( "user" );
+	}
+
 	/**********************
 	 * General property tests
 	 *********************/
@@ -418,8 +480,6 @@ public class HibernateXMLWriterTest {
 
 		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
-
-		String			xml					= xmlToString( doc );
 
 		Node			propertyNode		= doc.getDocumentElement().getFirstChild().getFirstChild();
 		NamedNodeMap	propertyAttributes	= propertyNode.getAttributes();
