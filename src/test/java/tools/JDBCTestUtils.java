@@ -42,8 +42,8 @@ public class JDBCTestUtils {
 	 * @param datasource
 	 */
 	public static void resetTables( DataSource datasource, IBoxContext context ) {
-		datasource.execute( "DELETE FROM manufacturers", context );
 		datasource.execute( "DELETE FROM vehicles", context );
+		datasource.execute( "DELETE FROM manufacturers", context );
 		datasource.execute(
 		    """
 		    INSERT INTO manufacturers ( id, name, address ) VALUES
