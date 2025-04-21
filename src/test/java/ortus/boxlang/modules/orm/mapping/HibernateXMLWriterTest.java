@@ -594,6 +594,39 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "false" );
 	}
 
+	@DisplayName( "It generates correct xml for insert/update booleans on to-one properties" )
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+	    	property
+	    		name="name"
+	    		fieldtype="one-to-one"
+	    		insert=false
+	    		update=false;
+	    }
+	    """
+	} )
+	@ParameterizedTest
+	public void testInsertUpdateOnOneToOne( String sourceCode ) {
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+
+		Node		classEL			= doc.getDocumentElement().getFirstChild();
+		Node		propertyNode	= classEL.getFirstChild();
+
+		assertThat( propertyNode.getAttributes().getNamedItem( "insert" ) ).isNull();
+		assertThat( propertyNode.getAttributes().getNamedItem( "update" ) ).isNull();
+
+		// Node columnNode = propertyNode.getFirstChild();
+		// NamedNodeMap columnAttributes = columnNode.getAttributes();
+		// assertThat( columnAttributes.getNamedItem( "insert" ).getTextContent() )
+		// .isEqualTo( "false" );
+		// assertThat( columnAttributes.getNamedItem( "update" ).getTextContent() )
+		// .isEqualTo( "false" );
+	}
+
 	// @formatter:off
 	@DisplayName( "It maps name, length, precision, and scale" )
 	@ValueSource( strings = {

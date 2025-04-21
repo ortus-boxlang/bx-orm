@@ -421,13 +421,6 @@ public class HibernateXMLWriter {
 		    ORMKeys.lazy, ORMKeys.embedXML, ORMKeys.foreignKey );
 		populateStringAttributes( theNode, association, stringProperties );
 
-		if ( association.containsKey( ORMKeys.insertable ) ) {
-			theNode.setAttribute( "insert", trueFalseFormat( association.getAsBoolean( ORMKeys.insertable ) ) );
-		}
-
-		if ( association.containsKey( ORMKeys.updateable ) ) {
-			theNode.setAttribute( "update", trueFalseFormat( association.getAsBoolean( ORMKeys.updateable ) ) );
-		}
 		if ( !type.equals( "one-to-one" ) && association.containsKey( ORMKeys.nullable ) ) {
 			theNode.setAttribute( "not-null", trueFalseFormat( !association.getAsBoolean( ORMKeys.nullable ) ) );
 		}
@@ -451,6 +444,13 @@ public class HibernateXMLWriter {
 			case "one-to-one" :
 				break;
 			case "many-to-one" :
+				if ( association.containsKey( ORMKeys.insertable ) ) {
+					theNode.setAttribute( "insert", trueFalseFormat( association.getAsBoolean( ORMKeys.insertable ) ) );
+				}
+
+				if ( association.containsKey( ORMKeys.updateable ) ) {
+					theNode.setAttribute( "update", trueFalseFormat( association.getAsBoolean( ORMKeys.updateable ) ) );
+				}
 				if ( association.containsKey( ORMKeys.unique ) ) {
 					theNode.setAttribute( "unique", trueFalseFormat( association.getAsBoolean( ORMKeys.unique ) ) );
 				}
