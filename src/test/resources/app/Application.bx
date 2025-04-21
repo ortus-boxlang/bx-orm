@@ -1,7 +1,7 @@
 class{
 	this.name = "BXORMTest";
 
-	this.mappings[ "/root" ] = "src/test/resources/app";
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
 
 	this.datasources={
 		"TestDB" = {
