@@ -535,9 +535,8 @@ public class HibernateXMLWriter {
 
 		if ( !prop.getGenerator().isEmpty() ) {
 			if ( elementName.equals( "key-property" ) ) {
-				logger.atError()
-				    .log( "Composite ID elements do not support generators. Ignoring generator for property [%s] on entity [%s].",
-				        prop.getName(), entity.getEntityName() );
+				logger.error( "Composite ID elements do not support generators. Ignoring generator for property [%s] on entity [%s].",
+				    prop.getName(), entity.getEntityName() );
 			} else {
 				theNode.appendChild( generateGeneratorElement( prop.getGenerator() ) );
 			}
