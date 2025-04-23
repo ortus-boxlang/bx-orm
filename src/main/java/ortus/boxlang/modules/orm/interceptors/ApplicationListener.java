@@ -50,6 +50,7 @@ public class ApplicationListener extends BaseInterceptor {
 	 */
 	@Override
 	public void configure( IStruct properties ) {
+		// System.out.println( "Configuring ORM ApplicationListener" );
 		this.properties	= properties;
 		this.logger		= getRuntime().getLoggingService().getLogger( ORM_LOGGER_NAME );
 		this.ormService	= ( ( ORMService ) getRuntime().getGlobalService( ORMKeys.ORMService ) );

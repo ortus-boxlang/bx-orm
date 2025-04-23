@@ -49,20 +49,19 @@ public class BIFDocumentationGenerator {
 	@SuppressWarnings( "unchecked" )
 	public static IStruct generate( DocletEnvironment docsEnvironment ) throws IOException {
 
-		BoxRuntime			runtime					= BoxRuntime.getInstance();
-		FunctionService		functionService			= runtime.getFunctionService();
-		String				PackageNavPlaceholder	= "{PackageNav}";
+		BoxRuntime		runtime					= BoxRuntime.getInstance();
+		FunctionService	functionService			= runtime.getFunctionService();
+		String			PackageNavPlaceholder	= "{PackageNav}";
 
-		Key					moduleName				= ORMKeys.moduleName;
-		String				modulePath				= Paths.get( "./build/module" ).toAbsolutePath().toString();
-		RequestBoxContext	context					= new ScriptingRequestBoxContext( runtime.getRuntimeContext(),
-		    Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
-		context.getApplicationListener().onRequestStart( context, null );
+		Key				moduleName				= ORMKeys.moduleName;
+		String			modulePath				= Paths.get( "./build/module" ).toAbsolutePath().toString();
 		if ( !runtime.getModuleService().hasModule( moduleName ) ) {
 			if ( !Files.exists( Paths.get( modulePath ) ) ) {
+				System.out.println( "Module path does not exist: " + modulePath );
 				System.exit( 1 );
 			}
 
+			System.out.println( "Loading module from path: " + modulePath );
 			ModuleRecord moduleRecord = new ModuleRecord( modulePath );
 			runtime.getModuleService().getRegistry().put( moduleName, moduleRecord );
 			moduleRecord
@@ -70,6 +69,14 @@ public class BIFDocumentationGenerator {
 			    .register( runtime.getRuntimeContext() )
 			    .activate( runtime.getRuntimeContext() );
 		}
+		// Weird: We DO have the ORMService registered.
+		System.out.println( runtime.getGlobalService( ORMKeys.ORMService ) );
+
+		// so why does this error with this.ormService == null in the ApplicationListener?
+		// I even determined the ApplicationListener.configure() method is called!
+		RequestBoxContext context = new ScriptingRequestBoxContext( runtime.getRuntimeContext(),
+		    Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+		context.getApplicationListener().onRequestStart( context, null );
 
 		// Register all BIFs as the Javdoc runtime will not auto-register them.
 		docsEnvironment.getSpecifiedElements()
