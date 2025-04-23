@@ -524,9 +524,6 @@ public class HibernateXMLWriter {
 	public Element generateIdElement( String elementName, IPropertyMeta prop ) {
 		Element theNode = this.document.createElement( elementName );
 
-		// compute defaults - move to ORMAnnotationInspector?
-		// prop.getAsStruct( Key.annotations ).computeIfAbsent( ORMKeys.ORMType, ( key ) -> "string" );
-
 		// set common attributes
 		theNode.setAttribute( "name", prop.getName() );
 		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
@@ -537,7 +534,13 @@ public class HibernateXMLWriter {
 		theNode.appendChild( generateColumnElement( prop ) );
 
 		if ( !prop.getGenerator().isEmpty() ) {
-			theNode.appendChild( generateGeneratorElement( prop.getGenerator() ) );
+			if ( elementName.equals( "key-property" ) ) {
+				logger.atError()
+				    .log( "Composite ID elements do not support generators. Ignoring generator for property [%s] on entity [%s].",
+				        prop.getName(), entity.getEntityName() );
+			} else {
+				theNode.appendChild( generateGeneratorElement( prop.getGenerator() ) );
+			}
 		}
 
 		return theNode;
