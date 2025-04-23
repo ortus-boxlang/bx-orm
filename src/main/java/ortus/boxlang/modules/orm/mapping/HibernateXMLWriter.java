@@ -742,18 +742,18 @@ public class HibernateXMLWriter {
 		}
 
 		// generate keys, aka <id> elements
-		List<IPropertyMeta> idProperties = entity.getIdProperties();
-		if ( idProperties.size() == 1 ) {
-			entityElement.appendChild( generateIdElement( "id", idProperties.get( 0 ) ) );
-		} else if ( !entity.isSubclass() && idProperties.size() > 1 ) {
-			Element compositeIdNode = this.document.createElement( "composite-id" );
-			idProperties.stream().forEach( ( prop ) -> {
-				compositeIdNode.appendChild( generateIdElement( "key-property", prop ) );
-			} );
-			entityElement.appendChild( compositeIdNode );
-		}
-
 		if ( !entity.isSubclass() ) {
+			List<IPropertyMeta> idProperties = entity.getIdProperties();
+			if ( idProperties.size() == 1 ) {
+				entityElement.appendChild( generateIdElement( "id", idProperties.get( 0 ) ) );
+			} else if ( idProperties.size() > 1 ) {
+				Element compositeIdNode = this.document.createElement( "composite-id" );
+				idProperties.stream().forEach( ( prop ) -> {
+					compositeIdNode.appendChild( generateIdElement( "key-property", prop ) );
+				} );
+				entityElement.appendChild( compositeIdNode );
+			}
+
 			addDiscriminatorData( entityElement, entity.getDiscriminator() );
 		}
 
