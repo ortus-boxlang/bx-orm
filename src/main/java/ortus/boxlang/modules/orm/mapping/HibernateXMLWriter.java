@@ -20,6 +20,7 @@ package ortus.boxlang.modules.orm.mapping;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -424,8 +425,15 @@ public class HibernateXMLWriter {
 		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys
 		if ( association.containsKey( Key.column ) ) {
 			Element keyNode = this.document.createElement( "key" );
-			// @TODO: Loop over all column values and create multiple <column> elements.
-			keyNode.setAttribute( "column", escapeReservedWords( ( association.getAsString( Key.column ) ) ) );
+			if ( association.getAsString( Key.column ).split( "," ).length > 1 ) {
+				Stream.of( association.getAsString( Key.column ).split( "," ) ).forEach( column -> {
+					Element columnNode = this.document.createElement( "column" );
+					columnNode.setAttribute( "name", escapeReservedWords( translateColumnName( column.trim() ) ) );
+					keyNode.appendChild( columnNode );
+				} );
+			} else {
+				keyNode.setAttribute( "column", escapeReservedWords( ( association.getAsString( Key.column ) ) ) );
+			}
 
 			if ( association.containsKey( ORMKeys.mappedBy ) ) {
 				keyNode.setAttribute( "property-ref", association.getAsString( ORMKeys.mappedBy ) );
@@ -466,11 +474,15 @@ public class HibernateXMLWriter {
 			theNode.setAttribute( "formula", prop.getFormula() );
 		}
 		if ( association.containsKey( Key.column ) ) {
-			// @TODO: Loop over all column values and create multiple <column> elements.
-			// Element columnNode = this.document.createElement( "column" );
-			// columnNode.setAttribute( "name", escapeReservedWords( translateColumnName( association.getAsString( Key.column ) ) ) );
-			// theNode.appendChild( columnNode );
-			theNode.setAttribute( "column", escapeReservedWords( translateColumnName( association.getAsString( Key.column ) ) ) );
+			if ( association.getAsString( Key.column ).split( "," ).length > 1 ) {
+				Stream.of( association.getAsString( Key.column ).split( "," ) ).forEach( column -> {
+					Element columnNode = this.document.createElement( "column" );
+					columnNode.setAttribute( "name", escapeReservedWords( translateColumnName( column.trim() ) ) );
+					theNode.appendChild( columnNode );
+				} );
+			} else {
+				theNode.setAttribute( "column", escapeReservedWords( translateColumnName( association.getAsString( Key.column ) ) ) );
+			}
 		}
 
 		// for attributes specific to each association type
