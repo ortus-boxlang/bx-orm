@@ -41,6 +41,7 @@ import ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.DoubleConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.IntegerConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.TimeConverter;
+import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -308,10 +309,12 @@ public class HibernateXMLWriter {
 			}
 
 		}
+
 		if ( association.containsKey( ORMKeys.inverseJoinColumn ) ) {
 			// @TODO: Loop over all column values and create multiple <column> elements.
 			toManyNode.setAttribute( "column", escapeReservedWords( translateColumnName( association.getAsString( ORMKeys.inverseJoinColumn ) ) ) );
 		}
+
 		if ( association.containsKey( Key._CLASS ) ) {
 			setEntityName( toManyNode, association.getAsString( Key._CLASS ), prop );
 		} else {
@@ -338,7 +341,7 @@ public class HibernateXMLWriter {
 		// Cite: https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#d0e10663
 		Element	theNode	= this.document.createElement( type );
 
-		if ( type == "map" ) {
+		if ( type.equals( "map" ) ) {
 			if ( association.containsKey( ORMKeys.structKeyColumn ) ) {
 				Element mapKeyNode = this.document.createElement( "map-key" );
 				theNode.appendChild( mapKeyNode );
@@ -386,6 +389,37 @@ public class HibernateXMLWriter {
 		List<Key> stringProperties = List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.lazy, ORMKeys.cascade, ORMKeys.where,
 		    ORMKeys.fetch, ORMKeys.embedXML );
 		populateStringAttributes( theNode, association, stringProperties );
+
+		if ( type.equals( "bag" ) && !association.containsKey( Key.column ) ) {
+			// If a column is not defined locally, we need to pull the information from the inverse side to get the column name.
+			Key				datasourceName			= this.entity.getDatasource().isEmpty() ? Key.defaultDatasource : Key.of( this.entity.getDatasource() );
+			EntityRecord	associatedEntity		= entityLookup.apply( association.getAsString( Key._CLASS ), datasourceName );
+			IEntityMeta		associatedEntityMeta	= associatedEntity.getEntityMeta();
+			if ( associatedEntityMeta == null ) {
+				IStruct meta = associatedEntity.getMetadata();
+				meta.put( ORMKeys.classFQN, associatedEntity.getClassFQN() );
+				meta.put( Key.datasource, datasourceName );
+				associatedEntityMeta = AbstractEntityMeta.autoDiscoverMetaType( meta );
+			}
+			IPropertyMeta inverseProp = associatedEntityMeta.getAssociations()
+			    .stream()
+			    .filter( remoteProp -> remoteProp.getAnnotations().containsKey( Key._CLASS ) || remoteProp.getAnnotations().containsKey( ORMKeys.cfc ) )
+			    .filter( remoteProp -> entityLookup
+			        .apply(
+			            remoteProp.getAnnotations().containsKey( Key._CLASS )
+			                ? remoteProp.getAnnotations().getAsString( Key._CLASS )
+			                : remoteProp.getAnnotations().getAsString( ORMKeys.cfc ),
+			            datasourceName
+			        ).getEntityName()
+			        .equals( prop.getDefiningEntity().getEntityName() )
+			    )
+			    .findFirst()
+			    .orElseThrow( () -> new BoxRuntimeException(
+			        "Could not find inverse property for association [%s] on entity [%s]".formatted( prop.getName(), this.entity.getEntityName() ) )
+			    );
+
+			association.put( Key.column, inverseProp.getAssociation().getAsString( Key.column ) );
+		}
 
 		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys
 		if ( association.containsKey( Key.column ) ) {
@@ -898,9 +932,10 @@ public class HibernateXMLWriter {
 		if ( associatedEntity == null ) {
 			String message = String.format( "Could not find entity '%s' referenced in property '%s' on entity '%s'", relationClassName, prop.getName(),
 			    prop.getDefiningEntity().getEntityName() );
-			logger.error( message );
 			if ( !this.ormConfig.ignoreParseErrors ) {
 				throw new BoxRuntimeException( message );
+			} else {
+				logger.error( message );
 			}
 		} else {
 			theNode.setAttribute( "entity-name", associatedEntity.getEntityName() );
