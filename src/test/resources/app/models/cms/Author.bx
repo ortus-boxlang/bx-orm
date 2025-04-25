@@ -149,5 +149,15 @@ class
 		default   ="false"
 		type      ="boolean";
 
+	property name="rejections"
+				// For backwards compat we leave the fk column out and pull the column from the inverse on xml generation
+				//fkcolumn="authorID"
+				cfc="root.models.composites.Rejection"
+				fieldtype="one-to-many"
+				inverse="true"
+				missingRowIgnored="true"
+				lazy="extra"
+				cascade="delete";
+
 
 }

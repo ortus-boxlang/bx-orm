@@ -75,6 +75,10 @@ class {
 		 * Every module has a settings configuration object
 		 */
 		settings = {
+			/**
+			 * Version of the underlying Hibernate ORM library. Set at build time.
+			 */
+			hibernateVersion : "@build.hibernateVersion@"
 		};
 
 		/**

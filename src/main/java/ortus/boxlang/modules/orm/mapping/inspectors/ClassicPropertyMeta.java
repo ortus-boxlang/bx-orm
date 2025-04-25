@@ -17,12 +17,12 @@
  */
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
-import java.util.Map;
-
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
+import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
@@ -292,14 +292,55 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			generator.put( ORMKeys.sequence, annotations.getAsString( ORMKeys.sequence ) );
 		}
 		if ( annotations.containsKey( Key.params ) ) {
-			Object	paramValue	= annotations.getAsString( Key.params );
-			IStruct	theParams	= Struct.fromMap( ( Map ) JSONUtil.fromJSON( paramValue ) );
+			IStruct	theParams	= null;
+			Object	paramValue	= annotations.get( Key.params );
+			if ( paramValue instanceof String s ) {
+				try {
+					Object parsedJSON = JSONUtil.fromJSON( s, true );
+					if ( parsedJSON instanceof IStruct ) {
+						theParams = ( IStruct ) parsedJSON;
+					}
+				} catch ( Exception e ) {
+					logger.warn( "Property '{}' has a 'params' annotation that could not be parsed as JSON. Falling back to struct syntax parsing: {}",
+					    annotations.getAsString( Key._NAME ),
+					    paramValue );
+					theParams = parseStructNotation( s.trim() );
+				}
+			} else {
+				theParams = StructCaster.cast( paramValue, false );
+			}
 			if ( theParams == null ) {
-				// logger.warn( "Property '{}' has a 'params' annotation that could not be cast to a struct: {}", propName, paramValue );
+				logger.warn( "Property '{}' has a 'params' annotation that could not be cast to a struct: {}", annotations.getAsString( Key._NAME ),
+				    paramValue );
 			} else {
 				generator.put( Key.params, theParams );
 			}
 		}
 		return generator;
+	}
+
+	/**
+	 * Parse a struct notation string into a struct.
+	 * 
+	 * @param value String notation of a struct, like `{ foo = 'bar', "baz" = 'qux' }`
+	 */
+	public IStruct parseStructNotation( String value ) {
+		if ( !value.startsWith( "{" ) || !value.endsWith( "}" ) )
+			return null;
+
+		value = value.substring( 1, value.length() - 1 );
+		IStruct	params	= new Struct();
+		Array	items	= Array.fromString( value, "," );
+		items.forEach( ( item ) -> {
+			String pair[] = item.toString().trim().split( "=" );
+			if ( pair.length != 2 )
+				return;
+			params.put(
+			    Key.of( pair[ 0 ].trim().replaceAll( "^'|'$|^\"|\"$", "" ) ),
+			    pair[ 1 ].trim().replaceAll( "^'|'$|^\"|\"$", "" )
+			);
+		} );
+
+		return params;
 	}
 }

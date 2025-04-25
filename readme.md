@@ -16,13 +16,17 @@
 
 <p>&nbsp;</p>
 
-## Documentation
+## Important Links
 
-Documentation is being written and currently located in [./docs](./docs/README.md).
+* [Documentation](https://bxorm.ortusbooks.com/)
+* [ForgeBox](https://forgebox.io/view/bx-orm)
+* [API docs](https://apidocs.ortussolutions.com/#/boxlang-modules/bx-orm/)
+* [Source Code](https://github.com/ortus-boxlang/bx-orm)
+* [Issue Tracker](https://ortussolutions.atlassian.net/browse/BLMODULES)
 
 ## Development
 
-To get started hacking on boxlang-orm:
+To get started hacking on bx-orm:
 
 1. Clone the repo
 2. Copy the latest boxlang binary jar to `src/test/resources/libs/boxlang-1.0.0.jar`
