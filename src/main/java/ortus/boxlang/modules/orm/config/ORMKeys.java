@@ -25,6 +25,7 @@ import ortus.boxlang.runtime.scopes.Key;
 public class ORMKeys {
 
 	public static final Key	moduleName					= Key.of( "orm" );
+	public static final Key	hibernateVersion			= Key.of( "hibernateVersion" );
 
 	// Various keys used as context attachments
 	public static final Key	ORMService					= Key.of( "ORMService" );

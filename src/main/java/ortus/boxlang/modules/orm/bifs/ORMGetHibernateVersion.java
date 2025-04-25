@@ -17,19 +17,15 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
+import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 
 @BoxBIF
 public class ORMGetHibernateVersion extends BaseORMBIF {
-
-	/**
-	 * Giant code smell, but Hibernate tends to return "[WORKING]" as the version string in test builds and other instances.
-	 *
-	 * @TODO: Consider embedding a .properties file into the built module to set this dynamically from the gradle build.
-	 */
-	private static final String fallback = "5.6.15.Final";
 
 	/**
 	 * Retrieve the installed Hibernate version.
@@ -42,7 +38,10 @@ public class ORMGetHibernateVersion extends BaseORMBIF {
 		if ( !version.trim().toUpperCase().equals( "[WORKING]" ) ) {
 			return version;
 		}
-		return fallback;
+		ModuleRecord ormModule = context.getRuntime().getModuleService().getModuleRecord( ORMKeys.moduleName );
+		return StringCaster.cast(
+		    ormModule.settings.getOrDefault( ORMKeys.hibernateVersion, "UNKNOWN" )
+		);
 	}
 
 }
