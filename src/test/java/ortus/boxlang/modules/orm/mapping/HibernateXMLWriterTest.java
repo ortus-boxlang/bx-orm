@@ -235,15 +235,12 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "id2" );
 	}
 
-	@DisplayName( "It sets the type of the id property via an annotation" )
+	@DisplayName( "It supports various ormType aliases" )
 	@ParameterizedTest
 	@ValueSource( strings = {
 	    """
 	    class persistent {
-	    	property
-	    		name="the_id"
-	    		fieldtype="id"
-	    		ormtype="integer";
+	    	property name="the_id" fieldtype="id" ormtype="int";
 	    }
 	    """
 	} )
@@ -726,19 +723,21 @@ public class HibernateXMLWriterTest {
 	// @formatter:on
 	@ParameterizedTest
 	public void testVersionProperty( String sourceCode ) {
-		IStruct		meta		= getClassMetaFromCode( sourceCode );
+		IStruct			meta				= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
-		Node		classEL		= doc.getDocumentElement().getFirstChild();
-		Node		versionNode	= classEL.getFirstChild();
+		Node			classEL				= doc.getDocumentElement().getFirstChild();
+		Node			versionNode			= classEL.getFirstChild();
+		NamedNodeMap	versionAttributes	= versionNode.getAttributes();
 
-		assertEquals( "version", versionNode.getNodeName() );
-		assertEquals( "version", versionNode.getAttributes().getNamedItem( "name" ).getTextContent() );
-		assertEquals( "itemVersion", versionNode.getAttributes().getNamedItem( "column" ).getTextContent() );
-		assertEquals( "false", versionNode.getAttributes().getNamedItem( "insert" ).getTextContent() );
-		// assertEquals( "never", versionNode.getAttributes().getNamedItem( "generated" ).getTextContent() );
+		assertThat( versionNode.getNodeName() ).isEqualTo( "version" );
+		assertThat( versionAttributes.getNamedItem( "name" ).getTextContent() ).isEqualTo( "version" );
+		assertThat( versionAttributes.getNamedItem( "column" ).getTextContent() ).isEqualTo( "itemVersion" );
+		assertThat( versionAttributes.getNamedItem( "insert" ).getTextContent() ).isEqualTo( "false" );
+		assertThat( versionAttributes.getNamedItem( "type" ).getTextContent() ).startsWith( "converted::" );
+		assertThat( versionAttributes.getNamedItem( "type" ).getTextContent() ).endsWith( "IntegerConverter" );
 	}
 
 	// @formatter:off
