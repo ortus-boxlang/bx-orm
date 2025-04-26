@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+* Skip usage of AttributeConverter on identifier properties - Resolves [BLMODULES-44](https://ortussolutions.atlassian.net/browse/BLMODULES-44)
+
 ## [1.0.8] - 2025-04-25
 
 ### ⭐ Added
