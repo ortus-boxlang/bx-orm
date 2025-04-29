@@ -117,11 +117,14 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 	public AbstractEntityMeta( IStruct entityMeta ) {
 
-		this.logger					= runtime.getLoggingService().getLogger( "orm" );
+		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 
 		// Setup the basic entity metadata
-		this.meta					= entityMeta;
-		this.annotations			= this.meta.getAsStruct( Key.annotations );
+		this.meta			= entityMeta;
+		this.annotations	= this.meta.getAsStruct( Key.annotations );
+		if ( this.annotations == null ) {
+			this.annotations = Struct.of();
+		}
 
 		this.datasource				= StringCaster.cast( this.meta.getOrDefault( Key.datasource, "" ) );
 
@@ -200,12 +203,6 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 * @return Instance of IEntityMeta, either ClassicEntityMeta or ModernEntityMeta.
 	 */
 	public static IEntityMeta autoDiscoverMetaType( IStruct meta ) {
-		// logger.debug( "Class contains 'persistent' annotation; using ClassicEntityMeta: [{}]", meta.getAsString( Key.path ) );
-		var annotations = meta.getAsStruct( Key.annotations );
-		if ( annotations.containsKey( ORMKeys.persistent ) ) {
-			return new ClassicEntityMeta( meta );
-		}
-		// logger.debug( "Using ModernEntityMeta: [{}]", meta.getAsString( Key.path ) );
 		return new ClassicEntityMeta( meta );
 	}
 
