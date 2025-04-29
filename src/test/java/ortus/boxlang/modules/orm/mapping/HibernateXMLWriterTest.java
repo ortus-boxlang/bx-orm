@@ -282,6 +282,50 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
+	@DisplayName( "It can generate struct/map collections" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+		    property
+				name="businessYear"
+				fieldtype="one-to-many"
+				type="struct"
+				structKeyType="string"
+				structKeyColumn="year";
+	    }
+	    """,
+		// test that structkeytype defaults to 'string'
+	    """
+	    class persistent {
+		    property
+				name="businessYear"
+				fieldtype="one-to-many"
+				type="struct"
+				// structKeyType="string"
+				structKeyColumn="year";
+	    }
+	    """
+	} )
+	// @formatter:on
+	public void testStructCollection( String sourceCode ) {
+		IStruct			meta				= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig )
+		    .generateXML();
+
+		Node			classEl				= doc.getDocumentElement().getFirstChild();
+		Node			mapNode				= classEl.getLastChild();
+		NamedNodeMap	mapKeyAttributes	= mapNode.getFirstChild().getAttributes();
+
+		assertThat( mapKeyAttributes.getNamedItem( "column" ).getTextContent() )
+		    .isEqualTo( "`year`" );
+		assertThat( mapKeyAttributes.getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
+	}
+
+	// @formatter:off
 	@DisplayName( "It aliases ORM types to their proper counterpart" )
 	@ParameterizedTest
 	@ValueSource( strings = {
