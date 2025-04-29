@@ -115,7 +115,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			}
 			if ( association.get( ORMKeys.collectionType ).equals( "map" ) ) {
 				if ( !annotations.containsKey( ORMKeys.structKeyColumn ) ) {
-					logger.error( "Missing required 'structKeyColumn' annotation for struct property [{}] on entity [{}]",
+					logger.error( "Missing required 'structKeyColumn' annotation for struct property {} on entity {}",
 					    this.name, this.entityName );
 					// @TODO: Respect ignoreParseErrors setting and only log an error.
 					throw new BoxRuntimeException( String.format( "Missing required 'structKeyColumn' annotation for struct property [%s] on entity [%s]",

@@ -282,13 +282,15 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
-	@DisplayName( "It aliases ORM types to their proper counterpart" )
+	@DisplayName( "It aliases ORM types to their proper counterpart, and properly defaults ormType to 'string'" )
 	@ParameterizedTest
 	@ValueSource( strings = {
 	    """
 	    class persistent {
 		    property name="the_name" ormtype="varchar(50)";
 		    property name="foo" ormtype="java.sql.Timestamp";
+		    property name="bar";
+		    property name="barNone" ormType="";
 	    }
 	    """
 	} )
@@ -301,13 +303,21 @@ public class HibernateXMLWriterTest {
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		Node		nameNode	= classEl.getFirstChild();
-		Node		fooNode		= classEl.getChildNodes().item( 1 );
+		Node		fooNode		= nameNode.getNextSibling();
+		Node		barNode		= fooNode.getNextSibling();
+		Node		barNoneNode	= barNode.getNextSibling();
 
 		assertThat( nameNode.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "string" );
 
 		assertThat( fooNode.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "converted::" + DateTimeConverter.class.getName() );
+
+		assertThat( barNode.getAttributes().getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
+
+		assertThat( barNoneNode.getAttributes().getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
 	}
 
 	// @formatter:off
@@ -496,6 +506,10 @@ public class HibernateXMLWriterTest {
 	    		name="the_name"
 	    		column="NameColumn"
 	    		sqltype="varchar";
+	    	property
+	    		name="bar"
+	    		column="bar"
+	    		sqltype="";
 	    }
 	    """
 	} )
@@ -504,16 +518,26 @@ public class HibernateXMLWriterTest {
 
 		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+		String			xml					= xmlToString( doc );
 
-		Node			propertyNode		= doc.getDocumentElement().getFirstChild().getFirstChild();
+		Node			classEL				= doc.getDocumentElement().getFirstChild();
+		Node			propertyNode		= classEL.getFirstChild();
 		NamedNodeMap	propertyAttributes	= propertyNode.getAttributes();
 
-		assertEquals( "the_name", propertyAttributes.getNamedItem( "name" ).getTextContent() );
-		assertEquals( "string", propertyAttributes.getNamedItem( "type" ).getTextContent() );
+		assertThat( propertyAttributes.getNamedItem( "name" ).getTextContent() )
+		    .isEqualTo( "the_name" );
+		assertThat( propertyAttributes.getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
 
-		Node columnNode = propertyNode.getFirstChild();
-		assertEquals( "varchar", columnNode.getAttributes().getNamedItem( "sql-type" ).getTextContent() );
-		assertEquals( "NameColumn", columnNode.getAttributes().getNamedItem( "name" ).getTextContent() );
+		NamedNodeMap nameColumnAttrs = propertyNode.getFirstChild().getAttributes();
+		assertThat( nameColumnAttrs.getNamedItem( "sql-type" ).getTextContent() )
+		    .isEqualTo( "varchar" );
+		assertThat( nameColumnAttrs.getNamedItem( "name" ).getTextContent() )
+		    .isEqualTo( "NameColumn" );
+		Node			barNode			= propertyNode.getNextSibling();
+		NamedNodeMap	barColumnNode	= barNode.getFirstChild().getAttributes();
+		assertThat( barColumnNode.getNamedItem( "sql-type" ).getTextContent() )
+		    .isEqualTo( "varchar" );
 	}
 
 	@DisplayName( "It escapes reserved words in class and property names" )

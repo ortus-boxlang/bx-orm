@@ -79,6 +79,15 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.definingEntity	= definingEntity;
 		this.annotations	= this.meta.getAsStruct( Key.annotations );
 		this.name			= this.meta.getAsString( Key._NAME );
+
+		if ( annotations.containsKey( Key.sqltype ) ) {
+			this.sqlType = annotations.getAsString( Key.sqltype );
+			if ( this.sqlType == null || this.sqlType.isBlank() ) {
+				this.sqlType = "varchar";
+				annotations.put( Key.sqltype, this.sqlType );
+			}
+		}
+
 		this.column			= parseColumnAnnotations( this.annotations );
 		this.generator		= parseGeneratorAnnotations( this.annotations );
 		this.association	= parseAssociation( this.annotations );
@@ -89,12 +98,11 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 			}
 		}
 
-		if ( annotations.containsKey( Key.sqltype ) ) {
-			this.sqlType = annotations.getAsString( Key.sqltype );
-		}
-
 		this.annotations.putIfAbsent( ORMKeys.ORMType, annotations.getOrDefault( Key.type, "string" ) );
 		this.ormType = annotations.getAsString( ORMKeys.ORMType );
+		if ( this.ormType == null || this.ormType.isBlank() ) {
+			this.ormType = "string";
+		}
 
 	}
 
