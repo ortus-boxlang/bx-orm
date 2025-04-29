@@ -118,7 +118,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 					logger.error( "Missing required 'structKeyColumn' annotation for struct property [{}] on entity [{}]",
 					    this.name, this.entityName );
 					// @TODO: Respect ignoreParseErrors setting and only log an error.
-					throw new BoxRuntimeException( String.format( "Missing required 'structKeyColumn' annotation for property [%s] on entity [%s]",
+					throw new BoxRuntimeException( String.format( "Missing required 'structKeyColumn' annotation for struct property [%s] on entity [%s]",
 					    this.name, this.entityName ) );
 				}
 				if ( !annotations.containsKey( ORMKeys.structKeyType ) && logger.isWarnEnabled() ) {
@@ -134,6 +134,14 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			}
 			if ( annotations.containsKey( ORMKeys.singularName ) ) {
 				association.put( ORMKeys.singularName, annotations.getAsString( ORMKeys.singularName ) );
+			}
+			if ( annotations.containsKey( ORMKeys.elementColumn ) ) {
+				association.put( ORMKeys.elementColumn, annotations.getAsString( ORMKeys.elementColumn ) );
+				if ( !annotations.containsKey( ORMKeys.elementType ) && logger.isWarnEnabled() ) {
+					logger.warn( "Missing recommented 'elementType' annotation for collection property {} on entity {}. Defaulting to 'string'.",
+					    this.name, this.entityName );
+				}
+				association.put( ORMKeys.elementType, StringCaster.cast( annotations.getOrDefault( ORMKeys.elementType, "string" ) ) );
 			}
 		}
 		if ( annotations.containsKey( ORMKeys.lazy ) ) {

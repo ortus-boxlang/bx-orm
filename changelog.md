@@ -11,7 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 
-* Skip usage of AttributeConverter on identifier properties - Resolves [BLMODULES-44](https://ortussolutions.atlassian.net/browse/BLMODULES-44)
+* Implement `elementType`,`elementColumn` annotations - Resolves [BLMODULES-46](https://ortussolutions.atlassian.net/browse/BLMODULES-46)
+* Fixes for map collection when `structkeytype` or `structkeycolumn` are ignored - Resolves [BLMODULES-45](https://ortussolutions.atlassian.net/browse/BLMODULES-45)
+* Skip usage of `AttributeConverter` on identifier properties - Resolves [BLMODULES-44](https://ortussolutions.atlassian.net/browse/BLMODULES-44)
 
 ## [1.0.8] - 2025-04-25
 

@@ -282,50 +282,6 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
-	@DisplayName( "It can generate struct/map collections" )
-	@ParameterizedTest
-	@ValueSource( strings = {
-	    """
-	    class persistent {
-		    property
-				name="businessYear"
-				fieldtype="one-to-many"
-				type="struct"
-				structKeyType="string"
-				structKeyColumn="year";
-	    }
-	    """,
-		// test that structkeytype defaults to 'string'
-	    """
-	    class persistent {
-		    property
-				name="businessYear"
-				fieldtype="one-to-many"
-				type="struct"
-				// structKeyType="string"
-				structKeyColumn="year";
-	    }
-	    """
-	} )
-	// @formatter:on
-	public void testStructCollection( String sourceCode ) {
-		IStruct			meta				= getClassMetaFromCode( sourceCode );
-
-		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig )
-		    .generateXML();
-
-		Node			classEl				= doc.getDocumentElement().getFirstChild();
-		Node			mapNode				= classEl.getLastChild();
-		NamedNodeMap	mapKeyAttributes	= mapNode.getFirstChild().getAttributes();
-
-		assertThat( mapKeyAttributes.getNamedItem( "column" ).getTextContent() )
-		    .isEqualTo( "`year`" );
-		assertThat( mapKeyAttributes.getNamedItem( "type" ).getTextContent() )
-		    .isEqualTo( "string" );
-	}
-
-	// @formatter:off
 	@DisplayName( "It aliases ORM types to their proper counterpart" )
 	@ParameterizedTest
 	@ValueSource( strings = {
@@ -1142,10 +1098,59 @@ public class HibernateXMLWriterTest {
 	public void testArrayCollection() {
 	}
 
-	@Disabled( "Unimplemented" )
+	// @formatter:off
 	@DisplayName( "It can map a struct/map collection" )
-	@Test
-	public void testStructCollection() {
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+		    property
+				name="businessYear"
+				fieldtype="one-to-many"
+				type="struct"
+				structKeyType="string"
+				elementType="date"
+				structKeyColumn="year"
+				elementColumn="date";
+	    }
+	    """,
+		// test that structkeytype defaults to 'string'
+	    """
+	    class persistent {
+		    property
+				name="businessYear"
+				fieldtype="one-to-many"
+				type="struct"
+				// structKeyType="string"
+				elementType="date"
+				structKeyColumn="year"
+				elementColumn="date";
+	    }
+	    """
+	} )
+	// @formatter:on
+	public void testStructCollection( String sourceCode ) {
+		IStruct			meta				= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig )
+		    .generateXML();
+
+		Node			classEl				= doc.getDocumentElement().getFirstChild();
+		Node			mapNode				= classEl.getLastChild();
+		Node			mapKeyNode			= mapNode.getFirstChild();
+		NamedNodeMap	mapKeyAttributes	= mapKeyNode.getAttributes();
+
+		assertThat( mapKeyAttributes.getNamedItem( "column" ).getTextContent() )
+		    .isEqualTo( "`year`" );
+		assertThat( mapKeyAttributes.getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
+		NamedNodeMap elementNodeAttributes = mapKeyNode.getNextSibling().getAttributes();
+
+		assertThat( elementNodeAttributes.getNamedItem( "column" ).getTextContent() )
+		    .isEqualTo( "`date`" );
+		assertThat( elementNodeAttributes.getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "date" );
 	}
 
 	/**
@@ -1154,11 +1159,7 @@ public class HibernateXMLWriterTest {
 	 *        missingRowIgnored
 	 *        joinColumn
 	 *        inverse
-	 *        structkeycolumn
-	 *        structkeytype
 	 *        structkeydatatype ?? ACF only?
-	 *        elementcolumn
-	 *        elementtype
 	 *        index
 	 *        unSavedValue - deprecated
 	 */
