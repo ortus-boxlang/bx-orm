@@ -80,7 +80,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
 		String associationType = annotations.getAsString( ORMKeys.fieldtype );
 		if ( annotations.containsKey( ORMKeys.linkTable ) && !annotations.containsKey( ORMKeys.fkcolumn ) ) {
-			// @TODO: Implement compatibility shim in bx-compat or bx-orm-compat
+			// @TODO: Respect ignoreParseErrors setting and only log an error.
 			throw new BoxRuntimeException( String.format( "Missing 'fkcolumn' annotation for property [{}] on entity [{}]", this.name, this.entityName ) );
 		}
 		if ( associationType.equalsIgnoreCase( "one-to-one" )
@@ -104,7 +104,8 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			// IS A COLLECTION
 			association.compute( ORMKeys.collectionType, ( key, object ) -> {
 				String propertyType = annotations.getAsString( Key.type );
-				if ( propertyType == null || propertyType.isBlank() || propertyType.trim().toLowerCase().equals( "any" ) ) {
+				if ( propertyType == null || propertyType.isBlank() || propertyType.trim().equalsIgnoreCase( "any" )
+				    || propertyType.equalsIgnoreCase( "object" ) ) {
 					propertyType = "array";
 				}
 				return propertyType.equalsIgnoreCase( "array" ) ? "bag" : "map";
@@ -113,12 +114,19 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				association.put( ORMKeys.batchsize, StringCaster.cast( annotations.get( ORMKeys.batchsize ) ) );
 			}
 			if ( association.get( ORMKeys.collectionType ).equals( "map" ) ) {
-				if ( annotations.containsKey( ORMKeys.structKeyColumn ) ) {
-					association.put( ORMKeys.structKeyColumn, annotations.getAsString( ORMKeys.structKeyColumn ) );
+				if ( !annotations.containsKey( ORMKeys.structKeyColumn ) ) {
+					logger.error( "Missing required 'structKeyColumn' annotation for struct property [{}] on entity [{}]",
+					    this.name, this.entityName );
+					// @TODO: Respect ignoreParseErrors setting and only log an error.
+					throw new BoxRuntimeException( String.format( "Missing required 'structKeyColumn' annotation for struct property [%s] on entity [%s]",
+					    this.name, this.entityName ) );
 				}
-				if ( annotations.containsKey( ORMKeys.structKeyType ) ) {
-					association.put( ORMKeys.structKeyType, annotations.getAsString( ORMKeys.structKeyType ) );
+				if ( !annotations.containsKey( ORMKeys.structKeyType ) && logger.isWarnEnabled() ) {
+					logger.warn( "Missing recommented 'structKeyType' annotation for struct property {} on entity {}. Defaulting to 'string'.",
+					    this.name, this.entityName );
 				}
+				association.put( ORMKeys.structKeyColumn, annotations.getAsString( ORMKeys.structKeyColumn ) );
+				association.put( ORMKeys.structKeyType, StringCaster.cast( annotations.getOrDefault( ORMKeys.structKeyType, "string" ) ) );
 				// NEW in BoxLang.
 				if ( annotations.containsKey( ORMKeys.structKeyFormula ) ) {
 					association.put( ORMKeys.structKeyFormula, annotations.getAsString( ORMKeys.structKeyFormula ) );
@@ -126,6 +134,14 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			}
 			if ( annotations.containsKey( ORMKeys.singularName ) ) {
 				association.put( ORMKeys.singularName, annotations.getAsString( ORMKeys.singularName ) );
+			}
+			if ( annotations.containsKey( ORMKeys.elementColumn ) ) {
+				association.put( ORMKeys.elementColumn, annotations.getAsString( ORMKeys.elementColumn ) );
+				if ( !annotations.containsKey( ORMKeys.elementType ) && logger.isWarnEnabled() ) {
+					logger.warn( "Missing recommented 'elementType' annotation for collection property {} on entity {}. Defaulting to 'string'.",
+					    this.name, this.entityName );
+				}
+				association.put( ORMKeys.elementType, StringCaster.cast( annotations.getOrDefault( ORMKeys.elementType, "string" ) ) );
 			}
 		}
 		if ( annotations.containsKey( ORMKeys.lazy ) ) {

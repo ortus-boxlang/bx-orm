@@ -99,7 +99,7 @@ public class EntityRecord {
 		this.entityName		= entityName;
 		this.classFQN		= classFQN;
 		this.datasource		= onDatasource;
-		this.metadata		= metadata == null ? Struct.EMPTY : metadata;
+		this.metadata		= metadata == null ? Struct.of() : metadata;
 		this.resolverPrefix	= parseResolverPrefix( ( String ) this.metadata.getOrDefault( Key.path, ClassLocator.BX_PREFIX ) );
 
 		String[] fqn = this.classFQN.split( "\\." );

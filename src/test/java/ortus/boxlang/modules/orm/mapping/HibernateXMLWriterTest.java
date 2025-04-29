@@ -235,15 +235,12 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "id2" );
 	}
 
-	@DisplayName( "It sets the type of the id property via an annotation" )
+	@DisplayName( "It supports various ormType aliases" )
 	@ParameterizedTest
 	@ValueSource( strings = {
 	    """
 	    class persistent {
-	    	property
-	    		name="the_id"
-	    		fieldtype="id"
-	    		ormtype="integer";
+	    	property name="the_id" fieldtype="id" ormtype="int";
 	    }
 	    """
 	} )
@@ -726,19 +723,21 @@ public class HibernateXMLWriterTest {
 	// @formatter:on
 	@ParameterizedTest
 	public void testVersionProperty( String sourceCode ) {
-		IStruct		meta		= getClassMetaFromCode( sourceCode );
+		IStruct			meta				= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
-		Node		classEL		= doc.getDocumentElement().getFirstChild();
-		Node		versionNode	= classEL.getFirstChild();
+		Node			classEL				= doc.getDocumentElement().getFirstChild();
+		Node			versionNode			= classEL.getFirstChild();
+		NamedNodeMap	versionAttributes	= versionNode.getAttributes();
 
-		assertEquals( "version", versionNode.getNodeName() );
-		assertEquals( "version", versionNode.getAttributes().getNamedItem( "name" ).getTextContent() );
-		assertEquals( "itemVersion", versionNode.getAttributes().getNamedItem( "column" ).getTextContent() );
-		assertEquals( "false", versionNode.getAttributes().getNamedItem( "insert" ).getTextContent() );
-		// assertEquals( "never", versionNode.getAttributes().getNamedItem( "generated" ).getTextContent() );
+		assertThat( versionNode.getNodeName() ).isEqualTo( "version" );
+		assertThat( versionAttributes.getNamedItem( "name" ).getTextContent() ).isEqualTo( "version" );
+		assertThat( versionAttributes.getNamedItem( "column" ).getTextContent() ).isEqualTo( "itemVersion" );
+		assertThat( versionAttributes.getNamedItem( "insert" ).getTextContent() ).isEqualTo( "false" );
+		assertThat( versionAttributes.getNamedItem( "type" ).getTextContent() ).startsWith( "converted::" );
+		assertThat( versionAttributes.getNamedItem( "type" ).getTextContent() ).endsWith( "IntegerConverter" );
 	}
 
 	// @formatter:off
@@ -1099,10 +1098,59 @@ public class HibernateXMLWriterTest {
 	public void testArrayCollection() {
 	}
 
-	@Disabled( "Unimplemented" )
+	// @formatter:off
 	@DisplayName( "It can map a struct/map collection" )
-	@Test
-	public void testStructCollection() {
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+		    property
+				name="businessYear"
+				fieldtype="one-to-many"
+				type="struct"
+				structKeyType="string"
+				elementType="date"
+				structKeyColumn="year"
+				elementColumn="date";
+	    }
+	    """,
+		// test that structkeytype defaults to 'string'
+	    """
+	    class persistent {
+		    property
+				name="businessYear"
+				fieldtype="one-to-many"
+				type="struct"
+				// structKeyType="string"
+				elementType="date"
+				structKeyColumn="year"
+				elementColumn="date";
+	    }
+	    """
+	} )
+	// @formatter:on
+	public void testStructCollection( String sourceCode ) {
+		IStruct			meta				= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig )
+		    .generateXML();
+
+		Node			classEl				= doc.getDocumentElement().getFirstChild();
+		Node			mapNode				= classEl.getLastChild();
+		Node			mapKeyNode			= mapNode.getFirstChild();
+		NamedNodeMap	mapKeyAttributes	= mapKeyNode.getAttributes();
+
+		assertThat( mapKeyAttributes.getNamedItem( "column" ).getTextContent() )
+		    .isEqualTo( "`year`" );
+		assertThat( mapKeyAttributes.getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
+		NamedNodeMap elementNodeAttributes = mapKeyNode.getNextSibling().getAttributes();
+
+		assertThat( elementNodeAttributes.getNamedItem( "column" ).getTextContent() )
+		    .isEqualTo( "`date`" );
+		assertThat( elementNodeAttributes.getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "date" );
 	}
 
 	/**
@@ -1111,11 +1159,7 @@ public class HibernateXMLWriterTest {
 	 *        missingRowIgnored
 	 *        joinColumn
 	 *        inverse
-	 *        structkeycolumn
-	 *        structkeytype
 	 *        structkeydatatype ?? ACF only?
-	 *        elementcolumn
-	 *        elementtype
 	 *        index
 	 *        unSavedValue - deprecated
 	 */

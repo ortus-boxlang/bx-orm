@@ -257,7 +257,7 @@ public class HibernateXMLWriter {
 
 		Element	theNode		= this.document.createElement( "property" );
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
+		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), false ) );
 
 		if ( prop.getFormula() != null ) {
 			theNode.setAttribute( "formula", "( " + prop.getFormula() + " )" );
@@ -572,7 +572,7 @@ public class HibernateXMLWriter {
 
 		// set common attributes
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
+		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), true ) );
 		if ( prop.getUnsavedValue() != null ) {
 			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );
 		}
@@ -895,7 +895,7 @@ public class HibernateXMLWriter {
 
 		// PROPERTY name
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
+		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), false ) );
 		// COLUMN name
 		if ( columnInfo.containsKey( Key._NAME ) ) {
 			theNode.setAttribute( "column", escapeReservedWords( translateColumnName( columnInfo.getAsString( Key._NAME ) ) ) );
@@ -1021,11 +1021,12 @@ public class HibernateXMLWriter {
 	/**
 	 * Caster to convert a property `ormType` field value to a Hibernate type.
 	 *
-	 * @param propertyType Property type, like `datetime` or `string`
+	 * @param propertyType         Property type, like `datetime` or `string`
+	 * @param isIdentifierProperty True if this is an identifier property, in which case we cannot use a converter.
 	 *
 	 * @return The Hibernate-safe type, like `timestamp` or `string`
 	 */
-	public static String toHibernateType( String propertyType ) {
+	public static String toHibernateType( String propertyType, boolean isIdentifierProperty ) {
 		// basic normalization
 		propertyType	= propertyType.trim().toLowerCase();
 		// grab "varchar" from "varchar(50)"
@@ -1033,23 +1034,33 @@ public class HibernateXMLWriter {
 		// grab "biginteger" from "java.math.biginteger", etc.
 		propertyType	= propertyType.substring( propertyType.lastIndexOf( "." ) + 1 );
 
-		return switch ( propertyType ) {
+		String normalizedType = switch ( propertyType ) {
 			case "blob", "byte[]" -> "binary";
-			case "bit", "bool" -> "converted::" + BooleanConverter.class.getName();
+			case "bit", "bool" -> "boolean";
 			case "yes-no", "yesno", "yes_no" -> "yes_no";
 			case "true-false", "truefalse", "true_false" -> "true_false";
-			case "big-decimal", "bigdecimal", "big_decimal" -> "converted::" + BigDecimalConverter.class.getName();
-			case "big-integer", "bigint", "biginteger", "big_integer" -> "converted::" + BigIntegerConverter.class.getName();
-			case "int" -> "converted::" + IntegerConverter.class.getName();
-			case "numeric", "number", "decimal" -> "converted::" + DoubleConverter.class.getName();
-			case "datetime", "eurodate", "usdate", "date" -> "converted::" + DateTimeConverter.class.getName();
+			case "big-decimal", "big_decimal" -> "bigdecimal";
+			case "big-integer", "bigint", "big_integer" -> "biginteger";
+			case "int" -> "integer";
+			case "numeric", "number", "decimal" -> "double";
+			case "eurodate", "usdate", "date", "timestamp" -> "datetime";
 			case "char", "nchar" -> "character";
 			case "varchar", "nvarchar" -> "string";
 			case "clob" -> "text";
-			case "boolean" -> "converted::" + BooleanConverter.class.getName();
-			case "timestamp" -> "converted::" + DateTimeConverter.class.getName();
-			case "time" -> "converted::" + TimeConverter.class.getName();
 			default -> propertyType;
+		};
+		if ( isIdentifierProperty ) {
+			return normalizedType;
+		}
+		return switch ( normalizedType ) {
+			case "time" -> "converted::" + TimeConverter.class.getName();
+			case "boolean" -> "converted::" + BooleanConverter.class.getName();
+			case "datetime" -> "converted::" + DateTimeConverter.class.getName();
+			case "double" -> "converted::" + DoubleConverter.class.getName();
+			case "integer" -> "converted::" + IntegerConverter.class.getName();
+			case "biginteger" -> "converted::" + BigIntegerConverter.class.getName();
+			case "bigdecimal" -> "converted::" + BigDecimalConverter.class.getName();
+			default -> normalizedType;
 		};
 	}
 
