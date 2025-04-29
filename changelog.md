@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.9] - 2025-04-29
+
 ### 🐛 Fixed
 
-* Implement `elementType`,`elementColumn` annotations - Resolves [BLMODULES-46](https://ortussolutions.atlassian.net/browse/BLMODULES-46)
-* Fixes for map collection when `structkeytype` or `structkeycolumn` are ignored - Resolves [BLMODULES-45](https://ortussolutions.atlassian.net/browse/BLMODULES-45)
-* Skip usage of `AttributeConverter` on identifier properties - Resolves [BLMODULES-44](https://ortussolutions.atlassian.net/browse/BLMODULES-44)
+- Implement `elementType`,`elementColumn` annotations - Resolves [BLMODULES-46](https://ortussolutions.atlassian.net/browse/BLMODULES-46)
+- Fixes for map collection when `structkeytype` or `structkeycolumn` are ignored - Resolves [BLMODULES-45](https://ortussolutions.atlassian.net/browse/BLMODULES-45)
+- Skip usage of `AttributeConverter` on identifier properties - Resolves [BLMODULES-44](https://ortussolutions.atlassian.net/browse/BLMODULES-44)
 
 ## [1.0.8] - 2025-04-25
 
@@ -101,7 +103,9 @@ No significant changes.
 
 - First iteration of this module
 
-[Unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.8...HEAD
+[Unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.9...HEAD
+
+[1.0.9]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.8...v1.0.9
 
 [1.0.8]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.7...v1.0.8
 
