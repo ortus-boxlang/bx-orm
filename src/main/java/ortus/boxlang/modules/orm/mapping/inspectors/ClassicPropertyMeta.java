@@ -64,7 +64,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.fieldtype ) ) {
 			String fieldType = annotations.getAsString( ORMKeys.fieldtype );
 			if ( fieldType == "collection" ) {
-				logger.warn( "Property {} on entity {} has fieldtype=collection, which is not yet supported. Please forward to your local Ortus agency.",
+				logger.warn( "Property '{}' on entity '{}' has fieldtype=collection, which is not yet supported. Please forward to your local Ortus agency.",
 				    this.name, entityName );
 			}
 		}
@@ -115,14 +115,14 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			}
 			if ( association.get( ORMKeys.collectionType ).equals( "map" ) ) {
 				if ( !annotations.containsKey( ORMKeys.structKeyColumn ) ) {
-					logger.error( "Missing required 'structKeyColumn' annotation for struct property {} on entity {}",
+					logger.error( "Missing required `structKeyColumn` annotation for struct property '{}' on entity '{}'",
 					    this.name, this.entityName );
 					// @TODO: Respect ignoreParseErrors setting and only log an error.
 					throw new BoxRuntimeException( String.format( "Missing required 'structKeyColumn' annotation for struct property [%s] on entity [%s]",
 					    this.name, this.entityName ) );
 				}
-				if ( !annotations.containsKey( ORMKeys.structKeyType ) && logger.isWarnEnabled() ) {
-					logger.warn( "Missing recommented 'structKeyType' annotation for struct property {} on entity {}. Defaulting to 'string'.",
+				if ( !annotations.containsKey( ORMKeys.structKeyType ) ) {
+					logger.warn( "Missing recommented `structKeyType` annotation for struct property '{}' on entity '{}'. Defaulting to 'string'.",
 					    this.name, this.entityName );
 				}
 				association.put( ORMKeys.structKeyColumn, annotations.getAsString( ORMKeys.structKeyColumn ) );
@@ -137,8 +137,8 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			}
 			if ( annotations.containsKey( ORMKeys.elementColumn ) ) {
 				association.put( ORMKeys.elementColumn, annotations.getAsString( ORMKeys.elementColumn ) );
-				if ( !annotations.containsKey( ORMKeys.elementType ) && logger.isWarnEnabled() ) {
-					logger.warn( "Missing recommented 'elementType' annotation for collection property {} on entity {}. Defaulting to 'string'.",
+				if ( !annotations.containsKey( ORMKeys.elementType ) ) {
+					logger.warn( "Missing recommented 'elementType' annotation for collection property '{}' on entity '{}'. Defaulting to 'string'.",
 					    this.name, this.entityName );
 				}
 				association.put( ORMKeys.elementType, StringCaster.cast( annotations.getOrDefault( ORMKeys.elementType, "string" ) ) );

@@ -518,7 +518,6 @@ public class HibernateXMLWriterTest {
 
 		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
-		String			xml					= xmlToString( doc );
 
 		Node			classEL				= doc.getDocumentElement().getFirstChild();
 		Node			propertyNode		= classEL.getFirstChild();

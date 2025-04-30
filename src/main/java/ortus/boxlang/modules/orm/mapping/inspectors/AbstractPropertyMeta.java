@@ -83,7 +83,7 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		if ( annotations.containsKey( Key.sqltype ) ) {
 			this.sqlType = annotations.getAsString( Key.sqltype );
 			if ( this.sqlType == null || this.sqlType.isBlank() ) {
-				logger.warn( "Annotation `sqltype` is blank for property {} on entity {}. Defaulting to 'varchar'.", this.name, this.entityName );
+				logger.warn( "Annotation `sqltype` is blank for property '{}' on entity '{}'. Defaulting to 'varchar'.", this.name, this.entityName );
 				this.sqlType = "varchar";
 				annotations.put( Key.sqltype, this.sqlType );
 			}
@@ -102,7 +102,7 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.annotations.putIfAbsent( ORMKeys.ORMType, annotations.getOrDefault( Key.type, "string" ) );
 		this.ormType = annotations.getAsString( ORMKeys.ORMType );
 		if ( this.ormType == null || this.ormType.isBlank() ) {
-			logger.warn( "Annotation `ormtype` is blank for property {} on entity {}. Defaulting to 'string'.", this.name, this.entityName );
+			logger.warn( "Annotation `ormtype` is blank for property '{}' on entity '{}'. Defaulting to 'string'.", this.name, this.entityName );
 			this.ormType = "string";
 		}
 
