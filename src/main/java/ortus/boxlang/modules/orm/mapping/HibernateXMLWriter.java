@@ -264,7 +264,11 @@ public class HibernateXMLWriter {
 		if ( prop.getFormula() != null ) {
 			theNode.setAttribute( "formula", "( " + prop.getFormula() + " )" );
 		} else {
-			theNode.appendChild( generateColumnElement( prop ) );
+			String[] columnName = columnInfo.getOrDefault( Key._name, "" ).toString().split( "," );
+			for ( String column : columnName ) {
+				columnInfo.put( Key._name, column.trim() );
+				theNode.appendChild( generateColumnElement( columnInfo ) );
+			}
 		}
 		if ( columnInfo.containsKey( ORMKeys.insertable ) ) {
 			theNode.setAttribute( "insert", trueFalseFormat( columnInfo.getAsBoolean( ORMKeys.insertable ) ) );
@@ -314,8 +318,7 @@ public class HibernateXMLWriter {
 		}
 
 		if ( association.containsKey( ORMKeys.inverseJoinColumn ) ) {
-			// @TODO: Loop over all column values and create multiple <column> elements.
-			toManyNode.setAttribute( "column", escapeReservedWords( translateColumnName( association.getAsString( ORMKeys.inverseJoinColumn ) ) ) );
+			addColumnNames( toManyNode, association.getAsString( ORMKeys.inverseJoinColumn ) );
 		}
 
 		if ( association.containsKey( Key._CLASS ) ) {
@@ -347,9 +350,6 @@ public class HibernateXMLWriter {
 		if ( type.equals( "map" ) ) {
 			if ( association.containsKey( ORMKeys.structKeyColumn ) ) {
 				Element mapKeyNode = this.document.createElement( "map-key" );
-				theNode.appendChild( mapKeyNode );
-				// Note that Lucee doesn't support comma-delimited values in structKeyColumn
-				mapKeyNode.setAttribute( "column", escapeReservedWords( translateColumnName( association.getAsString( ORMKeys.structKeyColumn ) ) ) );
 				if ( association.containsKey( ORMKeys.structKeyType ) ) {
 					mapKeyNode.setAttribute( "type", association.getAsString( ORMKeys.structKeyType ) );
 				}
@@ -357,19 +357,20 @@ public class HibernateXMLWriter {
 				if ( association.containsKey( ORMKeys.structKeyFormula ) ) {
 					mapKeyNode.setAttribute( "formula", association.getAsString( ORMKeys.structKeyFormula ) );
 				}
+				addColumnNames( mapKeyNode, association.getAsString( ORMKeys.structKeyColumn ) );
+				theNode.appendChild( mapKeyNode );
 			}
 		}
 		if ( association.containsKey( ORMKeys.elementColumn ) ) {
 			Element elementNode = this.document.createElement( "element" );
-			theNode.appendChild( elementNode );
-			// Note that Lucee doesn't support comma-delimited values in elementColumn
-			elementNode.setAttribute( "column", escapeReservedWords( translateColumnName( association.getAsString( ORMKeys.elementColumn ) ) ) );
 			if ( association.containsKey( ORMKeys.elementType ) ) {
 				elementNode.setAttribute( "type", association.getAsString( ORMKeys.elementType ) );
 			}
 			if ( association.containsKey( ORMKeys.elementFormula ) ) {
 				elementNode.setAttribute( "formula", association.getAsString( ORMKeys.elementFormula ) );
 			}
+			addColumnNames( elementNode, association.getAsString( ORMKeys.elementColumn ) );
+			theNode.appendChild( elementNode );
 		}
 
 		theNode.setAttribute( "name", prop.getName() );
@@ -427,20 +428,34 @@ public class HibernateXMLWriter {
 		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys
 		if ( association.containsKey( Key.column ) ) {
 			Element keyNode = this.document.createElement( "key" );
-			if ( association.getAsString( Key.column ).split( "," ).length > 1 ) {
-				Stream.of( association.getAsString( Key.column ).split( "," ) ).forEach( column -> {
-					Element columnNode = this.document.createElement( "column" );
-					columnNode.setAttribute( "name", escapeReservedWords( translateColumnName( column.trim() ) ) );
-					keyNode.appendChild( columnNode );
-				} );
-			} else {
-				keyNode.setAttribute( "column", escapeReservedWords( ( association.getAsString( Key.column ) ) ) );
-			}
+			addColumnNames( keyNode, association.getAsString( Key.column ) );
 
 			if ( association.containsKey( ORMKeys.mappedBy ) ) {
 				keyNode.setAttribute( "property-ref", association.getAsString( ORMKeys.mappedBy ) );
 			}
 			theNode.appendChild( keyNode );
+		}
+		return theNode;
+	}
+
+	/**
+	 * Add column names (single, via attribute, or multiple, via child column nodes) to the given node.
+	 * 
+	 * @param theNode    Parent node to either modify or add child nodes to.
+	 * @param columnName The column name(s) to add. If multiple, they should be comma-delimited.
+	 */
+	protected Element addColumnNames( Element theNode, String columnName ) {
+		if ( columnName == null ) {
+			return theNode;
+		}
+		if ( columnName.split( "," ).length > 1 ) {
+			Stream.of( columnName.split( "," ) ).forEach( column -> {
+				Element columnNode = this.document.createElement( "column" );
+				columnNode.setAttribute( "name", escapeReservedWords( translateColumnName( column.trim() ) ) );
+				theNode.appendChild( columnNode );
+			} );
+		} else {
+			theNode.setAttribute( "column", escapeReservedWords( ( columnName ) ) );
 		}
 		return theNode;
 	}
@@ -476,15 +491,7 @@ public class HibernateXMLWriter {
 			theNode.setAttribute( "formula", prop.getFormula() );
 		}
 		if ( association.containsKey( Key.column ) ) {
-			if ( association.getAsString( Key.column ).split( "," ).length > 1 ) {
-				Stream.of( association.getAsString( Key.column ).split( "," ) ).forEach( column -> {
-					Element columnNode = this.document.createElement( "column" );
-					columnNode.setAttribute( "name", escapeReservedWords( translateColumnName( column.trim() ) ) );
-					theNode.appendChild( columnNode );
-				} );
-			} else {
-				theNode.setAttribute( "column", escapeReservedWords( translateColumnName( association.getAsString( Key.column ) ) ) );
-			}
+			addColumnNames( theNode, association.getAsString( Key.column ) );
 		}
 
 		// for attributes specific to each association type
@@ -516,13 +523,12 @@ public class HibernateXMLWriter {
 	 *
 	 * @TODO: Refactor all key logic into a getPropertyColumn() method which groups and combines all the various column-specific annotations.
 	 *
-	 * @param prop Column metadata
+	 * @param columnInfo Column metadata
 	 *
 	 * @return A &lt;column /&gt; element ready to add to a Hibernate mapping document
 	 */
-	public Element generateColumnElement( IPropertyMeta prop ) {
+	public Element generateColumnElement( IStruct columnInfo ) {
 		Element		theNode				= this.document.createElement( "column" );
-		IStruct		columnInfo			= prop.getColumn();
 
 		List<Key>	stringProperties	= List.of( Key._DEFAULT, Key.sqltype, ORMKeys.length, ORMKeys.precision, ORMKeys.scale, ORMKeys.uniqueKey );
 		populateStringAttributes( theNode, columnInfo, stringProperties );
@@ -568,7 +574,8 @@ public class HibernateXMLWriter {
 	 * @return An id or key-property XML node ready to add to a Hibernate mapping class or composite-id element
 	 */
 	public Element generateIdElement( String elementName, IPropertyMeta prop ) {
-		Element theNode = this.document.createElement( elementName );
+		Element	theNode		= this.document.createElement( elementName );
+		IStruct	columnInfo	= prop.getColumn();
 
 		// set common attributes
 		theNode.setAttribute( "name", prop.getName() );
@@ -577,7 +584,11 @@ public class HibernateXMLWriter {
 			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );
 		}
 
-		theNode.appendChild( generateColumnElement( prop ) );
+		String[] columnName = columnInfo.getOrDefault( Key._name, "" ).toString().split( "," );
+		for ( String column : columnName ) {
+			columnInfo.put( Key._name, column.trim() );
+			theNode.appendChild( generateColumnElement( columnInfo ) );
+		}
 
 		if ( !prop.getGenerator().isEmpty() ) {
 			if ( elementName.equals( "key-property" ) ) {
@@ -898,7 +909,7 @@ public class HibernateXMLWriter {
 		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), false ) );
 		// COLUMN name
 		if ( columnInfo.containsKey( Key._NAME ) ) {
-			theNode.setAttribute( "column", escapeReservedWords( translateColumnName( columnInfo.getAsString( Key._NAME ) ) ) );
+			addColumnNames( theNode, columnInfo.getAsString( Key._NAME ) );
 		}
 		if ( prop.getUnsavedValue() != null ) {
 			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );

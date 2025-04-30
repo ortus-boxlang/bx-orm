@@ -122,7 +122,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 					    this.name, this.entityName ) );
 				}
 				if ( !annotations.containsKey( ORMKeys.structKeyType ) ) {
-					logger.warn( "Missing recommented `structKeyType` annotation for struct property '{}' on entity '{}'. Defaulting to 'string'.",
+					logger.warn( "Missing recommended `structKeyType` annotation for struct property '{}' on entity '{}'. Defaulting to 'string'.",
 					    this.name, this.entityName );
 				}
 				association.put( ORMKeys.structKeyColumn, annotations.getAsString( ORMKeys.structKeyColumn ) );
@@ -138,7 +138,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			if ( annotations.containsKey( ORMKeys.elementColumn ) ) {
 				association.put( ORMKeys.elementColumn, annotations.getAsString( ORMKeys.elementColumn ) );
 				if ( !annotations.containsKey( ORMKeys.elementType ) ) {
-					logger.warn( "Missing recommented 'elementType' annotation for collection property '{}' on entity '{}'. Defaulting to 'string'.",
+					logger.warn( "Missing recommended 'elementType' annotation for collection property '{}' on entity '{}'. Defaulting to 'string'.",
 					    this.name, this.entityName );
 				}
 				association.put( ORMKeys.elementType, StringCaster.cast( annotations.getOrDefault( ORMKeys.elementType, "string" ) ) );
