@@ -505,11 +505,13 @@ public class HibernateXMLWriterTest {
 	    	property
 	    		name="the_name"
 	    		column="NameColumn"
-	    		sqltype="varchar";
+	    		sqltype="varchar"
+	    		index="nameIndex";
 	    	property
 	    		name="bar"
 	    		column="bar"
-	    		sqltype="";
+	    		sqltype=""
+	    		index="";
 	    }
 	    """
 	} )
@@ -527,6 +529,8 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "the_name" );
 		assertThat( propertyAttributes.getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "string" );
+		assertThat( propertyAttributes.getNamedItem( "index" ).getTextContent() )
+		    .isEqualTo( "nameIndex" );
 
 		NamedNodeMap nameColumnAttrs = propertyNode.getFirstChild().getAttributes();
 		assertThat( nameColumnAttrs.getNamedItem( "sql-type" ).getTextContent() )
@@ -537,6 +541,7 @@ public class HibernateXMLWriterTest {
 		NamedNodeMap	barColumnNode	= barNode.getFirstChild().getAttributes();
 		assertThat( barColumnNode.getNamedItem( "sql-type" ).getTextContent() )
 		    .isEqualTo( "varchar" );
+		assertThat( barColumnNode.getNamedItem( "index" ) ).isNull();
 	}
 
 	@DisplayName( "It escapes reserved words in class and property names" )
@@ -974,6 +979,7 @@ public class HibernateXMLWriterTest {
 	    		insert="false"
 	    		update="false"
 	    		lazy="true"
+				index="idx_createdBy"
 	    		persistent=true;
 	    }
 	    """
@@ -990,17 +996,18 @@ public class HibernateXMLWriterTest {
 
 		Node		manyToOneNode	= classEL.getLastChild();
 		assertNotNull( manyToOneNode );
-		assertEquals( "many-to-one", manyToOneNode.getNodeName() );
+		assertThat( manyToOneNode.getNodeName() ).isEqualTo( "many-to-one" );
 
 		NamedNodeMap manyToOneAttrs = manyToOneNode.getAttributes();
-		assertEquals( "createdBy", manyToOneAttrs.getNamedItem( "name" ).getTextContent() );
-		assertEquals( "select", manyToOneAttrs.getNamedItem( "fetch" ).getTextContent() );
-		assertEquals( "all", manyToOneAttrs.getNamedItem( "cascade" ).getTextContent() );
-		assertEquals( "Manufacturer", manyToOneAttrs.getNamedItem( "entity-name" ).getTextContent() );
-		assertEquals( "false", manyToOneAttrs.getNamedItem( "insert" ).getTextContent() );
-		assertEquals( "false", manyToOneAttrs.getNamedItem( "update" ).getTextContent() );
+		assertThat( manyToOneAttrs.getNamedItem( "name" ).getTextContent() ).isEqualTo( "createdBy" );
+		assertThat( manyToOneAttrs.getNamedItem( "fetch" ).getTextContent() ).isEqualTo( "select" );
+		assertThat( manyToOneAttrs.getNamedItem( "cascade" ).getTextContent() ).isEqualTo( "all" );
+		assertThat( manyToOneAttrs.getNamedItem( "entity-name" ).getTextContent() ).isEqualTo( "Manufacturer" );
+		assertThat( manyToOneAttrs.getNamedItem( "insert" ).getTextContent() ).isEqualTo( "false" );
+		assertThat( manyToOneAttrs.getNamedItem( "update" ).getTextContent() ).isEqualTo( "false" );
+		assertThat( manyToOneAttrs.getNamedItem( "index" ).getTextContent() ).isEqualTo( "idx_createdBy" );
 		// @TODO: Fix!
-		// assertEquals( "FK_manufacturer", manyToOneAttrs.getNamedItem( "column" ).getTextContent() );
+		// assertThat( manyToOneAttrs.getNamedItem( "column" ).getTextContent() ).isEqualTo( "FK_manufacturer" );
 	}
 
 	// @formatter:off
@@ -1183,7 +1190,6 @@ public class HibernateXMLWriterTest {
 	 *        joinColumn
 	 *        inverse
 	 *        structkeydatatype ?? ACF only?
-	 *        index
 	 *        unSavedValue - deprecated
 	 */
 

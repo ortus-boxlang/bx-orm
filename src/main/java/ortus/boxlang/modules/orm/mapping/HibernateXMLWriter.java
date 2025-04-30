@@ -253,11 +253,13 @@ public class HibernateXMLWriter {
 	 * @return A &lt;property /&gt; element ready to add to a Hibernate mapping document
 	 */
 	public Element generatePropertyElement( IPropertyMeta prop ) {
-		IStruct	columnInfo	= prop.getColumn();
+		IStruct	propAnnotations	= prop.getAnnotations();
+		IStruct	columnInfo		= prop.getColumn();
 
-		Element	theNode		= this.document.createElement( "property" );
+		Element	theNode			= this.document.createElement( "property" );
 		theNode.setAttribute( "name", prop.getName() );
 		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), false ) );
+		populateStringAttributes( theNode, propAnnotations, List.of( ORMKeys.index ) );
 
 		if ( prop.getFormula() != null ) {
 			theNode.setAttribute( "formula", "( " + prop.getFormula() + " )" );
@@ -500,9 +502,7 @@ public class HibernateXMLWriter {
 				if ( association.containsKey( ORMKeys.unique ) ) {
 					theNode.setAttribute( "unique", trueFalseFormat( association.getAsBoolean( ORMKeys.unique ) ) );
 				}
-				if ( association.containsKey( ORMKeys.missingRowIgnored ) ) {
-					theNode.setAttribute( "not-found", association.getAsString( ORMKeys.missingRowIgnored ) );
-				}
+				populateStringAttributes( theNode, association, List.of( ORMKeys.uniqueKey, ORMKeys.index ) );
 				// @TODO: unique-key
 				break;
 		}
@@ -1013,6 +1013,8 @@ public class HibernateXMLWriter {
 				return "order-by";
 			case "uniquekey" :
 				return "unique-key";
+			case "missingRowIgnored" :
+				return "not-found";
 			default :
 				return name;
 		}
