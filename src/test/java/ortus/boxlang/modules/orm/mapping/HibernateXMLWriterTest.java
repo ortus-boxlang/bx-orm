@@ -753,7 +753,7 @@ public class HibernateXMLWriterTest {
 				fieldtype="version"
 				generated="never"
 				column="itemVersion"
-				ormType="integer"
+				dataType="integer"
 				insert="false"
 				name="version";
 		}

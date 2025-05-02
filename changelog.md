@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Fixed
 
 - Throw or log an error when class annotation on association is an empty string - Resolves [BLMODULES-50](https://ortussolutions.atlassian.net/browse/BLMODULES-50)
+- Fix support for `dataType` annotation on version properties - Resolves [BLMODULES-51](https://ortussolutions.atlassian.net/browse/BLMODULES-51)
 
 ### ⭐ Added
 

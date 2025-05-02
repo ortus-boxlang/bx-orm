@@ -17,6 +17,8 @@
  */
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.List;
+
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
@@ -45,6 +47,21 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			if ( this.fieldType == null ) {
 				throw new BoxRuntimeException( String.format( "Unknown field type '%s' for property '%s' on entity '%s'",
 				    annotations.getAsString( ORMKeys.fieldtype ), this.name, this.entityName ) );
+			}
+		}
+		if ( this.getFieldType() == FIELDTYPE.VERSION ) {
+			// fall back to dataType annotation for compat
+			if ( this.annotations.containsKey( ORMKeys.dataType ) ) {
+				String dataType = this.annotations.getAsString( ORMKeys.dataType );
+				if ( dataType == null || dataType.isBlank() ) {
+					logger.warn( "Annotation `datatype` is highly re for property '{}' on entity '{}'. Defaulting to 'string'.", this.name, this.entityName );
+				} else {
+					this.ormType = dataType.trim().toLowerCase();
+				}
+			}
+			// Validate
+			if ( !List.of( "int", "long", "short" ).contains( this.ormType ) ) {
+				logger.error( "ORM type '{}' is not a valid type for version property '{}' on entity '{}'.", this.ormType, this.name, this.entityName );
 			}
 		}
 

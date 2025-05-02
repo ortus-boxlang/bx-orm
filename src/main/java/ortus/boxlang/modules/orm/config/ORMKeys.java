@@ -60,6 +60,7 @@ public class ORMKeys {
 	public static final Key	namingStrategy				= Key.of( "namingStrategy" );
 	public static final Key	ormConfig					= Key.of( "ormConfig" );
 	public static final Key	ORMType						= Key.of( "ORMType" );
+	public static final Key	dataType					= Key.of( "dataType" );
 	public static final Key	persistent					= Key.of( "persistent" );
 	public static final Key	sampleEntity				= Key.of( "sampleEntity" );
 	public static final Key	saveMapping					= Key.of( "saveMapping" );
