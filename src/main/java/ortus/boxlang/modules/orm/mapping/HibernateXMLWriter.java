@@ -324,7 +324,8 @@ public class HibernateXMLWriter {
 		if ( association.containsKey( Key._CLASS ) ) {
 			setEntityName( toManyNode, association.getAsString( Key._CLASS ), prop );
 		} else {
-			throw new BoxRuntimeException( "Missing required class name for relationship [%s] on entity".formatted( prop.getName() ) );
+			throw new BoxRuntimeException(
+			    "Missing required class name for relationship '%s' on entity '%s'".formatted( prop.getName(), this.entity.getEntityName() ) );
 		}
 
 		collectionNode.appendChild( toManyNode );
@@ -419,7 +420,7 @@ public class HibernateXMLWriter {
 			    )
 			    .findFirst()
 			    .orElseThrow( () -> new BoxRuntimeException(
-			        "Could not find inverse property for association [%s] on entity [%s]".formatted( prop.getName(), this.entity.getEntityName() ) )
+			        "Could not find inverse property for association '%s' on entity '%s'".formatted( prop.getName(), this.entity.getEntityName() ) )
 			    );
 
 			association.put( Key.column, inverseProp.getAssociation().getAsString( Key.column ) );
@@ -475,7 +476,8 @@ public class HibernateXMLWriter {
 		if ( association.containsKey( Key._CLASS ) ) {
 			setEntityName( theNode, association.getAsString( Key._CLASS ), prop );
 		} else {
-			throw new BoxRuntimeException( "Missing required class name for relationship [%s] on entity".formatted( prop.getName() ) );
+			throw new BoxRuntimeException(
+			    "Missing required class name for relationship '%s' on entity '%s'".formatted( prop.getName(), this.entity.getEntityName() ) );
 		}
 
 		List<Key> stringProperties = List.of( Key._NAME, ORMKeys.cascade, ORMKeys.fetch, ORMKeys.mappedBy, ORMKeys.access,
@@ -594,7 +596,7 @@ public class HibernateXMLWriter {
 
 		if ( !prop.getGenerator().isEmpty() ) {
 			if ( elementName.equals( "key-property" ) ) {
-				logger.error( "Composite ID elements do not support generators. Ignoring generator for property [%s] on entity [%s].",
+				logger.error( "Composite ID elements do not support generators. Ignoring generator for property [{}] on entity [{}].",
 				    prop.getName(), entity.getEntityName() );
 			} else {
 				theNode.appendChild( generateGeneratorElement( prop.getGenerator() ) );
@@ -951,7 +953,7 @@ public class HibernateXMLWriter {
 	private void setEntityName( Element theNode, String relationClassName, IPropertyMeta prop ) {
 		if ( relationClassName == null || relationClassName.isBlank() ) {
 			throw new BoxRuntimeException(
-			    "Missing required class name for relationship [%s] on entity %s".formatted( prop.getName(), this.entity.getEntityName() ) );
+			    "Missing required class name for relationship '%s' on entity '%s'".formatted( prop.getName(), this.entity.getEntityName() ) );
 		}
 		Key				datasourceName		= this.entity.getDatasource().isEmpty() ? Key.defaultDatasource : Key.of( this.entity.getDatasource() );
 		EntityRecord	associatedEntity	= entityLookup.apply( relationClassName, datasourceName );
