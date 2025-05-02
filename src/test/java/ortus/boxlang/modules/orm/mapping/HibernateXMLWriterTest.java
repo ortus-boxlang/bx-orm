@@ -635,6 +635,7 @@ public class HibernateXMLWriterTest {
 	    	property
 	    		name="name"
 	    		fieldtype="one-to-one"
+	    		class="Vehicle"
 	    		insert=false
 	    		update=false;
 	    }
@@ -645,7 +646,8 @@ public class HibernateXMLWriterTest {
 		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Vehicle", "models.Vehicle" ), ormConfig )
+		    .generateXML();
 
 		Node		classEL			= doc.getDocumentElement().getFirstChild();
 		Node		propertyNode	= classEL.getFirstChild();
@@ -788,6 +790,7 @@ public class HibernateXMLWriterTest {
 				cfc="Person"
 				mappedBy="id"
 				fieldtype="one-to-one"
+				class="Person"
 				foreignKey="fooID"
 				cascade="all-delete-orphan"
 				constrained="true"
@@ -926,6 +929,7 @@ public class HibernateXMLWriterTest {
 	    		cfc="Person"
 	    		cascade="all"
 	    		fieldtype="one-to-many"
+				class="Person"
 	    		fkcolumn="FK_owner"
 	    		mappedBy="owners"
 	    		orderBy="name DESC"
@@ -1055,6 +1059,7 @@ public class HibernateXMLWriterTest {
 	    		name="vehicles"
 	    		cfc="Vehicle"
 	    		fieldtype="one-to-many"
+	    		class="Vehicle"
 	    		linkTable="vehicles"
 	    		fkcolumn="make,model";
 	    }
@@ -1205,6 +1210,7 @@ public class HibernateXMLWriterTest {
 				structKeyType="string"
 				elementType="date"
 				structKeyColumn="year"
+				class="Person"
 				elementColumn="date";
 	    }
 	    """,
@@ -1217,6 +1223,7 @@ public class HibernateXMLWriterTest {
 				type="struct"
 				// structKeyType="string"
 				elementType="date"
+				class="Person"
 				structKeyColumn="year"
 				elementColumn="date";
 	    }
@@ -1227,7 +1234,7 @@ public class HibernateXMLWriterTest {
 		IStruct			meta				= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig )
+		Document		doc					= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), ormConfig )
 		    .generateXML();
 
 		Node			classEl				= doc.getDocumentElement().getFirstChild();
