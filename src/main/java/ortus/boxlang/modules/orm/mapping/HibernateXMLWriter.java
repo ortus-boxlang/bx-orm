@@ -474,6 +474,8 @@ public class HibernateXMLWriter {
 
 		if ( association.containsKey( Key._CLASS ) ) {
 			setEntityName( theNode, association.getAsString( Key._CLASS ), prop );
+		} else {
+			throw new BoxRuntimeException( "Missing required class name for relationship [%s] on entity".formatted( prop.getName() ) );
 		}
 
 		List<Key> stringProperties = List.of( Key._NAME, ORMKeys.cascade, ORMKeys.fetch, ORMKeys.mappedBy, ORMKeys.access,
@@ -948,7 +950,8 @@ public class HibernateXMLWriter {
 	 */
 	private void setEntityName( Element theNode, String relationClassName, IPropertyMeta prop ) {
 		if ( relationClassName == null || relationClassName.isBlank() ) {
-			return;
+			throw new BoxRuntimeException(
+			    "Missing required class name for relationship [%s] on entity %s".formatted( prop.getName(), this.entity.getEntityName() ) );
 		}
 		Key				datasourceName		= this.entity.getDatasource().isEmpty() ? Key.defaultDatasource : Key.of( this.entity.getDatasource() );
 		EntityRecord	associatedEntity	= entityLookup.apply( relationClassName, datasourceName );
@@ -961,6 +964,17 @@ public class HibernateXMLWriter {
 				logger.error( message );
 			}
 		} else {
+			if ( associatedEntity.getEntityName() == null || associatedEntity.getEntityName().isBlank() ) {
+				String message = String.format( "Associated entity '%s' referenced in property '%s' on entity '%s' has null or empty entity name",
+				    relationClassName,
+				    prop.getName(),
+				    prop.getDefiningEntity().getEntityName() );
+				if ( !this.ormConfig.ignoreParseErrors ) {
+					throw new BoxRuntimeException( message );
+				} else {
+					logger.error( message );
+				}
+			}
 			theNode.setAttribute( "entity-name", associatedEntity.getEntityName() );
 		}
 	}

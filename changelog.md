@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- Throw or log an error when class annotation on association is an empty string - Resolves [BLMODULES-50](https://ortussolutions.atlassian.net/browse/BLMODULES-50)
+
 ### ⭐ Added
 
 - Implement 'index' annotation - Resolves [BLMODULES-47](https://ortussolutions.atlassian.net/browse/BLMODULES-47)
