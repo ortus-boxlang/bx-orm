@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.10] - 2025-05-03
+
 ### 🐛 Fixed
 
 - Throw or log an error when class annotation on association is an empty string - Resolves [BLMODULES-50](https://ortussolutions.atlassian.net/browse/BLMODULES-50)
@@ -114,7 +116,9 @@ No significant changes.
 
 - First iteration of this module
 
-[Unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.9...HEAD
+[Unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.10...HEAD
+
+[1.0.10]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.9...v1.0.10
 
 [1.0.9]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.8...v1.0.9
 
