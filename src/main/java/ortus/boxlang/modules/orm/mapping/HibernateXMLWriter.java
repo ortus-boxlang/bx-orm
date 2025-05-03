@@ -426,6 +426,10 @@ public class HibernateXMLWriter {
 			association.put( Key.column, inverseProp.getAssociation().getAsString( Key.column ) );
 		}
 
+		if ( !prop.getCache().isEmpty() ) {
+			theNode.appendChild( generateCacheElement( prop.getCache() ) );
+		}
+
 		// @JoinColumn - https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#collections-foreignkeys
 		if ( association.containsKey( Key.column ) ) {
 			Element keyNode = this.document.createElement( "key" );
@@ -514,7 +518,6 @@ public class HibernateXMLWriter {
 					theNode.setAttribute( "unique", trueFalseFormat( association.getAsBoolean( ORMKeys.unique ) ) );
 				}
 				populateStringAttributes( theNode, association, List.of( ORMKeys.uniqueKey, ORMKeys.index ) );
-				// @TODO: unique-key
 				break;
 		}
 		return theNode;

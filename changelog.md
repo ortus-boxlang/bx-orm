@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Implement 'index' annotation - Resolves [BLMODULES-47](https://ortussolutions.atlassian.net/browse/BLMODULES-47)
 - Implement multi-column support in `column` and `fkcolumn` - Resolves [BLMODULES-48](https://ortussolutions.atlassian.net/browse/BLMODULES-48)
+- Implement cache support at the property level - Resolves [BLMODULES-52](https://ortussolutions.atlassian.net/browse/BLMODULES-52)
 
 ## [1.0.9] - 2025-04-29
 

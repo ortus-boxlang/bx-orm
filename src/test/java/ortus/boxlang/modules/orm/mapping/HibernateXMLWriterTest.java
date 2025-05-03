@@ -1024,7 +1024,7 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
-	@DisplayName( "It maps cache meta" )
+	@DisplayName( "It maps cache meta at the entity level" )
 	@ParameterizedTest
 	@ValueSource( strings = {
 	    """
@@ -1032,7 +1032,7 @@ public class HibernateXMLWriterTest {
 	    """
 	} )
 	// @formatter:on
-	public void testCacheMapping( String sourceCode ) {
+	public void testEntityLevelCache( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
@@ -1050,6 +1050,47 @@ public class HibernateXMLWriterTest {
 		assertEquals( "non-lazy", cacheAttrs.getNamedItem( "include" ).getTextContent() );
 	}
 
+	// @formatter:off
+	@DisplayName( "It maps cache meta" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+	    	property
+	    		name="vehicles"
+	    		cfc="Vehicle"
+	    		fieldtype="one-to-many"
+	    		linkTable="vehicles"
+				fkcolumn="vin"
+				cacheuse="nonstrict-read-write"
+				cacheName="vehicleCache"
+				cacheInclude="non-lazy";
+		}
+	    """
+	} )
+	// @formatter:on
+	public void testPropertyLevelCache( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Vehicle", "models.Vehicle" ), ormConfig )
+		    .generateXML();
+
+		String		xml			= xmlToString( doc );
+
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
+		Node		bagNode		= classEl.getFirstChild();
+		Node		cacheNode	= bagNode.getFirstChild();
+
+		assertNotNull( cacheNode );
+		assertEquals( "cache", cacheNode.getNodeName() );
+
+		NamedNodeMap cacheAttrs = cacheNode.getAttributes();
+		assertEquals( "nonstrict-read-write", cacheAttrs.getNamedItem( "usage" ).getTextContent() );
+		assertEquals( "vehicleCache", cacheAttrs.getNamedItem( "region" ).getTextContent() );
+		assertEquals( "non-lazy", cacheAttrs.getNamedItem( "include" ).getTextContent() );
+	}
+
 	@DisplayName( "It can handle string-delimited column names for a FOREIGN composite key" )
 	@ParameterizedTest
 	@ValueSource( strings = {
@@ -1059,7 +1100,6 @@ public class HibernateXMLWriterTest {
 	    		name="vehicles"
 	    		cfc="Vehicle"
 	    		fieldtype="one-to-many"
-	    		class="Vehicle"
 	    		linkTable="vehicles"
 	    		fkcolumn="make,model";
 	    }

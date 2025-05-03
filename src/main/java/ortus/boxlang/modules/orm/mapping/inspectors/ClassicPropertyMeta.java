@@ -78,12 +78,19 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( this.annotations.containsKey( ORMKeys.formula ) ) {
 			this.formula = this.annotations.getAsString( ORMKeys.formula );
 		}
-		if ( annotations.containsKey( ORMKeys.fieldtype ) ) {
-			String fieldType = annotations.getAsString( ORMKeys.fieldtype );
+		if ( this.annotations.containsKey( ORMKeys.fieldtype ) ) {
+			String fieldType = this.annotations.getAsString( ORMKeys.fieldtype );
 			if ( fieldType == "collection" ) {
 				logger.warn( "Property '{}' on entity '{}' has fieldtype=collection, which is not yet supported. Please forward to your local Ortus agency.",
 				    this.name, entityName );
 			}
+		}
+
+		if ( this.annotations.containsKey( ORMKeys.cacheUse ) ) {
+			this.cache = new Struct();
+			this.cache.computeIfAbsent( ORMKeys.strategy, key -> this.annotations.getAsString( ORMKeys.cacheUse ) );
+			this.cache.computeIfAbsent( Key.region, key -> this.annotations.getAsString( ORMKeys.cacheName ) );
+			this.cache.computeIfAbsent( ORMKeys.include, key -> this.annotations.getAsString( ORMKeys.cacheInclude ) );
 		}
 	}
 
@@ -98,7 +105,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		String associationType = annotations.getAsString( ORMKeys.fieldtype );
 		if ( annotations.containsKey( ORMKeys.linkTable ) && !annotations.containsKey( ORMKeys.fkcolumn ) ) {
 			// @TODO: Respect ignoreParseErrors setting and only log an error.
-			throw new BoxRuntimeException( String.format( "Missing 'fkcolumn' annotation for property [{}] on entity [{}]", this.name, this.entityName ) );
+			throw new BoxRuntimeException( "Missing 'fkcolumn' annotation for property [%s] on entity [%s]".formatted( this.name, this.entityName ) );
 		}
 		if ( associationType.equalsIgnoreCase( "one-to-one" )
 		    && ( annotations.containsKey( ORMKeys.fkcolumn ) || annotations.containsKey( ORMKeys.linkTable ) ) ) {

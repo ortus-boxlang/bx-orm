@@ -24,6 +24,7 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 
 /**
  * Abstract base class for property metadata in the ORM framework.
@@ -71,6 +72,8 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	protected String				unsavedValue;
 
 	protected FIELDTYPE				fieldType;
+
+	protected IStruct				cache				= Struct.EMPTY;
 
 	public AbstractPropertyMeta( String entityName, IStruct meta, IEntityMeta definingEntity ) {
 		this.logger			= runtime.getLoggingService().getLogger( "orm" );
@@ -278,5 +281,14 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	 */
 	public String getSqlType() {
 		return this.sqlType;
+	}
+
+	/**
+	 * Gets the cache configuration of the property.
+	 *
+	 * @return the cache configuration of the property.
+	 */
+	public IStruct getCache() {
+		return this.cache;
 	}
 }
