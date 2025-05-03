@@ -24,6 +24,7 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 
 /**
  * Abstract base class for property metadata in the ORM framework.
@@ -72,6 +73,8 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
 	protected FIELDTYPE				fieldType;
 
+	protected IStruct				cache				= Struct.EMPTY;
+
 	public AbstractPropertyMeta( String entityName, IStruct meta, IEntityMeta definingEntity ) {
 		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 		this.entityName		= entityName;
@@ -79,6 +82,16 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.definingEntity	= definingEntity;
 		this.annotations	= this.meta.getAsStruct( Key.annotations );
 		this.name			= this.meta.getAsString( Key._NAME );
+
+		if ( annotations.containsKey( Key.sqltype ) ) {
+			this.sqlType = annotations.getAsString( Key.sqltype );
+			if ( this.sqlType == null || this.sqlType.isBlank() ) {
+				logger.warn( "Annotation `sqltype` is blank for property '{}' on entity '{}'. Defaulting to 'varchar'.", this.name, this.entityName );
+				this.sqlType = "varchar";
+				annotations.put( Key.sqltype, this.sqlType );
+			}
+		}
+
 		this.column			= parseColumnAnnotations( this.annotations );
 		this.generator		= parseGeneratorAnnotations( this.annotations );
 		this.association	= parseAssociation( this.annotations );
@@ -89,12 +102,12 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 			}
 		}
 
-		if ( annotations.containsKey( Key.sqltype ) ) {
-			this.sqlType = annotations.getAsString( Key.sqltype );
-		}
-
 		this.annotations.putIfAbsent( ORMKeys.ORMType, annotations.getOrDefault( Key.type, "string" ) );
 		this.ormType = annotations.getAsString( ORMKeys.ORMType );
+		if ( this.ormType == null || this.ormType.isBlank() ) {
+			logger.warn( "Annotation `ormtype` is blank for property '{}' on entity '{}'. Defaulting to 'string'.", this.name, this.entityName );
+			this.ormType = "string";
+		}
 
 	}
 
@@ -268,5 +281,14 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	 */
 	public String getSqlType() {
 		return this.sqlType;
+	}
+
+	/**
+	 * Gets the cache configuration of the property.
+	 *
+	 * @return the cache configuration of the property.
+	 */
+	public IStruct getCache() {
+		return this.cache;
 	}
 }

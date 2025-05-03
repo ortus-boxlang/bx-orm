@@ -17,6 +17,8 @@
  */
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
 /**
@@ -129,6 +131,18 @@ public interface IPropertyMeta {
 	 * Get the ORM type, aka `property ormtype="string"...`.
 	 */
 	public String getORMType();
+
+	/**
+	 * Get the second-level cache properties for this property.
+	 *
+	 * @return A struct of cache properties - EMPTY if none defined, else a struct with the following keys (any of which may be null):
+	 *         <ul>
+	 *         <li>{@link Key#region} - The cache region to use</li>
+	 *         <li>{@link ORMKeys#strategy} - Caching strategy to use - one of NONE|NONSTRICT_READ_WRITE|READ_ONLY|READ_WRITE|TRANSACTIONAL</li>
+	 *         <li>{@link ORMKeys#include} - How lazy properties are included in the cache - one of all|non-lazy</li>
+	 *         </ul>
+	 */
+	public IStruct getCache();
 
 	/**
 	 * Get the property fieldtype.

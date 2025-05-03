@@ -207,8 +207,8 @@ public class HibernateXMLWriterTest {
 	@ValueSource( strings = {
 	    """
 		class persistent{
-			property name="id1" fieldtype="id";
-			property name="id2" fieldtype="id" sqltype="varchar(50)";
+			property name="id1" fieldtype="id" ormType="integer";
+			property name="id2" fieldtype="id" sqltype="varchar(50)" ormType="string";
 		}
 		"""
 	} )
@@ -218,6 +218,8 @@ public class HibernateXMLWriterTest {
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+
+		String		xml			= xmlToString( doc );
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		assertThat( classEl.getNodeName() ).isEqualTo( "class" );
@@ -229,10 +231,17 @@ public class HibernateXMLWriterTest {
 
 		assertThat( firstIDNode.getNodeName() ).isEqualTo( "key-property" );
 		assertThat( lastIDNode.getNodeName() ).isEqualTo( "key-property" );
-		assertThat( firstIDNode.getAttributes().getNamedItem( "name" ).getTextContent() )
+
+		NamedNodeMap	firstIDAttrs	= firstIDNode.getAttributes();
+		NamedNodeMap	lastIDAttrs		= lastIDNode.getAttributes();
+		assertThat( firstIDAttrs.getNamedItem( "name" ).getTextContent() )
 		    .isEqualTo( "id1" );
-		assertThat( lastIDNode.getAttributes().getNamedItem( "name" ).getTextContent() )
+		assertThat( firstIDAttrs.getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "integer" );
+		assertThat( lastIDAttrs.getNamedItem( "name" ).getTextContent() )
 		    .isEqualTo( "id2" );
+		assertThat( lastIDAttrs.getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
 	}
 
 	@DisplayName( "It supports various ormType aliases" )
@@ -282,13 +291,15 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
-	@DisplayName( "It aliases ORM types to their proper counterpart" )
+	@DisplayName( "It aliases ORM types to their proper counterpart, and properly defaults ormType to 'string'" )
 	@ParameterizedTest
 	@ValueSource( strings = {
 	    """
 	    class persistent {
 		    property name="the_name" ormtype="varchar(50)";
 		    property name="foo" ormtype="java.sql.Timestamp";
+		    property name="bar";
+		    property name="barNone" ormType="";
 	    }
 	    """
 	} )
@@ -301,13 +312,21 @@ public class HibernateXMLWriterTest {
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 		Node		nameNode	= classEl.getFirstChild();
-		Node		fooNode		= classEl.getChildNodes().item( 1 );
+		Node		fooNode		= nameNode.getNextSibling();
+		Node		barNode		= fooNode.getNextSibling();
+		Node		barNoneNode	= barNode.getNextSibling();
 
 		assertThat( nameNode.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "string" );
 
 		assertThat( fooNode.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "converted::" + DateTimeConverter.class.getName() );
+
+		assertThat( barNode.getAttributes().getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
+
+		assertThat( barNoneNode.getAttributes().getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
 	}
 
 	// @formatter:off
@@ -495,7 +514,13 @@ public class HibernateXMLWriterTest {
 	    	property
 	    		name="the_name"
 	    		column="NameColumn"
-	    		sqltype="varchar";
+	    		sqltype="varchar"
+	    		index="nameIndex";
+	    	property
+	    		name="bar"
+	    		column="bar"
+	    		sqltype=""
+	    		index="";
 	    }
 	    """
 	} )
@@ -505,15 +530,27 @@ public class HibernateXMLWriterTest {
 		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
 		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
-		Node			propertyNode		= doc.getDocumentElement().getFirstChild().getFirstChild();
+		Node			classEL				= doc.getDocumentElement().getFirstChild();
+		Node			propertyNode		= classEL.getFirstChild();
 		NamedNodeMap	propertyAttributes	= propertyNode.getAttributes();
 
-		assertEquals( "the_name", propertyAttributes.getNamedItem( "name" ).getTextContent() );
-		assertEquals( "string", propertyAttributes.getNamedItem( "type" ).getTextContent() );
+		assertThat( propertyAttributes.getNamedItem( "name" ).getTextContent() )
+		    .isEqualTo( "the_name" );
+		assertThat( propertyAttributes.getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( "string" );
+		assertThat( propertyAttributes.getNamedItem( "index" ).getTextContent() )
+		    .isEqualTo( "nameIndex" );
 
-		Node columnNode = propertyNode.getFirstChild();
-		assertEquals( "varchar", columnNode.getAttributes().getNamedItem( "sql-type" ).getTextContent() );
-		assertEquals( "NameColumn", columnNode.getAttributes().getNamedItem( "name" ).getTextContent() );
+		NamedNodeMap nameColumnAttrs = propertyNode.getFirstChild().getAttributes();
+		assertThat( nameColumnAttrs.getNamedItem( "sql-type" ).getTextContent() )
+		    .isEqualTo( "varchar" );
+		assertThat( nameColumnAttrs.getNamedItem( "name" ).getTextContent() )
+		    .isEqualTo( "NameColumn" );
+		Node			barNode			= propertyNode.getNextSibling();
+		NamedNodeMap	barColumnNode	= barNode.getFirstChild().getAttributes();
+		assertThat( barColumnNode.getNamedItem( "sql-type" ).getTextContent() )
+		    .isEqualTo( "varchar" );
+		assertThat( barColumnNode.getNamedItem( "index" ) ).isNull();
 	}
 
 	@DisplayName( "It escapes reserved words in class and property names" )
@@ -598,6 +635,7 @@ public class HibernateXMLWriterTest {
 	    	property
 	    		name="name"
 	    		fieldtype="one-to-one"
+	    		class="Vehicle"
 	    		insert=false
 	    		update=false;
 	    }
@@ -608,7 +646,8 @@ public class HibernateXMLWriterTest {
 		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Vehicle", "models.Vehicle" ), ormConfig )
+		    .generateXML();
 
 		Node		classEL			= doc.getDocumentElement().getFirstChild();
 		Node		propertyNode	= classEL.getFirstChild();
@@ -714,7 +753,7 @@ public class HibernateXMLWriterTest {
 				fieldtype="version"
 				generated="never"
 				column="itemVersion"
-				ormType="integer"
+				dataType="integer"
 				insert="false"
 				name="version";
 		}
@@ -751,6 +790,7 @@ public class HibernateXMLWriterTest {
 				cfc="Person"
 				mappedBy="id"
 				fieldtype="one-to-one"
+				class="Person"
 				foreignKey="fooID"
 				cascade="all-delete-orphan"
 				constrained="true"
@@ -889,6 +929,7 @@ public class HibernateXMLWriterTest {
 	    		cfc="Person"
 	    		cascade="all"
 	    		fieldtype="one-to-many"
+				class="Person"
 	    		fkcolumn="FK_owner"
 	    		mappedBy="owners"
 	    		orderBy="name DESC"
@@ -951,6 +992,7 @@ public class HibernateXMLWriterTest {
 	    		insert="false"
 	    		update="false"
 	    		lazy="true"
+				index="idx_createdBy"
 	    		persistent=true;
 	    }
 	    """
@@ -967,21 +1009,22 @@ public class HibernateXMLWriterTest {
 
 		Node		manyToOneNode	= classEL.getLastChild();
 		assertNotNull( manyToOneNode );
-		assertEquals( "many-to-one", manyToOneNode.getNodeName() );
+		assertThat( manyToOneNode.getNodeName() ).isEqualTo( "many-to-one" );
 
 		NamedNodeMap manyToOneAttrs = manyToOneNode.getAttributes();
-		assertEquals( "createdBy", manyToOneAttrs.getNamedItem( "name" ).getTextContent() );
-		assertEquals( "select", manyToOneAttrs.getNamedItem( "fetch" ).getTextContent() );
-		assertEquals( "all", manyToOneAttrs.getNamedItem( "cascade" ).getTextContent() );
-		assertEquals( "Manufacturer", manyToOneAttrs.getNamedItem( "entity-name" ).getTextContent() );
-		assertEquals( "false", manyToOneAttrs.getNamedItem( "insert" ).getTextContent() );
-		assertEquals( "false", manyToOneAttrs.getNamedItem( "update" ).getTextContent() );
+		assertThat( manyToOneAttrs.getNamedItem( "name" ).getTextContent() ).isEqualTo( "createdBy" );
+		assertThat( manyToOneAttrs.getNamedItem( "fetch" ).getTextContent() ).isEqualTo( "select" );
+		assertThat( manyToOneAttrs.getNamedItem( "cascade" ).getTextContent() ).isEqualTo( "all" );
+		assertThat( manyToOneAttrs.getNamedItem( "entity-name" ).getTextContent() ).isEqualTo( "Manufacturer" );
+		assertThat( manyToOneAttrs.getNamedItem( "insert" ).getTextContent() ).isEqualTo( "false" );
+		assertThat( manyToOneAttrs.getNamedItem( "update" ).getTextContent() ).isEqualTo( "false" );
+		assertThat( manyToOneAttrs.getNamedItem( "index" ).getTextContent() ).isEqualTo( "idx_createdBy" );
 		// @TODO: Fix!
-		// assertEquals( "FK_manufacturer", manyToOneAttrs.getNamedItem( "column" ).getTextContent() );
+		// assertThat( manyToOneAttrs.getNamedItem( "column" ).getTextContent() ).isEqualTo( "FK_manufacturer" );
 	}
 
 	// @formatter:off
-	@DisplayName( "It maps cache meta" )
+	@DisplayName( "It maps cache meta at the entity level" )
 	@ParameterizedTest
 	@ValueSource( strings = {
 	    """
@@ -989,7 +1032,7 @@ public class HibernateXMLWriterTest {
 	    """
 	} )
 	// @formatter:on
-	public void testCacheMapping( String sourceCode ) {
+	public void testEntityLevelCache( String sourceCode ) {
 		IStruct		meta		= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
@@ -1007,23 +1050,119 @@ public class HibernateXMLWriterTest {
 		assertEquals( "non-lazy", cacheAttrs.getNamedItem( "include" ).getTextContent() );
 	}
 
-	@Disabled( "Unimplemented" )
-	@DisplayName( "It can handle string-delimited column names for a composite key" )
+	// @formatter:off
+	@DisplayName( "It maps cache meta" )
 	@ParameterizedTest
 	@ValueSource( strings = {
 	    """
 	    class persistent {
 	    	property
-	    		name="owners"
-	    		cfc="Person"
+	    		name="vehicles"
+	    		cfc="Vehicle"
 	    		fieldtype="one-to-many"
-	    		linkTable="owners"
-	    		fkcolumn="name,dob,phone";
+	    		linkTable="vehicles"
+				fkcolumn="vin"
+				cacheuse="nonstrict-read-write"
+				cacheName="vehicleCache"
+				cacheInclude="non-lazy";
+		}
+	    """
+	} )
+	// @formatter:on
+	public void testPropertyLevelCache( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Vehicle", "models.Vehicle" ), ormConfig )
+		    .generateXML();
+
+		String		xml			= xmlToString( doc );
+
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
+		Node		bagNode		= classEl.getFirstChild();
+		Node		cacheNode	= bagNode.getFirstChild();
+
+		assertNotNull( cacheNode );
+		assertEquals( "cache", cacheNode.getNodeName() );
+
+		NamedNodeMap cacheAttrs = cacheNode.getAttributes();
+		assertEquals( "nonstrict-read-write", cacheAttrs.getNamedItem( "usage" ).getTextContent() );
+		assertEquals( "vehicleCache", cacheAttrs.getNamedItem( "region" ).getTextContent() );
+		assertEquals( "non-lazy", cacheAttrs.getNamedItem( "include" ).getTextContent() );
+	}
+
+	@DisplayName( "It can handle string-delimited column names for a FOREIGN composite key" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+	    	property
+	    		name="vehicles"
+	    		cfc="Vehicle"
+	    		fieldtype="one-to-many"
+	    		linkTable="vehicles"
+	    		fkcolumn="make,model";
 	    }
 	    """
 	} )
 	// @formatter:on
 	public void testMultipleFKColumns( String sourceCode ) {
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Vehicle", "models.Vehicle" ), ormConfig )
+		    .generateXML();
+
+		Node		classEl			= doc.getDocumentElement().getFirstChild();
+		Node		bagNode			= classEl.getFirstChild();
+		Node		keyNode			= bagNode.getFirstChild();
+		Node		manyToManyNode	= bagNode.getLastChild();
+		assertThat( keyNode.getNodeName() ).isEqualTo( "key" );
+		assertThat( manyToManyNode.getNodeName() ).isEqualTo( "many-to-many" );
+		assertThat( keyNode.getChildNodes().getLength() ).isEqualTo( 2 );
+
+		Node	makeKeyColumnNode	= keyNode.getFirstChild();
+		Node	modelKeyColumnNode	= makeKeyColumnNode.getNextSibling();
+		assertThat( makeKeyColumnNode.getNodeName() ).isEqualTo( "column" );
+		assertThat( modelKeyColumnNode.getNodeName() ).isEqualTo( "column" );
+		assertThat( makeKeyColumnNode.getAttributes().getNamedItem( "name" ).getTextContent() ).isEqualTo( "make" );
+		assertThat( modelKeyColumnNode.getAttributes().getNamedItem( "name" ).getTextContent() ).isEqualTo( "model" );
+	}
+
+	// @formatter:off
+	@DisplayName( "It can handle string-delimited column names for a composite key" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+		class persistent{
+			property name="NAP" column="name,address" fieldtype="id" ormType="integer";
+		}
+		"""
+	} )
+	// @formatter:on
+	public void testMultiColumnSupport( String sourceCode ) {
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+
+		String		xml				= xmlToString( doc );
+
+		Node		classEl			= doc.getDocumentElement().getFirstChild();
+		Node		keyNode			= classEl.getFirstChild();
+
+		Node		nameColumn		= keyNode.getFirstChild();
+		Node		addressColumn	= nameColumn.getNextSibling();
+
+		assertThat( nameColumn.getNodeName() ).isEqualTo( "column" );
+		assertThat( addressColumn.getNodeName() ).isEqualTo( "column" );
+
+		NamedNodeMap	nameColumnAttrs		= nameColumn.getAttributes();
+		NamedNodeMap	AddressColumnAttrs	= addressColumn.getAttributes();
+		assertThat( nameColumnAttrs.getNamedItem( "name" ).getTextContent() )
+		    .isEqualTo( "name" );
+		assertThat( AddressColumnAttrs.getNamedItem( "name" ).getTextContent() )
+		    .isEqualTo( "address" );
 	}
 
 	@DisplayName( "It can customize the table and column names with a naming strategy" )
@@ -1111,6 +1250,7 @@ public class HibernateXMLWriterTest {
 				structKeyType="string"
 				elementType="date"
 				structKeyColumn="year"
+				class="Person"
 				elementColumn="date";
 	    }
 	    """,
@@ -1123,6 +1263,7 @@ public class HibernateXMLWriterTest {
 				type="struct"
 				// structKeyType="string"
 				elementType="date"
+				class="Person"
 				structKeyColumn="year"
 				elementColumn="date";
 	    }
@@ -1133,7 +1274,7 @@ public class HibernateXMLWriterTest {
 		IStruct			meta				= getClassMetaFromCode( sourceCode );
 
 		IEntityMeta		entityMeta			= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document		doc					= new HibernateXMLWriter( entityMeta, null, ormConfig )
+		Document		doc					= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), ormConfig )
 		    .generateXML();
 
 		Node			classEl				= doc.getDocumentElement().getFirstChild();
@@ -1160,7 +1301,6 @@ public class HibernateXMLWriterTest {
 	 *        joinColumn
 	 *        inverse
 	 *        structkeydatatype ?? ACF only?
-	 *        index
 	 *        unSavedValue - deprecated
 	 */
 

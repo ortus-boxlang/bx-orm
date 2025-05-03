@@ -17,6 +17,8 @@
  */
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.List;
+
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
@@ -47,6 +49,21 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				    annotations.getAsString( ORMKeys.fieldtype ), this.name, this.entityName ) );
 			}
 		}
+		if ( this.getFieldType() == FIELDTYPE.VERSION ) {
+			// fall back to dataType annotation for compat
+			if ( this.annotations.containsKey( ORMKeys.dataType ) ) {
+				String dataType = this.annotations.getAsString( ORMKeys.dataType );
+				if ( dataType == null || dataType.isBlank() ) {
+					logger.warn( "Annotation `datatype` is highly re for property '{}' on entity '{}'. Defaulting to 'string'.", this.name, this.entityName );
+				} else {
+					this.ormType = dataType.trim().toLowerCase();
+				}
+			}
+			// Validate
+			if ( !List.of( "int", "long", "short" ).contains( this.ormType ) ) {
+				logger.error( "ORM type '{}' is not a valid type for version property '{}' on entity '{}'.", this.ormType, this.name, this.entityName );
+			}
+		}
 
 		// General property annotations
 		if ( this.annotations.containsKey( ORMKeys.lazy ) ) {
@@ -61,12 +78,19 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( this.annotations.containsKey( ORMKeys.formula ) ) {
 			this.formula = this.annotations.getAsString( ORMKeys.formula );
 		}
-		if ( annotations.containsKey( ORMKeys.fieldtype ) ) {
-			String fieldType = annotations.getAsString( ORMKeys.fieldtype );
+		if ( this.annotations.containsKey( ORMKeys.fieldtype ) ) {
+			String fieldType = this.annotations.getAsString( ORMKeys.fieldtype );
 			if ( fieldType == "collection" ) {
-				logger.warn( "Property {} on entity {} has fieldtype=collection, which is not yet supported. Please forward to your local Ortus agency.",
+				logger.warn( "Property '{}' on entity '{}' has fieldtype=collection, which is not yet supported. Please forward to your local Ortus agency.",
 				    this.name, entityName );
 			}
+		}
+
+		if ( this.annotations.containsKey( ORMKeys.cacheUse ) ) {
+			this.cache = new Struct();
+			this.cache.computeIfAbsent( ORMKeys.strategy, key -> this.annotations.getAsString( ORMKeys.cacheUse ) );
+			this.cache.computeIfAbsent( Key.region, key -> this.annotations.getAsString( ORMKeys.cacheName ) );
+			this.cache.computeIfAbsent( ORMKeys.include, key -> this.annotations.getAsString( ORMKeys.cacheInclude ) );
 		}
 	}
 
@@ -81,7 +105,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		String associationType = annotations.getAsString( ORMKeys.fieldtype );
 		if ( annotations.containsKey( ORMKeys.linkTable ) && !annotations.containsKey( ORMKeys.fkcolumn ) ) {
 			// @TODO: Respect ignoreParseErrors setting and only log an error.
-			throw new BoxRuntimeException( String.format( "Missing 'fkcolumn' annotation for property [{}] on entity [{}]", this.name, this.entityName ) );
+			throw new BoxRuntimeException( "Missing 'fkcolumn' annotation for property [%s] on entity [%s]".formatted( this.name, this.entityName ) );
 		}
 		if ( associationType.equalsIgnoreCase( "one-to-one" )
 		    && ( annotations.containsKey( ORMKeys.fkcolumn ) || annotations.containsKey( ORMKeys.linkTable ) ) ) {
@@ -115,14 +139,14 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			}
 			if ( association.get( ORMKeys.collectionType ).equals( "map" ) ) {
 				if ( !annotations.containsKey( ORMKeys.structKeyColumn ) ) {
-					logger.error( "Missing required 'structKeyColumn' annotation for struct property [{}] on entity [{}]",
+					logger.error( "Missing required `structKeyColumn` annotation for struct property '{}' on entity '{}'",
 					    this.name, this.entityName );
 					// @TODO: Respect ignoreParseErrors setting and only log an error.
 					throw new BoxRuntimeException( String.format( "Missing required 'structKeyColumn' annotation for struct property [%s] on entity [%s]",
 					    this.name, this.entityName ) );
 				}
-				if ( !annotations.containsKey( ORMKeys.structKeyType ) && logger.isWarnEnabled() ) {
-					logger.warn( "Missing recommented 'structKeyType' annotation for struct property {} on entity {}. Defaulting to 'string'.",
+				if ( !annotations.containsKey( ORMKeys.structKeyType ) ) {
+					logger.warn( "Missing recommended `structKeyType` annotation for struct property '{}' on entity '{}'. Defaulting to 'string'.",
 					    this.name, this.entityName );
 				}
 				association.put( ORMKeys.structKeyColumn, annotations.getAsString( ORMKeys.structKeyColumn ) );
@@ -137,8 +161,8 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			}
 			if ( annotations.containsKey( ORMKeys.elementColumn ) ) {
 				association.put( ORMKeys.elementColumn, annotations.getAsString( ORMKeys.elementColumn ) );
-				if ( !annotations.containsKey( ORMKeys.elementType ) && logger.isWarnEnabled() ) {
-					logger.warn( "Missing recommented 'elementType' annotation for collection property {} on entity {}. Defaulting to 'string'.",
+				if ( !annotations.containsKey( ORMKeys.elementType ) ) {
+					logger.warn( "Missing recommended 'elementType' annotation for collection property '{}' on entity '{}'. Defaulting to 'string'.",
 					    this.name, this.entityName );
 				}
 				association.put( ORMKeys.elementType, StringCaster.cast( annotations.getOrDefault( ORMKeys.elementType, "string" ) ) );
@@ -196,6 +220,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		}
 		if ( annotations.containsKey( ORMKeys.where ) ) {
 			association.put( ORMKeys.where, annotations.getAsString( ORMKeys.where ) );
+		}
+		if ( annotations.containsKey( ORMKeys.index ) ) {
+			association.put( ORMKeys.index, annotations.getAsString( ORMKeys.index ) );
 		}
 		if ( annotations.containsKey( ORMKeys.missingRowIgnored ) ) {
 			association.compute( ORMKeys.missingRowIgnored,
