@@ -54,7 +54,7 @@ public class ORMConfig {
 	 */
 	private static final ClassLocator	CLASS_LOCATOR			= BoxRuntime.getInstance().getClassLocator();
 
-	private static final String			DEFAULT_CACHEPROVIDER	= "BoxCacheProvider";
+	public static final String			DEFAULT_CACHEPROVIDER	= "BoxCacheProvider";
 
 	/**
 	 * Runtime
