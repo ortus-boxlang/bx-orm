@@ -82,6 +82,12 @@ component persistent="true" table="timeOff" extends="BaseEntity" {
 		notnull="true"
 		index="idx_timeOffStatus";
 
+	property
+		name="employeeId"
+		insert="false"
+		update="false"
+		column="FK_userId";
+
 	/* *********************************************************************
 	 **						RELATIONSHIPS
 	 ********************************************************************* */

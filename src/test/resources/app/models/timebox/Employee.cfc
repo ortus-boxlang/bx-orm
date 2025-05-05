@@ -51,14 +51,14 @@ component
 	property
 		name="salary"
 		notnull="false"
-		ormtype="big_decimal"
+		ormtype="float"
 		scale="4"
 		default="0.00";
 
 	property
 		name="sickTimePerYear"
 		notnull="true"
-		ormtype="big_decimal"
+		ormtype="double"
 		scale="4"
 		default="0"
 		dbdefault="0";
@@ -93,6 +93,18 @@ component
 		notnull="false"
 		default="";
 
+	property
+		name="rank"
+		ormtype="short"
+		notnull="false"
+		default="0";
+
+	property
+		name="avatar"
+		ormtype="binary"
+		notnull="false";
+
+
 	/* *********************************************************************
 	 **						RELATIONSHIPS
 	 ********************************************************************* */
@@ -117,6 +129,18 @@ component
 		length="50"
 		default="salary"
 		db_html="textarea";
+
+	property
+		name="terminationDate"
+		insert="false"
+		update="false"
+		ormtype="timestamp";
+
+	property
+		name="_memento"
+		persistent="false"
+		type="struct";
+
 
 	/* *********************************************************************
 	 **							CALCULATED FIELDS
