@@ -1075,7 +1075,7 @@ public class HibernateXMLWriter {
 			case "big-integer", "bigint", "big_integer" -> "biginteger";
 			case "int" -> "integer";
 			case "numeric", "number", "decimal" -> "double";
-			case "eurodate", "usdate", "date", "timestamp" -> "datetime";
+			case "eurodate", "usdate", "date", "datetime" -> "timestamp";
 			case "char", "nchar" -> "character";
 			case "varchar", "nvarchar" -> "string";
 			case "clob" -> "text";
@@ -1087,7 +1087,7 @@ public class HibernateXMLWriter {
 		return switch ( normalizedType ) {
 			case "time" -> "converted::" + TimeConverter.class.getName();
 			case "boolean" -> "converted::" + BooleanConverter.class.getName();
-			case "datetime" -> "converted::" + DateTimeConverter.class.getName();
+			case "timestamp" -> "converted::" + DateTimeConverter.class.getName();
 			case "double" -> "converted::" + DoubleConverter.class.getName();
 			case "integer" -> "converted::" + IntegerConverter.class.getName();
 			case "biginteger" -> "converted::" + BigIntegerConverter.class.getName();
