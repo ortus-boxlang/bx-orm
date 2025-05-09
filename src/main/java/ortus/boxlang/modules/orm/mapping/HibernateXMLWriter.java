@@ -258,7 +258,7 @@ public class HibernateXMLWriter {
 
 		Element	theNode			= this.document.createElement( "property" );
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), false ) );
+		theNode.setAttribute( "type", toConverterType( toHibernateType( prop.getORMType() ) ) );
 		populateStringAttributes( theNode, propAnnotations, List.of( ORMKeys.index ) );
 
 		if ( prop.getFormula() != null ) {
@@ -586,7 +586,7 @@ public class HibernateXMLWriter {
 
 		// set common attributes
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), true ) );
+		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
 		if ( prop.getUnsavedValue() != null ) {
 			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );
 		}
@@ -913,7 +913,7 @@ public class HibernateXMLWriter {
 
 		// PROPERTY name
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), true ) );
+		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
 		// COLUMN name
 		if ( columnInfo.containsKey( Key._NAME ) ) {
 			addColumnNames( theNode, columnInfo.getAsString( Key._NAME ) );
@@ -1053,12 +1053,11 @@ public class HibernateXMLWriter {
 	/**
 	 * Caster to convert a property `ormType` field value to a Hibernate type.
 	 *
-	 * @param propertyType       Property type, like `datetime` or `string`
-	 * @param skipTypeConverters True to return the raw type name and skip the attribute converter
+	 * @param propertyType Property type, like `datetime` or `string`
 	 *
 	 * @return The Hibernate-safe type, like `timestamp` or `string`
 	 */
-	public static String toHibernateType( String propertyType, boolean skipTypeConverters ) {
+	public static String toHibernateType( String propertyType ) {
 		// basic normalization
 		propertyType	= propertyType.trim().toLowerCase();
 		// grab "varchar" from "varchar(50)"
@@ -1066,7 +1065,7 @@ public class HibernateXMLWriter {
 		// grab "biginteger" from "java.math.biginteger", etc.
 		propertyType	= propertyType.substring( propertyType.lastIndexOf( "." ) + 1 );
 
-		String normalizedType = switch ( propertyType ) {
+		return switch ( propertyType ) {
 			case "blob", "byte[]" -> "binary";
 			case "bit", "bool" -> "boolean";
 			case "yes-no", "yesno", "yes_no" -> "yes_no";
@@ -1081,9 +1080,14 @@ public class HibernateXMLWriter {
 			case "clob" -> "text";
 			default -> propertyType;
 		};
-		if ( skipTypeConverters ) {
-			return normalizedType;
-		}
+	}
+
+	/**
+	 * Apply Attribute Converters to the given property type, or return the type as-is.
+	 * 
+	 * @param normalizedType The normalized type name, like "biginteger" or "timestamp". Must be normalized via {@link toHibernateType()} first
+	 */
+	protected String toConverterType( String normalizedType ) {
 		return switch ( normalizedType ) {
 			case "time" -> "converted::" + TimeConverter.class.getName();
 			case "boolean" -> "converted::" + BooleanConverter.class.getName();
