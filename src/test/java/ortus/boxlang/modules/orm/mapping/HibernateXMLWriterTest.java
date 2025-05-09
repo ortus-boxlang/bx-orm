@@ -775,8 +775,7 @@ public class HibernateXMLWriterTest {
 		assertThat( versionAttributes.getNamedItem( "name" ).getTextContent() ).isEqualTo( "version" );
 		assertThat( versionAttributes.getNamedItem( "column" ).getTextContent() ).isEqualTo( "itemVersion" );
 		assertThat( versionAttributes.getNamedItem( "insert" ).getTextContent() ).isEqualTo( "false" );
-		assertThat( versionAttributes.getNamedItem( "type" ).getTextContent() ).startsWith( "converted::" );
-		assertThat( versionAttributes.getNamedItem( "type" ).getTextContent() ).endsWith( "IntegerConverter" );
+		assertThat( versionAttributes.getNamedItem( "type" ).getTextContent() ).isEqualTo( "integer" );
 	}
 
 	// @formatter:off
