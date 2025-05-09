@@ -913,7 +913,7 @@ public class HibernateXMLWriter {
 
 		// PROPERTY name
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), false ) );
+		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), true ) );
 		// COLUMN name
 		if ( columnInfo.containsKey( Key._NAME ) ) {
 			addColumnNames( theNode, columnInfo.getAsString( Key._NAME ) );
@@ -1053,12 +1053,12 @@ public class HibernateXMLWriter {
 	/**
 	 * Caster to convert a property `ormType` field value to a Hibernate type.
 	 *
-	 * @param propertyType         Property type, like `datetime` or `string`
-	 * @param isIdentifierProperty True if this is an identifier property, in which case we cannot use a converter.
+	 * @param propertyType       Property type, like `datetime` or `string`
+	 * @param skipTypeConverters True to return the raw type name and skip the attribute converter
 	 *
 	 * @return The Hibernate-safe type, like `timestamp` or `string`
 	 */
-	public static String toHibernateType( String propertyType, boolean isIdentifierProperty ) {
+	public static String toHibernateType( String propertyType, boolean skipTypeConverters ) {
 		// basic normalization
 		propertyType	= propertyType.trim().toLowerCase();
 		// grab "varchar" from "varchar(50)"
@@ -1081,7 +1081,7 @@ public class HibernateXMLWriter {
 			case "clob" -> "text";
 			default -> propertyType;
 		};
-		if ( isIdentifierProperty ) {
+		if ( skipTypeConverters ) {
 			return normalizedType;
 		}
 		return switch ( normalizedType ) {
