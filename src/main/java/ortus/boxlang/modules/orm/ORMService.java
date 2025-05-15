@@ -87,7 +87,7 @@ public class ORMService extends BaseService {
 	 */
 	public ORMService( BoxRuntime runtime ) {
 		super( runtime, ORMKeys.ORMService );
-		getLogger().debug( "ORMService built" );
+		getLogger().trace( "ORMService built" );
 
 		// Attach appender to Hibernate logging categories
 		String[]		hibernateCategories	= {
@@ -131,7 +131,7 @@ public class ORMService extends BaseService {
 	 */
 	@Override
 	public void onStartup() {
-		getLogger().info( "+ ORMService started" );
+		getLogger().debug( "+ ORMService started" );
 	}
 
 	/**
@@ -139,7 +139,7 @@ public class ORMService extends BaseService {
 	 */
 	@Override
 	public void onShutdown( Boolean force ) {
-		getLogger().info( "+ ORMService shutdown requested" );
+		getLogger().debug( "+ ORMService shutdown requested" );
 		this.ormApps.forEach( ( key, ormApp ) -> ormApp.shutdown() );
 		this.ormApps.clear();
 	}
@@ -244,7 +244,7 @@ public class ORMService extends BaseService {
 		// We remove it first to prevent further access to the ORMApp
 		ORMApp app = this.ormApps.remove( uniqueAppName );
 		if ( app != null ) {
-			logger.info( "Shutting down ORMApp for unique name [{}]", uniqueAppName );
+			logger.debug( "Shutting down ORMApp for unique name [{}]", uniqueAppName );
 			app.shutdown();
 		}
 		RequestBoxContext context = RequestBoxContext.getCurrent();
