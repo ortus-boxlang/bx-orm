@@ -1067,13 +1067,12 @@ public class HibernateXMLWriter {
 
 		return switch ( propertyType ) {
 			case "blob", "byte[]" -> "binary";
-			case "bit", "bool" -> "boolean";
+			case "bit", "bool", "tinyint", "tinyinteger" -> "boolean";
 			case "yes-no", "yesno", "yes_no" -> "yes_no";
 			case "true-false", "truefalse", "true_false" -> "true_false";
 			case "big-decimal", "big_decimal" -> "bigdecimal";
 			case "big-integer", "bigint", "big_integer" -> "biginteger";
 			case "int" -> "integer";
-			case "tinyint" -> "tinyinteger";
 			case "numeric", "number", "decimal" -> "double";
 			case "eurodate", "usdate", "date", "datetime" -> "timestamp";
 			case "char", "nchar" -> "character";
