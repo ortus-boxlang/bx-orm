@@ -445,7 +445,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Add column names (single, via attribute, or multiple, via child column nodes) to the given node.
-	 * 
+	 *
 	 * @param theNode    Parent node to either modify or add child nodes to.
 	 * @param columnName The column name(s) to add. If multiple, they should be comma-delimited.
 	 */
@@ -1073,6 +1073,7 @@ public class HibernateXMLWriter {
 			case "big-decimal", "big_decimal" -> "bigdecimal";
 			case "big-integer", "bigint", "big_integer" -> "biginteger";
 			case "int" -> "integer";
+			case "tinyint" -> "tinyinteger";
 			case "numeric", "number", "decimal" -> "double";
 			case "eurodate", "usdate", "date", "datetime" -> "timestamp";
 			case "char", "nchar" -> "character";
@@ -1084,7 +1085,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Apply Attribute Converters to the given property type, or return the type as-is.
-	 * 
+	 *
 	 * @param normalizedType The normalized type name, like "biginteger" or "timestamp". Must be normalized via {@link toHibernateType()} first
 	 */
 	protected String toConverterType( String normalizedType ) {
