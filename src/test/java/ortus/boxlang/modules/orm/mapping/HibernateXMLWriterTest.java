@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNotNull;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.nio.file.Path;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -78,10 +79,11 @@ public class HibernateXMLWriterTest {
 
 	@BeforeEach
 	public void setupEach() {
-		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext() );
+		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
 		variables	= context.getScopeNearby( VariablesScope.name );
 		IStruct properties = new Struct();
 		properties.put( "ignoreParseErrors", "true" );
+		// We don't need an actual datasource for this test so we'll add one to prevent the error
 		ormConfig = new ORMConfig( properties, context.getRequestContext() );
 	}
 
