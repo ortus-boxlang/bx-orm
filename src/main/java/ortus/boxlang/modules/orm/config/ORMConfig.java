@@ -21,6 +21,7 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
@@ -43,6 +44,7 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * ORM configuration manager, normalizer, validator, etc.
@@ -442,9 +444,13 @@ public class ORMConfig {
 		IStruct	configDatasources	= ( IStruct ) this.requestContext.getConfigItems( new Key[] { Key.datasources } );
 		if ( !defaultDatasource.isEmpty() && configDatasources.containsKey( defaultDatasource ) ) {
 			return defaultDatasource;
+		} else if ( !defaultDatasource.isEmpty() ) {
+			logger.warn( "The datasource [" + defaultDatasource + "] could not be found in the request configuration.  Datasources found: ["
+			    + configDatasources.keySet().stream().map( Key::getName ).collect( Collectors.joining( ", " ) ) + "]" );
+			return defaultDatasource;
 		} else {
-			// We may have to switch to a null as a representation of the default datasource.;
-			return Key.defaultDatasource;
+			throw new BoxRuntimeException( "A default datasource could not be found in the current runtime configuration. Available datasources: "
+			    + configDatasources.keySet().stream().map( Key::getName ).collect( Collectors.joining( ", " ) ) );
 		}
 	}
 
