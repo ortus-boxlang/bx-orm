@@ -49,6 +49,8 @@ import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 /**
  * Boxlang class proxy.
+ * 
+ * @since 1.0.0
  */
 public class BoxProxy implements IClassRunnable, HibernateProxy {
 

@@ -36,6 +36,8 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
  * <li><code>bookAuthors</code> becomes <code>BOOK_AUTHOR</code></li>
  * <li><code>authorContact</code> becomes <code>AUTHOR_CONTACT</code></li>
  * </ul>
+ * 
+ * @since 1.0.0
  */
 public class MacroCaseNamingStrategy implements PhysicalNamingStrategy {
 

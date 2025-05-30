@@ -56,7 +56,8 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Generate a Hibernate XML mapping document for a given IEntityMeta instance, which represents the parsed entity metadata (whether classic or modern
- * syntax) in a normalized form.
+ * 
+ * @since 1.0.0
  */
 public class HibernateXMLWriter {
 

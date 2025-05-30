@@ -18,6 +18,12 @@ import ortus.boxlang.runtime.runnables.IBoxRunnable;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.types.Struct;
 
+/**
+ * Lazy initializer for BoxLang entities, which allows for lazy loading of entities
+ * in a way that is compatible with the BoxLang runtime and ORM system.
+ * 
+ * @since 1.0.0
+ */
 public class BoxLazyInitializer extends AbstractLazyInitializer implements Serializable {
 
 	@SuppressWarnings( "unused" ) // needed for compilation

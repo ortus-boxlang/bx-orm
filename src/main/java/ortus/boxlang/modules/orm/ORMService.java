@@ -43,6 +43,8 @@ import ortus.boxlang.runtime.types.IStruct;
  * engine.
  *
  * Constructs and stores Hibernate session factories.
+ * 
+ * @since 1.0.0
  */
 public class ORMService extends BaseService {
 

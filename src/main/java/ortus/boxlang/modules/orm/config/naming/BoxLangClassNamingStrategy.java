@@ -45,6 +45,8 @@ import ortus.boxlang.runtime.types.Struct;
  * <li><code>getSchemaName()</code></li>
  * <li><code>getSequenceName()</code></li>
  * </ul>
+ * 
+ * @since 1.0.0
  */
 public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 

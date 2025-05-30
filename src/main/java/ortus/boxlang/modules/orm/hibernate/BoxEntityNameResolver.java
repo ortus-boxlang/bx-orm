@@ -27,6 +27,8 @@ import ortus.boxlang.runtime.types.IStruct;
 
 /**
  * Determine entity names for a given entity/boxlang class.
+ * 
+ * @since 1.0.0
  */
 public class BoxEntityNameResolver implements EntityNameResolver {
 

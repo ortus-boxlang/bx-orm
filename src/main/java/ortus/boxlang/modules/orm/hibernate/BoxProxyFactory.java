@@ -32,6 +32,8 @@ import org.hibernate.type.CompositeType;
 
 /**
  * Assists in generating BoxProxy classes for Hibernate.
+ * 
+ * @since 1.0.0
  */
 public class BoxProxyFactory implements ProxyFactory {
 

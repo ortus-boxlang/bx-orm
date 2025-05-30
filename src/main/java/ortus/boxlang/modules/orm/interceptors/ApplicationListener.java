@@ -35,6 +35,8 @@ import ortus.boxlang.runtime.types.IStruct;
  * <p>
  * This interceptor uses application startup and shutdown events to construct and destroy the ORM service. (Which is itself responsible for
  * constructing the ORM session factories, etc.)
+ * 
+ * @since 1.0.0
  */
 public class ApplicationListener extends BaseInterceptor {
 

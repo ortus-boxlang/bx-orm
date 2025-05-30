@@ -30,6 +30,8 @@ import ortus.boxlang.runtime.types.IStruct;
  * BoxLang request listener used to construct and tear down ORM request contexts.
  * <p>
  * Listens to request events (start and end) in order to construct and tear down ORM request contexts.
+ * 
+ * @since 1.0.0
  */
 public class RequestListener extends BaseInterceptor {
 

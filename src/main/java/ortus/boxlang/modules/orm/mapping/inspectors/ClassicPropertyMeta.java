@@ -35,6 +35,8 @@ import ortus.boxlang.runtime.types.util.JSONUtil;
  *
  * i.e. handles translating CFML property annotations like `sqltype="varchar"` into the IPropertyMeta interface for consistent reference by the
  * HibernateXMLWriter.
+ * 
+ * @since 1.0.0
  */
 public class ClassicPropertyMeta extends AbstractPropertyMeta {
 

@@ -33,6 +33,8 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
 
 /**
  * This class is used to get a property on a BoxLang class for a Hibernate entity.
+ * 
+ * @since 1.0.0
  */
 public class BoxPropertyGetter implements Getter {
 

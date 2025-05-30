@@ -47,6 +47,8 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Box Hibernate cache which implements the JSR-107 Cache interface.
+ * 
+ * @since 1.0.0
  */
 public class BoxHibernateCache<K, V> implements Cache<K, V> {
 
