@@ -64,6 +64,8 @@ import ortus.boxlang.runtime.util.ResolvedFilePath;
 /**
  * Hibernate entity mapping generator. Responsible for walking the file tree and generating hibernate mapping configurations for each discovered
  * persistent entity.
+ * 
+ * @since 1.0.0
  */
 public class MappingGenerator {
 

@@ -281,6 +281,18 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( entities ).isInstanceOf( Array.class );
 	}
 
+	@DisplayName( "It can perform use a cache query" )
+	@Test
+	public void getWithCache() {
+		// @formatter:off
+		instance.executeSource( """
+		result = ormExecuteQuery( "FROM cbContent WHERE contentType = 'Page'", {}, { cacheable : true } );
+		""", context );
+		// @formatter:on
+		Object entities = variables.get( result );
+		assertThat( entities ).isInstanceOf( Array.class );
+	}
+
 	@DisplayName( "It can query by the relationship discrimator value" )
 	@Test
 	public void getByRelationshipDiscrimator() {

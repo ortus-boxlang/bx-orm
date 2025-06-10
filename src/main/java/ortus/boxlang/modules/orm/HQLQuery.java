@@ -22,6 +22,13 @@ import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 
+/**
+ * HQL Query representation
+ * This class is responsible for processing HQL queries, binding parameters,
+ * and executing the query against the ORM session.
+ * 
+ * @since 1.0.0
+ */
 public class HQLQuery {
 
 	private static BoxRuntime		runtime				= BoxRuntime.getInstance();

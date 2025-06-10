@@ -40,6 +40,8 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  * Transient context for ORM requests.
  * <p>
  * Tracks Hibernate sessions and transactions for the lifetime of a single Boxlang request.
+ * 
+ * @since 1.0.0
  */
 public class ORMRequestContext {
 

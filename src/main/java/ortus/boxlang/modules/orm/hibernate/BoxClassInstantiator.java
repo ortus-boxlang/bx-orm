@@ -58,6 +58,8 @@ import ortus.boxlang.runtime.validation.Validator;
  * <p>
  * In other words, here is where the magic happens to tie a Hibernate entity to a BoxLang class when loading entities from the database via
  * `entityLoadByPK()`, creating new entities via `entityNew()`, etc, etc.
+ * 
+ * @since 1.0.0
  */
 public class BoxClassInstantiator implements Instantiator {
 

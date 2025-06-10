@@ -56,6 +56,8 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  * Manages a single ORM application and persists the lifetime of the boxlang application.
  *
  * Stores ORM configuration, datasources, session factories, and other until the ORM application is shut down or reloaded.
+ * 
+ * @since 1.0.0
  */
 public class ORMApp {
 

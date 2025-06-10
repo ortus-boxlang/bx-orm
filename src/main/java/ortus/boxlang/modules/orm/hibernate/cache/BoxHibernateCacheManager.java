@@ -20,6 +20,8 @@ import ortus.boxlang.runtime.logging.BoxLangLogger;
 
 /**
  * BoxLang implementation of the JCache CacheManager {@link CacheManager}.
+ * 
+ * @since 1.0.0
  */
 public class BoxHibernateCacheManager implements CacheManager {
 

@@ -32,6 +32,8 @@ import ortus.boxlang.runtime.scopes.Key;
  * Java class responsible for providing datasource connections to Hibernate ORM.
  *
  * @see org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
+ * 
+ * @since 1.0.0
  */
 public class ORMConnectionProvider implements ConnectionProvider {
 

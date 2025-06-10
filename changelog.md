@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 
+- Fixed issue with default cache not being created when cache provider was empty - Resolves [BLMODULES-53](https://ortussolutions.atlassian.net/browse/BLMODULES-53)
+
+## [1.0.10] - 2025-05-03
+
+### 🐛 Fixed
+
 - Throw or log an error when class annotation on association is an empty string - Resolves [BLMODULES-50](https://ortussolutions.atlassian.net/browse/BLMODULES-50)
 - Fix support for `dataType` annotation on version properties - Resolves [BLMODULES-51](https://ortussolutions.atlassian.net/browse/BLMODULES-51)
 

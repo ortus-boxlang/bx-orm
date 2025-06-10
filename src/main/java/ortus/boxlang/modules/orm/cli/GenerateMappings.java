@@ -48,6 +48,8 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  * <li><code>--debug</code> - Spit out debug logging. Not necessary for your
  * first run, but this may be helpful in debugging mapping errors.</li>
  * </ul>
+ * 
+ * @since 1.0.0
  */
 public class GenerateMappings {
 

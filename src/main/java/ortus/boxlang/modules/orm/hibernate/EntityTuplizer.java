@@ -33,6 +33,8 @@ import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 
 /**
  * Hibernate implementation class for helping convert tuples (database rows) into boxlang classes.
+ * 
+ * @since 1.0.0
  */
 public class EntityTuplizer extends AbstractEntityTuplizer {
 

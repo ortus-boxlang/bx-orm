@@ -47,6 +47,8 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Box Hibernate cache which implements the JSR-107 Cache interface.
+ * 
+ * @since 1.0.0
  */
 public class BoxHibernateCache<K, V> implements Cache<K, V> {
 
@@ -60,6 +62,7 @@ public class BoxHibernateCache<K, V> implements Cache<K, V> {
 	private Key							cacheName;
 
 	private static final String			LEGACY_CACHE_PROVIDER_MAP		= "ConcurrentHashMap";
+	private static final String			LEGACY_CACHE_PROVIDER_TABLE		= "HashTable";
 	private static final String			LEGACY_CACHE_PROVIDER_EHCACHE	= "ehcache";
 
 	/**
@@ -370,7 +373,10 @@ public class BoxHibernateCache<K, V> implements Cache<K, V> {
 
 			if ( cacheService.hasCache( this.cacheName ) ) {
 				return cacheService.getCache( this.cacheName );
-			} else if ( config.cacheProvider == null || config.cacheProvider.equalsIgnoreCase( LEGACY_CACHE_PROVIDER_MAP ) ) {
+			} else if ( config.cacheProvider == null
+			    || config.cacheProvider.equalsIgnoreCase( LEGACY_CACHE_PROVIDER_MAP )
+			    || config.cacheProvider.equalsIgnoreCase( LEGACY_CACHE_PROVIDER_TABLE )
+			    || cacheProviderKey.equals( Key.of( ORMConfig.DEFAULT_CACHEPROVIDER ) ) ) {
 				return cacheService.createDefaultCache( this.cacheName );
 			} else if ( cacheService.hasProvider( cacheProviderKey ) ) {
 				return cacheService.createCache( this.cacheName, Key.of( config.cacheProvider ), config.cacheConfigProperties );

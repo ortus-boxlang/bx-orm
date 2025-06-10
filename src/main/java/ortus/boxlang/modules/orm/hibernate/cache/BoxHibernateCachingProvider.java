@@ -13,6 +13,8 @@ import javax.cache.spi.CachingProvider;
 
 /**
  * BoxLang Hibernate implementation of the {@link CachingProvider}.
+ * 
+ * @since 1.0.0
  */
 public class BoxHibernateCachingProvider implements CachingProvider {
 

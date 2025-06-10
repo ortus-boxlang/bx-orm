@@ -43,6 +43,8 @@ import ortus.boxlang.runtime.scopes.Key;
 
 /**
  * Configures and starts up Hibernate - specifically, configures and starts up a session factory specific to a single datasource.
+ * 
+ * @since 1.0.0
  */
 public class SessionFactoryBuilder {
 

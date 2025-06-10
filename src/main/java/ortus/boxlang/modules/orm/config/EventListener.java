@@ -71,6 +71,8 @@ import ortus.boxlang.runtime.types.Struct;
 
 /**
  * Hibernate Event listener which wraps the event to fire the appropriate event handler on the global and/or entity event listener.
+ * 
+ * @since 1.0.0
  */
 public class EventListener
     implements Integrator, PreInsertEventListener, PostInsertEventListener, PreDeleteEventListener, PostDeleteEventListener,

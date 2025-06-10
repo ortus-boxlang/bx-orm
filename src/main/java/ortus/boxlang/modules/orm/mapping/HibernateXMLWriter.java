@@ -41,6 +41,7 @@ import ortus.boxlang.modules.orm.hibernate.converters.BooleanConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.DoubleConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.IntegerConverter;
+import ortus.boxlang.modules.orm.hibernate.converters.ShortConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.TimeConverter;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
@@ -55,7 +56,8 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Generate a Hibernate XML mapping document for a given IEntityMeta instance, which represents the parsed entity metadata (whether classic or modern
- * syntax) in a normalized form.
+ * 
+ * @since 1.0.0
  */
 public class HibernateXMLWriter {
 
@@ -258,7 +260,7 @@ public class HibernateXMLWriter {
 
 		Element	theNode			= this.document.createElement( "property" );
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), false ) );
+		theNode.setAttribute( "type", toConverterType( toHibernateType( prop.getORMType() ) ) );
 		populateStringAttributes( theNode, propAnnotations, List.of( ORMKeys.index ) );
 
 		if ( prop.getFormula() != null ) {
@@ -445,7 +447,7 @@ public class HibernateXMLWriter {
 
 	/**
 	 * Add column names (single, via attribute, or multiple, via child column nodes) to the given node.
-	 * 
+	 *
 	 * @param theNode    Parent node to either modify or add child nodes to.
 	 * @param columnName The column name(s) to add. If multiple, they should be comma-delimited.
 	 */
@@ -586,7 +588,7 @@ public class HibernateXMLWriter {
 
 		// set common attributes
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), true ) );
+		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
 		if ( prop.getUnsavedValue() != null ) {
 			theNode.setAttribute( "unsaved-value", prop.getUnsavedValue() );
 		}
@@ -913,7 +915,7 @@ public class HibernateXMLWriter {
 
 		// PROPERTY name
 		theNode.setAttribute( "name", prop.getName() );
-		theNode.setAttribute( "type", toHibernateType( prop.getORMType(), false ) );
+		theNode.setAttribute( "type", toHibernateType( prop.getORMType() ) );
 		// COLUMN name
 		if ( columnInfo.containsKey( Key._NAME ) ) {
 			addColumnNames( theNode, columnInfo.getAsString( Key._NAME ) );
@@ -1053,12 +1055,11 @@ public class HibernateXMLWriter {
 	/**
 	 * Caster to convert a property `ormType` field value to a Hibernate type.
 	 *
-	 * @param propertyType         Property type, like `datetime` or `string`
-	 * @param isIdentifierProperty True if this is an identifier property, in which case we cannot use a converter.
+	 * @param propertyType Property type, like `datetime` or `string`
 	 *
 	 * @return The Hibernate-safe type, like `timestamp` or `string`
 	 */
-	public static String toHibernateType( String propertyType, boolean isIdentifierProperty ) {
+	public static String toHibernateType( String propertyType ) {
 		// basic normalization
 		propertyType	= propertyType.trim().toLowerCase();
 		// grab "varchar" from "varchar(50)"
@@ -1066,29 +1067,36 @@ public class HibernateXMLWriter {
 		// grab "biginteger" from "java.math.biginteger", etc.
 		propertyType	= propertyType.substring( propertyType.lastIndexOf( "." ) + 1 );
 
-		String normalizedType = switch ( propertyType ) {
+		return switch ( propertyType ) {
 			case "blob", "byte[]" -> "binary";
 			case "bit", "bool" -> "boolean";
+			case "tinyint", "tinyinteger" -> "short";
 			case "yes-no", "yesno", "yes_no" -> "yes_no";
 			case "true-false", "truefalse", "true_false" -> "true_false";
 			case "big-decimal", "big_decimal" -> "bigdecimal";
 			case "big-integer", "bigint", "big_integer" -> "biginteger";
 			case "int" -> "integer";
 			case "numeric", "number", "decimal" -> "double";
-			case "eurodate", "usdate", "date", "timestamp" -> "datetime";
+			case "eurodate", "usdate", "date", "datetime" -> "timestamp";
 			case "char", "nchar" -> "character";
 			case "varchar", "nvarchar" -> "string";
 			case "clob" -> "text";
 			default -> propertyType;
 		};
-		if ( isIdentifierProperty ) {
-			return normalizedType;
-		}
+	}
+
+	/**
+	 * Apply Attribute Converters to the given property type, or return the type as-is.
+	 *
+	 * @param normalizedType The normalized type name, like "biginteger" or "timestamp". Must be normalized via {@link toHibernateType()} first
+	 */
+	protected String toConverterType( String normalizedType ) {
 		return switch ( normalizedType ) {
 			case "time" -> "converted::" + TimeConverter.class.getName();
 			case "boolean" -> "converted::" + BooleanConverter.class.getName();
-			case "datetime" -> "converted::" + DateTimeConverter.class.getName();
+			case "timestamp" -> "converted::" + DateTimeConverter.class.getName();
 			case "double" -> "converted::" + DoubleConverter.class.getName();
+			case "short" -> "converted::" + ShortConverter.class.getName();
 			case "integer" -> "converted::" + IntegerConverter.class.getName();
 			case "biginteger" -> "converted::" + BigIntegerConverter.class.getName();
 			case "bigdecimal" -> "converted::" + BigDecimalConverter.class.getName();

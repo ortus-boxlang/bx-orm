@@ -28,6 +28,8 @@ import ortus.boxlang.runtime.types.Struct;
 
 /**
  * Stores all entity metadata for a given entity.
+ * 
+ * @since 1.0.0
  */
 public class EntityRecord {
 

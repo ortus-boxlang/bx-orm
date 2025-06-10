@@ -35,6 +35,8 @@ import ortus.boxlang.runtime.types.IStruct;
  * <p>
  * This interceptor uses application startup and shutdown events to construct and destroy the ORM service. (Which is itself responsible for
  * constructing the ORM session factories, etc.)
+ * 
+ * @since 1.0.0
  */
 public class ApplicationListener extends BaseInterceptor {
 
@@ -69,12 +71,12 @@ public class ApplicationListener extends BaseInterceptor {
 		RequestBoxContext		context				= ( RequestBoxContext ) args.get( Key.context );
 		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( Key.listener );
 		URI						startingTemplate	= ( URI ) args.get( Key.template );
-		ORMConfig				config				= ORMConfig.loadFromContext( context );
+		ORMConfig				ormConfig			= ORMConfig.loadFromContext( context );
 
 		// If the starting template is null, it means, the listener is not linked to a template and no Application.bx, so ignore it.
-		if ( startingTemplate != null && config != null ) {
+		if ( startingTemplate != null && ormConfig != null ) {
 			this.logger.debug( "ORMEnabled, starting up ORM app for [{}]", startingListener.getAppName() );
-			this.ormService.startupApp( context, config, startingListener );
+			this.ormService.startupApp( context, ormConfig, startingListener );
 		}
 	}
 
@@ -89,8 +91,14 @@ public class ApplicationListener extends BaseInterceptor {
 		RequestBoxContext		requestContext		= RequestBoxContext.getCurrent();
 		if ( requestContext == null ) {
 			return;
-		} else if ( this.ormService.getORMAppByContext( requestContext ) == null ) {
-			this.ormService.startupApp( requestContext, ORMConfig.loadFromContext( requestContext ), startingListener );
+		}
+		ORMConfig ormConfig = ORMConfig.loadFromContext( requestContext );
+		if ( ormConfig == null ) {
+			// ORM is not enabled for this application
+			return;
+		}
+		if ( this.ormService.getORMAppByContext( requestContext ) == null ) {
+			this.ormService.startupApp( requestContext, ormConfig, startingListener );
 		}
 	}
 
