@@ -9,8 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.10] - 2025-05-03
-
 ### 🐛 Fixed
 
 - Fixed issue with default cache not being created when cache provider was empty - Resolves [BLMODULES-53](https://ortussolutions.atlassian.net/browse/BLMODULES-53)
