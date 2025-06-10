@@ -9,9 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.11] - 2025-06-10
+
 ### 🐛 Fixed
 
 - Fixed issue with default cache not being created when cache provider was empty - Resolves [BLMODULES-53](https://ortussolutions.atlassian.net/browse/BLMODULES-53)
+- Fix error starting up on non-ORM apps - Resolves [BLMODULES-49](https://ortussolutions.atlassian.net/browse/BLMODULES-49)
+- Add support for `tinyint` and `tinyinteger` ORM types - Resolves [BLMODULES-59](https://ortussolutions.atlassian.net/browse/BLMODULES-59)
+- Skip type conversion on version properties - Resolves [BLMODULES-45](https://ortussolutions.atlassian.net/browse/BLMODULES-45)
+- Drop ormApp instantiation in baseORMBIF - Fixes [BLMODULES-54](https://ortussolutions.atlassian.net/browse/BLMODULES-54)
+- Improve default datasource look up and throw error if empty - See [BLMODULES-56](https://ortussolutions.atlassian.net/browse/BLMODULES-56)
 
 ## [1.0.10] - 2025-05-03
 
@@ -31,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Fixed
 
 - Implement `elementType`,`elementColumn` annotations - Resolves [BLMODULES-46](https://ortussolutions.atlassian.net/browse/BLMODULES-46)
-- Fixes for map collection when `structkeytype` or `structkeycolumn` are ignored - Resolves [BLMODULES-45](https://ortussolutions.atlassian.net/browse/BLMODULES-45)
+- Fixes for map collection when `structkeytype` or `structkeycolumn` are ignored - See [BLMODULES-45](https://ortussolutions.atlassian.net/browse/BLMODULES-45)
 - Skip usage of `AttributeConverter` on identifier properties - Resolves [BLMODULES-44](https://ortussolutions.atlassian.net/browse/BLMODULES-44)
 
 ## [1.0.8] - 2025-04-25
@@ -120,7 +127,9 @@ No significant changes.
 
 - First iteration of this module
 
-[Unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.10...HEAD
+[Unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.11...HEAD
+
+[1.0.11]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.10...v1.0.11
 
 [1.0.10]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.9...v1.0.10
 
