@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.11] - 2025-06-10
+
 ### 🐛 Fixed
 
 - Fixed issue with default cache not being created when cache provider was empty - Resolves [BLMODULES-53](https://ortussolutions.atlassian.net/browse/BLMODULES-53)
@@ -125,7 +127,9 @@ No significant changes.
 
 - First iteration of this module
 
-[Unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.10...HEAD
+[Unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.11...HEAD
+
+[1.0.11]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.10...v1.0.11
 
 [1.0.10]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.9...v1.0.10
 
