@@ -22,10 +22,7 @@ import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
-import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Struct;
@@ -89,21 +86,14 @@ public class BoxLangClassNamingStrategy implements PhysicalNamingStrategy {
 	 * @param theIdentifier The original identifier (like "autos") which the method should transform.
 	 */
 	private Identifier fireImplementation( Key methodName, Key argumentName, Identifier theIdentifier ) {
-		return Identifier.toIdentifier(
+		return ( Identifier ) RequestBoxContext.runInContext( ( ctx ) -> Identifier.toIdentifier(
 		    ( String ) this.wrappedBLClass.dereferenceAndInvoke(
-		        getContextForInvocation(),
+		        ctx,
 		        methodName,
 		        Struct.of( argumentName, theIdentifier.getText() ),
 		        true // throw on not found
 		    )
-		);
+		) );
 	}
 
-	private IBoxContext getContextForInvocation() {
-		IBoxContext context = RequestBoxContext.getCurrent();
-		if ( context == null ) {
-			context = new ScriptingRequestBoxContext( BoxRuntime.getInstance().getRuntimeContext() );
-		}
-		return context;
-	}
 }

@@ -249,9 +249,13 @@ public class ORMService extends BaseService {
 			logger.debug( "Shutting down ORMApp for unique name [{}]", uniqueAppName );
 			app.shutdown();
 		}
-		RequestBoxContext context = RequestBoxContext.getCurrent();
-		if ( context != null && context.hasAttachment( ORMKeys.ORMRequestContext ) ) {
-			context.removeAttachment( ORMKeys.ORMRequestContext );
+		IBoxContext context = RequestBoxContext.getCurrent();
+		if ( context == null ) {
+			return; // No context to remove from
+		}
+		RequestBoxContext requestContext = context.getRequestContext();
+		if ( requestContext != null && requestContext.hasAttachment( ORMKeys.ORMRequestContext ) ) {
+			requestContext.removeAttachment( ORMKeys.ORMRequestContext );
 		}
 	}
 

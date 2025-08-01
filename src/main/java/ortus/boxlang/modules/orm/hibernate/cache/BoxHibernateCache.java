@@ -39,6 +39,7 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.cache.providers.ICacheProvider;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.Attempt;
 import ortus.boxlang.runtime.scopes.Key;
@@ -362,7 +363,7 @@ public class BoxHibernateCache<K, V> implements Cache<K, V> {
 	 */
 	private ICacheProvider getCacheProvider() {
 		if ( this.cacheProvider == null ) {
-			RequestBoxContext context = RequestBoxContext.getCurrent();
+			IBoxContext context = RequestBoxContext.getCurrent();
 			if ( context == null ) {
 				throw new BoxRuntimeException( "A Hibernate Cache may not be created outside of a BoxLang application context" );
 			}

@@ -61,7 +61,6 @@ import org.hibernate.tuple.entity.EntityMetamodel;
 
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
-import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
@@ -299,7 +298,7 @@ public class EventListener
 			return;
 		}
 		if ( !listenerReady ) {
-			globalListener.invokeConstructor( RequestBoxContext.getCurrent() );
+			RequestBoxContext.runInContext( ( ctx ) -> globalListener.invokeConstructor( ctx ) );
 			listenerReady = true;
 		}
 
@@ -316,7 +315,7 @@ public class EventListener
 				logger.debug( "Ready to invoke {} on global EventHandler with args {}", eventType.getName(), args.toString() );
 			}
 			// Fire the method on the global event handler
-			this.globalListener.dereferenceAndInvoke( getCurrentContext(), eventType, args, false );
+			RequestBoxContext.runInContext( ( ctx ) -> this.globalListener.dereferenceAndInvoke( ctx, eventType, args, false ) );
 		}
 	}
 
@@ -327,18 +326,8 @@ public class EventListener
 			}
 
 			// Fire the method on the entity itself
-			entity.dereferenceAndInvoke( getCurrentContext(), eventType, args, false );
+			RequestBoxContext.runInContext( ( ctx ) -> entity.dereferenceAndInvoke( ctx, eventType, args, false ) );
 		}
 	}
 
-	/**
-	 * Get the current RequestBoxContext, constructing one if necessary.
-	 */
-	private RequestBoxContext getCurrentContext() {
-		RequestBoxContext context = RequestBoxContext.getCurrent();
-		if ( context == null ) {
-			context = new ScriptingRequestBoxContext( BoxRuntime.getInstance().getRuntimeContext() );
-		}
-		return context;
-	}
 }

@@ -24,8 +24,8 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
-import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.Struct;
@@ -100,7 +100,7 @@ public class GenerateMappings {
 					runtime.getConfiguration().registerMapping( key, Path.of( mappings.get( key ) ).toAbsolutePath().toString() );
 				}
 			}
-			ORMConfig			ormConfig	= new ORMConfig(
+			ORMConfig ormConfig = new ORMConfig(
 			    Struct.of(
 			        // required that the user pass the correct path to their entity locations.
 			        ORMKeys.entityPaths, entityPaths,
@@ -115,11 +115,14 @@ public class GenerateMappings {
 			// @TODO: Add a custom toString() to ORMConfig for logging purposes.
 			// log.info( "Using ORM Config: {}", ormConfig );
 
-			MappingGenerator	generator	= new MappingGenerator(
-			    new ScriptingRequestBoxContext( runtime.getRuntimeContext() ),
-			    ormConfig );
+			RequestBoxContext.runInContext( ( ctx ) -> {
+				MappingGenerator generator = new MappingGenerator(
+				    ( IJDBCCapableContext ) ctx,
+				    ormConfig );
 
-			generator.generateMappings();
+				generator.generateMappings();
+				return null;
+			} );
 
 			System.exit( 0 );
 		} finally {

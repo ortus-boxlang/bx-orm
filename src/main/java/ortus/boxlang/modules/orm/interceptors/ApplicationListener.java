@@ -24,6 +24,7 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.application.Application;
 import ortus.boxlang.runtime.application.BaseApplicationListener;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
@@ -88,7 +89,11 @@ public class ApplicationListener extends BaseInterceptor {
 	@InterceptionPoint
 	public void onApplicationStart( IStruct args ) {
 		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( Key.listener );
-		RequestBoxContext		requestContext		= RequestBoxContext.getCurrent();
+		IBoxContext				context				= RequestBoxContext.getCurrent();
+		if ( context == null ) {
+			return;
+		}
+		RequestBoxContext requestContext = context.getRequestContext();
 		if ( requestContext == null ) {
 			return;
 		}

@@ -26,6 +26,7 @@ import org.hibernate.SessionFactory;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
@@ -78,18 +79,25 @@ public class ORMRequestContext {
 	 *
 	 * @return The ORMRequestContext for the given context.
 	 */
-	public static ORMRequestContext getForContext( RequestBoxContext context ) {
-		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
+	public static ORMRequestContext getForContext( IBoxContext context ) {
+		if ( context == null ) {
+			throw new BoxRuntimeException( "Could not acquire ORM context; context is null." );
+		}
+		RequestBoxContext requestContext = context.getRequestContext();
+		if ( requestContext == null ) {
+			throw new BoxRuntimeException( "Could not acquire ORM context; supplied context has no parent context which is a request typed." );
+		}
+		IStruct appSettings = ( IStruct ) requestContext.getConfigItem( Key.applicationSettings );
 
 		if ( !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
 		}
 
-		return context.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, key -> {
+		return requestContext.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, key -> {
 			// logger.debug( "Initializing ORM context" );
 			return new ORMRequestContext(
-			    context,
-			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), context )
+			    requestContext,
+			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), requestContext )
 			);
 		} );
 	}
