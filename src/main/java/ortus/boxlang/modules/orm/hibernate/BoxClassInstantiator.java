@@ -117,8 +117,7 @@ public class BoxClassInstantiator implements Instantiator {
 	 */
 
 	public IClassRunnable instantiate( IBoxContext context, EntityRecord entityRecord, IStruct properties ) {
-		RequestBoxContext	requestContext	= RequestBoxContext.getCurrent();
-		IClassRunnable		theEntity		= loadBoxClass( requestContext, entityRecord.getClassFQN() );
+		IClassRunnable theEntity = ( IClassRunnable ) RequestBoxContext.runInContext( context, ( ctx ) -> loadBoxClass( ctx, entityRecord.getClassFQN() ) );
 
 		entityRecord.getEntityMeta().getAssociations().stream()
 		    .forEach( prop -> {
@@ -238,7 +237,7 @@ public class BoxClassInstantiator implements Instantiator {
 		ORMApp			ormApp			= ORMRequestContext.getForContext( RequestBoxContext.getCurrent() ).getORMApp();
 		EntityRecord	entityRecord	= ormApp.lookupEntity( this.entityName, true );
 		return instantiate(
-		    RequestBoxContext.getCurrent(),
+		    null,  // Will automatically use the current context
 		    entityRecord,
 		    null
 		);

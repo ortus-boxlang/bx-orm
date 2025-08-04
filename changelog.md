@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ⛓️‍💥Changed
+
+- This new version only works with the fixes on [BoxLang v1.4.0](https://boxlang.ortusbooks.com/readme/release-history/1.4.0)
+
+### 🐛 Fixed
+
+- Updates to Request Context based on BoxLang v1.4.0 updates
+- Lots of dependency updates
+
 ## [1.0.11] - 2025-06-10
 
 ### 🐛 Fixed

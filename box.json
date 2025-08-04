@@ -13,9 +13,11 @@
 	"slug": "bx-orm",
 	"shortDescription": "ORM for BoxLang",
 	"type": "boxlang-modules",
-	"keywords": ["boxlang"],
+	"keywords": [
+		"boxlang"
+	],
 	"boxlang": {
-		"minimumVersion": "1.0.0",
+		"minimumVersion": "1.4.0",
 		"moduleName": "orm"
 	},
 	"private": false,

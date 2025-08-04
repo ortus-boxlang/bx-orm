@@ -11,9 +11,8 @@ import org.hibernate.tuple.entity.EntityMetamodel;
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
-import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
-import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.runnables.IBoxRunnable;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.types.Struct;
@@ -33,7 +32,7 @@ public class BoxLazyInitializer extends AbstractLazyInitializer implements Seria
 	private final PersistentClass		mappingInfo;
 	private final EntityMetamodel		entityMetamodel;
 	private final ORMApp				ormApp;
-	private RequestBoxContext			context;
+	private IBoxContext					context;
 	private final EntityRecord			entityRecord;
 	private final BoxClassInstantiator	boxClassInstantiator;
 
@@ -44,9 +43,6 @@ public class BoxLazyInitializer extends AbstractLazyInitializer implements Seria
 		this.mappingInfo	= mappingInfo;
 
 		this.context		= RequestBoxContext.getCurrent();
-		if ( context == null ) {
-			context = new ScriptingRequestBoxContext( BoxRuntime.getInstance().getRuntimeContext() );
-		}
 		this.ormApp			= ORMRequestContext.getForContext( context ).getORMApp();
 		this.entityRecord	= ormApp.lookupEntity( entityName, true );
 

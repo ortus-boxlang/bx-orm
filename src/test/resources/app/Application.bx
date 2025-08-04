@@ -25,8 +25,8 @@ class{
 	};
 	this.datasource = "TestDB";
 
-	println( "root expanded: " & this.mappings[ "/root" ] );
-	println( "expanded expansion: " & expandPath( "/root/models" ) );
+	//println( "root expanded: " & this.mappings[ "/root" ] );
+	//println( "expanded expansion: " & expandPath( "/root/models" ) );
 
 	this.ormSettings={
 		"datasource"    : "TestDB",
