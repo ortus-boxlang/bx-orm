@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-08-04
+
 ### ⛓️‍💥Changed
 
 - This new version only works with the fixes on [BoxLang v1.4.0](https://boxlang.ortusbooks.com/readme/release-history/1.4.0)
@@ -136,28 +138,17 @@ No significant changes.
 
 - First iteration of this module
 
-[Unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.11...HEAD
-
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.11...v1.1.0
 [1.0.11]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.10...v1.0.11
-
 [1.0.10]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.9...v1.0.10
-
 [1.0.9]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.8...v1.0.9
-
 [1.0.8]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.7...v1.0.8
-
 [1.0.7]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.6...v1.0.7
-
 [1.0.6]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.5...v1.0.6
-
 [1.0.5]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.4...v1.0.5
-
 [1.0.4]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.3...v1.0.4
-
 [1.0.3]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.2...v1.0.3
-
 [1.0.2]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.1...v1.0.2
-
 [1.0.1]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.0...v1.0.1
-
 [1.0.0]: https://github.com/ortus-boxlang/bx-orm/compare/2fe797c6330a5d110f3bfbc5ead058df9bdbe89e...v1.0.0
