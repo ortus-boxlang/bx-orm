@@ -19,12 +19,15 @@ package ortus.boxlang.modules.orm.hibernate;
 
 import org.hibernate.EntityNameResolver;
 
+import ortus.boxlang.modules.orm.ORMApp;
+import ortus.boxlang.modules.orm.ORMRequestContext;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.types.IStruct;
-import ortus.boxlang.runtime.util.FQN;
 
 /**
  * Determine entity names for a given entity/boxlang class.
@@ -44,10 +47,15 @@ public class BoxEntityNameResolver implements EntityNameResolver {
 				result = StringCaster.cast( annotations.get( ORMKeys.entityName ) );
 			}
 			if ( result == null || result.isBlank() ) {
-				String className = boxClass.getClass().getName().replace( ORMService.COMPILED_CLASS_PREFIX, "" )
-				    .replace( ORMService.BX_CLASS_SUFFIX, "" )
+				String			className		= boxClass.getClass().getSimpleName().replace( ORMService.BX_CLASS_SUFFIX, "" )
 				    .replace( ORMService.CFC_CLASS_SUFFIX, "" );
-				result = FQN.of( className ).getClassName();
+				ORMApp			ormApp			= ORMRequestContext.getForContext( RequestBoxContext.getCurrent() ).getORMApp();
+				EntityRecord	entityRecord	= ormApp.lookupEntity( className, false );
+				if ( entityRecord != null ) {
+					result = entityRecord.getEntityName();
+				} else {
+					result = className;
+				}
 			}
 			return result.trim();
 		}
