@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛Fixed
+
+- changed Array.fromString usage to use ListUtil as the method was removed from the Array class in v1.5.0 of the core
+
 ## [1.1.0] - 2025-08-04
 
 ### ⛓️‍💥Changed
