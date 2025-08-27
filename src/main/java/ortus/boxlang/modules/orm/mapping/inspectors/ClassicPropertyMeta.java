@@ -29,13 +29,14 @@ import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.types.util.JSONUtil;
+import ortus.boxlang.runtime.types.util.ListUtil;
 
 /**
  * A "Classic", aka traditional, implementation of the property metadata configuration.
  *
  * i.e. handles translating CFML property annotations like `sqltype="varchar"` into the IPropertyMeta interface for consistent reference by the
  * HibernateXMLWriter.
- * 
+ *
  * @since 1.0.0
  */
 public class ClassicPropertyMeta extends AbstractPropertyMeta {
@@ -366,7 +367,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
 	/**
 	 * Parse a struct notation string into a struct.
-	 * 
+	 *
 	 * @param value String notation of a struct, like `{ foo = 'bar', "baz" = 'qux' }`
 	 */
 	public IStruct parseStructNotation( String value ) {
@@ -375,7 +376,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
 		value = value.substring( 1, value.length() - 1 );
 		IStruct	params	= new Struct();
-		Array	items	= Array.fromString( value, "," );
+		Array	items	= ListUtil.asList( value, "," );
 		items.forEach( ( item ) -> {
 			String pair[] = item.toString().trim().split( "=" );
 			if ( pair.length != 2 )
