@@ -85,7 +85,7 @@ public class ORMConfigTest extends BaseORMTest {
 	public void testDefaultOpposites() {
 		ORMConfig config = new ORMConfig( Struct.of(
 		    // common settings
-		    ORMKeys.entityPaths, Array.fromString( "/foo/models" ),
+		    ORMKeys.entityPaths, Array.of( "/foo/models" ),
 		    ORMKeys.dialect, "org.hibernate.dialect.SQLServer2008Dialect",
 		    ORMKeys.dbcreate, "update",
 

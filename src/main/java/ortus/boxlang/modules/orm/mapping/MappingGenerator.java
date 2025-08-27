@@ -64,7 +64,7 @@ import ortus.boxlang.runtime.util.ResolvedFilePath;
 /**
  * Hibernate entity mapping generator. Responsible for walking the file tree and generating hibernate mapping configurations for each discovered
  * persistent entity.
- * 
+ *
  * @since 1.0.0
  */
 public class MappingGenerator {
@@ -421,7 +421,9 @@ public class MappingGenerator {
 			result.getRoot().accept( visitor );
 		} catch ( Throwable e ) {
 			if ( config.ignoreParseErrors ) {
-				logger.error( "Failed to parse class metadata for [{}]: {}", clazzPath, e.getMessage() );
+				logger.warn(
+				    "ORM Mapping Generator: Failed to parse class metadata for [{}]: {}. If this class is not an ORM entity, you can safely ignore this message.",
+				    clazzPath, e.getMessage() );
 				return Struct.EMPTY; // return empty struct if ignoreParseErrors is true
 			}
 			throw new BoxRuntimeException( "Failed to get metadata for class: " + clazzPath.toString(), e );

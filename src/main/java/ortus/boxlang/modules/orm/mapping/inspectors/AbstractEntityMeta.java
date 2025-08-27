@@ -153,46 +153,55 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 		// @TODO: We need to reimplement or rethink this to work recursively upwards. i.e., this current logic only works for one level of inheritance. :/
 		if ( this.isExtended ) {
-			IStruct	parentAnnotations			= this.parentMeta.getAsStruct( Key.annotations );
-			// @Entity
-			boolean	isParentPersistent			= parentAnnotations.containsKey( ORMKeys.entity )
-			    // persistent="false"
-			    || ( parentAnnotations.containsKey( ORMKeys.persistent )
-			        && BooleanCaster.cast( parentAnnotations.getOrDefault( ORMKeys.persistent, false ) ) );
-			// @mappedSuperClass
-			boolean	isParentMappedSuperClass	= parentAnnotations.containsKey( ORMKeys.mappedSuperClass )
-			    // Default to true to support @mappedSuperClass without a value. Otherwise, mappedSuperClass=false will be parsed as boolean.
-			    && BooleanCaster.cast( parentAnnotations.getOrDefault( ORMKeys.mappedSuperClass, true ) );
-
-			if ( !isParentPersistent && isParentMappedSuperClass ) {
-				this.allProperties.addAll( this.parentMeta.getAsArray( Key.properties ) );
-				this.isSimpleEntity = true;
-			} else if ( isParentPersistent
-			    && ( this.annotations.containsKey( ORMKeys.joinColumn ) || this.annotations.containsKey( ORMKeys.discriminatorValue ) ) ) {
-				this.isSubclass	= true;
-				this.joinColumn	= this.annotations.getAsString( ORMKeys.joinColumn );
-				if ( this.joinColumn == null ) {
-					IStruct idColumn = this.parentMeta.getAsArray( Key.properties )
-					    .stream()
-					    .map( StructCaster::cast )
-					    .filter( item -> item.containsKey( Key.annotations ) )
-					    .filter( item -> {
-						    IStruct annotations = item.getAsStruct( Key.annotations );
-						    return annotations.containsKey( ORMKeys.fieldtype )
-						        && annotations.containsKey( Key.column )
-						        && annotations.getAsString( ORMKeys.fieldtype ).equalsIgnoreCase( "id" );
-					    }
-					    ).findFirst().orElse( null );
-					if ( idColumn != null ) {
-						this.joinColumn = idColumn.getAsStruct( Key.annotations ).getAsString( Key.column );
-					}
-				}
-				this.isSimpleEntity = false;
-			}
+			addParentMeta( this.parentMeta );
 		}
 
 		// Only add the current entity's properties after first adding any parent properties.
 		this.allProperties.addAll( this.meta.getAsArray( Key.properties ) );
+	}
+
+	private void addParentMeta( IStruct superMeta ) {
+		IStruct	parentAnnotations			= superMeta.getAsStruct( Key.annotations );
+		// @Entity
+		boolean	isParentPersistent			= parentAnnotations.containsKey( ORMKeys.entity )
+		    // persistent="false"
+		    || ( parentAnnotations.containsKey( ORMKeys.persistent )
+		        && BooleanCaster.cast( parentAnnotations.getOrDefault( ORMKeys.persistent, false ) ) );
+		// @mappedSuperClass
+		boolean	isParentMappedSuperClass	= parentAnnotations.containsKey( ORMKeys.mappedSuperClass )
+		    // Default to true to support @mappedSuperClass without a value. Otherwise, mappedSuperClass=false will be parsed as boolean.
+		    && BooleanCaster.cast( parentAnnotations.getOrDefault( ORMKeys.mappedSuperClass, true ) );
+
+		if ( !isParentPersistent && isParentMappedSuperClass ) {
+			// recurse upwards first
+			IStruct superSuperMeta = superMeta.getAsStruct( Key._EXTENDS );
+			if ( superSuperMeta != null && !superSuperMeta.isEmpty() ) {
+				addParentMeta( superSuperMeta );
+			}
+			// now apppend our parent properties
+			this.allProperties.addAll( superMeta.getAsArray( Key.properties ) );
+		} else if ( isParentPersistent
+		    && ( this.annotations.containsKey( ORMKeys.joinColumn ) || this.annotations.containsKey( ORMKeys.discriminatorValue ) ) ) {
+			this.isSubclass	= true;
+			this.joinColumn	= this.annotations.getAsString( ORMKeys.joinColumn );
+			if ( this.joinColumn == null ) {
+				IStruct idColumn = superMeta.getAsArray( Key.properties )
+				    .stream()
+				    .map( StructCaster::cast )
+				    .filter( item -> item.containsKey( Key.annotations ) )
+				    .filter( item -> {
+					    IStruct annotations = item.getAsStruct( Key.annotations );
+					    return annotations.containsKey( ORMKeys.fieldtype )
+					        && annotations.containsKey( Key.column )
+					        && annotations.getAsString( ORMKeys.fieldtype ).equalsIgnoreCase( "id" );
+				    }
+				    ).findFirst().orElse( null );
+				if ( idColumn != null ) {
+					this.joinColumn = idColumn.getAsStruct( Key.annotations ).getAsString( Key.column );
+				}
+			}
+			this.isSimpleEntity = false;
+		}
 	}
 
 	/**
