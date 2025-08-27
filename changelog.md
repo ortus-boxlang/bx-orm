@@ -142,7 +142,14 @@ No significant changes.
 
 ## [1.0.0] - 2025-03-26
 
+<<<<<<< HEAD
+
 * First iteration of this module
+=======
+
+- First iteration of this module
+
+>>>>>>> main
 
 [unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.0...HEAD
 [1.1.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.11...v1.1.0
