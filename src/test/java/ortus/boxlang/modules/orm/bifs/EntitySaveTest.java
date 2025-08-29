@@ -19,7 +19,6 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -154,7 +153,6 @@ public class EntitySaveTest extends BaseORMTest {
 
 	@DisplayName( "It can asssign a relationship to a discriminated entity by reference" )
 	@Test
-	@Disabled
 	public void testRelationshipAssignment() {
 		// @formatter:off
 		instance.executeSource(
@@ -188,8 +186,8 @@ public class EntitySaveTest extends BaseORMTest {
 
 					entitySave( contact );
 					ormFlush();
-
-					userObj = entityLoad( "ClientContact", contact.getUserId() );
+					ormClearSession();
+					userObj = entityLoadByPK( "ClientContact", contact.getUserId() );
 
 					result = isNull( userObj.getClient() );
 
