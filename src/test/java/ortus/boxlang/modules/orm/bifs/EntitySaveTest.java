@@ -19,6 +19,7 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -149,6 +150,59 @@ public class EntitySaveTest extends BaseORMTest {
 		assertThat( variables.getAsBoolean( Key.of( "preSaveDirty" ) ) ).isFalse();
 		assertThat( variables.getAsBoolean( Key.of( "postSaveDirty" ) ) ).isFalse();
 		assertThat( variables.getAsBoolean( Key.of( "postModifyDirty" ) ) ).isTrue();
+	}
+
+	@DisplayName( "It can asssign a relationship to a discriminated entity by reference" )
+	@Test
+	@Disabled
+	public void testRelationshipAssignment() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction {
+				try {
+					clientObj = entityNew( "Client",
+						{
+							name : "Client A",
+							createdDate : now(),
+							updatedDate : now()
+						}
+					);
+					entitySave( clientObj );
+					ormFlush();
+
+					contact = entityNew(
+						"ClientContact",
+						{
+							"isPrimaryContact" : true,
+							"fName" : "John",
+							"lName" : "Doe",
+							"title" : "Manager",
+							"email" : "foo@bar.com",
+							"password" : "f00b4r",
+							createdDate : now(),
+							updatedDate : now()
+						}
+					);
+					contact.setClient( clientObj );
+
+					entitySave( contact );
+					ormFlush();
+
+					userObj = entityLoad( "ClientContact", contact.getUserId() );
+
+					result = isNull( userObj.getClient() );
+
+				} finally {
+					transactionRollback();
+				}
+			}
+			ormClearSession();
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsBoolean( Key.of( "result" ) ) ).isFalse();
 	}
 
 }

@@ -56,7 +56,7 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Generate a Hibernate XML mapping document for a given IEntityMeta instance, which represents the parsed entity metadata (whether classic or modern
- * 
+ *
  * @since 1.0.0
  */
 public class HibernateXMLWriter {
@@ -864,8 +864,14 @@ public class HibernateXMLWriter {
 					    // This is the use case where the inheritance has a key element and we must add ourselves after it
 					    entityElementFinal.appendChild( node );
 				    } else {
-					    // This is the discriminator based inheritance, so we must add all relationships BEFORE the <join> element
-					    parent.insertBefore( node, entityElementFinal );
+					    // This is the discriminator based inheritance
+					    if ( node.getNodeName().equals( "bag" ) ) {
+						    // bag nodes go before the join element because their key is on the far side
+						    parent.insertBefore( node, entityElementFinal );
+					    } else {
+						    // many-to-one and one-to-one nodes go inside the join element because their key is on the near side
+						    entityElementFinal.appendChild( node );
+					    }
 				    }
 			    } else {
 				    classElement.appendChild( node );
