@@ -25,6 +25,7 @@ import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
 import ortus.boxlang.runtime.scopes.Key;
@@ -57,7 +58,11 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionBegin( IStruct args ) {
-		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
+		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
+		if ( !isORMEnabled( context.getRequestContext() ) ) {
+			return;
+		}
+
 		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
 		ORMConfig			config				= ormRequestContext.getConfig();
@@ -99,7 +104,11 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionCommit( IStruct args ) {
-		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
+		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
+		if ( !isORMEnabled( context.getRequestContext() ) ) {
+			return;
+		}
+
 		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
 
@@ -121,7 +130,11 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionRollback( IStruct args ) {
-		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
+		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
+		if ( !isORMEnabled( context.getRequestContext() ) ) {
+			return;
+		}
+
 		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
 		ORMConfig			config				= ormRequestContext.getConfig();
@@ -161,7 +174,11 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionEnd( IStruct args ) {
-		IBoxContext			context				= args.getAs( IBoxContext.class, Key.context );
+		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
+		if ( !isORMEnabled( context.getRequestContext() ) ) {
+			return;
+		}
+
 		ORMApp				ormApp				= ormService.getORMAppByContext( context );
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
 
@@ -179,5 +196,22 @@ public class TransactionManager extends BaseInterceptor {
 			ormSession.getTransaction().commit();
 			ormSession.flush();
 		} );
+	}
+
+	/**
+	 * Ensure ORM is enabled for this request before we attempt any transaction processing.
+	 *
+	 * @param requestContext Request context which will have an ORM config attached if ORM is enabled.
+	 */
+	private boolean isORMEnabled( RequestBoxContext requestContext ) {
+		if ( requestContext == null ) {
+			return false;
+		}
+		ORMConfig ormConfig = ORMConfig.loadFromContext( requestContext );
+		if ( ormConfig == null ) {
+			// ORM is not enabled for this application
+			return false;
+		}
+		return true;
 	}
 }
