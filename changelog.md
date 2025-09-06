@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2025-09-06
+
 ## [1.1.1] - 2025-08-27
 
 ### 🐛Fixed
@@ -161,7 +163,8 @@ No significant changes.
 
 > > > > > > > main
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.1...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.11...v1.1.0
 [1.0.11]: https://github.com/ortus-boxlang/bx-orm/compare/v1.0.10...v1.0.11
