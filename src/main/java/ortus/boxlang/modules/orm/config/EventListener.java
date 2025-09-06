@@ -18,6 +18,7 @@
 package ortus.boxlang.modules.orm.config;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Set;
 
 import org.hibernate.HibernateException;
@@ -352,9 +353,10 @@ public class EventListener
 			Key		propertyName	= Key.of( persistProperties[ i ] );
 			Object	propertyValue	= entity.getVariablesScope().get( propertyName );
 			Object	oldValue		= state[ i ];
-			if ( ( propertyValue == null && oldValue == null ) ||
-			    ( propertyValue != null && propertyValue.equals( oldValue ) ) ) {
-				logger.debug( String.format( " - No change on property %s, value remains %s", propertyName, oldValue ) );
+			if ( Objects.equals( oldValue, propertyValue ) ) {
+				if ( logger.isDebugEnabled() ) {
+					logger.debug( String.format( " - No change on property %s, value remains %s", propertyName, oldValue ) );
+				}
 				// no change
 				continue;
 			}
