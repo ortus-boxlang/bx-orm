@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛Fixed
 
+- [BLMODULES-85](https://ortussolutions.atlassian.net/browse/BLMODULES-85) - fixed an issue where transaction interception points would throw an error on non-orm-enabled applications
 - [BLMODULES-88](https://ortussolutions.atlassian.net/browse/BLMODULES-88) - Resolved an issue where entity modifications during orm events were not persisting correctly to the database
 - [BLMODULES-90](https://ortussolutions.atlassian.net/browse/BLMODULES-90) - Resolved an issue where numerics were not being coerced correctly to strings on applicable properties when used in ORMExecuteQuery
 
