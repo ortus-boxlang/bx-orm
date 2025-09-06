@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛Fixed
+
+- [BLMODULES-88](https://ortussolutions.atlassian.net/browse/BLMODULES-88) - Resolved an issue where entity modifications during orm events were not persisting correctly to the database
+- [BLMODULES-90](https://ortussolutions.atlassian.net/browse/BLMODULES-90) - Resolved an issue where numerics were not being coerced correctly to strings on applicable properties when used in ORMExecuteQuery
+
 ## [1.1.1] - 2025-08-27
 
 ### 🐛Fixed
