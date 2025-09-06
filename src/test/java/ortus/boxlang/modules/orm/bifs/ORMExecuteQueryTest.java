@@ -269,6 +269,30 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( item ).isEqualTo( 1 );
 	}
 
+	@DisplayName( "It can can update a record with a param of a different type than the orm type" )
+	@Test
+	public void canUpdateARecordORMParamTyping() {
+		// @formatter:off
+		instance.executeSource( """
+		transaction {
+			try{
+				result = ormExecuteQuery(
+					"UPDATE Category SET description = ? WHERE category = ?",
+					[ 123456, "Training" ]
+				);
+			} catch( any e ){
+				rethrow;
+			} finally {
+				transactionRollback();
+			}
+		}
+
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isEqualTo( 1 );
+	}
+
 	@DisplayName( "It can perform an IN query on the discriminator value" )
 	@Test
 	public void getDiscriminatorInQuery() {
