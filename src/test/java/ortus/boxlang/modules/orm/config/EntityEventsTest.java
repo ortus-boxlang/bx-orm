@@ -73,6 +73,57 @@ public class EntityEventsTest extends BaseORMTest {
 		assertThat( eventLog.toList() ).containsExactly( "preInsert", "postInsert" );
 	}
 
+	@DisplayName( "Will correctly modify entity during preInsert interception" )
+	@Test
+	public void testPreInsertModification() {
+
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction{
+				try{
+				badDate = dateAdd( "d", -1, now() );
+				effectiveNow = now();
+				author = entityNew(
+					"cbAuthor",
+					{
+						firstName : "Jaime",
+						lastName: "Ramirez",
+						email : "jaime@ortussolutions.com",
+						username : "jramirez",
+						password : "password",
+						lastLogin: badDate,
+						createdDate :badDate,
+						modifiedDate : badDate
+					}
+				);
+					entitySave( author, true );
+					ormFlush();
+					ormClearSession();
+					author = EntityLoadByPK( "cbAuthor", author.getAuthorId() );
+					firstModifyDate = author.getModifiedDate();
+					println( "Effective Now: #effectiveNow#, Created: #author.getCreatedDate()#, Modified: #author.getModifiedDate()#, LastLogin: #author.getLastLogin()#" );
+					result = author.getCreatedDate() >= effectiveNow && author.getModifiedDate() >= effectiveNow && author.getLastLogin() >= effectiveNow;
+					author.setPassword( "password2" );
+					entitySave( author, true );
+					ormFlush();
+					ormClearSession();
+					author = EntityLoadByPK( "cbAuthor", author.getAuthorId() );
+					result2 = author.getModifiedDate() > firstModifyDate;
+				} catch( any e ){
+					rethrow;
+				} finally {
+					transactionRollback();
+				}
+			}
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsBoolean( result ) ).isTrue();
+		assertThat( variables.getAsBoolean( Key.of( "result2" ) ) ).isTrue();
+	}
+
 	@DisplayName( "It fires preUpdate,postUpdate" )
 	@Test
 	public void testEntityUpdateEvents() {

@@ -70,7 +70,7 @@ import ortus.boxlang.runtime.types.Struct;
 
 /**
  * Hibernate Event listener which wraps the event to fire the appropriate event handler on the global and/or entity event listener.
- * 
+ *
  * @since 1.0.0
  */
 public class EventListener
@@ -229,6 +229,8 @@ public class EventListener
 		announceGlobalEvent( ORMKeys.preUpdate, event, args );
 		announceEntityEvent( ORMKeys.preUpdate, ( IClassRunnable ) event.getEntity(), args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
+		// Update state so that changes made in the event are persisted
+		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), ( IClassRunnable ) event.getEntity() );
 		return false;
 	}
 
@@ -283,13 +285,16 @@ public class EventListener
 
 	@Override
 	public boolean onPreInsert( PreInsertEvent event ) {
-		IStruct args = Struct.of(
+		IClassRunnable	entity	= ( IClassRunnable ) event.getEntity();
+		IStruct			args	= Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, entity
 		);
 		announceGlobalEvent( ORMKeys.preInsert, event, args );
-		announceEntityEvent( ORMKeys.preInsert, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.preInsert, ( IClassRunnable ) entity, args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
+		// update our entity state to ensure changes persist
+		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), ( IClassRunnable ) entity );
 		return false;
 	}
 
@@ -327,6 +332,36 @@ public class EventListener
 
 			// Fire the method on the entity itself
 			RequestBoxContext.runInContext( ( ctx ) -> entity.dereferenceAndInvoke( ctx, eventType, args, false ) );
+		}
+	}
+
+	/**
+	 * Sync the any internal changes to the entity back to the event state array so that they are persisted.
+	 *
+	 * See http://anshuiitk.blogspot.com/2010/11/hibernate-pre-database-opertaion-event.html
+	 *
+	 * @param state             The entity state to persist
+	 * @param persistProperties Array of properties to update
+	 * @param entity            The entity to test for altered values.
+	 */
+	private void updateEntityEventState( Object[] state, String[] persistProperties, IClassRunnable entity ) {
+		if ( logger.isDebugEnabled() ) {
+			logger.debug( String.format( "Updating state changes on state properties %s", Arrays.toString( persistProperties ) ) );
+		}
+		for ( int i = 0; i < persistProperties.length; i++ ) {
+			Key		propertyName	= Key.of( persistProperties[ i ] );
+			Object	propertyValue	= entity.getVariablesScope().get( propertyName );
+			Object	oldValue		= state[ i ];
+			if ( ( propertyValue == null && oldValue == null ) ||
+			    ( propertyValue != null && propertyValue.equals( oldValue ) ) ) {
+				logger.debug( String.format( " - No change on property %s, value remains %s", propertyName, oldValue ) );
+				// no change
+				continue;
+			}
+			state[ i ] = propertyValue;
+			if ( logger.isDebugEnabled() ) {
+				logger.debug( String.format( " - Updated property %s from %s to value %s", propertyName, oldValue, propertyValue ) );
+			}
 		}
 	}
 

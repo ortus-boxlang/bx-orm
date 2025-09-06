@@ -160,4 +160,17 @@ class
 				cascade="delete";
 
 
+	function preInsert( entity ){
+		println( "In Author preInsert" );
+		entity.setCreatedDate( now() );
+		setLastLogin( now() );
+		setModifiedDate( now() );
+	}
+
+	function preUpdate( entity ){
+		println( "In Author preUpdate" );
+		setModifiedDate( now() );
+	}
+
+
 }
