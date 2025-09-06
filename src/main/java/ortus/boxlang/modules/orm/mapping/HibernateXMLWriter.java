@@ -42,6 +42,7 @@ import ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.DoubleConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.IntegerConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.ShortConverter;
+import ortus.boxlang.modules.orm.hibernate.converters.StringConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.TimeConverter;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
@@ -56,7 +57,7 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Generate a Hibernate XML mapping document for a given IEntityMeta instance, which represents the parsed entity metadata (whether classic or modern
- * 
+ *
  * @since 1.0.0
  */
 public class HibernateXMLWriter {
@@ -864,8 +865,14 @@ public class HibernateXMLWriter {
 					    // This is the use case where the inheritance has a key element and we must add ourselves after it
 					    entityElementFinal.appendChild( node );
 				    } else {
-					    // This is the discriminator based inheritance, so we must add all relationships BEFORE the <join> element
-					    parent.insertBefore( node, entityElementFinal );
+					    // This is the discriminator based inheritance
+					    if ( node.getNodeName().equals( "bag" ) ) {
+						    // bag nodes go before the join element because their key is on the far side
+						    parent.insertBefore( node, entityElementFinal );
+					    } else {
+						    // many-to-one and one-to-one nodes go inside the join element because their key is on the near side
+						    entityElementFinal.appendChild( node );
+					    }
 				    }
 			    } else {
 				    classElement.appendChild( node );
@@ -1094,12 +1101,15 @@ public class HibernateXMLWriter {
 		return switch ( normalizedType ) {
 			case "time" -> "converted::" + TimeConverter.class.getName();
 			case "boolean" -> "converted::" + BooleanConverter.class.getName();
+			case "yes_no" -> "converted::" + BooleanConverter.class.getName();
+			case "true_false" -> "converted::" + BooleanConverter.class.getName();
 			case "timestamp" -> "converted::" + DateTimeConverter.class.getName();
 			case "double" -> "converted::" + DoubleConverter.class.getName();
 			case "short" -> "converted::" + ShortConverter.class.getName();
 			case "integer" -> "converted::" + IntegerConverter.class.getName();
 			case "biginteger" -> "converted::" + BigIntegerConverter.class.getName();
 			case "bigdecimal" -> "converted::" + BigDecimalConverter.class.getName();
+			case "string" -> "converted::" + StringConverter.class.getName();
 			default -> normalizedType;
 		};
 	}

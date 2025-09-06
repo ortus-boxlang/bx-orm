@@ -23,6 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import tools.BaseORMTest;
 
@@ -39,6 +40,20 @@ public class EntityLoadTest extends BaseORMTest {
 		assertThat( variables.get( result ) ).isNotNull();
 		assertThat( variables.get( result ) ).isInstanceOf( Array.class );
 		assertThat( variables.getAsArray( result ).getFirst() ).isInstanceOf( IClassRunnable.class );
+	}
+
+	@DisplayName( "It can load array of entities with no filter or ID" )
+	@Test
+	public void testEntityLoadByIdUnique() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityLoad( 'Manufacturer', 1, true );
+			result2 = result.getName();
+		""", context );
+		// @formatter:on
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
+		assertThat( variables.get( Key.of( "result2" ) ) ).isEqualTo( "Ford Motor Company" );
 	}
 
 	@DisplayName( "It can load array of entities by ID" )

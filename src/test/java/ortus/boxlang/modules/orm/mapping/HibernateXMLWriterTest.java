@@ -51,6 +51,7 @@ import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter;
+import ortus.boxlang.modules.orm.hibernate.converters.StringConverter;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -289,7 +290,7 @@ public class HibernateXMLWriterTest {
 		Node		propertyNode	= classEl.getLastChild();
 
 		assertThat( propertyNode.getAttributes().getNamedItem( "type" ).getTextContent() )
-		    .isEqualTo( "string" );
+		    .isEqualTo( "converted::" + StringConverter.class.getName() );
 	}
 
 	// @formatter:off
@@ -319,16 +320,16 @@ public class HibernateXMLWriterTest {
 		Node		barNoneNode	= barNode.getNextSibling();
 
 		assertThat( nameNode.getAttributes().getNamedItem( "type" ).getTextContent() )
-		    .isEqualTo( "string" );
+		    .isEqualTo( "converted::" + StringConverter.class.getName() );
 
 		assertThat( fooNode.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( "converted::" + DateTimeConverter.class.getName() );
 
 		assertThat( barNode.getAttributes().getNamedItem( "type" ).getTextContent() )
-		    .isEqualTo( "string" );
+		    .isEqualTo( "converted::" + StringConverter.class.getName() );
 
 		assertThat( barNoneNode.getAttributes().getNamedItem( "type" ).getTextContent() )
-		    .isEqualTo( "string" );
+		    .isEqualTo( "converted::" + StringConverter.class.getName() );
 	}
 
 	// @formatter:off
@@ -539,7 +540,7 @@ public class HibernateXMLWriterTest {
 		assertThat( propertyAttributes.getNamedItem( "name" ).getTextContent() )
 		    .isEqualTo( "the_name" );
 		assertThat( propertyAttributes.getNamedItem( "type" ).getTextContent() )
-		    .isEqualTo( "string" );
+		    .isEqualTo( "converted::" + StringConverter.class.getName() );
 		assertThat( propertyAttributes.getNamedItem( "index" ).getTextContent() )
 		    .isEqualTo( "nameIndex" );
 
@@ -579,7 +580,7 @@ public class HibernateXMLWriterTest {
 		NamedNodeMap	propertyAttributes	= propertyNode.getAttributes();
 
 		assertThat( propertyAttributes.getNamedItem( "name" ).getTextContent() ).isEqualTo( "order" );
-		assertThat( propertyAttributes.getNamedItem( "type" ).getTextContent() ).isEqualTo( "string" );
+		assertThat( propertyAttributes.getNamedItem( "type" ).getTextContent() ).isEqualTo( "converted::" + StringConverter.class.getName() );
 
 		Node columnNode = propertyNode.getFirstChild();
 		assertThat( columnNode.getAttributes().getNamedItem( "name" ).getTextContent() ).isEqualTo( "`order`" );
