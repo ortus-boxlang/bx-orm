@@ -46,7 +46,7 @@ public class EntityNew extends BaseORMBIF {
 		declaredArguments = new Argument[] {
 		    new Argument( true, "String", ORMKeys.entityName, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
 		    new Argument( false, "Struct", Key.properties ),
-		    new Argument( false, "Boolean", ORMKeys.ignoreExtras, true, Set.of( Validator.NOT_IMPLEMENTED ) )
+		    new Argument( false, "Boolean", ORMKeys.ignoreExtras, Set.of( Validator.NOT_IMPLEMENTED ) )
 		};
 	}
 
