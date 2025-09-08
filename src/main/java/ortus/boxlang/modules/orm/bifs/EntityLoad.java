@@ -70,6 +70,25 @@ public class EntityLoad extends BaseORMBIF {
 
 	/**
 	 * Load an entity or array of entities from the database.
+	 * 
+	 * You can pass a struct of query options, including pagination, caching, and sort options.
+	 * 
+	 * <h2>Parameters</h2>
+	 * The <code>parameters</code> argument can be used to bind parameters to the SQL query.
+	 * You can use either an array of binding parameters or a struct of named binding parameters.
+	 * 
+	 * <h2>Options</h2>
+	 * 
+	 * <ul>
+	 * <li><strong><code>unique</code></strong> - Boolean. Specifies whether to retrieve a single, unique item. Default is `false`.</li>
+	 * <li><strong><code>ignorecase</code></strong> - Boolean. Ignores the case of sort order when set to true. Use only if you specify the sortorder
+	 * parameter. Defaults to `false`.</li>
+	 * <li><strong><code>offset</code></strong> - Number. Specifies the pagination offset. Defaults to 0.</li>
+	 * <li><strong><code>maxresults</code></strong> - Number. Specifies the maximum number of objects to be retrieved.</li>
+	 * <li><strong><code>cacheable</code></strong> - Boolean. Whether the result has to be cached in the secondary cache. Default is `false`.</li>
+	 * <li><strong><code>cachename</code></strong> - String. Name of the cache in secondary cache.</li>
+	 * <li><strong><code>timeout</code></strong> - Number. Specifies the timeout value (in seconds) for the query. No timeout by default.</li>
+	 * </ul>
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.

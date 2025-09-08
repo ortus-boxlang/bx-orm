@@ -58,6 +58,30 @@ public class ORMExecuteQuery extends BaseORMBIF {
 
 	/**
 	 * Execute an HQL query with (optional) parameters and specific query options.
+	 * 
+	 * <h2>Parameters</h2>
+	 * The <code>parameters</code> argument can be used to bind parameters to the SQL query.
+	 * You can use either an array of binding parameters or a struct of named binding parameters.
+	 * 
+	 * The SQL must have the parameters bound using the syntax <code>?</code> for positional parameters or <code>:name</code> for named parameters.
+	 * <p>
+	 * Example:
+	 *
+	 * <pre>
+	 * ORMExecuteQuery( hql: "FROM autos WHERE make = ?", params: [ 'Ford' ] );
+	 * ORMExecuteQuery( hql: "FROM autos WHERE make = :make", params: { make: 'Ford' } );
+	 * </pre>
+	 * 
+	 * <h2>Options</h2>
+	 * 
+	 * The options struct can contain any of the following keys:
+	 * <ul>
+	 * <li><strong><code>unique</code></strong> - Specifies whether to retrieve a single, unique item. Default is false.</li>
+	 * <li><strong><code>datasource</code></strong> - The datasource to use for the query. If not specified, the default datasource will be used.</li>
+	 * <li><strong><code>offset</code></strong> - Specifies the position from which to retrieve the objects. Default is 0.</li>
+	 * <li><strong><code>maxresults</code></strong> - Specifies the maximum number of objects to be retrieved. Default is no limit.</li>
+	 * <li><strong><code>readonly</code></strong> - If true, the query will be read-only. Default is false.</li>
+	 * </ul>
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
