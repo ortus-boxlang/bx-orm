@@ -43,10 +43,12 @@ public class EntityReload extends BaseORMBIF {
 	}
 
 	/**
-	 * Reload an entity from the database.
+	 * Reload an entity from the database. Will repopulate all persistent properties on the entity with the latest values from the database.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.entity The entity instance to reload.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		Object entity = arguments.get( ORMKeys.entity );

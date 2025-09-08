@@ -54,12 +54,19 @@ public class EntityLoadByPK extends BaseORMBIF {
 	 * is supported. To return an array of entities, use the `entityLoad` BIF.
 	 * <p>
 	 * Composite keys are also supported:
-	 * <code>
+	 * 
+	 * <pre>
 	 * entityLoadByPK( "VehicleType", { make : "Ford", model: "Fusion" } );
-	 * </code>
+	 * </pre>
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.entity The name of the entity to load.
+	 * 
+	 * @argument.id The primary key value, or a struct of key/value pairs for composite keys.
+	 * 
+	 * @argument.unique Not implemented. In BoxLang, a single entity is always returned.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String	entityName	= arguments.getAsString( ORMKeys.entity );

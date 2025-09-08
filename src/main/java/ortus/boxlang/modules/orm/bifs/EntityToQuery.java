@@ -49,10 +49,14 @@ public class EntityToQuery extends BaseORMBIF {
 	}
 
 	/**
-	 * ExampleBIF
+	 * Convert an entity or array of entities to a Query object.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.entity An instance of an ORM entity or an array of entities.
+	 * 
+	 * @argument.name The name of the entity. Required if `entity` is an array.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		ORMApp			ormApp			= ORMRequestContext.getForContext( context.getRequestContext() ).getORMApp();

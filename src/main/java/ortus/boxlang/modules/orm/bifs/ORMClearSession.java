@@ -56,7 +56,7 @@ public class ORMClearSession extends BaseORMBIF {
 		Key					datasourceName	= Key.of( StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" ) );
 		ORMRequestContext	ormContext		= ORMRequestContext.getForContext( context.getRequestContext() );
 
-		// If not ORM app found then ignore
+		// If no ORM app found then ignore
 		if ( ormContext.hasORMApp() ) {
 			ormContext.getSession( datasourceName.isEmpty() ? null : datasourceName ).clear();
 			return true;

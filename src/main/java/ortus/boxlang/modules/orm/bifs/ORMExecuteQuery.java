@@ -57,10 +57,19 @@ public class ORMExecuteQuery extends BaseORMBIF {
 	}
 
 	/**
-	 * ORMExecuteQuery
+	 * Execute an HQL query with (optional) parameters and specific query options.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.hql The HQL query string to execute.
+	 * 
+	 * @argument.params Optional parameters for the HQL query. Can be a struct of named parameters or an array of positional parameters.
+	 * 
+	 * @argument.unique Optional boolean indicating whether to return a unique result (true) or a list of results (false). If true, the query will return
+	 *                  a single object or null if no results found.
+	 * 
+	 * @argument.options Optional struct of additional query options.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IStruct	options		= arguments.containsKey( Key.options ) && arguments.get( Key.options ) != null

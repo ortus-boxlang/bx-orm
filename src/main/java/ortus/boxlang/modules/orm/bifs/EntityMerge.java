@@ -45,10 +45,12 @@ public class EntityMerge extends BaseORMBIF {
 	}
 
 	/**
-	 * Merge the state of the given entity into the current persistence context.
+	 * Merge the state of the given entity into the current persistence context (session).
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.entity The entity instance to merge.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );

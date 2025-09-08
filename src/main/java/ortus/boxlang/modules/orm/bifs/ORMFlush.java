@@ -40,12 +40,12 @@ public class ORMFlush extends BaseORMBIF {
 	}
 
 	/**
-	 * ORMFlush
-	 * <p>
 	 * Flush the Hibernate session - synchronizing the in-memory state with the database.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.datasource The datasource on which to flush the current session. If not provided, the default datasource will be used.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();

@@ -53,7 +53,9 @@ public class EntitySave extends BaseORMBIF {
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 * 
-	 * @return
+	 * @arguments.entity The entity instance to save.
+	 * 
+	 * @arguments.forceinsert If true, will force an insert operation. Otherwise, a saveOrUpdate operation will be performed.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );

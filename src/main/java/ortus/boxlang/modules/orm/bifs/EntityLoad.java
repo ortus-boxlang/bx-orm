@@ -73,6 +73,14 @@ public class EntityLoad extends BaseORMBIF {
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.entityName The name of the entity to load.
+	 * 
+	 * @argument.idOrFilter Either the ID of the entity to load, or a struct of filter criteria.
+	 * 
+	 * @argument.uniqueOrOrder Either a boolean indicating whether to return a unique result, or a string/array of order by clauses.
+	 * 
+	 * @argument.options A struct of options to modify the load operation. See below for supported options.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		if ( arguments.get( ORMKeys.uniqueOrOrder ) != null && arguments.get( ORMKeys.options ) == null

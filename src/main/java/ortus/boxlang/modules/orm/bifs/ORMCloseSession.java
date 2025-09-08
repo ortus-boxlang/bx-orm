@@ -49,8 +49,6 @@ public class ORMCloseSession extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 * 
 	 * @argument.datasource The datasource on which to close the current session. If not provided, the default datasource will be used.
-	 * 
-	 * @return null.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );

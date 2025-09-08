@@ -47,9 +47,13 @@ public class EntityDelete extends BaseORMBIF {
 
 	/**
 	 * Delete an entity from the database.
+	 * 
+	 * Delete operations will cascade to related entities if `cascade` is enabled on the relationship property.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.entity The entity instance to delete.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );
