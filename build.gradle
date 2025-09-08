@@ -37,6 +37,7 @@ repositories {
 dependencies {
 	// BoxLang Dependencies
 	compileOnly "io.boxlang:boxlang:1.5.0"
+	testImplementation "io.boxlang:boxlang:1.5.0"
 
 	// Implementation Dependencies
 	// https://mvnrepository.com/artifact/org.hibernate.orm/hibernate-core
