@@ -35,17 +35,8 @@ repositories {
 }
 
 dependencies {
-	// Until BoxLang is published to Maven Central
-	// Look for it in the local build directory
-	// You must run `./gradle build -x test` in the BoxLang project
-	// compileOnly files( '../../boxlang/build/distributions/boxlang-' + boxlangVersion + '.jar' )
-	if ( file( '../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' ).exists() ) {
-		compileOnly files( '../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
-		testImplementation files( '../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
-	} else {
-		compileOnly files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
-		testImplementation files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
-	}
+	// BoxLang Dependencies
+	compileOnly "io.boxlang:boxlang:1.5.0"
 
 	// Implementation Dependencies
 	// https://mvnrepository.com/artifact/org.hibernate.orm/hibernate-core
@@ -233,6 +224,37 @@ task downloadBoxLang( type: Download ) {
     dest "src/test/resources/libs/"
     overwrite true
     onlyIfModified false
+}
+
+task downloadDocGenerator( type: Download ) {
+	// Create the destination directory
+	doFirst {
+		file( "build/resources/libs" ).mkdirs()
+	}
+    // Configure the URL of the file to download
+    src "https://downloads.ortussolutions.com/ortussolutions/boxlang-runtimes/boxlang-doc-generator/1.0.0-snapshot/boxlang-doc-generator-1.0.0-snapshot.jar"
+    // Specify the destination directory for the downloaded file
+    dest "build/resources/libs/boxlang-doc-generator-1.0.0-snapshot.jar"
+    overwrite true
+    onlyIfModified false
+}
+/**
+ * Generate/Scaffold technical documentation
+ */
+task generateTechnicalDocumentation( type: Javadoc ) {
+	source = sourceSets.main.java
+	dependsOn downloadDocGenerator, compileJava, serviceLoaderBuild
+	def classPaths = new ArrayList<File>( sourceSets.main.runtimeClasspath.getFiles() )
+	classPaths.addAll( sourceSets.main.java.getFiles() )
+	classPaths.addAll( configurations.compileClasspath.getFiles() )
+	classPaths.addAll( files( 'build/resources/libs/boxlang-doc-generator-1.0.0-snapshot.jar' ) )
+	options.classpath( classPaths )
+    classpath = sourceSets.main.allJava
+	options.addBooleanOption( "Xdoclint:none", true )
+	exclude '**/boxlang/parser/**'
+	options.addBooleanOption( 'html5', true )
+	options.doclet = "ortus.boxlang.tools.doclets.BoxLangDoclet"
+    options.docletpath = classPaths
 }
 
 /**
