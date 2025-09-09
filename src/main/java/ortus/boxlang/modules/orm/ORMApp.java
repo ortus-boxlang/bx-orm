@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.hibernate.Criteria;
 import org.hibernate.Session;
@@ -56,7 +57,7 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  * Manages a single ORM application and persists the lifetime of the boxlang application.
  *
  * Stores ORM configuration, datasources, session factories, and other until the ORM application is shut down or reloaded.
- * 
+ *
  * @since 1.0.0
  */
 public class ORMApp {
@@ -178,8 +179,8 @@ public class ORMApp {
 	private void configureLoggingPerORMConfig() {
 		if ( this.config.logSQL ) {
 			LoggerContext loggerContext = runtime.getLoggingService().getLoggerContext();
-			loggerContext.getLogger( "org.hibernate.SQL" ).setLevel( Level.DEBUG );
-			loggerContext.getLogger( "org.hibernate.type.descriptor.sql" ).setLevel( Level.DEBUG );
+			loggerContext.getLogger( "org.hibernate.SQL" ).setLevel( logger.isDebugEnabled() ? Level.TRACE : Level.DEBUG );
+			loggerContext.getLogger( "org.hibernate.type.descriptor.sql" ).setLevel( logger.isDebugEnabled() ? Level.TRACE : Level.DEBUG );
 		}
 	}
 
@@ -242,7 +243,7 @@ public class ORMApp {
 			}
 		}
 		if ( fail ) {
-			String entityNames = getEntityRecords().stream().map( er -> er.getEntityName() ).toString();
+			String entityNames = getEntityRecords().stream().map( er -> er.getEntityName() ).collect( Collectors.joining( ", " ) );
 			throw new BoxRuntimeException( "Entity not found: " + entityName + "; configured entities are [" + entityNames + "]" );
 		}
 		return null;

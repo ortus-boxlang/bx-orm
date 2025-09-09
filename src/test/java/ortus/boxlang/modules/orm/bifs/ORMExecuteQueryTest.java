@@ -293,6 +293,59 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( item ).isEqualTo( 1 );
 	}
 
+	@DisplayName( "It can can update a record using primary keys as object pointers" )
+	@Test
+	public void canUpdateARecordUsingOnlyPKsAsObjectPointers() {
+		// @formatter:off
+		instance.executeSource( """
+		transaction {
+			try{
+				result = ormExecuteQuery(
+					"UPDATE Vehicle SET manufacturer = :honda WHERE manufacturer = :ford",
+					{ honda : 42, ford : 1 }
+				);
+			} catch( any e ){
+				rethrow;
+			} finally {
+				transactionRollback();
+			}
+		}
+
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isEqualTo( 1 );
+	}
+
+	// TODO: Currently if an object is used in the where clause, it will not find the record to update
+	// - we need to determine why Hibernate is failing to match
+	@DisplayName( "It can can update a record using objects as params" )
+	@Test
+	public void canUpdateRecordsUsingObjectParams() {
+		// @formatter:off
+		instance.executeSource( """
+		transaction {
+			try{
+				honda = entityLoadByPK( "Manufacturer", 42 );
+				ford = entityLoadByPK( "Manufacturer", 1 );
+				assert !isNull( ford );
+				result = ormExecuteQuery(
+					"UPDATE Vehicle SET manufacturer = :honda WHERE manufacturer = :ford",
+					{ honda : honda, ford : ford.getId() }
+				);
+			} catch( any e ){
+				rethrow;
+			} finally {
+				transactionRollback();
+			}
+		}
+
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isEqualTo( 1 );
+	}
+
 	@DisplayName( "It can perform an IN query on the discriminator value" )
 	@Test
 	public void getDiscriminatorInQuery() {

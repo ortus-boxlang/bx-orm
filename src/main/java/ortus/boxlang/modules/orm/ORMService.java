@@ -108,7 +108,7 @@ public class ORMService extends BaseService {
 			// hibernateLogger.addAppender( consoleAppender );
 			hibernateLogger.addAppender( getLogger().getAppender( "orm" ) );
 			// Add a console appender to the Hibernate logger
-			hibernateLogger.setLevel( Level.INFO );
+			hibernateLogger.setLevel( logger.isDebugEnabled() ? Level.DEBUG : Level.INFO );
 			hibernateLogger.setAdditive( false ); // Prevent messages from going to parent loggers
 		}
 
