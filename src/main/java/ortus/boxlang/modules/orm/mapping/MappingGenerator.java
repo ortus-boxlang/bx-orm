@@ -34,7 +34,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.w3c.dom.Document;
 
 import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
@@ -261,7 +261,7 @@ public class MappingGenerator {
 				        // only files
 				        .filter( Files::isRegularFile )
 				        // Only .bx or .cfc class files
-				        .filter( file -> StringUtils.endsWithAny( file.toString(), ENTITY_EXTENSIONS ) )
+				        .filter( file -> Strings.CS.endsWithAny( file.toString(), ENTITY_EXTENSIONS ) )
 				        // map to a struct instance containing the location and file name. We need both to generate the FQN.
 				        .map( file -> Struct.of(
 				            // The base path to use for the class name
