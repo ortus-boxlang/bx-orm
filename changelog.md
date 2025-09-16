@@ -9,19 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+* [BLMODULES-94](https://ortussolutions.atlassian.net/browse/BLMODULES-94) - Fix incorrect casting in Getter
+
 ## [1.1.2] - 2025-09-06
 
-## [1.1.1] - 2025-08-27
+### 🐛 Fixed
 
-### 🐛Fixed
-
-- [BLMODULES-85](https://ortussolutions.atlassian.net/browse/BLMODULES-85) - fixed an issue where transaction interception points would throw an error on non-orm-enabled applications
+- [BLMODULES-84](https://ortussolutions.atlassian.net/browse/BLMODULES-84) - Resolved incorrect location of many-to-one on discriminated child
+- [BLMODULES-85](https://ortussolutions.atlassian.net/browse/BLMODULES-85) - Resolved an issue where transaction interception points would throw an error on non-orm-enabled applications
 - [BLMODULES-88](https://ortussolutions.atlassian.net/browse/BLMODULES-88) - Resolved an issue where entity modifications during orm events were not persisting correctly to the database
 - [BLMODULES-90](https://ortussolutions.atlassian.net/browse/BLMODULES-90) - Resolved an issue where numerics were not being coerced correctly to strings on applicable properties when used in ORMExecuteQuery
 
 ## [1.1.1] - 2025-08-27
 
-### 🐛Fixed
+### 🐛 Fixed
 
 - Changed Array.fromString usage to use ListUtil as the method was removed from the Array class in v1.5.0 of the core
 - [BLMODULES-83](https://ortussolutions.atlassian.net/browse/BLMODULES-83) - Resolved inheritiance and `mappedSuperClass` issues with 3+ levels
@@ -29,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0] - 2025-08-04
 
-### ⛓️‍💥Changed
+### ⛓️‍💥 Changed
 
 - This new version only works with the fixes on [BoxLang v1.4.0](https://boxlang.ortusbooks.com/readme/release-history/1.4.0)
 
@@ -154,14 +157,7 @@ No significant changes.
 
 ## [1.0.0] - 2025-03-26
 
-&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
-
-- # First iteration of this module
-
-
 - First iteration of this module
-
-> > > > > > > main
 
 [unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.2...HEAD
 [1.1.2]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.1...v1.1.2
