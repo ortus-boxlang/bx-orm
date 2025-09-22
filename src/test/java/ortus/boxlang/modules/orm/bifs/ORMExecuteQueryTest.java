@@ -331,7 +331,61 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 				assert !isNull( ford );
 				result = ormExecuteQuery(
 					"UPDATE Vehicle SET manufacturer = :honda WHERE manufacturer = :ford",
-					{ honda : honda, ford : ford.getId() }
+					{ honda : honda, ford : ford }
+				);
+			} catch( any e ){
+				rethrow;
+			} finally {
+				transactionRollback();
+			}
+		}
+
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isEqualTo( 1 );
+	}
+
+	// TODO: Currently if an object is used in the where clause, it will not find the record to update
+	// - we need to determine why Hibernate is failing to match
+	@DisplayName( "It can can delete a record using objects as params" )
+	@Test
+	public void canDeleteRecordsUsingObjectParams() {
+		// @formatter:off
+		instance.executeSource( """
+		transaction {
+			try{
+				ford = entityLoadByPK( "Manufacturer", 1 );
+				assert !isNull( ford );
+				result = ormExecuteQuery(
+					"DELETE Vehicle WHERE manufacturer = :ford",
+					{ ford : ford }
+				);
+			} catch( any e ){
+				rethrow;
+			} finally {
+				transactionRollback();
+			}
+		}
+
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "It can can delete a using a pk of a relationship" )
+	@Test
+	public void testDeleteRelationshipPK() {
+		// @formatter:off
+		instance.executeSource( """
+		transaction {
+			try{
+				ford = entityLoadByPK( "Manufacturer", 1 );
+				assert !isNull( ford );
+				result = ormExecuteQuery(
+					"DELETE Vehicle WHERE manufacturer = :ford",
+					{ ford : ford.getId() }
 				);
 			} catch( any e ){
 				rethrow;
