@@ -29,11 +29,13 @@ import org.hibernate.tuple.Instantiator;
 import org.hibernate.tuple.entity.AbstractEntityTuplizer;
 import org.hibernate.tuple.entity.EntityMetamodel;
 
+import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 
 /**
  * Hibernate implementation class for helping convert tuples (database rows) into boxlang classes.
- * 
+ *
  * @since 1.0.0
  */
 public class EntityTuplizer extends AbstractEntityTuplizer {
@@ -64,8 +66,13 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	@Override
 	public String determineConcreteSubclassEntityName( Object entityInstance, SessionFactoryImplementor factory ) {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'determineConcreteSubclassEntityName'" );
+		if ( entityInstance instanceof IClassRunnable runnableEntity ) {
+			return ORMService.getEntityName( runnableEntity );
+		} else if ( entityInstance instanceof BoxProxy proxyEntity ) {
+			return proxyEntity.getHibernateLazyInitializer().getEntityName();
+		} else {
+			throw new IllegalArgumentException( "Entity instance is not a valid BoxLang ORM entity or proxy." );
+		}
 	}
 
 	@Override
