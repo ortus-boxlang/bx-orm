@@ -64,9 +64,9 @@ public class ApplicationListener extends BaseInterceptor {
 	 * Remember that when this fires, there is NO APPLICATION scope or APPLICATION loaded yet.
 	 */
 	@InterceptionPoint
-	public void beforeApplicationListenerLoad( IStruct args ) {
+	public void afterApplicationListenerLoad( IStruct args ) {
 		this.logger.debug(
-		    "beforeApplicationListenerLoad fired; checking for ORM configuration"
+		    "afterApplicationListenerLoad fired; checking for ORM configuration"
 		);
 
 		RequestBoxContext		context				= ( RequestBoxContext ) args.get( Key.context );
