@@ -362,7 +362,6 @@ public class HQLQuery {
 						hqlQuery.setParameter( parameterIndex++, value );
 					}
 				} else {
-					System.out.println( "Setting query param at " + parameterIndex + " to " + param.getValue() );
 					hqlQuery.setParameter( parameterIndex++, param.getValue() );
 				}
 			}
