@@ -244,8 +244,14 @@ public class ORMService extends BaseService {
 		} else if ( entity instanceof IClassRunnable boxClass ) {
 			return getEntityName( boxClass );
 		} else {
-			// Returning null here allows hibernate to treat it as a non-entity ( e.g. an identifier )
-			return null;
+			if ( entity instanceof String entityString ) {
+				throw new BoxRuntimeException(
+				    "The string provided " + entityString + " is not a valid BoxLang ORM entity or proxy." );
+			} else {
+
+				throw new BoxRuntimeException(
+				    "The entity instance of " + entity.getClass().getName() + " is not a valid BoxLang ORM entity or proxy." );
+			}
 		}
 	}
 
