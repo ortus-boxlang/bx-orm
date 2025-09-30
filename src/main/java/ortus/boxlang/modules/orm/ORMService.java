@@ -30,6 +30,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.hibernate.BoxProxy;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.BaseApplicationListener;
@@ -42,6 +43,7 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.BaseService;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Java class responsible for constructing and managing the Hibernate ORM
@@ -230,6 +232,24 @@ public class ORMService extends BaseService {
 	}
 
 	/**
+	 * Retrieve the entity name for the given entity object
+	 *
+	 * @param entity
+	 *
+	 * @return
+	 */
+	public static String getEntityName( Object entity ) {
+		if ( entity instanceof BoxProxy proxyEntity ) {
+			return proxyEntity.getHibernateLazyInitializer().getEntityName();
+		} else if ( entity instanceof IClassRunnable boxClass ) {
+			return getEntityName( boxClass );
+		} else {
+			// Returning null here allows hibernate to treat it as a non-entity ( e.g. an identifier )
+			return null;
+		}
+	}
+
+	/**
 	 * Retrieve the entity name for the given entity class.
 	 *
 	 * @param entity Instance of IClassRunnable, aka the compiled/parsed entity.
@@ -253,6 +273,21 @@ public class ORMService extends BaseService {
 	 */
 	public static String getClassNameFromFQN( String fqn ) {
 		return fqn.substring( fqn.lastIndexOf( '.' ) + 1 );
+	}
+
+	/**
+	 * Retrieve the primary key value for the given entity instance.
+	 *
+	 * @param entity Instance of IClassRunnable, aka the compiled/parsed entity.
+	 *
+	 * @return The primary key value for the given entity instance.
+	 */
+	public static Object getEntityIdentifier( IClassRunnable entity ) {
+		IBoxContext context = RequestBoxContext.getCurrent();
+		if ( context == null ) {
+			throw new BoxRuntimeException( "No current request context available to retrieve entity identifier." );
+		}
+		return getEntityIdentifier( entity, context );
 	}
 
 	/**

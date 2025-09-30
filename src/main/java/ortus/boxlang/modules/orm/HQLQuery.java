@@ -43,7 +43,7 @@ import ortus.boxlang.runtime.types.exceptions.DatabaseException;
  * HQL Query representation
  * This class is responsible for processing HQL queries, binding parameters,
  * and executing the query against the ORM session.
- * 
+ *
  * @since 1.0.0
  */
 public class HQLQuery {
@@ -362,6 +362,7 @@ public class HQLQuery {
 						hqlQuery.setParameter( parameterIndex++, value );
 					}
 				} else {
+					System.out.println( "Setting query param at " + parameterIndex + " to " + param.getValue() );
 					hqlQuery.setParameter( parameterIndex++, param.getValue() );
 				}
 			}

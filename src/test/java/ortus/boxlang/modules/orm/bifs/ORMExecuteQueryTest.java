@@ -355,12 +355,16 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		instance.executeSource( """
 		transaction {
 			try{
+				function deleteVehiclesByManufacturer( manuf ) {
+					return ormExecuteQuery(
+						"DELETE Vehicle WHERE manufacturer = :manuf",
+						{ manuf : manuf }
+					);
+				}
+
 				ford = entityLoadByPK( "Manufacturer", 1 );
 				assert !isNull( ford );
-				result = ormExecuteQuery(
-					"DELETE Vehicle WHERE manufacturer = :ford",
-					{ ford : ford }
-				);
+				result = deleteVehiclesByManufacturer( ford );
 			} catch( any e ){
 				rethrow;
 			} finally {

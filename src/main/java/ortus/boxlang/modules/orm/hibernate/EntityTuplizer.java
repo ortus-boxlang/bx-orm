@@ -17,6 +17,8 @@
  */
 package ortus.boxlang.modules.orm.hibernate;
 
+import java.io.Serializable;
+
 import org.hibernate.EntityMode;
 import org.hibernate.EntityNameResolver;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
@@ -31,6 +33,7 @@ import org.hibernate.tuple.entity.EntityMetamodel;
 
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 
 /**
@@ -44,8 +47,22 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	public EntityTuplizer( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
 		super( entityMetamodel, mappingInfo );
+	}
 
-		// this.entityMetamodel = entityMetamodel;
+	@Override
+	public Serializable getIdentifier( Object entity ) {
+		Object identifier = entity;
+		if ( entity instanceof BoxProxy proxyEntity ) {
+			identifier = ORMService.getEntityIdentifier( proxyEntity.getRunnable() );
+		} else if ( entity instanceof IClassRunnable runnable ) {
+			identifier = ORMService.getEntityIdentifier( runnable );
+		}
+		if ( identifier instanceof Serializable serializableId ) {
+			return serializableId;
+		} else {
+			throw new IllegalArgumentException( "Entity identifier [" + StringCaster.cast( identifier ) + "] is not serializable." );
+		}
+
 	}
 
 	@Override
@@ -66,12 +83,13 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	@Override
 	public String determineConcreteSubclassEntityName( Object entityInstance, SessionFactoryImplementor factory ) {
-		if ( entityInstance instanceof IClassRunnable runnableEntity ) {
-			return ORMService.getEntityName( runnableEntity );
-		} else if ( entityInstance instanceof BoxProxy proxyEntity ) {
-			return proxyEntity.getHibernateLazyInitializer().getEntityName();
+		if ( entityInstance instanceof BoxProxy proxy ) {
+			return ORMService.getEntityName( proxy.getRunnable() );
+		} else if ( entityInstance instanceof IClassRunnable runnable ) {
+			return ORMService.getEntityName( runnable );
 		} else {
-			throw new IllegalArgumentException( "Entity instance is not a valid BoxLang ORM entity or proxy." );
+			// Returning null here allows hibernate to treat it as an identifier for HQL operations
+			return null;
 		}
 	}
 

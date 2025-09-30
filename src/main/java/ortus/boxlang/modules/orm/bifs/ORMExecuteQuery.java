@@ -161,9 +161,9 @@ public class ORMExecuteQuery extends BaseORMBIF {
 			}
 			return param;
 		} else if ( param instanceof BoxProxy proxyClass ) {
-			return proxyClass.getRunnable();
-		} else if ( param instanceof IClassRunnable runnableClass ) {
-			return ORMService.getEntityIdentifier( runnableClass, context );
+			return ORMService.getEntityIdentifier( proxyClass.getRunnable() );
+		} else if ( param instanceof IClassRunnable runnable ) {
+			return ORMService.getEntityIdentifier( runnable );
 		} else {
 			return param;
 		}
