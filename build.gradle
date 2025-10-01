@@ -35,9 +35,16 @@ repositories {
 }
 
 dependencies {
-	// BoxLang Dependencies
-	compileOnly "io.boxlang:boxlang:1.5.0"
-	testImplementation "io.boxlang:boxlang:1.5.0"
+	// // BoxLang Dependencies
+	if ( file( '../../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' ).exists() ) {
+		// Run against a local BoxLang build
+		// You must run `./gradle build -x test` in the BoxLang project
+		compileOnly files( '../../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
+		testImplementation files( '../../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
+	} else {
+		compileOnly "io.boxlang:boxlang:1.5.0"
+		testImplementation "io.boxlang:boxlang:1.5.0"
+	}
 
 	// Implementation Dependencies
 	// https://mvnrepository.com/artifact/org.hibernate.orm/hibernate-core
