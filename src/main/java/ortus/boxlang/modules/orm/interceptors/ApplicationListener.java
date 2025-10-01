@@ -17,8 +17,6 @@
  */
 package ortus.boxlang.modules.orm.interceptors;
 
-import java.net.URI;
-
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -59,37 +57,15 @@ public class ApplicationListener extends BaseInterceptor {
 	}
 
 	/**
-	 * Listen for application startup and construct a Hibernate session factory if
-	 * ORM configuration is present in the application config.
-	 * Remember that when this fires, there is NO APPLICATION scope or APPLICATION loaded yet.
-	 */
-	@InterceptionPoint
-	public void afterApplicationListenerLoad( IStruct args ) {
-		this.logger.debug(
-		    "afterApplicationListenerLoad fired; checking for ORM configuration"
-		);
-
-		RequestBoxContext		context				= ( RequestBoxContext ) args.get( Key.context );
-		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( Key.listener );
-		URI						startingTemplate	= ( URI ) args.get( Key.template );
-		ORMConfig				ormConfig			= ORMConfig.loadFromContext( context );
-
-		// If the starting template is null, it means, the listener is not linked to a template and no Application.bx, so ignore it.
-		if ( startingTemplate != null && ormConfig != null ) {
-			this.logger.debug( "ORMEnabled, starting up ORM app for [{}]", startingListener.getAppName() );
-			this.ormService.startupApp( context, ormConfig, startingListener );
-		}
-	}
-
-	/**
-	 * Listens for an application startup. If the application has been shutdown due to timeout we reload the app
+	 * Listens for an application startup to either start up the ORM application, or to reload the app if the application has been shutdown due to
+	 * timeout.
 	 *
 	 * @param args
 	 */
 	@InterceptionPoint
 	public void onApplicationStart( IStruct args ) {
 		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( Key.listener );
-		IBoxContext				context				= RequestBoxContext.getCurrent();
+		IBoxContext				context				= ( IBoxContext ) args.get( Key.context );
 		if ( context == null ) {
 			return;
 		}
