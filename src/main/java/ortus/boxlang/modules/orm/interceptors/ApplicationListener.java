@@ -67,7 +67,11 @@ public class ApplicationListener extends BaseInterceptor {
 		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( Key.listener );
 		IBoxContext				context				= ( IBoxContext ) args.get( Key.context );
 		if ( context == null ) {
-			return;
+			// Fallback for boxlang 1.5.0 which does not provide the context in the args
+			context = RequestBoxContext.getCurrent();
+			if ( context == null ) {
+				return;
+			}
 		}
 		RequestBoxContext requestContext = context.getRequestContext();
 		if ( requestContext == null ) {
@@ -77,6 +81,10 @@ public class ApplicationListener extends BaseInterceptor {
 		if ( ormConfig == null ) {
 			// ORM is not enabled for this application
 			return;
+		}
+		// Lazy-load the ORM service if needed, since it was not loaded into the runtime until after module initialization was done
+		if ( this.ormService == null ) {
+			this.ormService = ( ( ORMService ) getRuntime().getGlobalService( ORMKeys.ORMService ) );
 		}
 		if ( this.ormService.getORMAppByContext( requestContext ) == null ) {
 			this.ormService.startupApp( requestContext, ormConfig, startingListener );
@@ -90,6 +98,12 @@ public class ApplicationListener extends BaseInterceptor {
 	public void onApplicationEnd( IStruct args ) {
 		this.logger.debug( "onApplicationEnd fired; Shutting down ORM application" );
 		Application application = ( Application ) args.get( Key.application );
+
+		// Lazy-load the ORM service if needed, since it was not loaded into the runtime until after module initialization was done
+		if ( this.ormService == null ) {
+			this.ormService = ( ( ORMService ) getRuntime().getGlobalService( ORMKeys.ORMService ) );
+		}
+
 		// If the orm app doesn't exist, this is a no-op
 		this.ormService.shutdownApp( ORMService.buildUniqueAppName( application.getName(), application.getStartingListener().getSettings() ) );
 	}
