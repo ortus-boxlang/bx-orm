@@ -219,9 +219,12 @@ public class EventListener
 	public boolean onPreUpdate( PreUpdateEvent event ) {
 		IStruct			oldData			= new Struct();
 		EntityMetamodel	entityMetamodel	= event.getPersister().getEntityMetamodel();
-		Arrays.stream( entityMetamodel.getPropertyNames() ).forEach( propertyName -> {
-			oldData.put( propertyName, event.getOldState()[ entityMetamodel.getPropertyIndex( propertyName ) ] );
-		} );
+		Object[]		oldState		= event.getOldState();
+		if ( oldState != null ) {
+			Arrays.stream( entityMetamodel.getPropertyNames() ).forEach( propertyName -> {
+				oldData.put( propertyName, oldState[ entityMetamodel.getPropertyIndex( propertyName ) ] );
+			} );
+		}
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
 		    ORMKeys.entity, event.getEntity(),
