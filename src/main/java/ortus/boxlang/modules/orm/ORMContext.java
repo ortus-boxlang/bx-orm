@@ -38,13 +38,24 @@ import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
- * Transient context for ORM requests.
+ * Transient ORM state tracker; manages ORM state for the lifetime of a BoxLang request or thread context.
  * <p>
- * Tracks Hibernate sessions and transactions for the lifetime of a single Boxlang request.
+ * Say you call `entityNew()` in a request context, then call it inside a thread loop:
+ * <code>
+ * entityNew( "MyEntity" ); // Request context
+ * items.each( item -> {
+ * entityNew( "MyEntity" ); // Thread context
+ * }, true ); // parallel execution
+ * </code>
+ * <p>
+ * You now have N+1 Hibernate sessions open (one for the request context, and one for each item in the `items` array`). Each of these Hibernate
+ * sessions is stored in its own ORMContext instance, which is attached to the request or thread context. Each thread will shut down the `ORMContext`
+ * upon thread completion, which will close all Hibernate sessions opened as part that thread's execution.
+ * The request context's `ORMContext` will be torn down at the end of the request, closing any remaining Hibernate sessions.
  * 
  * @since 1.0.0
  */
-public class ORMRequestContext {
+public class ORMContext {
 
 	/**
 	 * Runtime
@@ -79,7 +90,7 @@ public class ORMRequestContext {
 	 *
 	 * @return The ORMRequestContext for the given context.
 	 */
-	public static ORMRequestContext getForContext( IBoxContext context ) {
+	public static ORMContext getForContext( IBoxContext context ) {
 		if ( context == null ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; context is null." );
 		}
@@ -100,7 +111,7 @@ public class ORMRequestContext {
 		}
 
 		return boxContext.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, key -> {
-			return new ORMRequestContext(
+			return new ORMContext(
 			    finalBoxContext,
 			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), finalBoxContext )
 			);
@@ -113,7 +124,7 @@ public class ORMRequestContext {
 	 * @param context The request context.
 	 * @param config  The ORM configuration.
 	 */
-	public ORMRequestContext( IBoxContext context, ORMConfig config ) {
+	public ORMContext( IBoxContext context, ORMConfig config ) {
 		this.context	= context;
 		this.config		= config;
 		this.ormService	= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
@@ -195,7 +206,7 @@ public class ORMRequestContext {
 	 * <p>
 	 * Will close all Hibernate sessions and unregister the transaction manager.
 	 */
-	public ORMRequestContext shutdown() {
+	public ORMContext shutdown() {
 		// Auto-flush all sessions at the end of the request
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
 			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
@@ -214,7 +225,7 @@ public class ORMRequestContext {
 	 * <p>
 	 * Attempts a transaction commit prior to closing the sessions, if an active transaction is present.
 	 */
-	public ORMRequestContext closeAllSessions() {
+	public ORMContext closeAllSessions() {
 		this.sessions.forEach( ( key, session ) -> {
 			logger.debug( "Closing session on datasource {}", key );
 			try {
@@ -232,7 +243,7 @@ public class ORMRequestContext {
 	/**
 	 * Close the Hibernate session on the given datasource, and ensure it is removed from the session map.
 	 */
-	public ORMRequestContext closeSession( Key datasourceName ) {
+	public ORMContext closeSession( Key datasourceName ) {
 		Session session = null;
 		if ( datasourceName == null ) {
 			session			= getSession();
@@ -250,7 +261,7 @@ public class ORMRequestContext {
 	 * <p>
 	 * Attempts a transaction commit prior to closing the session, if an active transaction is present.
 	 */
-	private ORMRequestContext closeSessionAndTransaction( Session session ) {
+	private ORMContext closeSessionAndTransaction( Session session ) {
 		var tx = session.getTransaction();
 		if ( tx.isActive() ) {
 			logger.warn( "Session has an active transaction; committing before flushing" );

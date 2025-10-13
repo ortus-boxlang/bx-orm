@@ -19,7 +19,7 @@ package ortus.boxlang.modules.orm.bifs;
 
 import java.util.Set;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -53,8 +53,8 @@ public class ORMClearSession extends BaseORMBIF {
 	 * @return True if the session was cleared, false otherwise.
 	 */
 	public Boolean _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Key					datasourceName	= Key.of( StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" ) );
-		ORMRequestContext	ormContext		= ORMRequestContext.getForContext( context.getRequestContext() );
+		Key			datasourceName	= Key.of( StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" ) );
+		ORMContext	ormContext		= ORMContext.getForContext( context.getRequestContext() );
 
 		// If no ORM app found then ignore
 		if ( ormContext.hasORMApp() ) {

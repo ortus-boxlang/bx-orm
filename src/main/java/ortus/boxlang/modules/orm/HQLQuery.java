@@ -54,7 +54,7 @@ public class HQLQuery {
 	private Session					session;
 	private ORMApp					ormApp;
 	private IBoxContext				context;
-	private ORMRequestContext		ormRequestContext;
+	private ORMContext				ormRequestContext;
 
 	private List<QueryParameter>	parameters;
 	private int						parameterCount;
@@ -71,7 +71,7 @@ public class HQLQuery {
 		this.hql				= hql;
 
 		this.ormApp				= ormService.getORMAppByContext( context.getRequestContext() );
-		this.ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
+		this.ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
 		this.datasource			= options.containsKey( Key.datasource ) ? Key.of( options.getAsString( Key.datasource ) ) : null;
 		this.session			= ormRequestContext.getSession( datasource );
 

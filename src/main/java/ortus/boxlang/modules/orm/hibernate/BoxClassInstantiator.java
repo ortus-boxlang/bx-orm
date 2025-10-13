@@ -30,7 +30,7 @@ import org.hibernate.tuple.Instantiator;
 import org.hibernate.tuple.entity.EntityMetamodel;
 
 import ortus.boxlang.modules.orm.ORMApp;
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.inspectors.ClassicPropertyMeta;
@@ -234,7 +234,7 @@ public class BoxClassInstantiator implements Instantiator {
 
 	@Override
 	public Object instantiate( Serializable id ) {
-		ORMApp			ormApp			= ORMRequestContext.getForContext( RequestBoxContext.getCurrent() ).getORMApp();
+		ORMApp			ormApp			= ORMContext.getForContext( RequestBoxContext.getCurrent() ).getORMApp();
 		EntityRecord	entityRecord	= ormApp.lookupEntity( this.entityName, true );
 		return instantiate(
 		    null,  // Will automatically use the current context

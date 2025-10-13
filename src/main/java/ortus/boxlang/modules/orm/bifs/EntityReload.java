@@ -19,7 +19,7 @@ package ortus.boxlang.modules.orm.bifs;
 
 import java.util.Set;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -59,7 +59,7 @@ public class EntityReload extends BaseORMBIF {
 			}
 			entity = entityLookup.value();
 		}
-		ORMRequestContext
+		ORMContext
 		    .getForContext( context.getRequestContext() )
 		    .getSession()
 		    .refresh( entity );

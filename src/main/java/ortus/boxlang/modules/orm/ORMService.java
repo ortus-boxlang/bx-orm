@@ -306,10 +306,10 @@ public class ORMService extends BaseService {
 	 */
 	public static Object getEntityIdentifier( IClassRunnable entity, IBoxContext context ) {
 		RequestBoxContext	requestContext	= context.getRequestContext();
-		ORMApp				ormApp			= ORMRequestContext.getForContext( requestContext ).getORMApp();
+		ORMApp				ormApp			= ORMContext.getForContext( requestContext ).getORMApp();
 		String				entityName		= getEntityName( entity );
 		EntityRecord		entityRecord	= ormApp.lookupEntity( entityName, true );
-		Session				session			= ORMRequestContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+		Session				session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 		ClassMetadata		metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
 		return metadata.getIdentifier( entity );
 	}

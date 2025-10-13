@@ -17,7 +17,7 @@
  */
 package ortus.boxlang.modules.orm.interceptors;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.RequestBoxContext;
@@ -68,7 +68,7 @@ public class RequestListener extends BaseInterceptor {
 			return;
 		}
 
-		ORMRequestContext ormRequestContext = context.getAttachment( ORMKeys.ORMRequestContext );
+		ORMContext ormRequestContext = context.getAttachment( ORMKeys.ORMRequestContext );
 		ormRequestContext.shutdown();
 		context.removeAttachment( ORMKeys.ORMRequestContext );
 	}

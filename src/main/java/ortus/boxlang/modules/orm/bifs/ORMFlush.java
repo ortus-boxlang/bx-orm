@@ -19,7 +19,7 @@ package ortus.boxlang.modules.orm.bifs;
 
 import org.hibernate.Session;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -48,7 +48,7 @@ public class ORMFlush extends BaseORMBIF {
 	 * @argument.datasource The datasource on which to flush the current session. If not provided, the default datasource will be used.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Session session = ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
+		Session session = ORMContext.getForContext( context.getRequestContext() ).getSession();
 		session.flush();
 		// @TODO: Announce 'onFlush' event
 		return null;

@@ -259,7 +259,7 @@ public class ORMApp {
 	 */
 	public IClassRunnable loadEntityById( RequestBoxContext context, String entityName, Object keyValue ) {
 		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
-		Session			session			= ORMRequestContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+		Session			session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 
 		// @TODO: Support composite keys.
 		String			keyType			= getKeyJavaType( session, entityName ).getSimpleName();
@@ -282,7 +282,7 @@ public class ORMApp {
 	 */
 	public Array loadEntitiesByFilter( RequestBoxContext context, String entityName, IStruct filter, IStruct options ) {
 		EntityRecord			entityRecord	= this.lookupEntity( entityName, true );
-		Session					session			= ORMRequestContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+		Session					session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 		org.hibernate.Criteria	criteria		= session.createCriteria( entityRecord.getEntityName() );
 
 		if ( filter != null ) {
