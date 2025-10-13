@@ -323,7 +323,7 @@ public class ORMService extends BaseService {
 	 */
 	public void shutdownApp( IBoxContext context ) {
 		this.shutdownApp( ORMService.getAppNameFromContext( context ) );
-		context.getRequestContext().removeAttachment( ORMKeys.ORMRequestContext );
+		context.removeAttachment( ORMKeys.ORMRequestContext );
 	}
 
 	/**
@@ -359,6 +359,9 @@ public class ORMService extends BaseService {
 	 */
 	public ORMApp reloadApp( IBoxContext context ) {
 		RequestBoxContext requestContext = context instanceof RequestBoxContext castedContext ? castedContext : context.getRequestContext();
+		if ( requestContext == null ) {
+			throw new BoxRuntimeException( "No request context available to reload ORM application." );
+		}
 		shutdownApp( requestContext );
 		return startupApp(
 		    requestContext,

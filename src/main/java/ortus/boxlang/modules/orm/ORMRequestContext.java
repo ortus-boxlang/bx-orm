@@ -28,7 +28,7 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
-import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.context.ThreadBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
@@ -63,7 +63,7 @@ public class ORMRequestContext {
 
 	private ORMApp					ormApp;
 
-	private RequestBoxContext		context;
+	private IBoxContext				context;
 
 	private ORMConfig				config;
 
@@ -83,21 +83,26 @@ public class ORMRequestContext {
 		if ( context == null ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; context is null." );
 		}
-		RequestBoxContext requestContext = context.getRequestContext();
-		if ( requestContext == null ) {
-			throw new BoxRuntimeException( "Could not acquire ORM context; supplied context has no parent context which is a request typed." );
+		IBoxContext boxContext = context.getParentOfType( ThreadBoxContext.class );
+		if ( boxContext == null ) {
+			boxContext = context.getRequestContext();
+			if ( boxContext == null ) {
+				throw new BoxRuntimeException( "Could not acquire ORM context; supplied context has no parent context which is request or thread typed." );
+			}
 		}
-		IStruct appSettings = ( IStruct ) requestContext.getConfigItem( Key.applicationSettings );
+		// Fix for "effectively final" lambda capture
+		// https://www.baeldung.com/java-lambda-effectively-final-local-variables
+		final IBoxContext	finalBoxContext	= boxContext;
+		final IStruct		appSettings		= ( IStruct ) finalBoxContext.getConfigItem( Key.applicationSettings );
 
 		if ( !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
 		}
 
-		return requestContext.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, key -> {
-			// logger.debug( "Initializing ORM context" );
+		return boxContext.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, key -> {
 			return new ORMRequestContext(
-			    requestContext,
-			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), requestContext )
+			    finalBoxContext,
+			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), finalBoxContext )
 			);
 		} );
 	}
@@ -108,12 +113,13 @@ public class ORMRequestContext {
 	 * @param context The request context.
 	 * @param config  The ORM configuration.
 	 */
-	public ORMRequestContext( RequestBoxContext context, ORMConfig config ) {
+	public ORMRequestContext( IBoxContext context, ORMConfig config ) {
 		this.context	= context;
 		this.config		= config;
 		this.ormService	= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
 		this.ormApp		= this.ormService.getORMAppByContext( context );
 		this.logger		= runtime.getLoggingService().getLogger( "orm" );
+		this.logger.debug( "Initializing ORM context on context type: {}", context.getClass().getSimpleName() );
 	}
 
 	/**
