@@ -55,6 +55,12 @@ public class EntityNew extends BaseORMBIF {
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.entityName The name of the entity to create.
+	 * 
+	 * @argument.properties A struct of properties to populate on the new entity.
+	 * 
+	 * @argument.ignoreExtras If false, an error will be thrown if properties are provided that do not exist on the entity. Not implemented.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		ORMApp						ormApp				= ORMRequestContext.getForContext( context.getRequestContext() ).getORMApp();
@@ -66,7 +72,7 @@ public class EntityNew extends BaseORMBIF {
 		IClassRunnable				entity				= ( IClassRunnable ) sessionFactoryImpl.getMetamodel().entityPersister( entityRecord.getEntityName() )
 		    .getEntityMetamodel().getTuplizer().instantiate();
 
-		// @TODO: Move to ... somewhere.
+		// @TODO: Find a more correct location for the entity population logic. Surely we repeat this somewhere else?
 		if ( properties != null && !properties.isEmpty() ) {
 			entity.getVariablesScope().putAll( properties );
 		}

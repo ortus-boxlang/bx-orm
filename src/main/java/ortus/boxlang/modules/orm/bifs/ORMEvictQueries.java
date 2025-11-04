@@ -49,6 +49,10 @@ public class ORMEvictQueries extends BaseORMBIF {
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.cacheName The name of the cache region to evict. If not provided, the default query cache will be evicted.
+	 * 
+	 * @argument.datasource The name of the datasource on which to evict the cache. If not provided, the default datasource will be used.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String				cacheName			= arguments.getAsString( ORMKeys.cacheName );

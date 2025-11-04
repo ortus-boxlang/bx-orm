@@ -22,21 +22,28 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import org.hibernate.Session;
+import org.hibernate.metadata.ClassMetadata;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.hibernate.BoxProxy;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.BaseApplicationListener;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.BaseService;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Java class responsible for constructing and managing the Hibernate ORM
@@ -108,7 +115,7 @@ public class ORMService extends BaseService {
 			// hibernateLogger.addAppender( consoleAppender );
 			hibernateLogger.addAppender( getLogger().getAppender( "orm" ) );
 			// Add a console appender to the Hibernate logger
-			hibernateLogger.setLevel( Level.INFO );
+			hibernateLogger.setLevel( logger.isDebugEnabled() ? Level.DEBUG : Level.INFO );
 			hibernateLogger.setAdditive( false ); // Prevent messages from going to parent loggers
 		}
 
@@ -222,6 +229,89 @@ public class ORMService extends BaseService {
 		    appName,
 		    key -> new ORMApp( context, config, appName ).startup()
 		);
+	}
+
+	/**
+	 * Retrieve the entity name for the given entity object
+	 *
+	 * @param entity
+	 *
+	 * @return
+	 */
+	public static String getEntityName( Object entity ) {
+		if ( entity instanceof BoxProxy proxyEntity ) {
+			return proxyEntity.getHibernateLazyInitializer().getEntityName();
+		} else if ( entity instanceof IClassRunnable boxClass ) {
+			return getEntityName( boxClass );
+		} else {
+			if ( entity instanceof String entityString ) {
+				throw new BoxRuntimeException(
+				    "The string provided " + entityString + " is not a valid BoxLang ORM entity or proxy." );
+			} else {
+
+				throw new BoxRuntimeException(
+				    "The entity instance of " + entity.getClass().getName() + " is not a valid BoxLang ORM entity or proxy." );
+			}
+		}
+	}
+
+	/**
+	 * Retrieve the entity name for the given entity class.
+	 *
+	 * @param entity Instance of IClassRunnable, aka the compiled/parsed entity.
+	 */
+	public static String getEntityName( IClassRunnable entity ) {
+		// @TODO: Should we look up the EntityRecord and use that to grab the class name?
+		IStruct annotations = entity.getAnnotations();
+		if ( annotations.containsKey( ORMKeys.entity ) && !annotations.getAsString( ORMKeys.entity ).isBlank() ) {
+			return annotations.getAsString( ORMKeys.entity );
+		} else if ( annotations.containsKey( ORMKeys.entityName ) && !annotations.getAsString( ORMKeys.entityName ).isBlank() ) {
+			return annotations.getAsString( ORMKeys.entityName );
+		} else {
+			return getClassNameFromFQN( entity.bxGetName().getName() );
+		}
+	}
+
+	/**
+	 * Retrieve the last portion of the FQN as the class name.
+	 *
+	 * @param fqn Boxlang class FQN, like models.orm.foo
+	 */
+	public static String getClassNameFromFQN( String fqn ) {
+		return fqn.substring( fqn.lastIndexOf( '.' ) + 1 );
+	}
+
+	/**
+	 * Retrieve the primary key value for the given entity instance.
+	 *
+	 * @param entity Instance of IClassRunnable, aka the compiled/parsed entity.
+	 *
+	 * @return The primary key value for the given entity instance.
+	 */
+	public static Object getEntityIdentifier( IClassRunnable entity ) {
+		IBoxContext context = RequestBoxContext.getCurrent();
+		if ( context == null ) {
+			throw new BoxRuntimeException( "No current request context available to retrieve entity identifier." );
+		}
+		return getEntityIdentifier( entity, context );
+	}
+
+	/**
+	 * Retrieve the primary key value for the given entity instance.
+	 *
+	 * @param entity  Instance of IClassRunnable, aka the compiled/parsed entity.
+	 * @param context The IBoxContext for the application.
+	 *
+	 * @return The primary key value for the given entity instance.
+	 */
+	public static Object getEntityIdentifier( IClassRunnable entity, IBoxContext context ) {
+		RequestBoxContext	requestContext	= context.getRequestContext();
+		ORMApp				ormApp			= ORMRequestContext.getForContext( requestContext ).getORMApp();
+		String				entityName		= getEntityName( entity );
+		EntityRecord		entityRecord	= ormApp.lookupEntity( entityName, true );
+		Session				session			= ORMRequestContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+		ClassMetadata		metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
+		return metadata.getIdentifier( entity );
 	}
 
 	/**

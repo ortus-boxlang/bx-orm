@@ -26,6 +26,8 @@ import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.property.access.spi.Getter;
 
+import ortus.boxlang.modules.orm.ORMService;
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
@@ -33,7 +35,7 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
 
 /**
  * This class is used to get a property on a BoxLang class for a Hibernate entity.
- * 
+ *
  * @since 1.0.0
  */
 public class BoxPropertyGetter implements Getter {
@@ -41,7 +43,9 @@ public class BoxPropertyGetter implements Getter {
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime	= BoxRuntime.getInstance();
+	private static final BoxRuntime	runtime		= BoxRuntime.getInstance();
+
+	private static final ORMService	ormService	= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
 
 	/**
 	 * The logger for the ORM application.
@@ -63,8 +67,14 @@ public class BoxPropertyGetter implements Getter {
 	@Override
 	public Object get( Object owner ) {
 		logger.trace( "getting property {} on entity {}", mappedProperty.getName(), mappedEntity.getEntityName() );
-		// @TODO: I think we should call the getter method on the BoxLang class, and not just return the property from the scope?
-		return ( ( IClassRunnable ) owner ).getVariablesScope().get( mappedProperty.getName() );
+		if ( owner instanceof IClassRunnable castRunnable ) {
+			// If the being assigned from an object return the property directly
+			return castRunnable.getVariablesScope().get( mappedProperty.getName() );
+		} else {
+			// Otherwise we assume this is a primary key lookup and load the entity to get the property
+			return ormService.getORMAppByContext( context ).loadEntityById( context.getRequestContext(), mappedEntity.getEntityName(), owner )
+			    .get( mappedProperty.getName() );
+		}
 	}
 
 	@SuppressWarnings( "rawtypes" )

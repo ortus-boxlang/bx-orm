@@ -29,7 +29,7 @@ This project is open source, and as such, the maintainers give their free time t
 
 BoxLang tracks its issues in Jira and each module track it's own issues in its repo.
 
-- BoxLang JIra : https://ortussolutions.atlassian.net/browse/BL/issues
+- BoxLang Jira : https://ortussolutions.atlassian.net/browse/BL/issues
 - Module Issues: https://github.com/ortus-boxlang/bx-orm/issues
 
 If you file a bug report, your issue should contain a title, a clear description of the issue, a way to replicate the issue, and any support files that we might need to replicate your issue. The goal of a bug report is to make it easy for yourself - and others - to replicate the bug and develop a fix for it.  All issues that do not contain a way to replicate will not be addressed.
@@ -65,20 +65,12 @@ Please make sure you use JDK21+.
 
 ## Coding Styles & Formatting
 
-We are big on coding styles and have included two codings styles for you to follow:
+We are big on coding styles and have included a Java code formatter that you can use to format your code.  Our Java style guide is located in [.ortus-java-style.xml](ortus-java-style.xml).
 
-- [cfformat](../.cfformat.json) - For BoxLang/CFML code
-- [Java](../ortus-java-style.xml) - For Java code
+For formatting Java source code, you can use these commands:
 
-```bash
-# Format everything
-box run-script format
-
-# Start a watcher, type away, save and auto-format for you
-box run-script format:watch
-```
-
-We recommend that anytime you hack on the core you start the formatter watcher (`box run-script format:watch`). This will monitor your changes and auto-format your code for you.
+* To check formatting: `./gradlew spotlessCheck`
+* To format code: `./gradlew spotlessApply`
 
 You can also see the Ortus Coding Standards you must follow here: https://github.com/Ortus-Solutions/coding-standards.
 

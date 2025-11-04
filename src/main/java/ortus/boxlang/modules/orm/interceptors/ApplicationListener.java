@@ -17,8 +17,6 @@
  */
 package ortus.boxlang.modules.orm.interceptors;
 
-import java.net.URI;
-
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -59,39 +57,21 @@ public class ApplicationListener extends BaseInterceptor {
 	}
 
 	/**
-	 * Listen for application startup and construct a Hibernate session factory if
-	 * ORM configuration is present in the application config.
-	 * Remember that when this fires, there is NO APPLICATION scope or APPLICATION loaded yet.
-	 */
-	@InterceptionPoint
-	public void beforeApplicationListenerLoad( IStruct args ) {
-		this.logger.debug(
-		    "beforeApplicationListenerLoad fired; checking for ORM configuration"
-		);
-
-		RequestBoxContext		context				= ( RequestBoxContext ) args.get( Key.context );
-		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( Key.listener );
-		URI						startingTemplate	= ( URI ) args.get( Key.template );
-		ORMConfig				ormConfig			= ORMConfig.loadFromContext( context );
-
-		// If the starting template is null, it means, the listener is not linked to a template and no Application.bx, so ignore it.
-		if ( startingTemplate != null && ormConfig != null ) {
-			this.logger.debug( "ORMEnabled, starting up ORM app for [{}]", startingListener.getAppName() );
-			this.ormService.startupApp( context, ormConfig, startingListener );
-		}
-	}
-
-	/**
-	 * Listens for an application startup. If the application has been shutdown due to timeout we reload the app
+	 * Listens for an application startup to either start up the ORM application, or to reload the app if the application has been shutdown due to
+	 * timeout.
 	 *
 	 * @param args
 	 */
 	@InterceptionPoint
 	public void onApplicationStart( IStruct args ) {
 		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( Key.listener );
-		IBoxContext				context				= RequestBoxContext.getCurrent();
+		IBoxContext				context				= ( IBoxContext ) args.get( Key.context );
 		if ( context == null ) {
-			return;
+			// Fallback for boxlang 1.5.0 which does not provide the context in the args
+			context = RequestBoxContext.getCurrent();
+			if ( context == null ) {
+				return;
+			}
 		}
 		RequestBoxContext requestContext = context.getRequestContext();
 		if ( requestContext == null ) {
@@ -101,6 +81,10 @@ public class ApplicationListener extends BaseInterceptor {
 		if ( ormConfig == null ) {
 			// ORM is not enabled for this application
 			return;
+		}
+		// Lazy-load the ORM service if needed, since it was not loaded into the runtime until after module initialization was done
+		if ( this.ormService == null ) {
+			this.ormService = ( ( ORMService ) getRuntime().getGlobalService( ORMKeys.ORMService ) );
 		}
 		if ( this.ormService.getORMAppByContext( requestContext ) == null ) {
 			this.ormService.startupApp( requestContext, ormConfig, startingListener );
@@ -114,6 +98,12 @@ public class ApplicationListener extends BaseInterceptor {
 	public void onApplicationEnd( IStruct args ) {
 		this.logger.debug( "onApplicationEnd fired; Shutting down ORM application" );
 		Application application = ( Application ) args.get( Key.application );
+
+		// Lazy-load the ORM service if needed, since it was not loaded into the runtime until after module initialization was done
+		if ( this.ormService == null ) {
+			this.ormService = ( ( ORMService ) getRuntime().getGlobalService( ORMKeys.ORMService ) );
+		}
+
 		// If the orm app doesn't exist, this is a no-op
 		this.ormService.shutdownApp( ORMService.buildUniqueAppName( application.getName(), application.getStartingListener().getSettings() ) );
 	}

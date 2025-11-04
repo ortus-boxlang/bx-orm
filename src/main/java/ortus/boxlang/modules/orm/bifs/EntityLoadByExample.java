@@ -48,10 +48,14 @@ public class EntityLoadByExample extends BaseORMBIF {
 	}
 
 	/**
-	 * ExampleBIF
+	 * Load entities matching an example entity.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.sampleEntity Instance of an ORM entity to use as an example for the query.
+	 * 
+	 * @argument.unique Whether to return a single unique result (true) or an array of results (false).
 	 */
 	@SuppressWarnings( { "deprecation", "unchecked" } )
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {

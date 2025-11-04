@@ -30,8 +30,6 @@ public class ORMCloseAllSessions extends BaseORMBIF {
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
-	 * 
-	 * @return null/void.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		ORMRequestContext.getForContext( context.getRequestContext() ).closeAllSessions();

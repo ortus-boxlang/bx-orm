@@ -26,8 +26,6 @@ import ortus.boxlang.runtime.scopes.ArgumentsScope;
 public class ORMFlushAll extends BaseORMBIF {
 
 	/**
-	 * ORMFlushAll
-	 * <p>
 	 * Flush all open Hibernate sessions in the current request.
 	 *
 	 * @param context   The context in which the BIF is being invoked.

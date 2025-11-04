@@ -63,6 +63,8 @@ public abstract class BaseORMTest {
 		try {
 			loadModules( instance.getRuntimeContext() );
 			context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+
+			// reset the now-existing database tables
 			JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
 			JDBCTestUtils.resetAlternateTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDatasourceOrThrow( Key.of( "dsn2" ) ),
 			    context );

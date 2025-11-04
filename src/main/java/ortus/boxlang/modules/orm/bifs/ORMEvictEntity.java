@@ -53,6 +53,11 @@ public class ORMEvictEntity extends BaseORMBIF {
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
+	 * 
+	 * @argument.entityName The name of the entity on which to evict all cached data.
+	 * 
+	 * @argument.primaryKey Optional primary key of the entity instance for which to evict cached data. If not provided, all cached data for the entity
+	 *                      will be evicted.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String			entityName		= arguments.getAsString( ORMKeys.entityName );
