@@ -152,7 +152,6 @@ shadowJar {
     mergeServiceFiles()
     destinationDirectory = file( "build/libs" )
 }
-build.finalizedBy( shadowJar )
 
 /**
  * Source Code Formatting
@@ -174,6 +173,7 @@ spotless {
  * - Copies the src/main/bx/** to build/module/ folder.
  */
 task createModuleStructure(type: Copy) {
+	mustRunAfter shadowJar, jar
     from( 'build/libs' ) {
 		include "${project.name}-${version}.jar"
         into 'libs'
@@ -181,12 +181,11 @@ task createModuleStructure(type: Copy) {
     from( 'src/main/bx' ) {
 		include '**/*.bx'
 		// Token Replacements Go Here
-		filter { line -> line.replaceAll('@build.version@', project.version) }
-		filter { line -> line.replaceAll('@build.hibernateVersion@', hibernateVersion) }
+		filter{ line -> line.replaceAll( '@build.version@', project.version ) }
 		if( project.branch == "development" ){
-			filter { line -> line.replaceAll( '\\+@build.number@', '' ) }
+			filter{ line -> line.replaceAll( '\\+@build.number@', '' ) }
 		} else {
-			filter { line -> line.replaceAll( '@build.number@', project.buildID ) }
+			filter{ line -> line.replaceAll( '@build.number@', project.buildID ) }
 		}
     }
     from( '.' ) {
@@ -194,11 +193,11 @@ task createModuleStructure(type: Copy) {
 		include 'readme.md'
 		include 'changelog.md'
 		// Token Replacements Go Here
-		filter { line -> line.replaceAll( '@build.version@', project.version ) }
+		filter{ line -> line.replaceAll( '@build.version@', project.version ) }
 		if( project.branch == "development" ){
-			filter { line -> line.replaceAll( '\\+@build.number@', '' ) }
+			filter{ line -> line.replaceAll( '\\+@build.number@', '' ) }
 		} else {
-			filter { line -> line.replaceAll( '@build.number@', project.buildID ) }
+			filter{ line -> line.replaceAll( '@build.number@', project.buildID ) }
 		}
     }
 
