@@ -32,7 +32,7 @@ public class ORMKeys {
 	// Various keys used as context attachments
 	public static final Key	ORMService					= Key.of( "ORMService" );
 	public static final Key	RequestListener				= Key.of( "RequestListener" );
-	public static final Key	ORMRequestContext			= Key.of( "ORMRequestContext" );
+	public static final Key	ORMContext					= Key.of( "ORMContext" );
 	public static final Key	ORMApp						= Key.of( "ORMApp" );
 	public static final Key	TransactionManager			= Key.of( "TransactionManager" );
 	public static final Key	ORM							= Key.of( "ORM" );

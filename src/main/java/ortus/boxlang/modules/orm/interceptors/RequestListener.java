@@ -63,13 +63,13 @@ public class RequestListener extends BaseInterceptor {
 			return;
 		}
 
-		if ( !context.hasAttachment( ORMKeys.ORMRequestContext ) ) {
+		if ( !context.hasAttachment( ORMKeys.ORMContext ) ) {
 			logger.warn( "No ORM request context; did the request startup fail for some reason?" );
 			return;
 		}
 
-		ORMContext ormRequestContext = context.getAttachment( ORMKeys.ORMRequestContext );
+		ORMContext ormRequestContext = context.getAttachment( ORMKeys.ORMContext );
 		ormRequestContext.shutdown();
-		context.removeAttachment( ORMKeys.ORMRequestContext );
+		context.removeAttachment( ORMKeys.ORMContext );
 	}
 }

@@ -323,7 +323,7 @@ public class ORMService extends BaseService {
 	 */
 	public void shutdownApp( IBoxContext context ) {
 		this.shutdownApp( ORMService.getAppNameFromContext( context ) );
-		context.removeAttachment( ORMKeys.ORMRequestContext );
+		context.removeAttachment( ORMKeys.ORMContext );
 	}
 
 	/**
@@ -345,8 +345,8 @@ public class ORMService extends BaseService {
 			return; // No context to remove from
 		}
 		RequestBoxContext requestContext = context.getRequestContext();
-		if ( requestContext != null && requestContext.hasAttachment( ORMKeys.ORMRequestContext ) ) {
-			requestContext.removeAttachment( ORMKeys.ORMRequestContext );
+		if ( requestContext != null && requestContext.hasAttachment( ORMKeys.ORMContext ) ) {
+			requestContext.removeAttachment( ORMKeys.ORMContext );
 		}
 	}
 

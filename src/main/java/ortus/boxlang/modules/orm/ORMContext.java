@@ -83,11 +83,11 @@ public class ORMContext {
 	private Map<Key, Session>		sessions	= new ConcurrentHashMap<>();
 
 	/**
-	 * Retrieve the ORMRequestContext for the given context.
+	 * Retrieve the ORMContext for the given boxlang context (whatever JDBC-capable context inside which we are currently executing).
 	 *
-	 * @param context The context to retrieve the ORMRequestContext for.
+	 * @param context The context for which to retrieve the ORMContext.
 	 *
-	 * @return The ORMRequestContext for the given context.
+	 * @return The ORMContext for the given context.
 	 */
 	public static ORMContext getForContext( IBoxContext context ) {
 		if ( context == null ) {
@@ -106,7 +106,7 @@ public class ORMContext {
 			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
 		}
 
-		return jdbcCapableContext.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, key -> {
+		return jdbcCapableContext.computeAttachmentIfAbsent( ORMKeys.ORMContext, key -> {
 			return new ORMContext(
 			    finalJDBCContext,
 			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), finalJDBCContext )

@@ -54,7 +54,7 @@ public class HQLQuery {
 	private Session					session;
 	private ORMApp					ormApp;
 	private IBoxContext				context;
-	private ORMContext				ormRequestContext;
+	private ORMContext				ormContext;
 
 	private List<QueryParameter>	parameters;
 	private int						parameterCount;
@@ -66,17 +66,17 @@ public class HQLQuery {
 	private static final String		DELETE_PREFIX		= "DELETE";
 
 	public HQLQuery( IBoxContext context, String hql, Object bindings, IStruct options ) {
-		this.options			= options;
-		this.context			= context;
-		this.hql				= hql;
+		this.options		= options;
+		this.context		= context;
+		this.hql			= hql;
 
-		this.ormApp				= ormService.getORMAppByContext( context.getRequestContext() );
-		this.ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
-		this.datasource			= options.containsKey( Key.datasource ) ? Key.of( options.getAsString( Key.datasource ) ) : null;
-		this.session			= ormRequestContext.getSession( datasource );
+		this.ormApp			= ormService.getORMAppByContext( context.getRequestContext() );
+		this.ormContext		= ORMContext.getForContext( context.getRequestContext() );
+		this.datasource		= options.containsKey( Key.datasource ) ? Key.of( options.getAsString( Key.datasource ) ) : null;
+		this.session		= ormContext.getSession( datasource );
 
-		this.parameterCount		= 0;
-		this.parameters			= processBindings( bindings );
+		this.parameterCount	= 0;
+		this.parameters		= processBindings( bindings );
 	}
 
 	private List<QueryParameter> processBindings( Object bindings ) {
