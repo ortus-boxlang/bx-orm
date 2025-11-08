@@ -28,7 +28,6 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
-import ortus.boxlang.runtime.context.ThreadBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
@@ -94,26 +93,23 @@ public class ORMContext {
 		if ( context == null ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; context is null." );
 		}
-		IBoxContext boxContext = context.getParentOfType( ThreadBoxContext.class );
-		if ( boxContext == null ) {
-			boxContext = context.getRequestContext();
-			if ( boxContext == null ) {
-				throw new BoxRuntimeException( "Could not acquire ORM context; supplied context has no parent context which is request or thread typed." );
-			}
+		IBoxContext jdbcCapableContext = context.getParentOfType( IJDBCCapableContext.class );
+		if ( jdbcCapableContext == null ) {
+			throw new BoxRuntimeException( "Could not acquire ORM context; supplied context has no parent context which is request or thread typed." );
 		}
 		// Fix for "effectively final" lambda capture
 		// https://www.baeldung.com/java-lambda-effectively-final-local-variables
-		final IBoxContext	finalBoxContext	= boxContext;
-		final IStruct		appSettings		= ( IStruct ) finalBoxContext.getConfigItem( Key.applicationSettings );
+		final IBoxContext	finalJDBCContext	= jdbcCapableContext;
+		final IStruct		appSettings			= ( IStruct ) finalJDBCContext.getConfigItem( Key.applicationSettings );
 
 		if ( !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
 		}
 
-		return boxContext.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, key -> {
+		return jdbcCapableContext.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, key -> {
 			return new ORMContext(
-			    finalBoxContext,
-			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), finalBoxContext )
+			    finalJDBCContext,
+			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), finalJDBCContext )
 			);
 		} );
 	}
