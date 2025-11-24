@@ -1,6 +1,7 @@
 .gradle
-build/**
+build/
 bin/
+test/
 !gradle/wrapper/gradle-wrapper.jar
 
 # Secrets
@@ -23,7 +24,8 @@ derby.log
 src/test/resources/libs/*
 !src/test/resources/libs/.gitkeep
 src/test/resources/modules/
-grapher/**
+grapher/
+boxlang_modules/
 
 ## HBXML Files
 src/test/resources/app/models/**/*.hbm*
