@@ -35,3 +35,10 @@ Due to issues with JPA requiring native java classes in entity configuration, bx
 - Prefer extending existing interfaces and base classes for new ORM features.
 - Ensure new code is covered by tests in the `src/main/test/java/ortus/` directory.
 - Ensure new features, bug fixes, security updates, etc. are added to `changelog.md` under `## [Unreleased]`.
+
+## Tooling
+
+* Gradle is used for building/compiling the java sources, running junit tests, and building the final boxlang module structure into a zip file for uploading to forgebox.io.
+* Hibernate 5.6.15-FINAL serves as the ORM engine under the hood.
+* Spotless is used for java source formatting.
+* Docker-compose is used to stand up a simple mysql database for integration testing.
