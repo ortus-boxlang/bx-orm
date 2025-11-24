@@ -47,7 +47,7 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  * }, true ); // parallel execution
  * </code>
  * <p>
- * You now have N+1 Hibernate sessions open (one for the request context, and one for each item in the `items` array`). Each of these Hibernate
+ * You now have N+1 Hibernate sessions open (one for the request context, and one for each item in the `items` array). Each of these Hibernate
  * sessions is stored in its own ORMContext instance, which is attached to the request or thread context. Each thread will shut down the `ORMContext`
  * upon thread completion, which will close all Hibernate sessions opened as part that thread's execution.
  * The request context's `ORMContext` will be torn down at the end of the request, closing any remaining Hibernate sessions.
@@ -117,7 +117,7 @@ public class ORMContext {
 	/**
 	 * Constructor.
 	 *
-	 * @param context The request context.
+	 * @param context The JDBC-capable context (request or thread).
 	 * @param config  The ORM configuration.
 	 */
 	public ORMContext( IBoxContext context, ORMConfig config ) {
