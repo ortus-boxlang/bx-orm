@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- [BLMODULES-102](https://ortussolutions.atlassian.net/browse/BLMODULES-102) - Fix ORM usage in threads causing ConcurrentModificationException
+
 ## [1.1.3] - 2025-11-04
 
 ### 🐛 Fixed
@@ -16,7 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [BLMODULES-94](https://ortussolutions.atlassian.net/browse/BLMODULES-94) - Fix incorrect casting in Getter
 - [BLMODULES-96](https://ortussolutions.atlassian.net/browse/BLMODULES-96) - Fix ORMExecute query handling of WHERE clauses with object params
 - [BLMODULES-101](https://ortussolutions.atlassian.net/browse/BLMODULES-101) - Fix NPE due to null oldState in PreUpdate event listener
-- [BLMODULES-102](https://ortussolutions.atlassian.net/browse/BLMODULES-102) - Fix ORM usage in threads causing ConcurrentModificationException
 
 ## [1.1.2] - 2025-09-06
 
