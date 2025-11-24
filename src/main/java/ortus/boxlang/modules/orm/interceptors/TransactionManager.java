@@ -20,7 +20,7 @@ package ortus.boxlang.modules.orm.interceptors;
 import org.hibernate.Session;
 
 import ortus.boxlang.modules.orm.ORMApp;
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -63,9 +63,9 @@ public class TransactionManager extends BaseInterceptor {
 			return;
 		}
 
-		ORMApp				ormApp				= ormService.getORMAppByContext( context );
-		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
-		ORMConfig			config				= ormRequestContext.getConfig();
+		ORMApp		ormApp				= ormService.getORMAppByContext( context );
+		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
+		ORMConfig	config				= ormRequestContext.getConfig();
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
@@ -109,8 +109,8 @@ public class TransactionManager extends BaseInterceptor {
 			return;
 		}
 
-		ORMApp				ormApp				= ormService.getORMAppByContext( context );
-		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
+		ORMApp		ormApp				= ormService.getORMAppByContext( context );
+		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
 
 		ormApp.getDatasources().forEach( datasource -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
@@ -135,9 +135,9 @@ public class TransactionManager extends BaseInterceptor {
 			return;
 		}
 
-		ORMApp				ormApp				= ormService.getORMAppByContext( context );
-		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
-		ORMConfig			config				= ormRequestContext.getConfig();
+		ORMApp		ormApp				= ormService.getORMAppByContext( context );
+		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
+		ORMConfig	config				= ormRequestContext.getConfig();
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			// FYI: Lucee's implementation actually waits until transaction END to rollback and clear the session.
@@ -179,8 +179,8 @@ public class TransactionManager extends BaseInterceptor {
 			return;
 		}
 
-		ORMApp				ormApp				= ormService.getORMAppByContext( context );
-		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
+		ORMApp		ormApp				= ormService.getORMAppByContext( context );
+		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormRequestContext.getSession( datasource );

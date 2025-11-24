@@ -21,7 +21,7 @@ import java.util.Set;
 
 import org.hibernate.Session;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -55,9 +55,9 @@ public class ORMGetSession extends BaseORMBIF {
 	public Session _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String datasourceName = StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 		if ( !datasourceName.isBlank() ) {
-			return ORMRequestContext.getForContext( context.getRequestContext() ).getSession( Key.of( datasourceName ) );
+			return ORMContext.getForContext( context.getRequestContext() ).getSession( Key.of( datasourceName ) );
 		}
-		return ORMRequestContext.getForContext( context.getRequestContext() ).getSession();
+		return ORMContext.getForContext( context.getRequestContext() ).getSession();
 	}
 
 }

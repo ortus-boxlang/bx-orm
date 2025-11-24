@@ -35,6 +35,7 @@ import ortus.boxlang.modules.orm.config.naming.BoxLangClassNamingStrategy;
 import ortus.boxlang.modules.orm.config.naming.MacroCaseNamingStrategy;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.config.segments.CacheConfig;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.interop.DynamicObject;
@@ -253,9 +254,9 @@ public class ORMConfig {
 	public boolean						enableThreadedMapping	= true;
 
 	/**
-	 * Application context used for class lookups in naming strategies, event handlers, etc.
+	 * Boxlang context used for class lookups in naming strategies, event handlers, etc.
 	 */
-	private RequestBoxContext			requestContext;
+	private IBoxContext					context;
 
 	/**
 	 * The instantiated naming strategy object.
@@ -267,13 +268,13 @@ public class ORMConfig {
 	 *
 	 * @param properties Struct of ORM configuration properties.
 	 */
-	public ORMConfig( IStruct properties, RequestBoxContext context ) {
+	public ORMConfig( IStruct properties, IBoxContext context ) {
 		this.logger = runtime.getLoggingService().getLogger( "orm" );
 
 		if ( properties == null ) {
 			properties = new Struct();
 		}
-		this.requestContext = context;
+		this.context = context;
 
 		runtime.getInterceptorService().announce( ORMKeys.EVENT_ORM_PRE_CONFIG_LOAD, Struct.of(
 		    Key.properties, properties,
@@ -295,8 +296,12 @@ public class ORMConfig {
 	 *
 	 * @return ORMConfig object or null if ORM is not enabled or no ORM settings are present in the application settings.
 	 */
-	public static ORMConfig loadFromContext( RequestBoxContext context ) {
-		IStruct appSettings = ( IStruct ) context.getConfigItem( Key.applicationSettings );
+	public static ORMConfig loadFromContext( IBoxContext context ) {
+		RequestBoxContext requestContext = context.getRequestContext();
+		if ( requestContext == null ) {
+			return null;
+		}
+		IStruct appSettings = ( IStruct ) requestContext.getConfigItem( Key.applicationSettings );
 
 		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
 		    || !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
@@ -440,8 +445,8 @@ public class ORMConfig {
 	 * Read the default datasource name from application settings.
 	 */
 	private Key getAppDefaultDatasource() {
-		Key		defaultDatasource	= Key.of( ( String ) this.requestContext.getConfigItems( new Key[] { Key.defaultDatasource } ) );
-		IStruct	configDatasources	= ( IStruct ) this.requestContext.getConfigItems( new Key[] { Key.datasources } );
+		Key		defaultDatasource	= Key.of( ( String ) this.context.getConfigItems( new Key[] { Key.defaultDatasource } ) );
+		IStruct	configDatasources	= ( IStruct ) this.context.getConfigItems( new Key[] { Key.datasources } );
 		if ( !defaultDatasource.isEmpty() && configDatasources.containsKey( defaultDatasource ) ) {
 			return defaultDatasource;
 		} else if ( !defaultDatasource.isEmpty() ) {
@@ -479,7 +484,7 @@ public class ORMConfig {
 	public Configuration toHibernateConfig() {
 		// Load the event handler class if it is specified, else null
 		DynamicObject				eventHandlerClass	= this.eventHandler != null
-		    ? loadBoxLangClassByFQN( this.requestContext, this.eventHandler )
+		    ? loadBoxLangClassByFQN( this.eventHandler )
 		    : null;
 		BootstrapServiceRegistry	bootstrapRegistry	= new BootstrapServiceRegistryBuilder()
 		    .applyIntegrator( new EventListener( eventHandlerClass ) )
@@ -611,26 +616,25 @@ public class ORMConfig {
 			 * The "class" naming strategy allows apps to define their own naming strategy by
 			 * providing a full box class path.
 			 */
-			default -> new BoxLangClassNamingStrategy( loadBoxLangClassByFQN( this.requestContext, name ) );
+			default -> new BoxLangClassNamingStrategy( loadBoxLangClassByFQN( name ) );
 		};
 	}
 
 	/**
 	 * Load a BoxLang class by its fully-qualified name.
 	 *
-	 * @param context The current request context.
-	 * @param fqn     The fully-qualified name of the class to load.
+	 * @param fqn The fully-qualified name of the class to load.
 	 *
 	 * @return The loaded class.
 	 */
-	private DynamicObject loadBoxLangClassByFQN( RequestBoxContext context, String fqn ) {
+	private DynamicObject loadBoxLangClassByFQN( String fqn ) {
 		return CLASS_LOCATOR.load(
-		    context,
+		    this.context,
 		    fqn,
 		    ClassLocator.BX_PREFIX,
 		    true,
-		    context.getCurrentImports()
-		).invokeConstructor( context );
+		    this.context.getCurrentImports()
+		).invokeConstructor( this.context );
 	}
 
 	/**
@@ -640,6 +644,9 @@ public class ORMConfig {
 		return "ortus.boxlang.modules.orm.hibernate.cache.BoxHibernateCachingProvider";
 	}
 
+	/**
+	 * Get the default JCache properties for Hibernate.
+	 */
 	public Properties getJCacheDefaultProperties() {
 		Properties properties = new Properties();
 		properties.setProperty( "hibernate.cache.region_prefix", datasource.getName() + "_" );

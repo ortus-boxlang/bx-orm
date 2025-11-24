@@ -21,7 +21,7 @@ import java.util.Set;
 
 import org.hibernate.Session;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
@@ -56,7 +56,7 @@ public class EntityMerge extends BaseORMBIF {
 		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		String			entityName		= getEntityName( entity );
 		EntityRecord	entityRecord	= ormService.getORMAppByContext( context ).lookupEntity( entityName, true );
-		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
+		Session			session			= ORMContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
 		return session.merge( entity );
 	}
 

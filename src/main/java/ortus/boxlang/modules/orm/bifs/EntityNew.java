@@ -22,7 +22,7 @@ import java.util.Set;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 
 import ortus.boxlang.modules.orm.ORMApp;
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
@@ -63,7 +63,7 @@ public class EntityNew extends BaseORMBIF {
 	 * @argument.ignoreExtras If false, an error will be thrown if properties are provided that do not exist on the entity. Not implemented.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		ORMApp						ormApp				= ORMRequestContext.getForContext( context.getRequestContext() ).getORMApp();
+		ORMApp						ormApp				= ORMContext.getForContext( context.getRequestContext() ).getORMApp();
 		String						entityName			= arguments.getAsString( ORMKeys.entityName );
 		EntityRecord				entityRecord		= ormApp.lookupEntity( entityName, true );
 		IStruct						properties			= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
