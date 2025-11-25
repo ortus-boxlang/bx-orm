@@ -20,6 +20,7 @@ package ortus.boxlang.modules.orm.bifs;
 import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 
 @BoxBIF
@@ -32,7 +33,8 @@ public class ORMFlushAll extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		ORMContext ormRequestContext = ORMContext.getForContext( context.getRequestContext() );
+		IBoxContext	jdbcBoxContext		= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext	ormRequestContext	= ORMContext.getForContext( jdbcBoxContext );
 		ormRequestContext.getSessions().forEach( ( key, session ) -> session.flush() );
 		// @TODO: Announce 'onFlush' event
 		return null;

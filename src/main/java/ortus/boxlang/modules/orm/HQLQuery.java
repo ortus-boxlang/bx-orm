@@ -28,6 +28,7 @@ import org.hibernate.Session;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.ArrayCaster;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.CastAttempt;
@@ -67,11 +68,11 @@ public class HQLQuery {
 
 	public HQLQuery( IBoxContext context, String hql, Object bindings, IStruct options ) {
 		this.options		= options;
-		this.context		= context;
+		this.context		= context.getParentOfType( IJDBCCapableContext.class );
 		this.hql			= hql;
 
-		this.ormApp			= ormService.getORMAppByContext( context.getRequestContext() );
-		this.ormContext		= ORMContext.getForContext( context.getRequestContext() );
+		this.ormApp			= ormService.getORMAppByContext( this.context );
+		this.ormContext		= ORMContext.getForContext( this.context );
 		this.datasource		= options.containsKey( Key.datasource ) ? Key.of( options.getAsString( Key.datasource ) ) : null;
 		this.session		= ormContext.getSession( datasource );
 

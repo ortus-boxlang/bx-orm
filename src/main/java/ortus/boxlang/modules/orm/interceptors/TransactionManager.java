@@ -25,7 +25,7 @@ import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
 import ortus.boxlang.runtime.scopes.Key;
@@ -59,12 +59,12 @@ public class TransactionManager extends BaseInterceptor {
 	@InterceptionPoint
 	public void onTransactionBegin( IStruct args ) {
 		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
-		if ( !isORMEnabled( context.getRequestContext() ) ) {
+		if ( !isORMEnabled( context.getParentOfType( IJDBCCapableContext.class ) ) ) {
 			return;
 		}
 
 		ORMApp		ormApp				= ormService.getORMAppByContext( context );
-		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
+		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 		ORMConfig	config				= ormRequestContext.getConfig();
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
@@ -105,12 +105,12 @@ public class TransactionManager extends BaseInterceptor {
 	@InterceptionPoint
 	public void onTransactionCommit( IStruct args ) {
 		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
-		if ( !isORMEnabled( context.getRequestContext() ) ) {
+		if ( !isORMEnabled( context.getParentOfType( IJDBCCapableContext.class ) ) ) {
 			return;
 		}
 
 		ORMApp		ormApp				= ormService.getORMAppByContext( context );
-		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
+		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 
 		ormApp.getDatasources().forEach( datasource -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
@@ -131,12 +131,12 @@ public class TransactionManager extends BaseInterceptor {
 	@InterceptionPoint
 	public void onTransactionRollback( IStruct args ) {
 		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
-		if ( !isORMEnabled( context.getRequestContext() ) ) {
+		if ( !isORMEnabled( context.getParentOfType( IJDBCCapableContext.class ) ) ) {
 			return;
 		}
 
 		ORMApp		ormApp				= ormService.getORMAppByContext( context );
-		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
+		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 		ORMConfig	config				= ormRequestContext.getConfig();
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
@@ -175,12 +175,12 @@ public class TransactionManager extends BaseInterceptor {
 	@InterceptionPoint
 	public void onTransactionEnd( IStruct args ) {
 		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
-		if ( !isORMEnabled( context.getRequestContext() ) ) {
+		if ( !isORMEnabled( context.getParentOfType( IJDBCCapableContext.class ) ) ) {
 			return;
 		}
 
 		ORMApp		ormApp				= ormService.getORMAppByContext( context );
-		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
+		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
@@ -201,13 +201,13 @@ public class TransactionManager extends BaseInterceptor {
 	/**
 	 * Ensure ORM is enabled for this request before we attempt any transaction processing.
 	 *
-	 * @param requestContext Request context which will have an ORM config attached if ORM is enabled.
+	 * @param jdbcContext JDBC-capable context which will have an ORM config attached if ORM is enabled.
 	 */
-	private boolean isORMEnabled( RequestBoxContext requestContext ) {
-		if ( requestContext == null ) {
+	private boolean isORMEnabled( IJDBCCapableContext jdbcContext ) {
+		if ( jdbcContext == null ) {
 			return false;
 		}
-		ORMConfig ormConfig = ORMConfig.loadFromContext( requestContext );
+		ORMConfig ormConfig = ORMConfig.loadFromContext( jdbcContext );
 		if ( ormConfig == null ) {
 			// ORM is not enabled for this application
 			return false;

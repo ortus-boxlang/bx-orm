@@ -23,6 +23,7 @@ import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
@@ -57,7 +58,8 @@ public class ORMEvictQueries extends BaseORMBIF {
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String			cacheName			= arguments.getAsString( ORMKeys.cacheName );
 		String			datasourceName		= arguments.getAsString( ORMKeys.datasource );
-		ORMContext		ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
+		IBoxContext		jdbcBoxContext		= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext		ormRequestContext	= ORMContext.getForContext( jdbcBoxContext );
 		SessionFactory	factory				= null;
 		if ( datasourceName == null ) {
 			factory = ormRequestContext.getSession().getSessionFactory();

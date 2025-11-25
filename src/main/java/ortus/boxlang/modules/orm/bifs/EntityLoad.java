@@ -20,6 +20,7 @@ package ortus.boxlang.modules.orm.bifs;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.ArrayCaster;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
@@ -147,7 +148,7 @@ public class EntityLoad extends BaseORMBIF {
 		IStruct	options	= buildCriteriaOptions( arguments );
 		IStruct	filter	= arguments.getAsStruct( ORMKeys.idOrFilter );
 
-		Array	results	= ormService.getORMAppByContext( context ).loadEntitiesByFilter( context.getRequestContext(),
+		Array	results	= ormService.getORMAppByContext( context ).loadEntitiesByFilter( context.getParentOfType( IJDBCCapableContext.class ),
 		    arguments.getAsString( ORMKeys.entityName ), filter, options );
 		if ( options.getAsBoolean( ORMKeys.unique ) ) {
 			return results.isEmpty() ? null : results.getFirst();

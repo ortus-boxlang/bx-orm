@@ -23,6 +23,7 @@ import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
@@ -54,7 +55,8 @@ public class ORMClearSession extends BaseORMBIF {
 	 */
 	public Boolean _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		Key			datasourceName	= Key.of( StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" ) );
-		ORMContext	ormContext		= ORMContext.getForContext( context.getRequestContext() );
+		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext	ormContext		= ORMContext.getForContext( jdbcBoxContext );
 
 		// If no ORM app found then ignore
 		if ( ormContext.hasORMApp() ) {

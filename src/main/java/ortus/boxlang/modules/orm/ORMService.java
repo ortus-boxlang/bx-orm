@@ -35,6 +35,7 @@ import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.BaseApplicationListener;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
@@ -305,12 +306,13 @@ public class ORMService extends BaseService {
 	 * @return The primary key value for the given entity instance.
 	 */
 	public static Object getEntityIdentifier( IClassRunnable entity, IBoxContext context ) {
-		RequestBoxContext	requestContext	= context.getRequestContext();
-		ORMApp				ormApp			= ORMContext.getForContext( requestContext ).getORMApp();
-		String				entityName		= getEntityName( entity );
-		EntityRecord		entityRecord	= ormApp.lookupEntity( entityName, true );
-		Session				session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
-		ClassMetadata		metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
+		IBoxContext		jdbcContext		= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext		ormContext		= ORMContext.getForContext( jdbcContext );
+		ORMApp			ormApp			= ormContext.getORMApp();
+		String			entityName		= getEntityName( entity );
+		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
+		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
+		ClassMetadata	metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
 		return metadata.getIdentifier( entity );
 	}
 

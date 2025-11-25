@@ -252,12 +252,12 @@ public class ORMApp {
 	/**
 	 * Load an entity by its primary key.
 	 *
-	 * @param context    Boxlang Request context
+	 * @param context    Boxlang JDBC context
 	 * @param entityName The name of the entity to load
 	 * @param keyValue   The primary key value to load the entity by. This can be a single value such as a string or integer, or a struct for composite
 	 *                   keys.
 	 */
-	public IClassRunnable loadEntityById( RequestBoxContext context, String entityName, Object keyValue ) {
+	public IClassRunnable loadEntityById( IBoxContext context, String entityName, Object keyValue ) {
 		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
 		Session			session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 
@@ -275,12 +275,12 @@ public class ORMApp {
 	/**
 	 * Load an array of entities by filter criteria.
 	 *
-	 * @param context    Context in which the BIF was invoked.
+	 * @param context    JDBC-capable context in which the BIF was invoked.
 	 * @param entityName The name of the entity to load.
 	 * @param filter     Struct of filter criteria.
 	 * @param options    Struct of options, including maxResults, offset, order, etc.
 	 */
-	public Array loadEntitiesByFilter( RequestBoxContext context, String entityName, IStruct filter, IStruct options ) {
+	public Array loadEntitiesByFilter( IBoxContext context, String entityName, IStruct filter, IStruct options ) {
 		EntityRecord			entityRecord	= this.lookupEntity( entityName, true );
 		Session					session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 		org.hibernate.Criteria	criteria		= session.createCriteria( entityRecord.getEntityName() );

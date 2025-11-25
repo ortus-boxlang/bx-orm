@@ -23,6 +23,7 @@ import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
@@ -51,7 +52,8 @@ public class ORMCloseSession extends BaseORMBIF {
 	 * @argument.datasource The datasource on which to close the current session. If not provided, the default datasource will be used.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getRequestContext() );
+		IBoxContext	jdbcBoxContext		= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext	ormRequestContext	= ORMContext.getForContext( jdbcBoxContext );
 		String		datasourceName		= StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 
 		ormRequestContext.closeSession( !datasourceName.isBlank() ? Key.of( datasourceName ) : null );
