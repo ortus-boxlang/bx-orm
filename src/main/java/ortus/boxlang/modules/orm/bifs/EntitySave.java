@@ -27,6 +27,7 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
@@ -60,9 +61,10 @@ public class EntitySave extends BaseORMBIF {
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		String			entityName		= getEntityName( entity );
-		ORMApp			ormApp			= ORMContext.getForContext( context.getRequestContext() ).getORMApp();
+		ORMContext		ormContext		= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMApp			ormApp			= ormContext.getORMApp();
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
-		Session			session			= ORMContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
+		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		Boolean			forceInsert		= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
 
 		if ( forceInsert ) {
