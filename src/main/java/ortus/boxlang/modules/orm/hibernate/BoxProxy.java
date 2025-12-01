@@ -21,7 +21,6 @@ import java.io.Serializable;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,7 +48,7 @@ import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 /**
  * Boxlang class proxy.
- * 
+ *
  * @since 1.0.0
  */
 public class BoxProxy implements IClassRunnable, HibernateProxy {
@@ -158,21 +157,6 @@ public class BoxProxy implements IClassRunnable, HibernateProxy {
 	@Override
 	public List<ImportDefinition> getImports() {
 		return getRunnable().getImports();
-	}
-
-	@Override
-	public Object getRunnableAST() {
-		return getRunnable().getRunnableAST();
-	}
-
-	@Override
-	public long getRunnableCompileVersion() {
-		return getRunnable().getRunnableCompileVersion();
-	}
-
-	@Override
-	public LocalDateTime getRunnableCompiledOn() {
-		return getRunnable().getRunnableCompiledOn();
 	}
 
 	@Override

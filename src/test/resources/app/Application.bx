@@ -7,19 +7,19 @@ class{
 		"TestDB" = {
 			"driver"                 = "mysql",
 			"database"               = "test",
-			"host"                   = "${env.DB_HOST:127.0.0.1}",
-			"port"                   = "${env.DB_PORT:3306}",
-			"username"               = "${env.DB_USER:root}",
-			"password"               = "${env.DB_PASSWORD:root}",
+			"host"                   = "#getSystemSetting( "DB_HOST", "127.0.0.1" )#",
+			"port"                   = "#getSystemSetting( "DB_PORT", 3306 )#",
+			"username"               = "#getSystemSetting( "DB_USER", "root" )#",
+			"password"               = "#getSystemSetting( "DB_PASSWORD", "root" )#",
 			"LeakDetectionThreshold" = 3
 		},
 		"dsn2": {
 			"driver"                 = "mysql",
 			"database"               = "dsn2",
-			"host"                   = "${env.DB_HOST:127.0.0.1}",
-			"port"                   = "${env.DB_PORT:3306}",
-			"username"               = "${env.DB_USER:root}",
-			"password"               = "${env.DB_PASSWORD:root}",
+			"host"                   = "#getSystemSetting( "DB_HOST", "127.0.0.1" )#",
+			"port"                   = "#getSystemSetting( "DB_PORT", 3306 )#",
+			"username"               = "#getSystemSetting( "DB_USER", "root" )#",
+			"password"               = "#getSystemSetting( "DB_PASSWORD", "root" )#",
 			"LeakDetectionThreshold" = 3
 		}
 	};
