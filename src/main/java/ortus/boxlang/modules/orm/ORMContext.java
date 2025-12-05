@@ -28,7 +28,6 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
-import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
@@ -38,13 +37,24 @@ import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
- * Transient context for ORM requests.
+ * Transient ORM state tracker; manages ORM state for the lifetime of a BoxLang request or thread context.
  * <p>
- * Tracks Hibernate sessions and transactions for the lifetime of a single Boxlang request.
+ * Say you call `entityNew()` in a request context, then call it inside a thread loop:
+ * <code>
+ * entityNew( "MyEntity" ); // Request context
+ * items.each( item -> {
+ * entityNew( "MyEntity" ); // Thread context
+ * }, true ); // parallel execution
+ * </code>
+ * <p>
+ * You now have N+1 Hibernate sessions open (one for the request context, and one for each item in the `items` array). Each of these Hibernate
+ * sessions is stored in its own ORMContext instance, which is attached to the request or thread context. Each thread will shut down the `ORMContext`
+ * upon thread completion, which will close all Hibernate sessions opened as part that thread's execution.
+ * The request context's `ORMContext` will be torn down at the end of the request, closing any remaining Hibernate sessions.
  * 
  * @since 1.0.0
  */
-public class ORMRequestContext {
+public class ORMContext {
 
 	/**
 	 * Runtime
@@ -63,7 +73,7 @@ public class ORMRequestContext {
 
 	private ORMApp					ormApp;
 
-	private RequestBoxContext		context;
+	private IBoxContext				context;
 
 	private ORMConfig				config;
 
@@ -73,31 +83,33 @@ public class ORMRequestContext {
 	private Map<Key, Session>		sessions	= new ConcurrentHashMap<>();
 
 	/**
-	 * Retrieve the ORMRequestContext for the given context.
+	 * Retrieve the ORMContext for the given boxlang context (whatever JDBC-capable context inside which we are currently executing).
 	 *
-	 * @param context The context to retrieve the ORMRequestContext for.
+	 * @param context The context for which to retrieve the ORMContext.
 	 *
-	 * @return The ORMRequestContext for the given context.
+	 * @return The ORMContext for the given context.
 	 */
-	public static ORMRequestContext getForContext( IBoxContext context ) {
+	public static ORMContext getForContext( IBoxContext context ) {
 		if ( context == null ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; context is null." );
 		}
-		RequestBoxContext requestContext = context.getRequestContext();
-		if ( requestContext == null ) {
-			throw new BoxRuntimeException( "Could not acquire ORM context; supplied context has no parent context which is a request typed." );
+		IBoxContext jdbcCapableContext = context.getParentOfType( IJDBCCapableContext.class );
+		if ( jdbcCapableContext == null ) {
+			throw new BoxRuntimeException( "Could not acquire ORM context; supplied context has no parent context which is request or thread typed." );
 		}
-		IStruct appSettings = ( IStruct ) requestContext.getConfigItem( Key.applicationSettings );
+		// Fix for "effectively final" lambda capture
+		// https://www.baeldung.com/java-lambda-effectively-final-local-variables
+		final IBoxContext	finalJDBCContext	= jdbcCapableContext;
+		final IStruct		appSettings			= ( IStruct ) finalJDBCContext.getConfigItem( Key.applicationSettings );
 
 		if ( !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
 			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
 		}
 
-		return requestContext.computeAttachmentIfAbsent( ORMKeys.ORMRequestContext, key -> {
-			// logger.debug( "Initializing ORM context" );
-			return new ORMRequestContext(
-			    requestContext,
-			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), requestContext )
+		return jdbcCapableContext.computeAttachmentIfAbsent( ORMKeys.ORMContext, key -> {
+			return new ORMContext(
+			    finalJDBCContext,
+			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), finalJDBCContext )
 			);
 		} );
 	}
@@ -105,15 +117,16 @@ public class ORMRequestContext {
 	/**
 	 * Constructor.
 	 *
-	 * @param context The request context.
+	 * @param context The JDBC-capable context (request or thread).
 	 * @param config  The ORM configuration.
 	 */
-	public ORMRequestContext( RequestBoxContext context, ORMConfig config ) {
+	public ORMContext( IBoxContext context, ORMConfig config ) {
 		this.context	= context;
 		this.config		= config;
 		this.ormService	= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
 		this.ormApp		= this.ormService.getORMAppByContext( context );
 		this.logger		= runtime.getLoggingService().getLogger( "orm" );
+		this.logger.debug( "Initializing ORM context on context type: {}", context.getClass().getSimpleName() );
 	}
 
 	/**
@@ -189,7 +202,7 @@ public class ORMRequestContext {
 	 * <p>
 	 * Will close all Hibernate sessions and unregister the transaction manager.
 	 */
-	public ORMRequestContext shutdown() {
+	public ORMContext shutdown() {
 		// Auto-flush all sessions at the end of the request
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
 			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
@@ -208,7 +221,7 @@ public class ORMRequestContext {
 	 * <p>
 	 * Attempts a transaction commit prior to closing the sessions, if an active transaction is present.
 	 */
-	public ORMRequestContext closeAllSessions() {
+	public ORMContext closeAllSessions() {
 		this.sessions.forEach( ( key, session ) -> {
 			logger.debug( "Closing session on datasource {}", key );
 			try {
@@ -226,7 +239,7 @@ public class ORMRequestContext {
 	/**
 	 * Close the Hibernate session on the given datasource, and ensure it is removed from the session map.
 	 */
-	public ORMRequestContext closeSession( Key datasourceName ) {
+	public ORMContext closeSession( Key datasourceName ) {
 		Session session = null;
 		if ( datasourceName == null ) {
 			session			= getSession();
@@ -244,7 +257,7 @@ public class ORMRequestContext {
 	 * <p>
 	 * Attempts a transaction commit prior to closing the session, if an active transaction is present.
 	 */
-	private ORMRequestContext closeSessionAndTransaction( Session session ) {
+	private ORMContext closeSessionAndTransaction( Session session ) {
 		var tx = session.getTransaction();
 		if ( tx.isActive() ) {
 			logger.warn( "Session has an active transaction; committing before flushing" );

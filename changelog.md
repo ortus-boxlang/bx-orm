@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- [BLMODULES-102](https://ortussolutions.atlassian.net/browse/BLMODULES-102) - Fix ORM usage in threads causing ConcurrentModificationException
+
 ## [1.1.3] - 2025-11-04
 
 ### 🐛 Fixed

@@ -19,10 +19,11 @@ package ortus.boxlang.modules.orm.bifs;
 
 import org.hibernate.SessionFactory;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
@@ -55,10 +56,11 @@ public class ORMEvictQueries extends BaseORMBIF {
 	 * @argument.datasource The name of the datasource on which to evict the cache. If not provided, the default datasource will be used.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		String				cacheName			= arguments.getAsString( ORMKeys.cacheName );
-		String				datasourceName		= arguments.getAsString( ORMKeys.datasource );
-		ORMRequestContext	ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
-		SessionFactory		factory				= null;
+		String			cacheName			= arguments.getAsString( ORMKeys.cacheName );
+		String			datasourceName		= arguments.getAsString( ORMKeys.datasource );
+		IBoxContext		jdbcBoxContext		= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext		ormRequestContext	= ORMContext.getForContext( jdbcBoxContext );
+		SessionFactory	factory				= null;
 		if ( datasourceName == null ) {
 			factory = ormRequestContext.getSession().getSessionFactory();
 		} else {

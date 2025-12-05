@@ -20,12 +20,13 @@ package ortus.boxlang.modules.orm.bifs;
 import java.util.List;
 
 import ortus.boxlang.modules.orm.ORMApp;
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
@@ -59,7 +60,8 @@ public class EntityToQuery extends BaseORMBIF {
 	 * @argument.name The name of the entity. Required if `entity` is an array.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		ORMApp			ormApp			= ORMRequestContext.getForContext( context.getRequestContext() ).getORMApp();
+		IBoxContext		jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		ORMApp			ormApp			= ORMContext.getForContext( jdbcBoxContext ).getORMApp();
 		EntityRecord	entityRecord	= null;
 		String			entityName		= arguments.containsKey( Key._name )
 		    ? arguments.getAsString( Key._name )

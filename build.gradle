@@ -2,11 +2,11 @@
 plugins {
     id 'java'
     // For source code formatting
-    id "com.diffplug.spotless" version "7.2.1"
+    id "com.diffplug.spotless" version "8.1.0"
 	// https://github.com/harbby/gradle-serviceloader
     id "com.github.harbby.gradle.serviceloader" version "1.1.9"
 	// Shadow
-	id "com.gradleup.shadow" version "9.0.0-beta17"
+	id "com.gradleup.shadow" version "9.2.2"
     // Download task
     id "de.undercouch.download" version "5.6.0"
 }
@@ -42,8 +42,8 @@ dependencies {
 		compileOnly files( '../../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
 		testImplementation files( '../../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
 	} else {
-		compileOnly "io.boxlang:boxlang:1.6.0"
-		testImplementation "io.boxlang:boxlang:1.6.0"
+		compileOnly "io.boxlang:boxlang:1.7.0"
+		testImplementation "io.boxlang:boxlang:1.7.0"
 	}
 
 	// Implementation Dependencies
@@ -54,11 +54,11 @@ dependencies {
 	// https://mvnrepository.com/artifact/javax.cache/cache-api
 	implementation 'javax.cache:cache-api:1.1.1'
 	// https://mvnrepository.com/artifact/org.ehcache/ehcache
-	implementation 'org.ehcache:ehcache:3.10.8'
+	implementation 'org.ehcache:ehcache:3.11.1'
 
     // Testing Dependencies
     // Pinning this because the next version up breaks our tests
-    testImplementation "org.junit.jupiter:junit-jupiter:5.+"
+    testImplementation "org.junit.jupiter:junit-jupiter:6.+"
 	testImplementation "org.mockito:mockito-core:5.+"
 	testImplementation "com.google.truth:truth:1.+"
 	// Explicitly declare the JUnit platform launcher (to avoid deprecation)
@@ -152,7 +152,6 @@ shadowJar {
     mergeServiceFiles()
     destinationDirectory = file( "build/libs" )
 }
-build.finalizedBy( shadowJar )
 
 /**
  * Source Code Formatting
@@ -174,6 +173,7 @@ spotless {
  * - Copies the src/main/bx/** to build/module/ folder.
  */
 task createModuleStructure(type: Copy) {
+	mustRunAfter shadowJar, jar
     from( 'build/libs' ) {
 		include "${project.name}-${version}.jar"
         into 'libs'
@@ -181,12 +181,12 @@ task createModuleStructure(type: Copy) {
     from( 'src/main/bx' ) {
 		include '**/*.bx'
 		// Token Replacements Go Here
-		filter { line -> line.replaceAll('@build.version@', project.version) }
 		filter { line -> line.replaceAll('@build.hibernateVersion@', hibernateVersion) }
+		filter{ line -> line.replaceAll( '@build.version@', project.version ) }
 		if( project.branch == "development" ){
-			filter { line -> line.replaceAll( '\\+@build.number@', '' ) }
+			filter{ line -> line.replaceAll( '\\+@build.number@', '' ) }
 		} else {
-			filter { line -> line.replaceAll( '@build.number@', project.buildID ) }
+			filter{ line -> line.replaceAll( '@build.number@', project.buildID ) }
 		}
     }
     from( '.' ) {
@@ -194,11 +194,11 @@ task createModuleStructure(type: Copy) {
 		include 'readme.md'
 		include 'changelog.md'
 		// Token Replacements Go Here
-		filter { line -> line.replaceAll( '@build.version@', project.version ) }
+		filter{ line -> line.replaceAll( '@build.version@', project.version ) }
 		if( project.branch == "development" ){
-			filter { line -> line.replaceAll( '\\+@build.number@', '' ) }
+			filter{ line -> line.replaceAll( '\\+@build.number@', '' ) }
 		} else {
-			filter { line -> line.replaceAll( '@build.number@', project.buildID ) }
+			filter{ line -> line.replaceAll( '@build.number@', project.buildID ) }
 		}
     }
 

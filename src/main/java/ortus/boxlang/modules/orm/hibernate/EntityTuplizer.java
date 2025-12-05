@@ -95,8 +95,7 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	@Override
 	public Class getMappedClass() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getMappedClass'" );
+		return BoxProxy.class;
 	}
 
 	@Override

@@ -30,6 +30,7 @@ import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 
@@ -61,7 +62,7 @@ public class BoxPropertyGetter implements Getter {
 		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 		this.mappedProperty	= mappedProperty;
 		this.mappedEntity	= mappedEntity;
-		this.context		= context;
+		this.context		= context.getParentOfType( IJDBCCapableContext.class );
 	}
 
 	@Override
@@ -72,7 +73,7 @@ public class BoxPropertyGetter implements Getter {
 			return castRunnable.getVariablesScope().get( mappedProperty.getName() );
 		} else {
 			// Otherwise we assume this is a primary key lookup and load the entity to get the property
-			return ormService.getORMAppByContext( context ).loadEntityById( context.getRequestContext(), mappedEntity.getEntityName(), owner )
+			return ormService.getORMAppByContext( context ).loadEntityById( context, mappedEntity.getEntityName(), owner )
 			    .get( mappedProperty.getName() );
 		}
 	}

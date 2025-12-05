@@ -24,12 +24,12 @@ import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 
 import ortus.boxlang.modules.orm.ORMApp;
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
@@ -59,17 +59,20 @@ public class EntityLoadByExample extends BaseORMBIF {
 	 */
 	@SuppressWarnings( { "deprecation", "unchecked" } )
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		RequestBoxContext	requestContext	= context.getRequestContext();
-		ORMApp				ormApp			= ORMRequestContext.getForContext( requestContext ).getORMApp();
-		Object				sampleEntity	= arguments.get( ORMKeys.sampleEntity );
-		Boolean				unique			= arguments.getAsBoolean( ORMKeys.unique );
+		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext	ormContext		= ORMContext.getForContext( jdbcBoxContext );
+		ORMApp		ormApp			= ormContext.getORMApp();
+		Object		sampleEntity	= arguments.get( ORMKeys.sampleEntity );
+		Boolean		unique			= arguments.getAsBoolean( ORMKeys.unique );
+
 		if ( ! ( sampleEntity instanceof IClassRunnable ) ) {
 			throw new BoxRuntimeException( "Sample entity must be a valid entity" );
 		}
+
 		IClassRunnable	workingEntity	= ( IClassRunnable ) sampleEntity;
 		String			entityName		= getEntityName( workingEntity );
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
-		Session			session			= ORMRequestContext.getForContext( requestContext ).getSession( entityRecord.getDatasource() );
+		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		Criteria		criteria		= session.createCriteria( entityName );
 		Example			example			= Example.create( workingEntity );
 		criteria.add( example );

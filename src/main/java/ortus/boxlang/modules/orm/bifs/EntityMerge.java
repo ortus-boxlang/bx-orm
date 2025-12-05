@@ -21,11 +21,13 @@ import java.util.Set;
 
 import org.hibernate.Session;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMApp;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
@@ -55,8 +57,11 @@ public class EntityMerge extends BaseORMBIF {
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );
 		String			entityName		= getEntityName( entity );
-		EntityRecord	entityRecord	= ormService.getORMAppByContext( context ).lookupEntity( entityName, true );
-		Session			session			= ORMRequestContext.getForContext( context.getRequestContext() ).getSession( entityRecord.getDatasource() );
+		IBoxContext		jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext		ormContext		= ORMContext.getForContext( jdbcBoxContext );
+		ORMApp			ormApp			= ormContext.getORMApp();
+		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
+		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		return session.merge( entity );
 	}
 

@@ -35,6 +35,7 @@ import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.BaseApplicationListener;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
@@ -305,12 +306,13 @@ public class ORMService extends BaseService {
 	 * @return The primary key value for the given entity instance.
 	 */
 	public static Object getEntityIdentifier( IClassRunnable entity, IBoxContext context ) {
-		RequestBoxContext	requestContext	= context.getRequestContext();
-		ORMApp				ormApp			= ORMRequestContext.getForContext( requestContext ).getORMApp();
-		String				entityName		= getEntityName( entity );
-		EntityRecord		entityRecord	= ormApp.lookupEntity( entityName, true );
-		Session				session			= ORMRequestContext.getForContext( context ).getSession( entityRecord.getDatasource() );
-		ClassMetadata		metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
+		IBoxContext		jdbcContext		= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext		ormContext		= ORMContext.getForContext( jdbcContext );
+		ORMApp			ormApp			= ormContext.getORMApp();
+		String			entityName		= getEntityName( entity );
+		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
+		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
+		ClassMetadata	metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
 		return metadata.getIdentifier( entity );
 	}
 
@@ -323,7 +325,7 @@ public class ORMService extends BaseService {
 	 */
 	public void shutdownApp( IBoxContext context ) {
 		this.shutdownApp( ORMService.getAppNameFromContext( context ) );
-		context.getRequestContext().removeAttachment( ORMKeys.ORMRequestContext );
+		context.removeAttachment( ORMKeys.ORMContext );
 	}
 
 	/**
@@ -345,8 +347,8 @@ public class ORMService extends BaseService {
 			return; // No context to remove from
 		}
 		RequestBoxContext requestContext = context.getRequestContext();
-		if ( requestContext != null && requestContext.hasAttachment( ORMKeys.ORMRequestContext ) ) {
-			requestContext.removeAttachment( ORMKeys.ORMRequestContext );
+		if ( requestContext != null && requestContext.hasAttachment( ORMKeys.ORMContext ) ) {
+			requestContext.removeAttachment( ORMKeys.ORMContext );
 		}
 	}
 
@@ -359,6 +361,9 @@ public class ORMService extends BaseService {
 	 */
 	public ORMApp reloadApp( IBoxContext context ) {
 		RequestBoxContext requestContext = context instanceof RequestBoxContext castedContext ? castedContext : context.getRequestContext();
+		if ( requestContext == null ) {
+			throw new BoxRuntimeException( "No request context available to reload ORM application." );
+		}
 		shutdownApp( requestContext );
 		return startupApp(
 		    requestContext,

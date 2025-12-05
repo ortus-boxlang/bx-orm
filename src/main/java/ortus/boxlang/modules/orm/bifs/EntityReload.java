@@ -19,11 +19,12 @@ package ortus.boxlang.modules.orm.bifs;
 
 import java.util.Set;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext.ScopeSearchResult;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
@@ -51,7 +52,8 @@ public class EntityReload extends BaseORMBIF {
 	 * @argument.entity The entity instance to reload.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		Object entity = arguments.get( ORMKeys.entity );
+		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		Object		entity			= arguments.get( ORMKeys.entity );
 		if ( entity instanceof String variableName ) {
 			ScopeSearchResult entityLookup = context.scopeFindNearby( Key.of( ( String ) variableName ), null, true );
 			if ( entityLookup == null ) {
@@ -59,8 +61,8 @@ public class EntityReload extends BaseORMBIF {
 			}
 			entity = entityLookup.value();
 		}
-		ORMRequestContext
-		    .getForContext( context.getRequestContext() )
+		ORMContext
+		    .getForContext( jdbcBoxContext )
 		    .getSession()
 		    .refresh( entity );
 		return entity;

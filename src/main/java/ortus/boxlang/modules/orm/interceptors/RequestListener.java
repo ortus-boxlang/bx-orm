@@ -17,7 +17,7 @@
  */
 package ortus.boxlang.modules.orm.interceptors;
 
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.RequestBoxContext;
@@ -49,12 +49,10 @@ public class RequestListener extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onRequestStart( IStruct args ) {
-		logger.debug( "onRequestStart - Starting up ORM request" );
 	}
 
 	@InterceptionPoint
 	public void onRequestEnd( IStruct args ) {
-		logger.debug( "onRequestEnd - Shutting down ORM request" );
 		RequestBoxContext	context	= args.getAs( RequestBoxContext.class, Key.context );
 		ORMConfig			config	= ORMConfig.loadFromContext( context );
 
@@ -63,13 +61,14 @@ public class RequestListener extends BaseInterceptor {
 			return;
 		}
 
-		if ( !context.hasAttachment( ORMKeys.ORMRequestContext ) ) {
+		if ( !context.hasAttachment( ORMKeys.ORMContext ) ) {
 			logger.warn( "No ORM request context; did the request startup fail for some reason?" );
 			return;
 		}
 
-		ORMRequestContext ormRequestContext = context.getAttachment( ORMKeys.ORMRequestContext );
+		logger.debug( "onRequestEnd - Shutting down ORM request" );
+		ORMContext ormRequestContext = context.getAttachment( ORMKeys.ORMContext );
 		ormRequestContext.shutdown();
-		context.removeAttachment( ORMKeys.ORMRequestContext );
+		context.removeAttachment( ORMKeys.ORMContext );
 	}
 }

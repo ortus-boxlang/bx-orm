@@ -26,7 +26,7 @@ import org.hibernate.proxy.AbstractLazyInitializer;
 import org.hibernate.tuple.entity.EntityMetamodel;
 
 import ortus.boxlang.modules.orm.ORMApp;
-import ortus.boxlang.modules.orm.ORMRequestContext;
+import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
@@ -60,7 +60,7 @@ public class BoxLazyInitializer extends AbstractLazyInitializer implements Seria
 		this.mappingInfo	= mappingInfo;
 
 		this.context		= RequestBoxContext.getCurrent();
-		this.ormApp			= ORMRequestContext.getForContext( context ).getORMApp();
+		this.ormApp			= ORMContext.getForContext( context ).getORMApp();
 		this.entityRecord	= ormApp.lookupEntity( entityName, true );
 
 		SessionFactoryImplementor sessionFactoryImpl = ( SessionFactoryImplementor ) ormApp.getSessionFactoryOrThrow( this.entityRecord.getDatasource() );

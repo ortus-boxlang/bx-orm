@@ -20,6 +20,7 @@ package ortus.boxlang.modules.orm.bifs;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.ArrayCaster;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
@@ -102,6 +103,7 @@ public class EntityLoad extends BaseORMBIF {
 	 * @argument.options A struct of options to modify the load operation. See below for supported options.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		IBoxContext jdbcBoxContext = context.getParentOfType( IJDBCCapableContext.class );
 		if ( arguments.get( ORMKeys.uniqueOrOrder ) != null && arguments.get( ORMKeys.options ) == null
 		    && arguments.get( ORMKeys.uniqueOrOrder ) instanceof IStruct ) {
 			// If the uniqueOrOrder is a struct, we need to move it to options
@@ -113,26 +115,26 @@ public class EntityLoad extends BaseORMBIF {
 		if ( arguments.containsKey( ORMKeys.idOrFilter ) ) {
 			boolean idIsSimpleValue = StringCasterStrict.attempt( arguments.get( ORMKeys.idOrFilter ) ).wasSuccessful();
 			if ( idIsSimpleValue ) {
-				return loadEntityById( context, arguments );
+				return loadEntityById( jdbcBoxContext, arguments );
 			}
 		}
 		// EITHER: No filter or was ID provided, so load all entities as an array...
 		// OR a non-simple value was provided (i.e. a struct or array), so load by filter.
-		return loadEntitiesByFilter( context, arguments );
+		return loadEntitiesByFilter( jdbcBoxContext, arguments );
 	}
 
 	/**
 	 * Load an entity or array of entities by ID.
 	 *
-	 * @param context   Context in which the BIF was invoked.
+	 * @param context   JDBC context in which the BIF was invoked.
 	 * @param arguments Arguments scope of the BIF.
 	 */
 	private Object loadEntityById( IBoxContext context, ArgumentsScope arguments ) {
 		if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
-			return ormService.getORMAppByContext( context ).loadEntityById( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ),
+			return ormService.getORMAppByContext( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
 			    arguments.get( ORMKeys.idOrFilter ) );
 		}
-		var entity = ormService.getORMAppByContext( context ).loadEntityById( context.getRequestContext(), arguments.getAsString( ORMKeys.entityName ),
+		var entity = ormService.getORMAppByContext( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
 		    arguments.get( ORMKeys.idOrFilter ) );
 		return entity == null ? Array.EMPTY : Array.of( entity );
 	}
@@ -140,14 +142,14 @@ public class EntityLoad extends BaseORMBIF {
 	/**
 	 * Load an array of entities by filter criteria.
 	 *
-	 * @param context   Context in which the BIF was invoked.
+	 * @param context   JDBC context in which the BIF was invoked.
 	 * @param arguments Arguments scope of the BIF.
 	 */
 	private Object loadEntitiesByFilter( IBoxContext context, ArgumentsScope arguments ) {
 		IStruct	options	= buildCriteriaOptions( arguments );
 		IStruct	filter	= arguments.getAsStruct( ORMKeys.idOrFilter );
 
-		Array	results	= ormService.getORMAppByContext( context ).loadEntitiesByFilter( context.getRequestContext(),
+		Array	results	= ormService.getORMAppByContext( context ).loadEntitiesByFilter( context,
 		    arguments.getAsString( ORMKeys.entityName ), filter, options );
 		if ( options.getAsBoolean( ORMKeys.unique ) ) {
 			return results.isEmpty() ? null : results.getFirst();

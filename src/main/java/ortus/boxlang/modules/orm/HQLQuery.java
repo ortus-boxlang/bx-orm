@@ -28,6 +28,7 @@ import org.hibernate.Session;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.ArrayCaster;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.CastAttempt;
@@ -54,7 +55,7 @@ public class HQLQuery {
 	private Session					session;
 	private ORMApp					ormApp;
 	private IBoxContext				context;
-	private ORMRequestContext		ormRequestContext;
+	private ORMContext				ormContext;
 
 	private List<QueryParameter>	parameters;
 	private int						parameterCount;
@@ -66,17 +67,17 @@ public class HQLQuery {
 	private static final String		DELETE_PREFIX		= "DELETE";
 
 	public HQLQuery( IBoxContext context, String hql, Object bindings, IStruct options ) {
-		this.options			= options;
-		this.context			= context;
-		this.hql				= hql;
+		this.options		= options;
+		this.context		= context.getParentOfType( IJDBCCapableContext.class );
+		this.hql			= hql;
 
-		this.ormApp				= ormService.getORMAppByContext( context.getRequestContext() );
-		this.ormRequestContext	= ORMRequestContext.getForContext( context.getRequestContext() );
-		this.datasource			= options.containsKey( Key.datasource ) ? Key.of( options.getAsString( Key.datasource ) ) : null;
-		this.session			= ormRequestContext.getSession( datasource );
+		this.ormApp			= ormService.getORMAppByContext( this.context );
+		this.ormContext		= ORMContext.getForContext( this.context );
+		this.datasource		= options.containsKey( Key.datasource ) ? Key.of( options.getAsString( Key.datasource ) ) : null;
+		this.session		= ormContext.getSession( datasource );
 
-		this.parameterCount		= 0;
-		this.parameters			= processBindings( bindings );
+		this.parameterCount	= 0;
+		this.parameters		= processBindings( bindings );
 	}
 
 	private List<QueryParameter> processBindings( Object bindings ) {
