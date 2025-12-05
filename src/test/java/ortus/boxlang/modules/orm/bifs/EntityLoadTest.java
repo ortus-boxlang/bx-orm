@@ -123,6 +123,19 @@ public class EntityLoadTest extends BaseORMTest {
 		} );
 	}
 
+	@DisplayName( "It can search for entities with a filter criteria containing a null value" )
+	@Test
+	public void testEntityLoadFilterWithNull() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityLoad( 'cbContentStore', { 'slug' : 'my-expired-content-store', 'expireDate' : null } );
+		""", context );
+		// @formatter:on
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Array.class );
+		assertThat( variables.getAsArray( result ).size() ).isEqualTo( 0 );
+	}
+
 	@DisplayName( "It can load array of entities by filter criteria, sorting by custom order clause" )
 	@Test
 	public void testEntityLoadFilterSort() {
