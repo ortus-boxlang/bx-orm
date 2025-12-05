@@ -136,6 +136,19 @@ public class EntityLoadTest extends BaseORMTest {
 		assertThat( variables.getAsArray( result ).size() ).isEqualTo( 0 );
 	}
 
+	@DisplayName( "It can search for entities with a filter criteria containing a null relationship" )
+	@Test
+	public void testEntityLoadFilterWithNullRelationship() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityLoad( 'Vehicle', { 'manufacturer' : null } );
+		""", context );
+		// @formatter:on
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Array.class );
+		assertThat( variables.getAsArray( result ).size() ).isEqualTo( 1 );
+	}
+
 	@DisplayName( "It can load array of entities by filter criteria, sorting by custom order clause" )
 	@Test
 	public void testEntityLoadFilterSort() {

@@ -58,7 +58,8 @@ public class JDBCTestUtils {
 		    ('1HGCM82633A123456','Honda', 'Accord', 42 ),
 		    ('2HGCM82633A654321','Honda', 'Civic', 42 ),
 		    ('1HGCM82633A789012','Honda', 'Ridgeline', 42 ),
-		    ('9ABAZ85656A776723','Ford', 'Fusion', 1 )
+		    ('9ABAZ85656A776723','Ford', 'Fusion', 1 ),
+		    ('0SB123','Studebaker', 'Studious', NULL )
 		    """, context );
 
 		//@formatter:off

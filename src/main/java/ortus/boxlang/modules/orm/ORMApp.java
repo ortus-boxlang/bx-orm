@@ -299,16 +299,20 @@ public class ORMApp {
 				        "No persistent filter property found with the name of '" + key.getName() + "' in entity '" + entityName + "'" );
 			    } );
 
-			filter.entrySet().stream()
-			    .forEach( entry -> {
-				    int propertyIndex = properties.indexOf( KeyCaster.cast( entry.getKey() ) );
-				    criteria.add(
-				        org.hibernate.criterion.Restrictions.eq(
+			for ( Key entryKey : filter.keySet() ) {
+				int		propertyIndex	= properties.indexOf( KeyCaster.cast( entryKey ) );
+				Object	propertyValue	= filter.get( entryKey );
+				criteria.add(
+				    propertyValue != null
+				        ? org.hibernate.criterion.Restrictions.eq(
 				            KeyCaster.cast( properties.get( propertyIndex ) ).getName(),
-				            entry.getValue()
+				            propertyValue
 				        )
-				    );
-			    } );
+				        : org.hibernate.criterion.Restrictions.isNull(
+				            KeyCaster.cast( properties.get( propertyIndex ) ).getName()
+				        )
+				);
+			}
 		}
 
 		return Array.of(

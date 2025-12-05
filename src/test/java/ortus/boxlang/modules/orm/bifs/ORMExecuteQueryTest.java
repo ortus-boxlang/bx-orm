@@ -41,7 +41,7 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		Object array = variables.get( result );
 		assertThat( array ).isInstanceOf( Array.class );
 		Array a = ( Array ) array;
-		assertThat( a.size() ).isEqualTo( 4 );
+		assertThat( a.size() ).isEqualTo( 5 );
 	}
 
 	@DisplayName( "It can run an HQL query on another datasource" )
