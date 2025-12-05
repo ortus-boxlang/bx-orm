@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-12-05
+
 - [BLMODULES-102](https://ortussolutions.atlassian.net/browse/BLMODULES-102) - Fix ORM usage in threads causing ConcurrentModificationException
 
 ## [1.1.3] - 2025-11-04
@@ -165,7 +167,8 @@ No significant changes.
 
 - First iteration of this module
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.3...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.3...v1.2.0
 [1.1.3]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.0...v1.1.1
