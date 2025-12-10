@@ -67,8 +67,7 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	@Override
 	public EntityMode getEntityMode() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getEntityMode'" );
+		return EntityMode.MAP;
 	}
 
 	@Override
