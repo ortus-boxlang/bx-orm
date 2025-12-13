@@ -19,65 +19,43 @@ package ortus.boxlang.modules.orm.hibernate;
 
 import java.io.Serializable;
 
-import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
-import org.hibernate.mapping.PersistentClass;
 import org.hibernate.proxy.AbstractLazyInitializer;
-import org.hibernate.tuple.entity.EntityMetamodel;
 
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMContext;
-import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.runnables.IBoxRunnable;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
-import ortus.boxlang.runtime.types.Struct;
 
 /**
  * Lazy initializer for BoxLang entities, which allows for lazy loading of entities
  * in a way that is compatible with the BoxLang runtime and ORM system.
- * 
+ *
  * @since 1.0.0
  */
 public class BoxLazyInitializer extends AbstractLazyInitializer implements Serializable {
 
-	@SuppressWarnings( "unused" ) // needed for compilation
-	private final Serializable			id;
-	@SuppressWarnings( "unused" ) // needed for compilation
-	private final String				entityName;
-	private final PersistentClass		mappingInfo;
-	private final EntityMetamodel		entityMetamodel;
-	private final ORMApp				ormApp;
-	private IBoxContext					context;
-	private final EntityRecord			entityRecord;
-	private final BoxClassInstantiator	boxClassInstantiator;
+	private final Serializable	id;
+	private final String		entityName;
 
-	public BoxLazyInitializer( String entityName, Serializable id, SharedSessionContractImplementor session, PersistentClass mappingInfo ) {
+	public BoxLazyInitializer( String entityName, Serializable id, SharedSessionContractImplementor session ) {
 		super( entityName, id, session );
-		this.id				= id;
-		this.entityName		= entityName;
-		this.mappingInfo	= mappingInfo;
-
-		this.context		= RequestBoxContext.getCurrent();
-		this.ormApp			= ORMContext.getForContext( context ).getORMApp();
-		this.entityRecord	= ormApp.lookupEntity( entityName, true );
-
-		SessionFactoryImplementor sessionFactoryImpl = ( SessionFactoryImplementor ) ormApp.getSessionFactoryOrThrow( this.entityRecord.getDatasource() );
-		this.entityMetamodel		= sessionFactoryImpl.getMetamodel()
-		    .entityPersister( this.entityRecord.getEntityName() )
-		    .getEntityMetamodel();
-		this.boxClassInstantiator	= new BoxClassInstantiator( entityMetamodel, this.mappingInfo );
+		this.id			= id;
+		this.entityName	= entityName;
 	}
 
 	public IBoxRunnable getEntity() {
-		return boxClassInstantiator.instantiate( context, entityRecord, Struct.EMPTY );
+		IBoxContext	context	= RequestBoxContext.getCurrent();
+		ORMApp		ormApp	= ORMContext.getForContext( context ).getORMApp();
+		return ormApp.loadEntityById( context, this.entityName, this.id );
 	}
 
 	@SuppressWarnings( "rawtypes" )
 	@Override
 	public Class getPersistentClass() {
-		throw new UnsupportedOperationException( "dynamic-map entity representation" );
+		return BoxProxy.class;
 	}
 
 	/**

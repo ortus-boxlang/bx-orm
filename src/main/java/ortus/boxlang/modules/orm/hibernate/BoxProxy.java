@@ -65,7 +65,7 @@ public class BoxProxy implements IClassRunnable, HibernateProxy {
 	 * @param session
 	 */
 	public BoxProxy( String entityName, Serializable id, SharedSessionContractImplementor session, PersistentClass mappingInfo ) {
-		this.lazyInitializer = new BoxLazyInitializer( entityName, id, session, mappingInfo );
+		this.lazyInitializer = new BoxLazyInitializer( entityName, id, session );
 	}
 
 	/**
