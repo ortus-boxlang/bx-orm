@@ -43,8 +43,6 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
  */
 public class EntityTuplizer extends AbstractEntityTuplizer {
 
-	EntityMetamodel entityMetamodel;
-
 	public EntityTuplizer( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
 		super( entityMetamodel, mappingInfo );
 	}
@@ -99,8 +97,7 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	@Override
 	protected Getter buildPropertyGetter( Property mappedProperty, PersistentClass mappedEntity ) {
-		return new BoxPropertyGetter( SessionFactoryBuilder.getRequestContext( this.getEntityMetamodel().getSessionFactory() ),
-		    mappedProperty, mappedEntity );
+		return new BoxPropertyGetter( mappedProperty, mappedEntity );
 	}
 
 	@Override
