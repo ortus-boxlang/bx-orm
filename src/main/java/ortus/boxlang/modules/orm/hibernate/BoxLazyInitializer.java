@@ -22,11 +22,6 @@ import java.io.Serializable;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.proxy.AbstractLazyInitializer;
 
-import ortus.boxlang.modules.orm.ORMApp;
-import ortus.boxlang.modules.orm.ORMContext;
-import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.RequestBoxContext;
-import ortus.boxlang.runtime.runnables.IBoxRunnable;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 
 /**
@@ -37,19 +32,8 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
  */
 public class BoxLazyInitializer extends AbstractLazyInitializer implements Serializable {
 
-	private final Serializable	id;
-	private final String		entityName;
-
 	public BoxLazyInitializer( String entityName, Serializable id, SharedSessionContractImplementor session ) {
 		super( entityName, id, session );
-		this.id			= id;
-		this.entityName	= entityName;
-	}
-
-	public IBoxRunnable getEntity() {
-		IBoxContext	context	= RequestBoxContext.getCurrent();
-		ORMApp		ormApp	= ORMContext.getForContext( context ).getORMApp();
-		return ormApp.loadEntityById( context, this.entityName, this.id );
 	}
 
 	@SuppressWarnings( "rawtypes" )
@@ -64,7 +48,9 @@ public class BoxLazyInitializer extends AbstractLazyInitializer implements Seria
 	 * @return
 	 */
 	public IClassRunnable getInstantiatedEntity() {
-		initializeWithoutLoadIfPossible();
+		if ( !isUninitialized() ) {
+			initializeWithoutLoadIfPossible();
+		}
 		return ( IClassRunnable ) getImplementation();
 	}
 
