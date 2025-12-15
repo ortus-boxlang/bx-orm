@@ -66,6 +66,7 @@ public class BoxPropertySetter implements Setter {
 		Key propertyName = Key.of( mappedProperty.getName() );
 		logger.trace( "Setting property {} on entity {} to value {}", propertyName.getName(), mappedEntity.getEntityName(), value );
 		if ( target instanceof IClassRunnable instance ) {
+			instance.getThisScope().put( mappedProperty.getName(), value );
 			instance.getVariablesScope().put( propertyName, value );
 		}
 	}
