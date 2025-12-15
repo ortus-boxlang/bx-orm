@@ -35,6 +35,7 @@ import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.scopes.Key;
 
 /**
  * Hibernate implementation class for helping convert tuples (database rows) into boxlang classes.
@@ -61,6 +62,19 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 			throw new IllegalArgumentException( "Entity identifier [" + StringCaster.cast( identifier ) + "] is not serializable." );
 		}
 
+	}
+
+	/**
+	 * Sets the identifier value on the given entity instance - overload to ensure correct key casting.
+	 */
+	@Override
+	public void setIdentifier( Object entity, Serializable id ) {
+		if ( entity instanceof IClassRunnable runnable ) {
+			runnable.getVariablesScope().put( Key.of( getEntityMetamodel().getIdentifierProperty().getName() ), id );
+			runnable.getThisScope().put( Key.of( getEntityMetamodel().getIdentifierProperty().getName() ), id );
+		} else {
+			super.setIdentifier( entity, id );
+		}
 	}
 
 	@Override
