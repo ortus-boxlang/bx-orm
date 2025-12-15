@@ -22,6 +22,7 @@ import java.io.Serializable;
 import org.hibernate.EntityMode;
 import org.hibernate.EntityNameResolver;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.property.access.spi.Getter;
@@ -68,13 +69,11 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 	 * Sets the identifier value on the given entity instance - overload to ensure correct key casting.
 	 */
 	@Override
-	public void setIdentifier( Object entity, Serializable id ) {
-		if ( entity instanceof IClassRunnable runnable ) {
-			runnable.getVariablesScope().put( Key.of( getEntityMetamodel().getIdentifierProperty().getName() ), id );
-			runnable.getThisScope().put( Key.of( getEntityMetamodel().getIdentifierProperty().getName() ), id );
-		} else {
-			super.setIdentifier( entity, id );
+	public void setIdentifier( Object entity, Serializable id, SharedSessionContractImplementor session ) {
+		if ( id instanceof Key keyClass ) {
+			id = keyClass.getName();
 		}
+		super.setIdentifier( entity, id, session );
 	}
 
 	@Override
