@@ -84,26 +84,22 @@ public class BoxPropertyGetter implements Getter {
 
 	@Override
 	public Class getReturnType() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getReturnType'" );
+		return Object.class;
 	}
 
 	@Override
 	public Member getMember() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getMember'" );
+		return null;
 	}
 
 	@Override
 	public String getMethodName() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getMethodName'" );
+		return null;
 	}
 
 	@Override
 	public Method getMethod() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getMethod'" );
+		return null;
 	}
 
 }

@@ -35,7 +35,7 @@ import ortus.boxlang.runtime.scopes.Key;
  * <p>
  * In other words, this class takes care of populating the boxlang class properties by calling the appropriate setter method when a Hibernate entity
  * is populated - whether by loading from the database or any other method.
- * 
+ *
  * @since 1.0.0
  */
 public class BoxPropertySetter implements Setter {
@@ -73,14 +73,12 @@ public class BoxPropertySetter implements Setter {
 
 	@Override
 	public String getMethodName() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getMethodName'" );
+		return null;
 	}
 
 	@Override
 	public Method getMethod() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getMethod'" );
+		return null;
 	}
 
 }
