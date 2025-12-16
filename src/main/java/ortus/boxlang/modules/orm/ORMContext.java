@@ -189,7 +189,7 @@ public class ORMContext {
 	}
 
 	/**
-	 * Getter for this ORM request context's ORM configuration.
+	 * Getter for this ORM context's ORM configuration.
 	 *
 	 * @return
 	 */
@@ -198,12 +198,13 @@ public class ORMContext {
 	}
 
 	/**
-	 * Shut down this ORM request context.
+	 * Shut down this ORM context.
 	 * <p>
 	 * Will close all Hibernate sessions and unregister the transaction manager.
 	 */
 	public ORMContext shutdown() {
 		// Auto-flush all sessions at the end of the request
+		// Should we move this to an onRequestEnd() method in case ORMContext.shutdown is called mid-request?
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
 			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
 			this.sessions.forEach( ( key, session ) -> session.flush() );
