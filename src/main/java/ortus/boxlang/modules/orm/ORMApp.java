@@ -261,7 +261,6 @@ public class ORMApp {
 		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
 		Session			session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 
-		// @TODO: Support composite keys.
 		String			keyType			= getKeyJavaType( session, entityName ).getSimpleName();
 		Serializable	id				= ( Serializable ) GenericCaster.cast( context, keyValue, keyType );
 		var				entity			= session.get( entityRecord.getEntityName(), id );

@@ -23,9 +23,13 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.dynamic.casters.CastAttempt;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
+import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
@@ -37,9 +41,9 @@ public class EntityLoadByPK extends BaseORMBIF {
 	public EntityLoadByPK() {
 		super();
 		declaredArguments = new Argument[] {
-		    new Argument( true, "String", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
-		    new Argument( true, "String", Key.id, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
-		    new Argument( false, "String", ORMKeys.unique, Set.of( Validator.NOT_IMPLEMENTED ) )
+		    new Argument( true, Argument.STRING, ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		    new Argument( true, Argument.ANY, Key.id, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		    new Argument( false, Argument.STRING, ORMKeys.unique, Set.of( Validator.NOT_IMPLEMENTED ) )
 		};
 	}
 
@@ -70,10 +74,18 @@ public class EntityLoadByPK extends BaseORMBIF {
 	 * @argument.unique Not implemented. In BoxLang, a single entity is always returned.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		String		entityName		= arguments.getAsString( ORMKeys.entity );
-		Object		keyValue		= arguments.get( Key.id );
+		String				entityName		= arguments.getAsString( ORMKeys.entity );
+		Object				keyValue		= arguments.get( Key.id );
+		IBoxContext			jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		CastAttempt<String>	keyString		= StringCaster.attempt( keyValue );
+		if ( keyString.wasSuccessful() ) {
+			return ormService.getORMAppByContext( context ).loadEntityById( jdbcBoxContext, entityName, keyString.get() );
+		}
+		CastAttempt<IStruct> keyStruct = StructCaster.attempt( keyValue );
+		if ( keyStruct.wasSuccessful() ) {
+			return ormService.getORMAppByContext( context ).loadEntityById( jdbcBoxContext, entityName, keyStruct.get() );
+		}
+		throw new IllegalArgumentException( "The 'id' argument must be a string or a struct representing a composite key." );
 
-		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
-		return ormService.getORMAppByContext( context ).loadEntityById( jdbcBoxContext, entityName, keyValue );
 	}
 }

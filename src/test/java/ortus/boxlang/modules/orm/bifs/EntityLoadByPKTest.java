@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -160,7 +159,6 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		assertEquals( "Honda", variables.get( result ) );
 	}
 
-	@Disabled( "Unimplemented." )
 	@DisplayName( "It can load an entity by composite key" )
 	@Test
 	public void testEntityLoadByCompositeKey() {
@@ -174,7 +172,7 @@ public class EntityLoadByPKTest extends BaseORMTest {
 			context
 		);
 		// @formatter:on
-		assertEquals( "Honda", variables.get( result ) );
+		assertEquals( "Ford", variables.get( result ) );
 	}
 
 	@DisplayName( "It can load a subclass entity from the parent" )
