@@ -48,7 +48,6 @@ import ortus.boxlang.runtime.scopes.Key;
  */
 public class SessionFactoryBuilder {
 
-	public static final String		BOXLANG_CONTEXT			= "BOXLANG_CONTEXT";
 	public static final String		BOXLANG_ENTITY_MAP		= "BOXLANG_ENTITY_MAP";
 	public static final String		BOXLANG_EVENT_LISTENER	= "BOXLANG_EVENT_LISTENER";
 
@@ -88,15 +87,6 @@ public class SessionFactoryBuilder {
 	 * Static Helpers
 	 * ------------------------------------------------------------------------------------------------------------
 	 */
-
-	/**
-	 * Get the BoxLang context tied to this Hibernate session factory.
-	 *
-	 * @param sessionFactory The Hibernate session factory
-	 */
-	public static IBoxContext getRequestContext( SessionFactory sessionFactory ) {
-		return ( IBoxContext ) sessionFactory.getProperties().get( BOXLANG_CONTEXT );
-	}
 
 	/**
 	 * Get a unique key for the given context/datasource combination.
@@ -166,7 +156,6 @@ public class SessionFactoryBuilder {
 			Thread.currentThread().setContextClassLoader( oldClassLoader );
 		}
 
-		factory.getProperties().put( BOXLANG_CONTEXT, configuration.getProperties().get( BOXLANG_CONTEXT ) );
 		factory.getProperties().put( BOXLANG_ENTITY_MAP, configuration.getProperties().get( BOXLANG_ENTITY_MAP ) );
 		factory.getProperties().put( BOXLANG_EVENT_LISTENER, this.ormConfig.eventHandler );
 
@@ -191,9 +180,6 @@ public class SessionFactoryBuilder {
 		properties.put( AvailableSettings.CLASSLOADERS, classLoaders );
 		properties.put( AvailableSettings.TC_CLASSLOADER, "org.hibernate.boot.registry.classloading.internal.AggregatedClassLoader" );
 		properties.put( AvailableSettings.GLOBALLY_QUOTED_IDENTIFIERS, StringCaster.cast( ormConfig.quoteIdentifiers ) );
-		properties.put( BOXLANG_CONTEXT, context );
-
-		// properties.put( AvailableSettings.SESSION_FACTORY_NAME, getAppName().toString() );
 
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.POJO, EntityTuplizer.class );

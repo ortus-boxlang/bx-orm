@@ -33,7 +33,7 @@ import org.hibernate.tuple.entity.AbstractEntityTuplizer;
 import org.hibernate.tuple.entity.EntityMetamodel;
 
 import ortus.boxlang.modules.orm.ORMService;
-import ortus.boxlang.modules.orm.SessionFactoryBuilder;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
@@ -115,7 +115,7 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	@Override
 	protected Setter buildPropertySetter( Property mappedProperty, PersistentClass mappedEntity ) {
-		return new BoxPropertySetter( SessionFactoryBuilder.getRequestContext( this.getEntityMetamodel().getSessionFactory() ),
+		return new BoxPropertySetter( RequestBoxContext.getCurrent(),
 		    mappedProperty, mappedEntity );
 	}
 
