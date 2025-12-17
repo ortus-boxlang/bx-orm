@@ -62,7 +62,6 @@ public class RequestListener extends BaseInterceptor {
 		}
 
 		if ( !context.hasAttachment( ORMKeys.ORMContext ) ) {
-			logger.warn( "No ORM request context; did the request startup fail for some reason?" );
 			return;
 		}
 
