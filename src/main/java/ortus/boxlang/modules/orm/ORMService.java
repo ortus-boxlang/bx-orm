@@ -207,7 +207,11 @@ public class ORMService extends BaseService {
 	 * @return A unique key for the given application name and configuration.
 	 */
 	public static Key getAppNameFromContext( IBoxContext context ) {
-		IStruct settings = context.getApplicationContext().getApplication().getStartingListener().getSettings();
+		RequestBoxContext requestContext = context.getRequestContext();
+		if ( requestContext == null ) {
+			throw new BoxRuntimeException( "No request context available to build unique ORM application name." );
+		}
+		IStruct settings = requestContext.getApplicationListener().getSettings();
 		return buildUniqueAppName( context.getApplicationContext().getApplication().getName(), settings );
 	}
 
@@ -381,7 +385,11 @@ public class ORMService extends BaseService {
 	 * @return The ORM application for the given context or null if not found
 	 */
 	public ORMApp getORMAppByContext( IBoxContext context ) {
-		IStruct	settings	= context.getApplicationContext().getApplication().getStartingListener().getSettings();
+		RequestBoxContext requestContext = context.getRequestContext();
+		if ( requestContext == null ) {
+			throw new BoxRuntimeException( "No request context available to get ORM application." );
+		}
+		IStruct	settings	= requestContext.getApplicationListener().getSettings();
 		Key		appName		= ORMService.buildUniqueAppName( context.getApplicationContext().getApplication().getName(), settings );
 		return !hasORMApp( appName ) ? null : getORMApp( appName );
 	}
