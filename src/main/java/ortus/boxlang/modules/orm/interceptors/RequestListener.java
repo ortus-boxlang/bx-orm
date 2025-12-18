@@ -18,7 +18,6 @@
 package ortus.boxlang.modules.orm.interceptors;
 
 import ortus.boxlang.modules.orm.ORMContext;
-import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
@@ -53,13 +52,7 @@ public class RequestListener extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onRequestEnd( IStruct args ) {
-		RequestBoxContext	context	= args.getAs( RequestBoxContext.class, Key.context );
-		ORMConfig			config	= ORMConfig.loadFromContext( context );
-
-		if ( config == null ) {
-			logger.debug( "ORM not enabled for this request." );
-			return;
-		}
+		RequestBoxContext context = args.getAs( RequestBoxContext.class, Key.context );
 
 		if ( !context.hasAttachment( ORMKeys.ORMContext ) ) {
 			return;
