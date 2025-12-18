@@ -75,7 +75,7 @@ public class HibernateXMLWriterTest {
 
 	@BeforeAll
 	public static void setUp() {
-		instance = BoxRuntime.getInstance( true );
+		instance = BoxRuntime.getInstance( false );
 	}
 
 	@BeforeEach
