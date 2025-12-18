@@ -62,7 +62,9 @@ public abstract class BaseORMTest {
 		// Load the module
 		try {
 			loadModules( instance.getRuntimeContext() );
-			context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+			context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
+			RequestBoxContext.setCurrent( context );
+			context.loadApplicationDescriptor( Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
 
 			// reset the now-existing database tables
 			JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
@@ -77,6 +79,10 @@ public abstract class BaseORMTest {
 				System.out.println( classLocator.get().toString() );
 			}
 			throw e;
+		} finally {
+			if ( context != null ) {
+				RequestBoxContext.removeCurrent();
+			}
 		}
 	}
 
@@ -87,7 +93,9 @@ public abstract class BaseORMTest {
 
 	@BeforeEach
 	public void setupEach() {
-		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
+		RequestBoxContext.setCurrent( context );
+		context.loadApplicationDescriptor( Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
 		context.getApplicationListener().onRequestStart( context, null );
 		variables = context.getScopeNearby( VariablesScope.name );
 	}
@@ -96,6 +104,8 @@ public abstract class BaseORMTest {
 	public void teardownEach() {
 		variables.clear();
 		context.getApplicationListener().onRequestEnd( context, null );
+		RequestBoxContext.removeCurrent();
+		context.shutdown();
 	}
 
 	protected static void loadModules( IBoxContext context ) {
