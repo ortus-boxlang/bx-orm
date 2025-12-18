@@ -33,6 +33,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -55,7 +56,7 @@ import ortus.boxlang.modules.orm.hibernate.converters.StringConverter;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
@@ -68,7 +69,7 @@ import ortus.boxlang.runtime.types.exceptions.ParseException;
 public class HibernateXMLWriterTest {
 
 	static BoxRuntime	instance;
-	IBoxContext			context;
+	RequestBoxContext	context;
 	IScope				variables;
 	static Key			result	= new Key( "result" );
 	ORMConfig			ormConfig;
@@ -80,12 +81,23 @@ public class HibernateXMLWriterTest {
 
 	@BeforeEach
 	public void setupEach() {
-		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
-		variables	= context.getScopeNearby( VariablesScope.name );
+
+		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
+		RequestBoxContext.setCurrent( context );
+		context.loadApplicationDescriptor( Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+		variables = context.getScopeNearby( VariablesScope.name );
 		IStruct properties = new Struct();
 		properties.put( "ignoreParseErrors", "true" );
 		// We don't need an actual datasource for this test so we'll add one to prevent the error
 		ormConfig = new ORMConfig( properties, context.getRequestContext() );
+	}
+
+	@AfterEach
+	public void teardownEach() {
+		variables.clear();
+		context.getApplicationListener().onRequestEnd( context, null );
+		RequestBoxContext.removeCurrent();
+		context.shutdown();
 	}
 
 	/**********************
