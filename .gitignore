@@ -1,7 +1,7 @@
 .gradle
 build/
 bin/
-test/
+./test/
 !gradle/wrapper/gradle-wrapper.jar
 
 # Secrets

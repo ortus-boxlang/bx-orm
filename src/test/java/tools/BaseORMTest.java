@@ -30,6 +30,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -84,6 +86,11 @@ public abstract class BaseORMTest {
 				RequestBoxContext.removeCurrent();
 			}
 		}
+
+		// Silence Hibernate's schema generation logs in test runs, as Hibernate is extremely chatty and not even that bright about the order of operations.
+		// (Attempting to drop foreign keys on a table that doesn't exist, or attempting to create a table that already exists, etc.)
+		LoggerContext loggerContext = instance.getLoggingService().getLoggerContext();
+		loggerContext.getLogger( "org.hibernate.tool.schema.internal" ).setLevel( Level.ERROR );
 	}
 
 	@AfterAll
