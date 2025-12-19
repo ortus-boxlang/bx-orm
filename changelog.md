@@ -9,8 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
 - [BLMODULES-110](https://ortussolutions.atlassian.net/browse/BLMODULES-110) - Implement `EntityTuplizer.getEntityMode()` for relationship getters
 - [BLMODULES-113](https://ortussolutions.atlassian.net/browse/BLMODULES-113) - Drop unnecessary logging on request end for non-ORM requests
+- [BL-2039](https://ortussolutions.atlassian.net/browse/BL-2039) - Fix "Datasource with name ... not found" in empty transactions on subsequent requests
 
 ## [1.2.0] - 2025-12-05
 
