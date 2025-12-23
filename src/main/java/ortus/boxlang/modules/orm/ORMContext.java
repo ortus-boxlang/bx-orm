@@ -19,6 +19,7 @@ package ortus.boxlang.modules.orm;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -59,28 +60,45 @@ public class ORMContext {
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime		= BoxRuntime.getInstance();
+	private static final BoxRuntime			runtime				= BoxRuntime.getInstance();
+
+	/**
+	 * Shutdown listener
+	 */
+	private static Consumer<IBoxContext>	shutdownListener	= ctx -> {
+
+																	if ( !ctx.hasAttachment( ORMKeys.ORMContext ) ) {
+																		return;
+																	}
+
+																	runtime.getLoggingService().getLogger( "orm" )
+																	    .debug( "onRequestEnd - Shutting down ORM request" );
+																	ORMContext ormRequestContext = ctx.getAttachment( ORMKeys.ORMContext );
+																	ormRequestContext.shutdown();
+																	ctx.removeAttachment( ORMKeys.ORMContext );
+
+																};
 
 	/**
 	 * The logger for the ORM application.
 	 */
-	private BoxLangLogger			logger;
+	private BoxLangLogger					logger;
 
 	/**
 	 * ORM service.
 	 */
-	private ORMService				ormService;
+	private ORMService						ormService;
 
-	private ORMApp					ormApp;
+	private ORMApp							ormApp;
 
-	private IBoxContext				context;
+	private IBoxContext						context;
 
-	private ORMConfig				config;
+	private ORMConfig						config;
 
 	/**
 	 * Map of Hibernate sessions for this request, keyed by datasource name.
 	 */
-	private Map<Key, Session>		sessions	= new ConcurrentHashMap<>();
+	private Map<Key, Session>				sessions			= new ConcurrentHashMap<>();
 
 	/**
 	 * Retrieve the ORMContext for the given boxlang context (whatever JDBC-capable context inside which we are currently executing).
@@ -107,6 +125,9 @@ public class ORMContext {
 		}
 
 		return jdbcCapableContext.computeAttachmentIfAbsent( ORMKeys.ORMContext, key -> {
+			// This will remove the attachment on context shutdown
+			jdbcCapableContext.registerShutdownListener( shutdownListener );
+
 			return new ORMContext(
 			    finalJDBCContext,
 			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), finalJDBCContext )
