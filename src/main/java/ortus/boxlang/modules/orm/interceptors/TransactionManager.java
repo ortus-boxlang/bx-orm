@@ -114,8 +114,12 @@ public class TransactionManager extends BaseInterceptor {
 			return;
 		}
 
-		ORMApp		ormApp				= ormService.getORMAppByContext( context );
-		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMApp ormApp = ormService.getORMAppByContext( context );
+		if ( ormApp == null ) {
+			// Just return as we would already have warned during transaction begin
+			return;
+		}
+		ORMContext ormRequestContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 
 		ormApp.getDatasources().forEach( datasource -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
@@ -140,7 +144,11 @@ public class TransactionManager extends BaseInterceptor {
 			return;
 		}
 
-		ORMApp		ormApp				= ormService.getORMAppByContext( context );
+		ORMApp ormApp = ormService.getORMAppByContext( context );
+		if ( ormApp == null ) {
+			// Just return as we would already have warned during transaction begin
+			return;
+		}
 		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 		ORMConfig	config				= ormRequestContext.getConfig();
 
@@ -184,8 +192,12 @@ public class TransactionManager extends BaseInterceptor {
 			return;
 		}
 
-		ORMApp		ormApp				= ormService.getORMAppByContext( context );
-		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMApp ormApp = ormService.getORMAppByContext( context );
+		if ( ormApp == null ) {
+			// Just return as we would already have warned during transaction begin
+			return;
+		}
+		ORMContext ormRequestContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormRequestContext.getSession( datasource );
