@@ -52,7 +52,7 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  * sessions is stored in its own ORMContext instance, which is attached to the request or thread context. Each thread will shut down the `ORMContext`
  * upon thread completion, which will close all Hibernate sessions opened as part that thread's execution.
  * The request context's `ORMContext` will be torn down at the end of the request, closing any remaining Hibernate sessions.
- * 
+ *
  * @since 1.0.0
  */
 public class ORMContext {
@@ -282,7 +282,7 @@ public class ORMContext {
 	private ORMContext closeSessionAndTransaction( Session session ) {
 		var tx = session.getTransaction();
 		if ( tx.isActive() ) {
-			logger.warn( "Session has an active transaction; committing before flushing" );
+			logger.trace( "Session has an active transaction; committing before flushing" );
 			try {
 				tx.commit();
 			} catch ( Exception e ) {

@@ -121,15 +121,17 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It can set entity attributes" )
 	@ValueSource( strings = {
 	    """
-	    class
-	    	persistent="true"
-	    	entityName="Car"
-	    	table="vehicles"
-	    	schema="foo"
-	    	catalog="morefoo"
-	    	optimisticLock="all"
-	    {}
-	    """
+	       class
+	       	persistent="true"
+	       	entityName="Car"
+	       	table="vehicles"
+	       	schema="foo"
+	       	catalog="morefoo"
+	       	optimisticLock="all"
+	       {
+	       property name="id" fieldtype="id";
+	    }
+	       """
 	} )
 	@ParameterizedTest
 	public void testEntityAttributes( String sourceCode ) {

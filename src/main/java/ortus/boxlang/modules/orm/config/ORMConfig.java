@@ -450,7 +450,7 @@ public class ORMConfig {
 		if ( !defaultDatasource.isEmpty() && configDatasources.containsKey( defaultDatasource ) ) {
 			return defaultDatasource;
 		} else if ( !defaultDatasource.isEmpty() ) {
-			logger.warn( "The datasource [" + defaultDatasource + "] could not be found in the request configuration.  Datasources found: ["
+			logger.warn( "The datasource [" + defaultDatasource.getName() + "] could not be found in the request configuration.  Datasources found: ["
 			    + configDatasources.keySet().stream().map( Key::getName ).collect( Collectors.joining( ", " ) ) + "]" );
 			return defaultDatasource;
 		} else {
@@ -533,6 +533,7 @@ public class ORMConfig {
 		if ( this.secondaryCacheEnabled ) {
 			configuration.setProperty( AvailableSettings.USE_QUERY_CACHE, "true" );
 			configuration.setProperty( AvailableSettings.CACHE_REGION_FACTORY, "jcache" );
+			configuration.setProperty( "hibernate.javax.cache.missing_cache_strategy", "create" );
 			configuration.setProperty( "hibernate.javax.cache.provider", this.getJCacheProviderClassPath() );
 			if ( this.cacheConfigFile != null && !this.cacheConfigFile.isEmpty() ) {
 				configuration.setProperty( "hibernate.javax.cache.uri", this.cacheConfigFile );
@@ -576,7 +577,7 @@ public class ORMConfig {
 					logger.error( "ORM Configuration `sqlScript` file not found: {}", sqlScript );
 				}
 			} else {
-				logger.warn(
+				logger.trace(
 				    "ORM Configuration `sqlScript` is only valid with `dbcreate=dropcreate`. Ignoring for now." );
 			}
 		}
