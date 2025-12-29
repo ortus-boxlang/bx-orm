@@ -35,7 +35,7 @@ import ortus.boxlang.runtime.types.IStruct;
  * ORM transaction lifecycle management.
  * <p>
  * Listens to boxlang transaction events to manage the Hibernate transaction lifecycles (start,end,commit,rollback, etc.)
- * 
+ *
  * @since 1.0.0
  */
 public class TransactionManager extends BaseInterceptor {
@@ -63,7 +63,12 @@ public class TransactionManager extends BaseInterceptor {
 			return;
 		}
 
-		ORMApp		ormApp				= ormService.getORMAppByContext( context );
+		ORMApp ormApp = ormService.getORMAppByContext( context );
+		if ( ormApp == null ) {
+			logger.warn(
+			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
+			return;
+		}
 		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 		ORMConfig	config				= ormRequestContext.getConfig();
 
