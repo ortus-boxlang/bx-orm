@@ -391,7 +391,7 @@ public class ORMService extends BaseService {
 		}
 		IStruct	settings	= requestContext.getApplicationListener().getSettings();
 		Key		appName		= ORMService.buildUniqueAppName( context.getApplicationContext().getApplication().getName(), settings );
-		return !hasORMApp( appName ) ? null : getORMApp( appName );
+		return getORMApp( appName );
 	}
 
 	/**
@@ -402,7 +402,7 @@ public class ORMService extends BaseService {
 	 * @return The ORM application, if it exists, or null.
 	 */
 	public ORMApp getORMApp( Key appName ) {
-		return this.ormApps.get( appName );
+		return this.ormApps.containsKey( appName ) ? this.ormApps.get( appName ) : null;
 	}
 
 	/**
