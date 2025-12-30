@@ -794,15 +794,18 @@ public class HibernateXMLWriter {
 			classElement.setAttribute( "where", entity.getWhere() );
 		}
 
-		String tableName = entity.getTableName();
-		if ( tableName != null ) {
-			classElement.setAttribute( "table", escapeReservedWords( translateTableName( tableName ) ) );
-		}
-		if ( entity.getSchema() != null ) {
-			classElement.setAttribute( "schema", entity.getSchema() );
-		}
-		if ( entity.getCatalog() != null ) {
-			classElement.setAttribute( "catalog", entity.getCatalog() );
+		// And, if no discriminator or joinColumn is present:
+		if ( entity.isSimpleEntity() ) {
+			String tableName = entity.getTableName();
+			if ( tableName != null ) {
+				classElement.setAttribute( "table", escapeReservedWords( translateTableName( tableName ) ) );
+			}
+			if ( entity.getSchema() != null ) {
+				classElement.setAttribute( "schema", entity.getSchema() );
+			}
+			if ( entity.getCatalog() != null ) {
+				classElement.setAttribute( "catalog", entity.getCatalog() );
+			}
 		}
 
 		// generate keys, aka <id> elements
