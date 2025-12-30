@@ -298,24 +298,38 @@ public class ORMConfig {
 	 */
 	public static ORMConfig loadFromContext( IBoxContext context ) {
 		RequestBoxContext requestContext = context.getRequestContext();
-		if ( requestContext == null ) {
+		if ( requestContext == null || !isORMEnabled( context ) ) {
 			return null;
+		}
+
+		IStruct appSettings = ( IStruct ) requestContext.getConfigItem( Key.applicationSettings );
+		return new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), context );
+	}
+
+	/**
+	 * Check whether ORM is enabled for the given context.
+	 * 
+	 * Enabled means:
+	 * 1. There's a RequestBoxContext available
+	 * 2. `ORMEnabled` is true
+	 * 3. `ORMSettings` is not empty
+	 * 
+	 * @param context The IBoxContext to check for ORM enablement.
+	 */
+	public static boolean isORMEnabled( IBoxContext context ) {
+		if ( context == null ) {
+			return false;
+		}
+		RequestBoxContext requestContext = context.getRequestContext();
+		if ( requestContext == null ) {
+			return false;
 		}
 		IStruct appSettings = ( IStruct ) requestContext.getConfigItem( Key.applicationSettings );
 
-		if ( !appSettings.containsKey( ORMKeys.ORMEnabled )
-		    || !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
-			// logger.info( "ORMEnabled is false or not specified;" );
-			return null;
-		}
-
-		if ( !appSettings.containsKey( ORMKeys.ORMSettings )
-		    || appSettings.get( ORMKeys.ORMSettings ) == null ) {
-			// logger.info( "No ORM configuration found in application configuration;" );
-			return null;
-		}
-
-		return new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), context );
+		return appSettings.containsKey( ORMKeys.ORMEnabled )
+		    && appSettings.containsKey( ORMKeys.ORMSettings )
+		    && BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) )
+		    && appSettings.get( ORMKeys.ORMSettings ) != null;
 	}
 
 	/**
