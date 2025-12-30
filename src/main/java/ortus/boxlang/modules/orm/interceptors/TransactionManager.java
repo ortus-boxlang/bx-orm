@@ -58,22 +58,18 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionBegin( IStruct args ) {
-		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
-		if ( !isORMEnabled( context.getParentOfType( IJDBCCapableContext.class ) ) ) {
-			return;
-		}
-
-		ORMApp ormApp = ormService.getORMAppByContext( context );
+		IBoxContext	context	= args.getAs( IBoxContext.class, Key.context );
+		ORMApp		ormApp	= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
 			logger.warn(
 			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
-		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-		ORMConfig	config				= ormRequestContext.getConfig();
+		ORMContext	ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMConfig	config		= ormContext.getConfig();
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session ormSession = ormRequestContext.getSession( datasource );
+			Session ormSession = ormContext.getSession( datasource );
 			if ( config.autoManageSession ) {
 
 				if ( logger.isDebugEnabled() ) {
@@ -109,20 +105,17 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionCommit( IStruct args ) {
-		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
-		if ( !isORMEnabled( context.getParentOfType( IJDBCCapableContext.class ) ) ) {
-			return;
-		}
+		IBoxContext	context	= args.getAs( IBoxContext.class, Key.context );
 
-		ORMApp ormApp = ormService.getORMAppByContext( context );
+		ORMApp		ormApp	= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
 			// Just return as we would already have warned during transaction begin
 			return;
 		}
-		ORMContext ormRequestContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 
 		ormApp.getDatasources().forEach( datasource -> {
-			Session ormSession = ormRequestContext.getSession( datasource );
+			Session ormSession = ormContext.getSession( datasource );
 
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
@@ -139,22 +132,19 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionRollback( IStruct args ) {
-		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
-		if ( !isORMEnabled( context.getParentOfType( IJDBCCapableContext.class ) ) ) {
-			return;
-		}
+		IBoxContext	context	= args.getAs( IBoxContext.class, Key.context );
 
-		ORMApp ormApp = ormService.getORMAppByContext( context );
+		ORMApp		ormApp	= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
 			// Just return as we would already have warned during transaction begin
 			return;
 		}
-		ORMContext	ormRequestContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-		ORMConfig	config				= ormRequestContext.getConfig();
+		ORMContext	ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMConfig	config		= ormContext.getConfig();
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			// FYI: Lucee's implementation actually waits until transaction END to rollback and clear the session.
-			Session ormSession = ormRequestContext.getSession( datasource );
+			Session ormSession = ormContext.getSession( datasource );
 
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
@@ -187,20 +177,17 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionEnd( IStruct args ) {
-		IBoxContext context = args.getAs( IBoxContext.class, Key.context );
-		if ( !isORMEnabled( context.getParentOfType( IJDBCCapableContext.class ) ) ) {
-			return;
-		}
+		IBoxContext	context	= args.getAs( IBoxContext.class, Key.context );
 
-		ORMApp ormApp = ormService.getORMAppByContext( context );
+		ORMApp		ormApp	= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
 			// Just return as we would already have warned during transaction begin
 			return;
 		}
-		ORMContext ormRequestContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session ormSession = ormRequestContext.getSession( datasource );
+			Session ormSession = ormContext.getSession( datasource );
 
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
@@ -213,22 +200,5 @@ public class TransactionManager extends BaseInterceptor {
 			ormSession.getTransaction().commit();
 			ormSession.flush();
 		} );
-	}
-
-	/**
-	 * Ensure ORM is enabled for this request before we attempt any transaction processing.
-	 *
-	 * @param jdbcContext JDBC-capable context which will have an ORM config attached if ORM is enabled.
-	 */
-	private boolean isORMEnabled( IJDBCCapableContext jdbcContext ) {
-		if ( jdbcContext == null ) {
-			return false;
-		}
-		ORMConfig ormConfig = ORMConfig.loadFromContext( jdbcContext );
-		if ( ormConfig == null ) {
-			// ORM is not enabled for this application
-			return false;
-		}
-		return true;
 	}
 }
