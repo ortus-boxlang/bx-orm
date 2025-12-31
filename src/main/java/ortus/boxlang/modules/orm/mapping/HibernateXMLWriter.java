@@ -722,10 +722,10 @@ public class HibernateXMLWriter {
 	 * @return A &lt;class /&gt; element containing entity keys, properties, and other Hibernate mapping metadata.
 	 */
 	public Element generateClassElement() {
-		Element	classElement	= !entity.isSubclass()
-		    ? this.document.createElement( "class" )
-		    : this.document.createElement( entity.getDiscriminator().get( Key.value ) != null ? "subclass" : "joined-subclass" );
-
+		String	classType		= !entity.isSubclass()
+		    ? "class"
+		    : entity.getDiscriminator().get( Key.value ) != null ? "subclass" : "joined-subclass";
+		Element	classElement	= this.document.createElement( classType );
 		Element	entityElement	= classElement;
 
 		// general class attributes:
@@ -795,18 +795,17 @@ public class HibernateXMLWriter {
 			classElement.setAttribute( "where", entity.getWhere() );
 		}
 
-		if ( entity.getSchema() != null ) {
-			classElement.setAttribute( "schema", entity.getSchema() );
-		}
-		if ( entity.getCatalog() != null ) {
-			classElement.setAttribute( "catalog", entity.getCatalog() );
-		}
-
 		// And, if no discriminator or joinColumn is present:
-		if ( entity.isSimpleEntity() ) {
+		if ( classType.equals( "class" ) || classType.equals( "joined-subclass" ) ) {
 			String tableName = entity.getTableName();
 			if ( tableName != null ) {
 				classElement.setAttribute( "table", escapeReservedWords( translateTableName( tableName ) ) );
+			}
+			if ( entity.getSchema() != null ) {
+				classElement.setAttribute( "schema", entity.getSchema() );
+			}
+			if ( entity.getCatalog() != null ) {
+				classElement.setAttribute( "catalog", entity.getCatalog() );
 			}
 		}
 
