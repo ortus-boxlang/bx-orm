@@ -85,6 +85,7 @@ public class HibernateXMLWriterTest {
 		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
 		RequestBoxContext.setCurrent( context );
 		context.loadApplicationDescriptor( Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+		context.getApplicationListener().onRequestStart( context, null );
 		variables = context.getScopeNearby( VariablesScope.name );
 		IStruct properties = new Struct();
 		properties.put( "ignoreParseErrors", "true" );
@@ -1311,7 +1312,6 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
-	@Disabled( "Super class not found..." )
 	@DisplayName( "It generates a valid subclass xml element" )
 	@ParameterizedTest
 	@ValueSource( strings = {
@@ -1319,7 +1319,7 @@ public class HibernateXMLWriterTest {
 	    class
 	    	persistent="true"
 	    	entityName="CommentSubscription"
-	    	extends="BaseSubscription"
+	    	extends="root.models.cms.subscriptions.BaseSubscription"
 			discriminatorColumn="type"
 			discriminatorValue="comment"
 			table="ignored"
@@ -1333,7 +1333,7 @@ public class HibernateXMLWriterTest {
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 
 		Document	doc			= new HibernateXMLWriter( entityMeta,
-		    ( a, b ) -> new EntityRecord( "cbSubscription", "root.models.cms.subscriptions.BaseSubscription" ),
+		    ( a, b ) -> new EntityRecord( "cbSubscription", "models.cms.subscriptions.BaseSubscription" ),
 		    ormConfig ).generateXML();
 
 		// String xml = xmlToString( doc );
@@ -1349,7 +1349,6 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
-	@Disabled( "Super class not found..." )
 	@DisplayName( "It generates a valid subclass xml element" )
 	@ParameterizedTest
 	@ValueSource( strings = {
@@ -1357,7 +1356,7 @@ public class HibernateXMLWriterTest {
 	    class
 	    	persistent="true"
 	    	entityName="CommentSubscription"
-	    	extends="BaseSubscription"
+	    	extends="root.models.cms.subscriptions.BaseSubscription"
 			joinColumn="subscriptionId"
 			table="myTable"
 			schema="mySchema"
@@ -1372,7 +1371,7 @@ public class HibernateXMLWriterTest {
 		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
 
 		Document	doc			= new HibernateXMLWriter( entityMeta,
-		    ( a, b ) -> new EntityRecord( "cbSubscription", "root.models.cms.subscriptions.BaseSubscription" ),
+		    ( a, b ) -> new EntityRecord( "cbSubscription", "models.cms.subscriptions.BaseSubscription" ),
 		    ormConfig ).generateXML();
 
 		// String xml = xmlToString( doc );
@@ -1413,7 +1412,7 @@ public class HibernateXMLWriterTest {
 		if ( !result.isCorrect() ) {
 			throw new ParseException( result.getIssues(), "" );
 		}
-		ClassMetadataVisitor visitor = new ClassMetadataVisitor();
+		ClassMetadataVisitor visitor = new ClassMetadataVisitor( context );
 		result.getRoot().accept( visitor );
 		return visitor.getMetadata();
 	}
