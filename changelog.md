@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [BLMODULES-113](https://ortussolutions.atlassian.net/browse/BLMODULES-113) - Drop unnecessary logging on request end for non-ORM requests
 - [BL-2039](https://ortussolutions.atlassian.net/browse/BL-2039) - Fix "Datasource with name ... not found" in empty transactions on subsequent requests
 
+### ⭐ Added
+
+- [BLMODULES-118](https://ortussolutions.atlassian.net/browse/BLMODULES-118) - Enable `table`, `schema`, and `catalog` annotations for joined subclasses.
+
 ## [1.2.0] - 2025-12-05
 
 - [BLMODULES-102](https://ortussolutions.atlassian.net/browse/BLMODULES-102) - Fix ORM usage in threads causing ConcurrentModificationException
