@@ -1310,11 +1310,87 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "date" );
 	}
 
+	// @formatter:off
+	@Disabled( "Super class not found..." )
+	@DisplayName( "It generates a valid subclass xml element" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class
+	    	persistent="true"
+	    	entityName="CommentSubscription"
+	    	extends="BaseSubscription"
+			discriminatorColumn="type"
+			discriminatorValue="comment"
+			table="ignored"
+		{}
+	    """
+	} )
+	// @formatter:on
+	public void testSubclassGeneration( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+
+		Document	doc			= new HibernateXMLWriter( entityMeta,
+		    ( a, b ) -> new EntityRecord( "cbSubscription", "root.models.cms.subscriptions.BaseSubscription" ),
+		    ormConfig ).generateXML();
+
+		// String xml = xmlToString( doc );
+		// System.out.println( xml );
+
+		Node		subclassEl	= doc.getDocumentElement().getLastChild();
+		assertThat( subclassEl.getNodeName() ).isEqualTo( "subclass" );
+		NamedNodeMap subclassAttributes = subclassEl.getAttributes();
+		// it's a subclass (uses the same table as the parent), so no table/schema/catalog attrs
+		assertThat( subclassAttributes.getNamedItem( "table" ) ).isNull();
+		assertThat( subclassAttributes.getNamedItem( "schema" ) ).isNull();
+		assertThat( subclassAttributes.getNamedItem( "catalog" ) ).isNull();
+	}
+
+	// @formatter:off
+	@Disabled( "Super class not found..." )
+	@DisplayName( "It generates a valid subclass xml element" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class
+	    	persistent="true"
+	    	entityName="CommentSubscription"
+	    	extends="BaseSubscription"
+			joinColumn="subscriptionId"
+			table="myTable"
+			schema="mySchema"
+			catalog="myCatalog"
+		{}
+	    """
+	} )
+	// @formatter:on
+	public void testJoinedSubclassGeneration( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+
+		Document	doc			= new HibernateXMLWriter( entityMeta,
+		    ( a, b ) -> new EntityRecord( "cbSubscription", "root.models.cms.subscriptions.BaseSubscription" ),
+		    ormConfig ).generateXML();
+
+		// String xml = xmlToString( doc );
+		// System.out.println( xml );
+
+		Node		subclassEl	= doc.getDocumentElement().getLastChild();
+		assertThat( subclassEl.getNodeName() ).isEqualTo( "joined-subclass" );
+		NamedNodeMap subclassAttributes = subclassEl.getAttributes();
+		// it's a subclass (uses the same table as the parent), so no table/schema/catalog attrs
+		assertThat( subclassAttributes.getNamedItem( "table" ).getTextContent() ).isEqualTo( "myTable" );
+		assertThat( subclassAttributes.getNamedItem( "schema" ).getTextContent() ).isEqualTo( "mySchema" );
+		assertThat( subclassAttributes.getNamedItem( "catalog" ).getTextContent() ).isEqualTo( "myCatalog" );
+	}
+
 	/**
 	 * @TODO: The following ORM annotations are still lacking tests at either the entity level, the property level, or both:
 	 *        embedXml
 	 *        missingRowIgnored
-	 *        joinColumn
 	 *        inverse
 	 *        structkeydatatype ?? ACF only?
 	 *        unSavedValue - deprecated
@@ -1342,6 +1418,13 @@ public class HibernateXMLWriterTest {
 		return visitor.getMetadata();
 	}
 
+	/**
+	 * Debugging utility to convert a Document to a string.
+	 * 
+	 * Please leave this in place; it's handy for reviewing the generated output during test development.
+	 * 
+	 * @param doc The XML Document to convert to an XML string.
+	 */
 	private String xmlToString( Document doc ) {
 		try {
 			TransformerFactory	tf			= TransformerFactory.newInstance();
