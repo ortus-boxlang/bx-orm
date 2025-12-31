@@ -35,6 +35,7 @@ import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.validation.Validator;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 @BoxBIF
 public class EntityNew extends BaseORMBIF {
@@ -64,9 +65,13 @@ public class EntityNew extends BaseORMBIF {
 	 * @argument.ignoreExtras If false, an error will be thrown if properties are provided that do not exist on the entity. Not implemented.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		ORMContext					ormContext			= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-		ORMApp						ormApp				= ormContext.getORMApp();
-		String						entityName			= arguments.getAsString( ORMKeys.entityName );
+		ORMContext	ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMApp		ormApp		= ormContext.getORMApp();
+		String		entityName	= arguments.getAsString( ORMKeys.entityName );
+		if ( ormApp == null ) {
+			throw new BoxRuntimeException( "ORM application is not initialized." );
+		}
+
 		EntityRecord				entityRecord		= ormApp.lookupEntity( entityName, true );
 		IStruct						properties			= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 

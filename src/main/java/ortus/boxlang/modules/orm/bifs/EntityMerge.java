@@ -32,6 +32,7 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.validation.Validator;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 @BoxBIF
 public class EntityMerge extends BaseORMBIF {
@@ -60,6 +61,10 @@ public class EntityMerge extends BaseORMBIF {
 		IBoxContext		jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
 		ORMContext		ormContext		= ORMContext.getForContext( jdbcBoxContext );
 		ORMApp			ormApp			= ormContext.getORMApp();
+		if ( ormApp == null ) {
+			throw new BoxRuntimeException( "ORM application is not initialized." );
+		}
+
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		return session.merge( entity );

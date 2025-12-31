@@ -234,9 +234,12 @@ public class BoxClassInstantiator implements Instantiator {
 
 	@Override
 	public Object instantiate( Serializable id ) {
-		IBoxContext		context			= RequestBoxContext.getCurrent();
-		ORMApp			ormApp			= ORMContext.getForContext( context ).getORMApp();
-		EntityRecord	entityRecord	= ormApp.lookupEntity( this.entityName, true );
+		IBoxContext	context	= RequestBoxContext.getCurrent();
+		ORMApp		ormApp	= ORMContext.getForContext( context ).getORMApp();
+		if ( ormApp == null ) {
+			throw new BoxRuntimeException( "ORM application is not initialized." );
+		}
+		EntityRecord entityRecord = ormApp.lookupEntity( this.entityName, true );
 		// TODO: Because we have an id we should be returning a loded entity. Any attempt to do so, however, creates stack overflows.
 		return instantiate( null, entityRecord, null );
 	}
