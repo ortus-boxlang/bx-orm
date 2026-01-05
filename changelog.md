@@ -13,15 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [BLMODULES-110](https://ortussolutions.atlassian.net/browse/BLMODULES-110) - Implement `EntityTuplizer.getEntityMode()` for relationship getters
 - [BLMODULES-113](https://ortussolutions.atlassian.net/browse/BLMODULES-113) - Drop unnecessary logging on request end for non-ORM requests
+- [BLMODULES-117](https://ortussolutions.atlassian.net/browse/BLMODULES-117) - Resolve transaction interception error when no ORM App is present
 - [BL-2039](https://ortussolutions.atlassian.net/browse/BL-2039) - Fix "Datasource with name ... not found" in empty transactions on subsequent requests
 
 ### ⭐ Added
 
 - [BLMODULES-118](https://ortussolutions.atlassian.net/browse/BLMODULES-118) - Enable `table`, `schema`, and `catalog` annotations for joined subclasses.
+- [BL-2052](https://ortussolutions.atlassian.net/browse/BL-2052) - Move ORM context removal to shutdown listener for improved datasource cleanup on request end.
 
 ## [1.2.0] - 2025-12-05
 
+### 🐛 Fixed
+
 - [BLMODULES-102](https://ortussolutions.atlassian.net/browse/BLMODULES-102) - Fix ORM usage in threads causing ConcurrentModificationException
+- [BLMODULES-109](https://ortussolutions.atlassian.net/browse/BLMODULES-109) - Fix queries on null relationships.
 
 ## [1.1.3] - 2025-11-04
 
