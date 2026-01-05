@@ -58,7 +58,7 @@ import ortus.boxlang.runtime.validation.Validator;
  * <p>
  * In other words, here is where the magic happens to tie a Hibernate entity to a BoxLang class when loading entities from the database via
  * `entityLoadByPK()`, creating new entities via `entityNew()`, etc, etc.
- * 
+ *
  * @since 1.0.0
  */
 public class BoxClassInstantiator implements Instantiator {
@@ -234,19 +234,19 @@ public class BoxClassInstantiator implements Instantiator {
 
 	@Override
 	public Object instantiate( Serializable id ) {
-		ORMApp			ormApp			= ORMContext.getForContext( RequestBoxContext.getCurrent() ).getORMApp();
-		EntityRecord	entityRecord	= ormApp.lookupEntity( this.entityName, true );
-		return instantiate(
-		    null,  // Will automatically use the current context
-		    entityRecord,
-		    null
-		);
+		IBoxContext	context	= RequestBoxContext.getCurrent();
+		ORMApp		ormApp	= ORMContext.getForContext( context ).getORMApp();
+		if ( ormApp == null ) {
+			throw new BoxRuntimeException( "ORM application is not initialized." );
+		}
+		EntityRecord entityRecord = ormApp.lookupEntity( this.entityName, true );
+		// TODO: Because we have an id we should be returning a loded entity. Any attempt to do so, however, creates stack overflows.
+		return instantiate( null, entityRecord, null );
 	}
 
 	@Override
 	public Object instantiate() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'instantiate'" );
+		return instantiate( null );
 	}
 
 	@Override

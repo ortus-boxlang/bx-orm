@@ -33,6 +33,7 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.validation.Validator;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 @BoxBIF
 public class EntitySave extends BaseORMBIF {
@@ -59,10 +60,14 @@ public class EntitySave extends BaseORMBIF {
 	 * @arguments.forceinsert If true, will force an insert operation. Otherwise, a saveOrUpdate operation will be performed.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );
-		String			entityName		= getEntityName( entity );
-		ORMContext		ormContext		= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-		ORMApp			ormApp			= ormContext.getORMApp();
+		IClassRunnable	entity		= ( IClassRunnable ) arguments.get( ORMKeys.entity );
+		String			entityName	= getEntityName( entity );
+		ORMContext		ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMApp			ormApp		= ormContext.getORMApp();
+		if ( ormApp == null ) {
+			throw new BoxRuntimeException( "ORM application is not initialized." );
+		}
+
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		Boolean			forceInsert		= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );

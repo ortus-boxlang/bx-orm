@@ -19,6 +19,7 @@ package ortus.boxlang.modules.orm;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -51,7 +52,7 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  * sessions is stored in its own ORMContext instance, which is attached to the request or thread context. Each thread will shut down the `ORMContext`
  * upon thread completion, which will close all Hibernate sessions opened as part that thread's execution.
  * The request context's `ORMContext` will be torn down at the end of the request, closing any remaining Hibernate sessions.
- * 
+ *
  * @since 1.0.0
  */
 public class ORMContext {
@@ -59,28 +60,45 @@ public class ORMContext {
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime		= BoxRuntime.getInstance();
+	private static final BoxRuntime			runtime				= BoxRuntime.getInstance();
+
+	/**
+	 * Shutdown listener
+	 */
+	private static Consumer<IBoxContext>	shutdownListener	= ctx -> {
+
+																	if ( !ctx.hasAttachment( ORMKeys.ORMContext ) ) {
+																		return;
+																	}
+
+																	runtime.getLoggingService().getLogger( "orm" )
+																	    .debug( "onRequestEnd - Shutting down ORM request" );
+																	ORMContext ormRequestContext = ctx.getAttachment( ORMKeys.ORMContext );
+																	ormRequestContext.shutdown();
+																	ctx.removeAttachment( ORMKeys.ORMContext );
+
+																};
 
 	/**
 	 * The logger for the ORM application.
 	 */
-	private BoxLangLogger			logger;
+	private BoxLangLogger					logger;
 
 	/**
 	 * ORM service.
 	 */
-	private ORMService				ormService;
+	private ORMService						ormService;
 
-	private ORMApp					ormApp;
+	private ORMApp							ormApp;
 
-	private IBoxContext				context;
+	private IBoxContext						context;
 
-	private ORMConfig				config;
+	private ORMConfig						config;
 
 	/**
 	 * Map of Hibernate sessions for this request, keyed by datasource name.
 	 */
-	private Map<Key, Session>		sessions	= new ConcurrentHashMap<>();
+	private Map<Key, Session>				sessions			= new ConcurrentHashMap<>();
 
 	/**
 	 * Retrieve the ORMContext for the given boxlang context (whatever JDBC-capable context inside which we are currently executing).
@@ -107,6 +125,9 @@ public class ORMContext {
 		}
 
 		return jdbcCapableContext.computeAttachmentIfAbsent( ORMKeys.ORMContext, key -> {
+			// This will remove the attachment on context shutdown
+			jdbcCapableContext.registerShutdownListener( shutdownListener );
+
 			return new ORMContext(
 			    finalJDBCContext,
 			    new ORMConfig( appSettings.getAsStruct( ORMKeys.ORMSettings ), finalJDBCContext )
@@ -189,7 +210,7 @@ public class ORMContext {
 	}
 
 	/**
-	 * Getter for this ORM request context's ORM configuration.
+	 * Getter for this ORM context's ORM configuration.
 	 *
 	 * @return
 	 */
@@ -198,12 +219,13 @@ public class ORMContext {
 	}
 
 	/**
-	 * Shut down this ORM request context.
+	 * Shut down this ORM context.
 	 * <p>
 	 * Will close all Hibernate sessions and unregister the transaction manager.
 	 */
 	public ORMContext shutdown() {
 		// Auto-flush all sessions at the end of the request
+		// Should we move this to an onRequestEnd() method in case ORMContext.shutdown is called mid-request?
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
 			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
 			this.sessions.forEach( ( key, session ) -> session.flush() );
@@ -260,7 +282,7 @@ public class ORMContext {
 	private ORMContext closeSessionAndTransaction( Session session ) {
 		var tx = session.getTransaction();
 		if ( tx.isActive() ) {
-			logger.warn( "Session has an active transaction; committing before flushing" );
+			logger.trace( "Session has an active transaction; committing before flushing" );
 			try {
 				tx.commit();
 			} catch ( Exception e ) {

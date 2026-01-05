@@ -28,13 +28,14 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.scopes.Key;
 
 /**
  * This class is used to set a property on a BoxLang class for a Hibernate entity.
  * <p>
  * In other words, this class takes care of populating the boxlang class properties by calling the appropriate setter method when a Hibernate entity
  * is populated - whether by loading from the database or any other method.
- * 
+ *
  * @since 1.0.0
  */
 public class BoxPropertySetter implements Setter {
@@ -62,23 +63,22 @@ public class BoxPropertySetter implements Setter {
 
 	@Override
 	public void set( Object target, Object value, SessionFactoryImplementor factory ) {
-		logger.trace( "Setting property {} on entity {} to value {}", mappedProperty.getName(), mappedEntity.getEntityName(), value );
+		Key propertyName = Key.of( mappedProperty.getName() );
+		logger.trace( "Setting property {} on entity {} to value {}", propertyName.getName(), mappedEntity.getEntityName(), value );
 		if ( target instanceof IClassRunnable instance ) {
 			instance.getThisScope().put( mappedProperty.getName(), value );
-			instance.getVariablesScope().put( mappedProperty.getName(), value );
+			instance.getVariablesScope().put( propertyName, value );
 		}
 	}
 
 	@Override
 	public String getMethodName() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getMethodName'" );
+		return null;
 	}
 
 	@Override
 	public Method getMethod() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getMethod'" );
+		return null;
 	}
 
 }

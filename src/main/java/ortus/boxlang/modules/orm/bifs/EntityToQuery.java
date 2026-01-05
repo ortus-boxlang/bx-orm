@@ -34,6 +34,7 @@ import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.Query;
 import ortus.boxlang.runtime.types.QueryColumnType;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 @BoxBIF
 public class EntityToQuery extends BaseORMBIF {
@@ -60,8 +61,12 @@ public class EntityToQuery extends BaseORMBIF {
 	 * @argument.name The name of the entity. Required if `entity` is an array.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IBoxContext		jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
-		ORMApp			ormApp			= ORMContext.getForContext( jdbcBoxContext ).getORMApp();
+		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		ORMApp		ormApp			= ORMContext.getForContext( jdbcBoxContext ).getORMApp();
+		if ( ormApp == null ) {
+			throw new BoxRuntimeException( "ORM application is not initialized." );
+		}
+
 		EntityRecord	entityRecord	= null;
 		String			entityName		= arguments.containsKey( Key._name )
 		    ? arguments.getAsString( Key._name )

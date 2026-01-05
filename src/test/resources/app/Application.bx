@@ -33,7 +33,7 @@ class{
 		// we use the mapping here to make sure class resolver issues and path walking are handled
 		"entityPaths"   : [ "/root/models" ],
 		"saveMapping"   : "true",
-		"logSQL"        : "true",
+		"logSQL"        : "false",
 		"dialect"       : "MySQLDialect",
 		"dbcreate"      : "dropcreate",
 		"cacheprovider" : "ConcurrentHashMap",

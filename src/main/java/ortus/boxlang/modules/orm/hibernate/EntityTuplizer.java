@@ -22,6 +22,7 @@ import java.io.Serializable;
 import org.hibernate.EntityMode;
 import org.hibernate.EntityNameResolver;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.property.access.spi.Getter;
@@ -32,9 +33,10 @@ import org.hibernate.tuple.entity.AbstractEntityTuplizer;
 import org.hibernate.tuple.entity.EntityMetamodel;
 
 import ortus.boxlang.modules.orm.ORMService;
-import ortus.boxlang.modules.orm.SessionFactoryBuilder;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.scopes.Key;
 
 /**
  * Hibernate implementation class for helping convert tuples (database rows) into boxlang classes.
@@ -42,8 +44,6 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
  * @since 1.0.0
  */
 public class EntityTuplizer extends AbstractEntityTuplizer {
-
-	EntityMetamodel entityMetamodel;
 
 	public EntityTuplizer( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
 		super( entityMetamodel, mappingInfo );
@@ -65,10 +65,20 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	}
 
+	/**
+	 * Sets the identifier value on the given entity instance - overload to ensure correct key casting.
+	 */
+	@Override
+	public void setIdentifier( Object entity, Serializable id, SharedSessionContractImplementor session ) {
+		if ( id instanceof Key keyClass ) {
+			id = keyClass.getName();
+		}
+		super.setIdentifier( entity, id, session );
+	}
+
 	@Override
 	public EntityMode getEntityMode() {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'getEntityMode'" );
+		return EntityMode.MAP;
 	}
 
 	@Override
@@ -100,13 +110,12 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	@Override
 	protected Getter buildPropertyGetter( Property mappedProperty, PersistentClass mappedEntity ) {
-		return new BoxPropertyGetter( SessionFactoryBuilder.getRequestContext( this.getEntityMetamodel().getSessionFactory() ),
-		    mappedProperty, mappedEntity );
+		return new BoxPropertyGetter( mappedProperty, mappedEntity );
 	}
 
 	@Override
 	protected Setter buildPropertySetter( Property mappedProperty, PersistentClass mappedEntity ) {
-		return new BoxPropertySetter( SessionFactoryBuilder.getRequestContext( this.getEntityMetamodel().getSessionFactory() ),
+		return new BoxPropertySetter( RequestBoxContext.getCurrent(),
 		    mappedProperty, mappedEntity );
 	}
 

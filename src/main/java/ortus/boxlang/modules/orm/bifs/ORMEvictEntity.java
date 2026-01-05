@@ -34,6 +34,7 @@ import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.validation.Validator;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 @BoxBIF
 public class ORMEvictEntity extends BaseORMBIF {
@@ -61,11 +62,15 @@ public class ORMEvictEntity extends BaseORMBIF {
 	 *                      will be evicted.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		String			entityName		= arguments.getAsString( ORMKeys.entityName );
-		String			primaryKey		= arguments.getAsString( ORMKeys.primaryKey );
-		IBoxContext		jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
-		ORMContext		ormContext		= ORMContext.getForContext( jdbcBoxContext );
-		ORMApp			ormApp			= ormContext.getORMApp();
+		String		entityName		= arguments.getAsString( ORMKeys.entityName );
+		String		primaryKey		= arguments.getAsString( ORMKeys.primaryKey );
+		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext	ormContext		= ORMContext.getForContext( jdbcBoxContext );
+		ORMApp		ormApp			= ormContext.getORMApp();
+		if ( ormApp == null ) {
+			throw new BoxRuntimeException( "ORM application is not initialized." );
+		}
+
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		SessionFactory	factory			= session.getSessionFactory();

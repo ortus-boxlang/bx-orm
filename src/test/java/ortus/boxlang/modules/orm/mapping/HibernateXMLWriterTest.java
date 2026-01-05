@@ -33,6 +33,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -55,7 +56,7 @@ import ortus.boxlang.modules.orm.hibernate.converters.StringConverter;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
@@ -68,24 +69,36 @@ import ortus.boxlang.runtime.types.exceptions.ParseException;
 public class HibernateXMLWriterTest {
 
 	static BoxRuntime	instance;
-	IBoxContext			context;
+	RequestBoxContext	context;
 	IScope				variables;
 	static Key			result	= new Key( "result" );
 	ORMConfig			ormConfig;
 
 	@BeforeAll
 	public static void setUp() {
-		instance = BoxRuntime.getInstance( true );
+		instance = BoxRuntime.getInstance( false );
 	}
 
 	@BeforeEach
 	public void setupEach() {
-		context		= new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
-		variables	= context.getScopeNearby( VariablesScope.name );
+
+		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
+		RequestBoxContext.setCurrent( context );
+		context.loadApplicationDescriptor( Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+		context.getApplicationListener().onRequestStart( context, null );
+		variables = context.getScopeNearby( VariablesScope.name );
 		IStruct properties = new Struct();
 		properties.put( "ignoreParseErrors", "true" );
 		// We don't need an actual datasource for this test so we'll add one to prevent the error
 		ormConfig = new ORMConfig( properties, context.getRequestContext() );
+	}
+
+	@AfterEach
+	public void teardownEach() {
+		variables.clear();
+		context.getApplicationListener().onRequestEnd( context, null );
+		RequestBoxContext.removeCurrent();
+		context.shutdown();
 	}
 
 	/**********************
@@ -109,15 +122,17 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It can set entity attributes" )
 	@ValueSource( strings = {
 	    """
-	    class
-	    	persistent="true"
-	    	entityName="Car"
-	    	table="vehicles"
-	    	schema="foo"
-	    	catalog="morefoo"
-	    	optimisticLock="all"
-	    {}
-	    """
+	       class
+	       	persistent="true"
+	       	entityName="Car"
+	       	table="vehicles"
+	       	schema="foo"
+	       	catalog="morefoo"
+	       	optimisticLock="all"
+	       {
+	       property name="id" fieldtype="id";
+	    }
+	       """
 	} )
 	@ParameterizedTest
 	public void testEntityAttributes( String sourceCode ) {
@@ -1296,11 +1311,85 @@ public class HibernateXMLWriterTest {
 		    .isEqualTo( "date" );
 	}
 
+	// @formatter:off
+	@DisplayName( "It generates a valid subclass xml element" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class
+	    	persistent="true"
+	    	entityName="CommentSubscription"
+	    	extends="root.models.cms.subscriptions.BaseSubscription"
+			discriminatorColumn="type"
+			discriminatorValue="comment"
+			table="ignored"
+		{}
+	    """
+	} )
+	// @formatter:on
+	public void testSubclassGeneration( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+
+		Document	doc			= new HibernateXMLWriter( entityMeta,
+		    ( a, b ) -> new EntityRecord( "cbSubscription", "models.cms.subscriptions.BaseSubscription" ),
+		    ormConfig ).generateXML();
+
+		// String xml = xmlToString( doc );
+		// System.out.println( xml );
+
+		Node		subclassEl	= doc.getDocumentElement().getLastChild();
+		assertThat( subclassEl.getNodeName() ).isEqualTo( "subclass" );
+		NamedNodeMap subclassAttributes = subclassEl.getAttributes();
+		// it's a subclass (uses the same table as the parent), so no table/schema/catalog attrs
+		assertThat( subclassAttributes.getNamedItem( "table" ) ).isNull();
+		assertThat( subclassAttributes.getNamedItem( "schema" ) ).isNull();
+		assertThat( subclassAttributes.getNamedItem( "catalog" ) ).isNull();
+	}
+
+	// @formatter:off
+	@DisplayName( "It generates a valid subclass xml element" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class
+	    	persistent="true"
+	    	entityName="CommentSubscription"
+	    	extends="root.models.cms.subscriptions.BaseSubscription"
+			joinColumn="subscriptionId"
+			table="myTable"
+			schema="mySchema"
+			catalog="myCatalog"
+		{}
+	    """
+	} )
+	// @formatter:on
+	public void testJoinedSubclassGeneration( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+
+		Document	doc			= new HibernateXMLWriter( entityMeta,
+		    ( a, b ) -> new EntityRecord( "cbSubscription", "models.cms.subscriptions.BaseSubscription" ),
+		    ormConfig ).generateXML();
+
+		// String xml = xmlToString( doc );
+		// System.out.println( xml );
+
+		Node		subclassEl	= doc.getDocumentElement().getLastChild();
+		assertThat( subclassEl.getNodeName() ).isEqualTo( "joined-subclass" );
+		NamedNodeMap subclassAttributes = subclassEl.getAttributes();
+		// it's a subclass (uses the same table as the parent), so no table/schema/catalog attrs
+		assertThat( subclassAttributes.getNamedItem( "table" ).getTextContent() ).isEqualTo( "myTable" );
+		assertThat( subclassAttributes.getNamedItem( "schema" ).getTextContent() ).isEqualTo( "mySchema" );
+		assertThat( subclassAttributes.getNamedItem( "catalog" ).getTextContent() ).isEqualTo( "myCatalog" );
+	}
+
 	/**
 	 * @TODO: The following ORM annotations are still lacking tests at either the entity level, the property level, or both:
 	 *        embedXml
 	 *        missingRowIgnored
-	 *        joinColumn
 	 *        inverse
 	 *        structkeydatatype ?? ACF only?
 	 *        unSavedValue - deprecated
@@ -1323,11 +1412,18 @@ public class HibernateXMLWriterTest {
 		if ( !result.isCorrect() ) {
 			throw new ParseException( result.getIssues(), "" );
 		}
-		ClassMetadataVisitor visitor = new ClassMetadataVisitor();
+		ClassMetadataVisitor visitor = new ClassMetadataVisitor( context );
 		result.getRoot().accept( visitor );
 		return visitor.getMetadata();
 	}
 
+	/**
+	 * Debugging utility to convert a Document to a string.
+	 * 
+	 * Please leave this in place; it's handy for reviewing the generated output during test development.
+	 * 
+	 * @param doc The XML Document to convert to an XML string.
+	 */
 	private String xmlToString( Document doc ) {
 		try {
 			TransformerFactory	tf			= TransformerFactory.newInstance();

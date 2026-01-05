@@ -30,6 +30,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -58,11 +60,13 @@ public abstract class BaseORMTest {
 
 	@BeforeAll
 	public void setUp() {
-		instance = BoxRuntime.getInstance( true );
+		instance = BoxRuntime.getInstance( false );
 		// Load the module
 		try {
 			loadModules( instance.getRuntimeContext() );
-			context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+			context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
+			RequestBoxContext.setCurrent( context );
+			context.loadApplicationDescriptor( Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
 
 			// reset the now-existing database tables
 			JDBCTestUtils.resetTables( ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow(), context );
@@ -77,7 +81,16 @@ public abstract class BaseORMTest {
 				System.out.println( classLocator.get().toString() );
 			}
 			throw e;
+		} finally {
+			if ( context != null ) {
+				RequestBoxContext.removeCurrent();
+			}
 		}
+
+		// Silence Hibernate's schema generation logs in test runs, as Hibernate is extremely chatty and not even that bright about the order of operations.
+		// (Attempting to drop foreign keys on a table that doesn't exist, or attempting to create a table that already exists, etc.)
+		LoggerContext loggerContext = instance.getLoggingService().getLoggerContext();
+		loggerContext.getLogger( "org.hibernate.tool.schema.internal" ).setLevel( Level.ERROR );
 	}
 
 	@AfterAll
@@ -87,7 +100,9 @@ public abstract class BaseORMTest {
 
 	@BeforeEach
 	public void setupEach() {
-		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
+		RequestBoxContext.setCurrent( context );
+		context.loadApplicationDescriptor( Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
 		context.getApplicationListener().onRequestStart( context, null );
 		variables = context.getScopeNearby( VariablesScope.name );
 	}
@@ -96,6 +111,8 @@ public abstract class BaseORMTest {
 	public void teardownEach() {
 		variables.clear();
 		context.getApplicationListener().onRequestEnd( context, null );
+		RequestBoxContext.removeCurrent();
+		context.shutdown();
 	}
 
 	protected static void loadModules( IBoxContext context ) {

@@ -48,15 +48,13 @@ import ortus.boxlang.runtime.scopes.Key;
  */
 public class SessionFactoryBuilder {
 
-	public static final String		BOXLANG_APPLICATION_CONTEXT	= "BOXLANG_APPLICATION_CONTEXT";
-	public static final String		BOXLANG_CONTEXT				= "BOXLANG_CONTEXT";
-	public static final String		BOXLANG_ENTITY_MAP			= "BOXLANG_ENTITY_MAP";
-	public static final String		BOXLANG_EVENT_LISTENER		= "BOXLANG_EVENT_LISTENER";
+	public static final String		BOXLANG_ENTITY_MAP		= "BOXLANG_ENTITY_MAP";
+	public static final String		BOXLANG_EVENT_LISTENER	= "BOXLANG_EVENT_LISTENER";
 
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime						= BoxRuntime.getInstance();
+	private static final BoxRuntime	runtime					= BoxRuntime.getInstance();
 
 	/**
 	 * The logger for this class. We may log warnings or errors if we encounter
@@ -89,15 +87,6 @@ public class SessionFactoryBuilder {
 	 * Static Helpers
 	 * ------------------------------------------------------------------------------------------------------------
 	 */
-
-	/**
-	 * Get the BoxLang context tied to this Hibernate session factory.
-	 *
-	 * @param sessionFactory The Hibernate session factory
-	 */
-	public static IBoxContext getRequestContext( SessionFactory sessionFactory ) {
-		return ( IBoxContext ) sessionFactory.getProperties().get( BOXLANG_CONTEXT );
-	}
 
 	/**
 	 * Get a unique key for the given context/datasource combination.
@@ -167,8 +156,6 @@ public class SessionFactoryBuilder {
 			Thread.currentThread().setContextClassLoader( oldClassLoader );
 		}
 
-		factory.getProperties().put( BOXLANG_APPLICATION_CONTEXT, configuration.getProperties().get( BOXLANG_APPLICATION_CONTEXT ) );
-		factory.getProperties().put( BOXLANG_CONTEXT, configuration.getProperties().get( BOXLANG_CONTEXT ) );
 		factory.getProperties().put( BOXLANG_ENTITY_MAP, configuration.getProperties().get( BOXLANG_ENTITY_MAP ) );
 		factory.getProperties().put( BOXLANG_EVENT_LISTENER, this.ormConfig.eventHandler );
 
@@ -188,14 +175,11 @@ public class SessionFactoryBuilder {
 		classLoaders.add( runtime.getClass().getClassLoader() );
 
 		// Any configuration which needs a specific java type (such as the connection provider instance) goes here
-		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( context.getConnectionManager(), this.datasourceName ) );
+		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasourceName ) );
 		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
 		properties.put( AvailableSettings.CLASSLOADERS, classLoaders );
 		properties.put( AvailableSettings.TC_CLASSLOADER, "org.hibernate.boot.registry.classloading.internal.AggregatedClassLoader" );
 		properties.put( AvailableSettings.GLOBALLY_QUOTED_IDENTIFIERS, StringCaster.cast( ormConfig.quoteIdentifiers ) );
-		properties.put( BOXLANG_CONTEXT, context );
-
-		// properties.put( AvailableSettings.SESSION_FACTORY_NAME, getAppName().toString() );
 
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
 		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.POJO, EntityTuplizer.class );

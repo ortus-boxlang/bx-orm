@@ -23,14 +23,19 @@ import java.sql.SQLException;
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
 
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
 
 /**
- * Java class responsible for providing datasource connections to Hibernate ORM.
- *
+ * Hibernate ConnectionProvider implementation for retrieving JDBC connections on a specific datasource from BoxLang's connection manager.
+ * 
+ * Built once at ORM startup for each datasource/session factory.
+ * 
  * @see org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
  * 
  * @since 1.0.0
@@ -53,16 +58,9 @@ public class ORMConnectionProvider implements ConnectionProvider {
 	 */
 	private Key						datasourceName;
 
-	/**
-	 * The BoxLang ConnectionManager object which manages database connections and
-	 * especially connection pooling.
-	 */
-	private ConnectionManager		connectionManager;
-
-	public ORMConnectionProvider( ConnectionManager connectionManager, Key datasourceName ) {
-		this.logger				= runtime.getLoggingService().getLogger( "orm" );
-		this.datasourceName		= datasourceName;
-		this.connectionManager	= connectionManager;
+	public ORMConnectionProvider( Key datasourceName ) {
+		this.logger			= runtime.getLoggingService().getLogger( "orm" );
+		this.datasourceName	= datasourceName;
 	}
 
 	@Override
@@ -105,7 +103,15 @@ public class ORMConnectionProvider implements ConnectionProvider {
 	 * @param datasourceName Datasource name to look up.
 	 */
 	private DataSource getDatasourceForKey( Key datasourceName ) {
-		// ConnectionManager connectionManager = context.getConnectionManager();
+		IBoxContext context = RequestBoxContext.getCurrent();
+		if ( context == null ) {
+			throw new IllegalStateException( "No BoxLang request context is available to retrieve the datasource." );
+		}
+		IJDBCCapableContext jdbcContext = context.getParentOfType( IJDBCCapableContext.class );
+		if ( jdbcContext == null ) {
+			throw new IllegalStateException( "No JDBC-capable BoxLang context is available to retrieve the datasource." );
+		}
+		ConnectionManager connectionManager = jdbcContext.getConnectionManager();
 		return datasourceName == null || datasourceName.equals( Key.defaultDatasource )
 		    ? connectionManager.getDefaultDatasourceOrThrow()
 		    : connectionManager.getDatasourceOrThrow( datasourceName );
