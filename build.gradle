@@ -49,7 +49,7 @@ dependencies {
 	} else {
 		// Downloaded Dependencies
 		compileOnly files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
-		testImplementation files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
+		testImplementation files( 'src/test/resources/libs/boxlang-1.9.0-snapshot.jar' )
 	}
 
 	// Implementation Dependencies
@@ -243,6 +243,7 @@ task downloadBoxLang( type: Download ) {
     // Configure the URL of the file to download
 	src([
 		"https://downloads.ortussolutions.com/ortussolutions/boxlang/${boxlangVersion}/boxlang-${boxlangVersion}.jar",
+		"https://downloads.ortussolutions.com/ortussolutions/boxlang/1.9.0-snapshot/boxlang-1.9.0-snapshot.jar",
 		"https://downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-mysql/${mysqlVersion}/bx-mysql-${mysqlVersion}.zip"
 	])
     // Specify the destination directory for the downloaded files
