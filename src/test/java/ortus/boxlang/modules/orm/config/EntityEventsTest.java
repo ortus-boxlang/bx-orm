@@ -84,6 +84,7 @@ public class EntityEventsTest extends BaseORMTest {
 				try{
 				badDate = dateAdd( "d", -1, now() );
 				effectiveNow = now();
+				sleep( 1000 ); // Ensure we have a time difference
 				author = entityNew(
 					"cbAuthor",
 					{
