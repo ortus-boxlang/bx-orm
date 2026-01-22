@@ -41,6 +41,7 @@ import ortus.boxlang.modules.orm.hibernate.converters.BooleanConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.DoubleConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.IntegerConverter;
+import ortus.boxlang.modules.orm.hibernate.converters.LongConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.ShortConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.StringConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.TimeConverter;
@@ -1118,6 +1119,7 @@ public class HibernateXMLWriter {
 			case "short" -> "converted::" + ShortConverter.class.getName();
 			case "integer" -> "converted::" + IntegerConverter.class.getName();
 			case "biginteger" -> "converted::" + BigIntegerConverter.class.getName();
+			case "long" -> "converted::" + LongConverter.class.getName();
 			case "bigdecimal" -> "converted::" + BigDecimalConverter.class.getName();
 			case "string" -> "converted::" + StringConverter.class.getName();
 			default -> normalizedType;
