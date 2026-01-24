@@ -164,6 +164,7 @@ public class TransactionManager extends BaseInterceptor {
 					    "'autoManageSession' is enabled; clearing ORM session [{}] for datasource [{}] after transaction rollback.",
 					    ormSession,
 					    datasource.getName()
+					);
 				}
 				ormSession.clear();
 			}
