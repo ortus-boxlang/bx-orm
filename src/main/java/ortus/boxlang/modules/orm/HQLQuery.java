@@ -344,6 +344,10 @@ public class HQLQuery {
 
 		org.hibernate.query.Query<?>	hqlQuery	= session.createQuery( this.hql );
 
+		if ( !ormContext.getConfig().autoManageSession ) {
+			hqlQuery.setHibernateFlushMode( org.hibernate.FlushMode.MANUAL );
+		}
+
 		if ( this.options.containsKey( Key.offset ) ) {
 			hqlQuery.getQueryOptions().setFirstRow( this.options.getAsInteger( Key.offset ) );
 		}
