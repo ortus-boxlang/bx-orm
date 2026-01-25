@@ -106,6 +106,32 @@ public class TransactionManager extends BaseInterceptor {
 	}
 
 	@InterceptionPoint
+	public void onTransactionSetSavepoint( IStruct args ) {
+		IBoxContext	context			= args.getAs( IBoxContext.class, Key.context );
+		String		savepointName	= args.getAsString( Key.savepoint );
+		ORMApp		ormApp			= ormService.getORMAppByContext( context );
+		if ( ormApp == null ) {
+			// Just return as we would already have warned during transaction begin
+			return;
+		}
+		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ormApp.getDatasources().forEach( datasource -> {
+			Session ormSession = ormContext.getSession( datasource );
+
+			if ( logger.isDebugEnabled() ) {
+				logger.debug(
+				    "Setting ORM transaction savepoint [{}] on session [{}] for datasource [{}]",
+				    savepointName,
+				    ormSession,
+				    datasource.getName()
+				);
+			}
+
+			ormSession.flush();
+		} );
+	}
+
+	@InterceptionPoint
 	public void onTransactionCommit( IStruct args ) {
 		IBoxContext	context	= args.getAs( IBoxContext.class, Key.context );
 
@@ -201,8 +227,8 @@ public class TransactionManager extends BaseInterceptor {
 				);
 			}
 
-			ormSession.getTransaction().commit();
 			ormSession.flush();
+			ormSession.getTransaction().commit();
 		} );
 	}
 }
