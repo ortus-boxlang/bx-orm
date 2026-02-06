@@ -74,7 +74,7 @@ jobs:
         run: |
           gradle installModuleDependencies --stacktrace --console=plain
           # this is done in order to build the module structure before testing
-          gradle clean test --stacktrace --console=plain
+          gradle shadowJar test --stacktrace --console=plain
 
       - name: Publish Test Reports
         uses: mikepenz/action-junit-report@v6.0.1
