@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
 public class TransactionManagementTest extends BaseORMTest {
@@ -63,16 +64,32 @@ public class TransactionManagementTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 			"""
+			previousMfrs = EntityLoad( "manufacturer" ).len();
 			transaction{
-				entitySave( entityNew( "manufacturer", { name : "BMW Group", address : "102 BMW Tower" } ) );
+				bmw = entityNew( "manufacturer", { name : "BMW Group", address : "102 BMW Tower" } );
+				entitySave( bmw );
+				transaction {
+					chrysler = entityNew( "manufacturer", { name : "Chrysler Corporation", address : "105 Chrysler Way" } );
+					entitySave( chrysler );
+					transaction{
+						fiat = entityNew( "manufacturer", { name : "Fiat S.p.A.", address : "106 Fiat Road" } );
+						entitySave( fiat );
+					}
+				}
+				allMfrs = EntityLoad( "manufacturer" ).len();
 			}
 			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'BMW Group'" );
+			result2 = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Chrysler Corporation'" );
+			result3 = allMfrs - previousMfrs;
 			""",
 			context
 		);
 		// @formatter:on
 		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
 		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "BMW Group" );
+		assertThat( variables.getAsQuery( Key.of( "result2" ) ).size() ).isEqualTo( 1 );
+		assertThat( variables.getAsQuery( Key.of( "result2" ) ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Chrysler Corporation" );
+		assertThat( variables.getAsInteger( Key.of( "result3" ) ) ).isEqualTo( 3 );
 	}
 
 	@DisplayName( "It rolls back on transaction rollback" )

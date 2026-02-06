@@ -50,21 +50,21 @@ public class ORMEvictQueries extends BaseORMBIF {
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
-	 * 
+	 *
 	 * @argument.cacheName The name of the cache region to evict. If not provided, the default query cache will be evicted.
-	 * 
+	 *
 	 * @argument.datasource The name of the datasource on which to evict the cache. If not provided, the default datasource will be used.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		String			cacheName			= arguments.getAsString( ORMKeys.cacheName );
-		String			datasourceName		= arguments.getAsString( ORMKeys.datasource );
-		IBoxContext		jdbcBoxContext		= context.getParentOfType( IJDBCCapableContext.class );
-		ORMContext		ormRequestContext	= ORMContext.getForContext( jdbcBoxContext );
-		SessionFactory	factory				= null;
+		String			cacheName		= arguments.getAsString( ORMKeys.cacheName );
+		String			datasourceName	= arguments.getAsString( ORMKeys.datasource );
+		IBoxContext		jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext		ormContext		= ORMContext.getForContext( jdbcBoxContext );
+		SessionFactory	factory			= null;
 		if ( datasourceName == null ) {
-			factory = ormRequestContext.getSession().getSessionFactory();
+			factory = ormContext.getSession().getSessionFactory();
 		} else {
-			factory = ormRequestContext.getSession( Key.of( datasourceName ) ).getSessionFactory();
+			factory = ormContext.getSession( Key.of( datasourceName ) ).getSessionFactory();
 		}
 
 		if ( cacheName == null ) {

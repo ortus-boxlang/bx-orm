@@ -21,7 +21,7 @@ import ortus.boxlang.runtime.scopes.Key;
 
 /**
  * Key instances specific to the ORM module.
- * 
+ *
  * @since 1.0.0
  */
 public class ORMKeys {
@@ -76,6 +76,8 @@ public class ORMKeys {
 	public static final Key	ignoreExtras				= Key.of( "ignoreExtras" );
 	public static final Key	enableThreadedMapping		= Key.of( "enableThreadedMapping" );
 	public static final Key	quoteIdentifiers			= Key.of( "quoteIdentifiers" );
+	public static final Key	defaultBatchSize			= Key.of( "defaultBatchSize" );
+	public static final Key	proxyLazyLoading			= Key.of( "proxyLazyLoading" );
 
 	/**
 	 * OLD setting name. Deprecated. Use {@link ignoreParseErrors} instead.

@@ -32,6 +32,7 @@ import org.hibernate.proxy.LazyInitializer;
 
 import ortus.boxlang.compiler.parser.BoxSourceType;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.loader.ImportDefinition;
 import ortus.boxlang.runtime.runnables.BoxClassSupport;
 import ortus.boxlang.runtime.runnables.BoxInterface;
@@ -43,6 +44,7 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.types.AbstractFunction;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Property;
+import ortus.boxlang.runtime.types.UDF;
 import ortus.boxlang.runtime.types.meta.BoxMeta;
 import ortus.boxlang.runtime.util.ResolvedFilePath;
 
@@ -347,6 +349,16 @@ public class BoxProxy implements IClassRunnable, HibernateProxy {
 	@Override
 	public void setSuper( IClassRunnable arg0 ) {
 		getRunnable().setSuper( arg0 );
+	}
+
+	@Override
+	public Map<Key, Class<? extends UDF>> getCompileTimeMethods() {
+		return getRunnable().getCompileTimeMethods();
+	}
+
+	@Override
+	public DynamicObject getSuperClass() {
+		return getRunnable().getSuperClass();
 	}
 
 }

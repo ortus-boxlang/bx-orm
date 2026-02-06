@@ -344,6 +344,14 @@ public class HQLQuery {
 
 		org.hibernate.query.Query<?>	hqlQuery	= session.createQuery( this.hql );
 
+		if ( !ormContext.getConfig().autoManageSession ) {
+			hqlQuery.setHibernateFlushMode( org.hibernate.FlushMode.MANUAL );
+		}
+
+		// Ensure the query respects the session cache to maintain entity identity
+		// This prevents returning duplicate instances of entities already in the session
+		hqlQuery.setCacheMode( org.hibernate.CacheMode.NORMAL );
+
 		if ( this.options.containsKey( Key.offset ) ) {
 			hqlQuery.getQueryOptions().setFirstRow( this.options.getAsInteger( Key.offset ) );
 		}
