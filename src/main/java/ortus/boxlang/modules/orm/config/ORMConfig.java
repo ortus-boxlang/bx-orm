@@ -72,7 +72,7 @@ public class ORMConfig {
 	/**
 	 * Specifies whether ColdFusion should automatically generate entity mappings
 	 * for the persistent CFCs. If autogenmap=false, the mapping should be
-	 * provided in the form of <code>orm.xml</code> files.
+	 * provided in the form of <code>hbm.xml</code> files.
 	 */
 	public boolean						autoGenMap				= true;
 

@@ -184,15 +184,9 @@ public class MappingGenerator {
 	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
 	 */
 	public static Map<Key, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
-		if ( !ormConfig.autoGenMap ) {
-			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
-			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
-		} else {
-			// generate xml mappings on the fly, saving them either to a temp directory or alongside the entity class files if `ormConfig.saveMapping` is true.
-			return new MappingGenerator( context, ormConfig )
-			    .generateMappings()
-			    .getEntityDatasourceMap();
-		}
+		return new MappingGenerator( context, ormConfig )
+		    .generateMappings()
+		    .getEntityDatasourceMap();
 	}
 
 	/**
@@ -234,7 +228,21 @@ public class MappingGenerator {
 		// Generate XML mapping files for each entity
 		// Change this to a stream if we will be doing parallel processing
 		for ( EntityRecord entity : this.entities ) {
-			entity.setXmlFilePath( writeXMLFile( entity ) );
+			Path xmlPath = getXMLPathForEntity( entity );
+			if ( config.autoGenMap ) {
+				// see if hbm.xml file already exists. Must match entityname.hbm.xml exactly.
+				// if it doesn't exist, throw an error, because we are in autoGenMap mode and we expect the mapping file to already be there. This allows us to
+				// skip the generation step if we have pre-generated mappings checked into source control.
+				if ( !Files.exists( xmlPath ) ) {
+					String message = String.format(
+					    "Mapping file not found for entity [%s] at expected location: [%s]. If you are using `autoGenMap`, you must pre-generate the mapping files and place them in the expected location. If you want the mapping generator to generate the mapping files for you, set `autoGenMap` to false.",
+					    entity.getEntityName(), xmlPath );
+					throw new BoxRuntimeException( message );
+				}
+			} else {
+				writeXMLFile( entity, xmlPath );
+			}
+			entity.setXmlFilePath( xmlPath );
 		}
 
 		return this;
@@ -443,19 +451,14 @@ public class MappingGenerator {
 	/**
 	 * Write the XML mapping file for the given entity metadata.
 	 *
-	 * @param entity EntityRecord containing the entity metadata.
+	 * @param entity  EntityRecord containing the entity metadata.
+	 * @param xmlPath The path to write the XML mapping file to.
 	 *
 	 * @return The path to the generated XML mapping file If `saveMappingAlongsideEntity` is true, the path will be the same as the entity file, but with
 	 *         a `.hbm.xml` extension.
 	 */
-	private Path writeXMLFile( EntityRecord entity ) {
-		IStruct	meta	= entity.getMetadata();
-		String	name	= meta.getAsString( Key._name );
-		String	path	= meta.getAsString( Key.path );
-		String	fileExt	= path.substring( path.lastIndexOf( '.' ) );
-		Path	xmlPath	= this.saveAlongsideEntity
-		    ? Path.of( path.replace( fileExt, ".hbm.xml" ) )
-		    : Path.of( this.saveDirectory, name + ".hbm.xml" );
+	private Path writeXMLFile( EntityRecord entity, Path xmlPath ) {
+		String name = entity.getMetadata().getAsString( Key._name );
 		try {
 			if ( logger.isDebugEnabled() )
 				logger.debug( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
@@ -520,6 +523,25 @@ public class MappingGenerator {
 		}
 
 		return "";
+	}
+
+	/**
+	 * Build a path to the XML mapping file for the given entity based on ORM configuration.
+	 * 
+	 * If `saveMappingAlongsideEntity` is true, the path will be the same as the entity file,
+	 * but with a `.hbm.xml` extension. Otherwise, the path will be the temp directory located
+	 * at `saveDirectory{entity name}.hbm.xml`.
+	 * 
+	 * @param entity The EntityRecord instance for which to build an hbm.xml path
+	 */
+	private Path getXMLPathForEntity( EntityRecord entity ) {
+		IStruct	meta	= entity.getMetadata();
+		String	name	= meta.getAsString( Key._name );
+		String	path	= meta.getAsString( Key.path );
+		String	fileExt	= path.substring( path.lastIndexOf( '.' ) );
+		return this.saveAlongsideEntity
+		    ? Path.of( path.replace( fileExt, ".hbm.xml" ) )
+		    : Path.of( this.saveDirectory, name + ".hbm.xml" );
 	}
 
 	/**
