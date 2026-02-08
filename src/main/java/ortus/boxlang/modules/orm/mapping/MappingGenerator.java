@@ -230,6 +230,8 @@ public class MappingGenerator {
 		for ( EntityRecord entity : this.entities ) {
 			Path xmlPath = getXMLPathForEntity( entity );
 			if ( config.autoGenMap ) {
+				writeXMLFile( entity, xmlPath );
+			} else {
 				// see if hbm.xml file already exists. Must match entityname.hbm.xml exactly.
 				// if it doesn't exist, throw an error, because we are in autoGenMap mode and we expect the mapping file to already be there. This allows us to
 				// skip the generation step if we have pre-generated mappings checked into source control.
@@ -239,8 +241,6 @@ public class MappingGenerator {
 					    entity.getEntityName(), xmlPath );
 					throw new BoxRuntimeException( message );
 				}
-			} else {
-				writeXMLFile( entity, xmlPath );
 			}
 			entity.setXmlFilePath( xmlPath );
 		}
