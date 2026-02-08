@@ -228,7 +228,14 @@ public class MappingGenerator {
 		// Generate XML mapping files for each entity
 		// Change this to a stream if we will be doing parallel processing
 		for ( EntityRecord entity : this.entities ) {
-			Path xmlPath = getXMLPathForEntity( entity );
+			Path		xmlPath		= getXMLPathForEntity( entity );
+			IStruct		meta		= entity.getMetadata();
+			IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+			// We need this for inheritance
+			meta.put( ORMKeys.classFQN, entity.getClassFQN() );
+			// ensure the 'datasource' key is populated with our default logic
+			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
+			entity.setEntityMeta( entityMeta );
 			if ( config.autoGenMap ) {
 				writeXMLFile( entity, xmlPath );
 			} else {
@@ -490,15 +497,7 @@ public class MappingGenerator {
 	 */
 	private String generateXML( EntityRecord entity ) {
 		try {
-			IStruct meta = entity.getMetadata();
-			// We need this for inheritance
-			meta.put( ORMKeys.classFQN, entity.getClassFQN() );
-			// ensure the 'datasource' key is populated with our default logic
-			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
-			IEntityMeta entityMeta = AbstractEntityMeta.autoDiscoverMetaType( meta );
-			entity.setEntityMeta( entityMeta );
-
-			Document			doc			= new HibernateXMLWriter( entityMeta, this::entityLookup, this.config ).generateXML();
+			Document			doc			= new HibernateXMLWriter( entity.getEntityMeta(), this::entityLookup, this.config ).generateXML();
 
 			TransformerFactory	tf			= TransformerFactory.newInstance();
 			Transformer			transformer	= tf.newTransformer();
