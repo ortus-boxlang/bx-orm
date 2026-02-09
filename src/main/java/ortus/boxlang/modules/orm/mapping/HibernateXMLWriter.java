@@ -400,7 +400,7 @@ public class HibernateXMLWriter {
 
 		if ( type.equals( "bag" ) && !association.containsKey( Key.column ) ) {
 			// If a column is not defined locally, we need to pull the information from the inverse side to get the column name.
-			Key				datasourceName			= this.entity.getDatasource().isEmpty() ? Key.defaultDatasource : Key.of( this.entity.getDatasource() );
+			Key				datasourceName			= this.entity.getDatasource().isEmpty() ? this.ormConfig.datasource : Key.of( this.entity.getDatasource() );
 			EntityRecord	associatedEntity		= entityLookup.apply( association.getAsString( Key._CLASS ), datasourceName );
 			IEntityMeta		associatedEntityMeta	= associatedEntity.getEntityMeta();
 			if ( associatedEntityMeta == null ) {
@@ -968,7 +968,7 @@ public class HibernateXMLWriter {
 			throw new BoxRuntimeException(
 			    "Missing required class name for relationship '%s' on entity '%s'".formatted( prop.getName(), this.entity.getEntityName() ) );
 		}
-		Key				datasourceName		= this.entity.getDatasource().isEmpty() ? Key.defaultDatasource : Key.of( this.entity.getDatasource() );
+		Key				datasourceName		= this.entity.getDatasource().isEmpty() ? this.ormConfig.datasource : Key.of( this.entity.getDatasource() );
 		EntityRecord	associatedEntity	= entityLookup.apply( relationClassName, datasourceName );
 		if ( associatedEntity == null ) {
 			String message = String.format( "Could not find entity '%s' referenced in property '%s' on entity '%s'", relationClassName, prop.getName(),
