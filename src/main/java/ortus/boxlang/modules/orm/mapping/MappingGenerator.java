@@ -240,11 +240,11 @@ public class MappingGenerator {
 				writeXMLFile( entity, xmlPath );
 			} else {
 				// see if hbm.xml file already exists. Must match entityname.hbm.xml exactly.
-				// if it doesn't exist, throw an error, because we are in autoGenMap mode and we expect the mapping file to already be there. This allows us to
-				// skip the generation step if we have pre-generated mappings checked into source control.
+				// if it doesn't exist, throw an error, because we are in manual mapping mode (`autoGenMap=false`) and we expect the mapping file to already be there.
+				// This allows us to skip the generation step if we have pre-generated mappings checked into source control.
 				if ( !Files.exists( xmlPath ) ) {
 					String message = String.format(
-					    "Mapping file not found for entity [%s] at expected location: [%s]. If you are using `autoGenMap`, you must pre-generate the mapping files and place them in the expected location. If you want the mapping generator to generate the mapping files for you, set `autoGenMap` to false.",
+					    "Mapping file not found for entity [%s] at expected location: [%s]. When `autoGenMap` is false, you must pre-generate the mapping files and place them in the expected location. If you want the mapping generator to generate the mapping files for you, set `autoGenMap` to true.",
 					    entity.getEntityName(), xmlPath );
 					throw new BoxRuntimeException( message );
 				}
