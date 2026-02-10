@@ -44,7 +44,6 @@ import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
-import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.ConfigOverrideBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -87,7 +86,7 @@ public class MappingGenerator {
 	private static final String[]		ENTITY_EXTENSIONS			= { ".bx", ".cfc" };
 
 	/**
-	 * File extension for the generated XML mapping files.
+	 * File extension for XML mapping files.
 	 */
 	private static final String			HBM_XML_EXT					= ".hbm.xml";
 
@@ -233,22 +232,17 @@ public class MappingGenerator {
 		// Generate XML mapping files for each entity
 		// Change this to a stream if we will be doing parallel processing
 		for ( EntityRecord entity : this.entities ) {
-			Path		xmlPath		= getXMLPathForEntity( entity );
-			IStruct		meta		= entity.getMetadata();
-			IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+			Path	xmlPath	= getXMLPathForEntity( entity );
+			IStruct	meta	= entity.getMetadata();
 			// We need this for inheritance
 			meta.put( ORMKeys.classFQN, entity.getClassFQN() );
 			// ensure the 'datasource' key is populated with our default logic
 			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
-			entity.setEntityMeta( entityMeta );
+			// Build the entity metadata
+			entity.setEntityMeta( AbstractEntityMeta.autoDiscoverMetaType( meta ) );
 			if ( config.generateMappings ) {
 				writeXMLFile( entity, xmlPath );
 			} else {
-				// see if hbm.xml file already exists. Must match entityname.hbm.xml exactly.
-				// if it doesn't exist, throw an error, because we are in manual mapping mode (`generateMappings=false`) and we expect the mapping file to
-				// already be
-				// there.
-				// This allows us to skip the generation step if we have pre-generated mappings checked into source control.
 				if ( !Files.exists( xmlPath ) ) {
 					String message = String.format(
 					    "Mapping file not found for entity [%s] at expected location: [%s]. When `generateMappings` is false, you must pre-generate the mapping files and place them in the expected location. If you want the mapping generator to generate the mapping files for you, set `generateMappings` to true.",
