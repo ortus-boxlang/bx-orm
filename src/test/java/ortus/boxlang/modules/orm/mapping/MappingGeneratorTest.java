@@ -47,7 +47,7 @@ public class MappingGeneratorTest {
 		ormConfig	= new ORMConfig(
 		    Struct.of(
 		        "ignoreParseErrors", "true",
-		        "autoGenMap", "true",
+		        "generateMappings", "true",
 		        "saveMapping", "true"
 		    ),
 		    context.getRequestContext()
@@ -78,7 +78,7 @@ public class MappingGeneratorTest {
 		MappingGenerator	generator						= new MappingGenerator( context.getRequestContext(), ormConfig );
 		generator.generateMappings();
 
-		// Check that the file has been modified since autoGenMap is true
+		// Check that the file has been modified since generateMappings is true
 		long lastModifiedAfter = entityXMLFilePath.lastModified();
 		assertThat( lastModifiedAfter ).isGreaterThan( preGenerateXMLModificationTime );
 
@@ -127,6 +127,34 @@ public class MappingGeneratorTest {
 		generator.generateMappings();
 
 		// Check that the file was not modified since autoGenMap is false
+		long lastModifiedAfter = entityXMLFilePath.lastModified();
+		assertThat( lastModifiedAfter ).isEqualTo( preGenerateXMLModificationTime );
+
+		// Check that the mapping was still generated in memory
+		Map<Key, List<EntityRecord>> mappings = generator.getEntityDatasourceMap();
+		assertThat( mappings ).isNotNull();
+		assertThat( mappings ).containsKey( new Key( "TestDB" ) );
+		assertThat( mappings ).containsKey( new Key( "dsn2" ) );
+	}
+
+	@Test
+	public void testGenerateMappings() {
+		var					testORMConfig					= new ORMConfig(
+		    Struct.of(
+		        "ignoreParseErrors", "true",
+		        "generateMappings", "false",
+		        "saveMapping", "true",
+		        "entityPaths", Array.of( "/root/models" )
+		    ),
+		    context.getRequestContext()
+		);
+		File				entityXMLFilePath				= Path.of( "src/test/resources/app/models/Manufacturer.hbm.xml" ).toFile();
+		long				preGenerateXMLModificationTime	= entityXMLFilePath.lastModified();
+
+		MappingGenerator	generator						= new MappingGenerator( context.getRequestContext(), testORMConfig );
+		generator.generateMappings();
+
+		// Check that the file was not modified since generateMappings is false
 		long lastModifiedAfter = entityXMLFilePath.lastModified();
 		assertThat( lastModifiedAfter ).isEqualTo( preGenerateXMLModificationTime );
 

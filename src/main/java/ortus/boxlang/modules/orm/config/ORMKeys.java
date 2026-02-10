@@ -42,6 +42,7 @@ public class ORMKeys {
 	public static final Key	ORMEnabled					= Key.of( "ormEnabled" );
 	public static final Key	ORMSettings					= Key.of( "ormSettings" );
 	public static final Key	autoGenMap					= Key.of( "autoGenMap" );
+	public static final Key	generateMappings			= Key.of( "generateMappings" );
 	public static final Key	autoManageSession			= Key.of( "autoManageSession" );
 	public static final Key	basePath					= Key.of( "basePath" );
 	public static final Key	cacheConfig					= Key.of( "cacheConfig" );

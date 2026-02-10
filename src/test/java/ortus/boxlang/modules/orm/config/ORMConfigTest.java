@@ -71,6 +71,7 @@ public class ORMConfigTest extends BaseORMTest {
 		assertFalse( config.logSQL );
 		assertFalse( config.eventHandling );
 		assertTrue( config.autoGenMap );
+		assertTrue( config.generateMappings );
 		assertFalse( config.saveMapping );
 
 		// BREAKING CHANGE: These settings are both FALSE by default in BoxLang, but TRUE by default in Lucee.
@@ -135,6 +136,7 @@ public class ORMConfigTest extends BaseORMTest {
 		// mapping generation
 		assertThat( config.saveMapping ).isTrue();
 		assertFalse( config.autoGenMap );
+		assertFalse( config.generateMappings );
 		assertThat( config.ignoreParseErrors ).isTrue();
 	}
 }

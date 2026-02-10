@@ -236,16 +236,17 @@ public class MappingGenerator {
 			// ensure the 'datasource' key is populated with our default logic
 			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
 			entity.setEntityMeta( entityMeta );
-			if ( config.autoGenMap ) {
+			if ( config.generateMappings ) {
 				writeXMLFile( entity, xmlPath );
 			} else {
 				// see if hbm.xml file already exists. Must match entityname.hbm.xml exactly.
-				// if it doesn't exist, throw an error, because we are in manual mapping mode (`autoGenMap=false`) and we expect the mapping file to already be
+				// if it doesn't exist, throw an error, because we are in manual mapping mode (`generateMappings=false`) and we expect the mapping file to
+				// already be
 				// there.
 				// This allows us to skip the generation step if we have pre-generated mappings checked into source control.
 				if ( !Files.exists( xmlPath ) ) {
 					String message = String.format(
-					    "Mapping file not found for entity [%s] at expected location: [%s]. When `autoGenMap` is false, you must pre-generate the mapping files and place them in the expected location. If you want the mapping generator to generate the mapping files for you, set `autoGenMap` to true.",
+					    "Mapping file not found for entity [%s] at expected location: [%s]. When `generateMappings` is false, you must pre-generate the mapping files and place them in the expected location. If you want the mapping generator to generate the mapping files for you, set `generateMappings` to true.",
 					    entity.getEntityName(), xmlPath );
 					throw new BoxRuntimeException( message );
 				}

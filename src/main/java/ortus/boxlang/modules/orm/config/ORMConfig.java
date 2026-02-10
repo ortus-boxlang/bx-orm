@@ -71,8 +71,16 @@ public class ORMConfig {
 
 	/**
 	 * Specifies whether ColdFusion should automatically generate entity mappings
-	 * for the persistent CFCs. If autogenmap=false, the mapping should be
-	 * provided in the form of <code>hbm.xml</code> files.
+	 * for the persistent CFCs. If generateMappings=false, the mapping should be
+	 * provided in the form of <code>hbm.xml</code> files stored ALONGSIDE the persistent CFCs. If true, the ORM will generate the mapping XML files on
+	 * the fly based on the structure of the persistent CFCs and their properties.
+	 */
+	public boolean						generateMappings		= true;
+
+	/**
+	 * Backwards-compatible alias for `generateMappings`. {@link #generateMappings}
+	 * 
+	 * @deprecated Use `generateMappings` instead of this property. This property will be removed in a future release.
 	 */
 	public boolean						autoGenMap				= true;
 
@@ -348,7 +356,12 @@ public class ORMConfig {
 		 * boolean.
 		 */
 		if ( properties.containsKey( ORMKeys.autoGenMap ) && properties.get( ORMKeys.autoGenMap ) != null ) {
-			autoGenMap = BooleanCaster.cast( properties.get( ORMKeys.autoGenMap ) );
+			// Backwards-compat alias for generateMappings
+			generateMappings = BooleanCaster.cast( properties.get( ORMKeys.autoGenMap ) );
+		}
+		if ( properties.containsKey( ORMKeys.generateMappings ) && properties.get( ORMKeys.generateMappings ) != null ) {
+			// note that generateMappings takes precedence over autoGenMap if both are specified
+			generateMappings = BooleanCaster.cast( properties.get( ORMKeys.generateMappings ) );
 		}
 		if ( properties.containsKey( ORMKeys.autoManageSession ) && properties.get( ORMKeys.autoManageSession ) != null ) {
 			autoManageSession = BooleanCaster.cast( properties.get( ORMKeys.autoManageSession ) );
