@@ -87,6 +87,11 @@ public class MappingGenerator {
 	private static final String[]		ENTITY_EXTENSIONS			= { ".bx", ".cfc" };
 
 	/**
+	 * File extension for the generated XML mapping files.
+	 */
+	private static final String			HBM_XML_EXT					= ".hbm.xml";
+
+	/**
 	 * The maximum number of entities to process synchronously.
 	 */
 	private static final int			MAX_SYNCHRONOUS_ENTITIES	= 20;
@@ -541,8 +546,8 @@ public class MappingGenerator {
 		String	path	= meta.getAsString( Key.path );
 		String	fileExt	= path.substring( path.lastIndexOf( '.' ) );
 		return this.saveAlongsideEntity
-		    ? Path.of( path.replace( fileExt, ".hbm.xml" ) )
-		    : Path.of( this.saveDirectory, name + ".hbm.xml" );
+		    ? Path.of( path.replace( fileExt, MappingGenerator.HBM_XML_EXT ) )
+		    : Path.of( this.saveDirectory, name + MappingGenerator.HBM_XML_EXT );
 	}
 
 	/**
