@@ -240,7 +240,8 @@ public class MappingGenerator {
 				writeXMLFile( entity, xmlPath );
 			} else {
 				// see if hbm.xml file already exists. Must match entityname.hbm.xml exactly.
-				// if it doesn't exist, throw an error, because we are in manual mapping mode (`autoGenMap=false`) and we expect the mapping file to already be there.
+				// if it doesn't exist, throw an error, because we are in manual mapping mode (`autoGenMap=false`) and we expect the mapping file to already be
+				// there.
 				// This allows us to skip the generation step if we have pre-generated mappings checked into source control.
 				if ( !Files.exists( xmlPath ) ) {
 					String message = String.format(
