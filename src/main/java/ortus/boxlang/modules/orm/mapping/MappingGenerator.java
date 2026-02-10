@@ -241,7 +241,9 @@ public class MappingGenerator {
 			// Build the entity metadata
 			entity.setEntityMeta( AbstractEntityMeta.autoDiscoverMetaType( meta ) );
 			if ( config.generateMappings ) {
-				writeXMLFile( entity, xmlPath );
+				// we reset the XML path just in case there was a parse error and ignoreParseErrors is true.
+				// If this happens we allow the entity to have a null XML file path, and we just continue forward.
+				xmlPath = writeXMLFile( entity, xmlPath );
 			} else {
 				if ( !Files.exists( xmlPath ) ) {
 					String message = String.format(
