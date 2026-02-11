@@ -358,9 +358,14 @@ public class MappingGenerator {
 		String	entityName			= readEntityName( meta );
 		String	basePath			= theEntity.getAsString( ORMKeys.basePath );
 		String	expandedBasePath	= FileSystemUtil.expandPath( context, theEntity.getAsString( ORMKeys.basePath ) ).absolutePath().toString();
+		String	fqn					= null;
 		// Make sure our FQN remains the same at all times
-		String	fqn					= ResolvedFilePath.of( Path.of( meta.getAsString( Key.path ).replace( expandedBasePath, basePath ) ) ).getBoxFQN()
-		    .toString();
+		try {
+			fqn = ResolvedFilePath.of( Path.of( meta.getAsString( Key.path ) ).toRealPath().toString().replace( expandedBasePath, basePath ) ).getBoxFQN()
+			    .toString();
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( "Failed to resolve real path for entity: " + entityName + ". Meta path: " + meta.getAsString( Key.path ), e );
+		}
 		if ( fqn == null || fqn.isBlank() ) {
 			throw new BoxRuntimeException( "Failed to generate FQN for entity: " + entityName );
 		}
@@ -451,7 +456,12 @@ public class MappingGenerator {
 	private Path writeXMLFile( EntityRecord entity ) {
 		IStruct	meta	= entity.getMetadata();
 		String	name	= meta.getAsString( Key._name );
-		String	path	= meta.getAsString( Key.path );
+		String	path	= null;
+		try {
+			path = Path.of( meta.getAsString( Key.path ) ).toRealPath().toString();
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( "Failed to resolve real path for entity: " + name + ". Meta path: " + meta.getAsString( Key.path ), e );
+		}
 		String	fileExt	= path.substring( path.lastIndexOf( '.' ) );
 		Path	xmlPath	= this.saveAlongsideEntity
 		    ? Path.of( path.replace( fileExt, ".hbm.xml" ) )
