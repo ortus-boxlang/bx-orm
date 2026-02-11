@@ -25,17 +25,16 @@ import javax.persistence.Converter;
 import ortus.boxlang.runtime.dynamic.casters.BigDecimalCaster;
 
 @Converter( autoApply = true )
-public class BigDecimalConverter<T> implements AttributeConverter<T, BigDecimal> {
+public class BigDecimalConverter implements AttributeConverter<Object, BigDecimal> {
 
 	@Override
-	public BigDecimal convertToDatabaseColumn( T attribute ) {
+	public BigDecimal convertToDatabaseColumn( Object attribute ) {
 		return attribute != null ? BigDecimalCaster.cast( attribute ) : null;
 	}
 
-	@SuppressWarnings( "unchecked" )
 	@Override
-	public T convertToEntityAttribute( BigDecimal dbData ) {
-		return ( T ) dbData;
+	public Object convertToEntityAttribute( BigDecimal dbData ) {
+		return dbData;
 	}
 
 }

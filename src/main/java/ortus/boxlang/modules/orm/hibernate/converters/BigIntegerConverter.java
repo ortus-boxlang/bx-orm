@@ -25,17 +25,16 @@ import javax.persistence.Converter;
 import ortus.boxlang.runtime.dynamic.casters.BigIntegerCaster;
 
 @Converter( autoApply = true )
-public class BigIntegerConverter<T> implements AttributeConverter<T, BigInteger> {
+public class BigIntegerConverter implements AttributeConverter<Object, BigInteger> {
 
 	@Override
-	public BigInteger convertToDatabaseColumn( T attribute ) {
+	public BigInteger convertToDatabaseColumn( Object attribute ) {
 		return attribute != null ? BigIntegerCaster.cast( attribute ) : null;
 	}
 
-	@SuppressWarnings( "unchecked" )
 	@Override
-	public T convertToEntityAttribute( BigInteger dbData ) {
-		return ( T ) ( dbData != null ? BigIntegerCaster.cast( dbData ) : null );
+	public Object convertToEntityAttribute( BigInteger dbData ) {
+		return dbData;
 	}
 
 }

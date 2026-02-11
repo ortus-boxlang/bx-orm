@@ -23,17 +23,16 @@ import javax.persistence.Converter;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 
 @Converter( autoApply = true )
-public class BooleanConverter<T> implements AttributeConverter<T, Boolean> {
+public class BooleanConverter implements AttributeConverter<Object, Boolean> {
 
 	@Override
-	public Boolean convertToDatabaseColumn( T attribute ) {
+	public Boolean convertToDatabaseColumn( Object attribute ) {
 		return attribute != null ? BooleanCaster.cast( attribute ) : null;
 	}
 
-	@SuppressWarnings( "unchecked" )
 	@Override
-	public T convertToEntityAttribute( Boolean dbData ) {
-		return ( T ) ( dbData != null ? BooleanCaster.cast( dbData ) : null );
+	public Object convertToEntityAttribute( Boolean dbData ) {
+		return dbData != null ? BooleanCaster.cast( dbData ) : null;
 	}
 
 }
