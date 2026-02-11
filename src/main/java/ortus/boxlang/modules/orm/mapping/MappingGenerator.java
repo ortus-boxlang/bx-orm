@@ -211,7 +211,7 @@ public class MappingGenerator {
 
 			this.entities = classes.parallelStream()
 			    // Parse class metadata
-			    .map( c -> StructCaster.cast( ThreadBoxContext.runInContext( context, false, ( ctx ) -> readMeta( c, ctx ) ) ) )
+			    .map( c -> StructCaster.cast( ThreadBoxContext.runInContext( context, ( ctx ) -> readMeta( c, ctx ) ) ) )
 			    // Filter out non-persistent entities
 			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
 			    // Convert to EntityRecord
@@ -540,12 +540,10 @@ public class MappingGenerator {
 	 * @return EntityRecord instance or null.
 	 */
 	public EntityRecord entityLookup( String className, Key datasourceName ) {
-		Optional<DynamicObject> runnableLookup = classLocator.safeLoad( context, className, ClassLocator.BX_PREFIX,
+		Optional<DynamicObject>	runnableLookup	= classLocator.safeLoad( context, className, ClassLocator.BX_PREFIX,
 		    context.getCurrentImports() );
 
-		System.out.println( "Looking up entity for class name: " + className + " with datasource: " + datasourceName );
-		System.out.println( "Runnable lookup result: " + runnableLookup.isPresent() );
-		String lookupClassName = runnableLookup.isPresent()
+		String					lookupClassName	= runnableLookup.isPresent()
 		    ? runnableLookup.get().getTargetClass().getName().replace( ORMService.BX_CLASS_SUFFIX, "" ).replace( ORMService.CFC_CLASS_SUFFIX, "" )
 		    : null;
 		return this.entities
@@ -556,15 +554,12 @@ public class MappingGenerator {
 			    // 2. The FQN name matches the entity's class name
 			    // 3. The class name matches the entity's lookup class or entity name
 			// @formatter:off
-				System.out.println( "Comparing against entity: " + e.getEntityName() + " | Class Name: " + e.getClassName() + " | FQN: " + e.getClassFQN() );
 			    return (
 					e.getEntityName().equalsIgnoreCase( className )
 			        ||
 					e.getClassName().equalsIgnoreCase( className )
 			        ||
 			        e.getClassFQN().equalsIgnoreCase( className )
-					||
-					e.getClassName().substring( e.getClassName().lastIndexOf( "." ) + 1 ).equalsIgnoreCase( className )
 			        ||
 			        ( lookupClassName != null && e.getClassName().substring( e.getClassName().lastIndexOf( "." ) + 1 ).equalsIgnoreCase( lookupClassName.substring( lookupClassName.lastIndexOf( "." ) + 1 ) ) )
 				)
