@@ -26,16 +26,17 @@ import ortus.boxlang.runtime.dynamic.casters.DateTimeCaster;
 import ortus.boxlang.runtime.dynamic.casters.TimeCaster;
 
 @Converter( autoApply = true )
-public class TimeConverter implements AttributeConverter<Object, LocalTime> {
+public class TimeConverter<T> implements AttributeConverter<T, LocalTime> {
 
 	@Override
-	public LocalTime convertToDatabaseColumn( Object attribute ) {
+	public LocalTime convertToDatabaseColumn( T attribute ) {
 		return attribute != null ? TimeCaster.cast( attribute ) : null;
 	}
 
+	@SuppressWarnings( "unchecked" )
 	@Override
-	public Object convertToEntityAttribute( LocalTime dbData ) {
-		return dbData != null ? DateTimeCaster.cast( dbData ) : dbData;
+	public T convertToEntityAttribute( LocalTime dbData ) {
+		return ( T ) ( dbData != null ? DateTimeCaster.cast( dbData ) : dbData );
 	}
 
 }

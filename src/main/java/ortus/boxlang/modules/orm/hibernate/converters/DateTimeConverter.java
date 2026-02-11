@@ -25,16 +25,17 @@ import javax.persistence.Converter;
 import ortus.boxlang.runtime.dynamic.casters.DateTimeCaster;
 
 @Converter( autoApply = true )
-public class DateTimeConverter implements AttributeConverter<Object, Date> {
+public class DateTimeConverter<T> implements AttributeConverter<T, Date> {
 
 	@Override
-	public Date convertToDatabaseColumn( Object attribute ) {
+	public Date convertToDatabaseColumn( T attribute ) {
 		return attribute != null ? DateTimeCaster.cast( attribute ).toDate() : null;
 	}
 
+	@SuppressWarnings( "unchecked" )
 	@Override
-	public Object convertToEntityAttribute( Date dbData ) {
-		return dbData != null ? DateTimeCaster.cast( dbData ) : dbData;
+	public T convertToEntityAttribute( Date dbData ) {
+		return ( T ) ( dbData != null ? DateTimeCaster.cast( dbData ) : null );
 	}
 
 }

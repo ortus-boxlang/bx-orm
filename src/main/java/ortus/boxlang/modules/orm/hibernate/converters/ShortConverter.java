@@ -23,16 +23,17 @@ import javax.persistence.Converter;
 import ortus.boxlang.runtime.dynamic.casters.ShortCaster;
 
 @Converter( autoApply = true )
-public class ShortConverter implements AttributeConverter<Object, Short> {
+public class ShortConverter<T> implements AttributeConverter<T, Short> {
 
 	@Override
-	public Short convertToDatabaseColumn( Object attribute ) {
+	public Short convertToDatabaseColumn( T attribute ) {
 		return attribute != null ? ShortCaster.cast( attribute ) : null;
 	}
 
+	@SuppressWarnings( "unchecked" )
 	@Override
-	public Object convertToEntityAttribute( Short dbData ) {
-		return dbData;
+	public T convertToEntityAttribute( Short dbData ) {
+		return ( T ) dbData;
 	}
 
 }

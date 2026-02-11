@@ -23,16 +23,17 @@ import javax.persistence.Converter;
 import ortus.boxlang.runtime.dynamic.casters.LongCaster;
 
 @Converter( autoApply = true )
-public class LongConverter implements AttributeConverter<Object, Long> {
+public class LongConverter<T> implements AttributeConverter<T, Long> {
 
 	@Override
-	public Long convertToDatabaseColumn( Object attribute ) {
+	public Long convertToDatabaseColumn( T attribute ) {
 		return attribute != null ? LongCaster.cast( attribute ) : null;
 	}
 
+	@SuppressWarnings( "unchecked" )
 	@Override
-	public Object convertToEntityAttribute( Long dbData ) {
-		return dbData;
+	public T convertToEntityAttribute( Long dbData ) {
+		return ( T ) dbData;
 	}
 
 }

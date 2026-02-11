@@ -23,16 +23,17 @@ import javax.persistence.Converter;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 
 @Converter( autoApply = true )
-public class StringConverter implements AttributeConverter<Object, String> {
+public class StringConverter<T> implements AttributeConverter<T, String> {
 
 	@Override
-	public String convertToDatabaseColumn( Object attribute ) {
+	public String convertToDatabaseColumn( T attribute ) {
 		return attribute != null ? StringCaster.cast( attribute ) : null;
 	}
 
+	@SuppressWarnings( "unchecked" )
 	@Override
-	public Object convertToEntityAttribute( String dbData ) {
-		return dbData;
+	public T convertToEntityAttribute( String dbData ) {
+		return ( T ) dbData;
 	}
 
 }
