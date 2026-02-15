@@ -27,6 +27,7 @@ import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.dynamic.casters.ArrayCaster;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
@@ -55,9 +56,9 @@ public class EntityToQuery extends BaseORMBIF {
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
-	 * 
+	 *
 	 * @argument.entity An instance of an ORM entity or an array of entities.
-	 * 
+	 *
 	 * @argument.name The name of the entity. Required if `entity` is an array.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
@@ -73,12 +74,12 @@ public class EntityToQuery extends BaseORMBIF {
 		    : null;
 
 		Object			item			= arguments.get( ORMKeys.entity );
-		if ( item instanceof Array entities ) {
+		if ( item instanceof List entities ) {
 			if ( entityName == null ) {
 				entityName = getEntityNameOrThrow( entities.getFirst() );
 			}
 			entityRecord = ormApp.lookupEntity( entityName, true );
-			return populateQuery( entities, entityRecord );
+			return populateQuery( ArrayCaster.cast( entities ), entityRecord );
 		}
 		if ( entityName == null ) {
 			entityName = getEntityNameOrThrow( item );

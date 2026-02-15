@@ -41,6 +41,7 @@ import ortus.boxlang.modules.orm.hibernate.converters.BooleanConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.DoubleConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.IntegerConverter;
+import ortus.boxlang.modules.orm.hibernate.converters.LongConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.ShortConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.StringConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.TimeConverter;
@@ -169,6 +170,8 @@ public class HibernateXMLWriter {
 	    "vcat", "view", "volumes", "waitfor", "when", "whenever", "where", "while", "window", "with", "within", "without",
 	    "wlm", "work", "write", "writetext", "xor", "year", "year_month", "zerofill", "zone" );
 
+	private static final List<String>		toOneTypes		= List.of( "one-to-one", "many-to-one" );
+
 	/**
 	 * Create a new Hibernate XML writer for the given entity metadata, using the provided entity lookup function to find associated entities.
 	 *
@@ -258,6 +261,9 @@ public class HibernateXMLWriter {
 	public Element generatePropertyElement( IPropertyMeta prop ) {
 		IStruct	propAnnotations	= prop.getAnnotations();
 		IStruct	columnInfo		= prop.getColumn();
+		IStruct	association		= prop.getAssociation();
+		boolean	isToOneProperty	= association.get( Key.type ) != null
+		    && toOneTypes.contains( association.getAsString( Key.type ) );
 
 		Element	theNode			= this.document.createElement( "property" );
 		theNode.setAttribute( "name", prop.getName() );
@@ -280,7 +286,11 @@ public class HibernateXMLWriter {
 			theNode.setAttribute( "update", trueFalseFormat( columnInfo.getAsBoolean( ORMKeys.updateable ) ) );
 		}
 		if ( prop.getLazy() != null ) {
-			theNode.setAttribute( "lazy", prop.getLazy() );
+			String lazyValue = prop.getLazy();
+			if ( isToOneProperty && lazyValue.equals( "true" ) && this.ormConfig.proxyLazyLoading ) {
+				lazyValue = "proxy";
+			}
+			theNode.setAttribute( "lazy", lazyValue );
 		}
 		if ( !prop.isOptimisticLock() ) {
 			theNode.setAttribute( "optimistic-lock", "false" );
@@ -775,7 +785,7 @@ public class HibernateXMLWriter {
 			classElement.setAttribute( "batch-size", StringCaster.cast( entity.getBatchSize() ) );
 		}
 		if ( entity.isLazy() ) {
-			classElement.setAttribute( "lazy", "true" );
+			classElement.setAttribute( "lazy", this.ormConfig.proxyLazyLoading ? "proxy" : "true" );
 		}
 		if ( entity.isSelectBeforeUpdate() ) {
 			classElement.setAttribute( "rowid", "true" );
@@ -1109,6 +1119,7 @@ public class HibernateXMLWriter {
 			case "short" -> "converted::" + ShortConverter.class.getName();
 			case "integer" -> "converted::" + IntegerConverter.class.getName();
 			case "biginteger" -> "converted::" + BigIntegerConverter.class.getName();
+			case "long" -> "converted::" + LongConverter.class.getName();
 			case "bigdecimal" -> "converted::" + BigDecimalConverter.class.getName();
 			case "string" -> "converted::" + StringConverter.class.getName();
 			default -> normalizedType;

@@ -38,6 +38,7 @@ import ortus.boxlang.runtime.config.segments.CacheConfig;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.dynamic.casters.IntegerCaster;
 import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
@@ -262,6 +263,16 @@ public class ORMConfig {
 	public boolean						enableThreadedMapping	= true;
 
 	/**
+	 * Default batch size for hibernate fetching
+	 */
+	public static int					defaultBatchSize		= 16;
+
+	/**
+	 * Whether to use proxy-based lazy loading for entities.
+	 */
+	public boolean						proxyLazyLoading		= true;
+
+	/**
 	 * Boxlang context used for class lookups in naming strategies, event handlers, etc.
 	 */
 	private IBoxContext					context;
@@ -316,12 +327,12 @@ public class ORMConfig {
 
 	/**
 	 * Check whether ORM is enabled for the given context.
-	 * 
+	 *
 	 * Enabled means:
 	 * 1. There's a RequestBoxContext available
 	 * 2. `ORMEnabled` is true
 	 * 3. `ORMSettings` is not empty
-	 * 
+	 *
 	 * @param context The IBoxContext to check for ORM enablement.
 	 */
 	public static boolean isORMEnabled( IBoxContext context ) {
@@ -463,6 +474,14 @@ public class ORMConfig {
 			catalog = properties.getAsString( ORMKeys.catalog );
 		}
 
+		if ( properties.containsKey( ORMKeys.defaultBatchSize ) && properties.get( ORMKeys.defaultBatchSize ) != null ) {
+			defaultBatchSize = IntegerCaster.cast( properties.get( ORMKeys.defaultBatchSize ) );
+		}
+
+		if ( properties.containsKey( ORMKeys.proxyLazyLoading ) && properties.get( ORMKeys.proxyLazyLoading ) != null ) {
+			proxyLazyLoading = BooleanCaster.cast( properties.get( ORMKeys.proxyLazyLoading ) );
+		}
+
 		if ( this.namingStrategy != null ) {
 			this.instantiatedNamingStrategy = getNamingStrategyForName( this.namingStrategy );
 		}
@@ -555,6 +574,9 @@ public class ORMConfig {
 		if ( this.instantiatedNamingStrategy != null ) {
 			configuration.setPhysicalNamingStrategy( this.instantiatedNamingStrategy );
 		}
+
+		// Default batch size for collections
+		configuration.setProperty( AvailableSettings.DEFAULT_BATCH_FETCH_SIZE, Integer.toString( this.defaultBatchSize ) );
 
 		configuration.setProperty( AvailableSettings.USE_SECOND_LEVEL_CACHE, Boolean.toString( this.secondaryCacheEnabled ) );
 		if ( this.secondaryCacheEnabled ) {

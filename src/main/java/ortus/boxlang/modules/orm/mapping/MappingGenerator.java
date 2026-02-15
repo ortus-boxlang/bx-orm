@@ -45,10 +45,11 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.ConfigOverrideBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.context.ThreadBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
@@ -208,11 +209,7 @@ public class MappingGenerator {
 
 			this.entities = classes.parallelStream()
 			    // Parse class metadata
-			    .map( c -> {
-				    // In parallel, we need to use a new context for each entity so they can push their
-				    // "current template" to the stack without collisions
-				    return readMeta( c, new ConfigOverrideBoxContext( context, config -> config ) );
-			    } )
+			    .map( c -> StructCaster.cast( ThreadBoxContext.runInContext( context, ( ctx ) -> readMeta( c, ctx ) ) ) )
 			    // Filter out non-persistent entities
 			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
 			    // Convert to EntityRecord
@@ -232,8 +229,10 @@ public class MappingGenerator {
 		// Generate XML mapping files for each entity
 		// Change this to a stream if we will be doing parallel processing
 		for ( EntityRecord entity : this.entities ) {
-			Path	xmlPath	= getXMLPathForEntity( entity );
 			IStruct	meta	= entity.getMetadata();
+			String	name	= meta.getAsString( Key._name );
+			String	path	= meta.getAsString( Key.path );
+			Path	xmlPath	= getXMLPathForEntity( name, path );
 			// We need this for inheritance
 			meta.put( ORMKeys.classFQN, entity.getClassFQN() );
 			// ensure the 'datasource' key is populated with our default logic
@@ -376,9 +375,14 @@ public class MappingGenerator {
 		String	entityName			= readEntityName( meta );
 		String	basePath			= theEntity.getAsString( ORMKeys.basePath );
 		String	expandedBasePath	= FileSystemUtil.expandPath( context, theEntity.getAsString( ORMKeys.basePath ) ).absolutePath().toString();
+		String	fqn					= null;
 		// Make sure our FQN remains the same at all times
-		String	fqn					= ResolvedFilePath.of( Path.of( meta.getAsString( Key.path ).replace( expandedBasePath, basePath ) ) ).getBoxFQN()
-		    .toString();
+		try {
+			fqn = ResolvedFilePath.of( Path.of( meta.getAsString( Key.path ) ).toRealPath().toString().replace( expandedBasePath, basePath ) ).getBoxFQN()
+			    .toString();
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( "Failed to resolve real path for entity: " + entityName + ". Meta path: " + meta.getAsString( Key.path ), e );
+		}
 		if ( fqn == null || fqn.isBlank() ) {
 			throw new BoxRuntimeException( "Failed to generate FQN for entity: " + entityName );
 		}
@@ -534,13 +538,16 @@ public class MappingGenerator {
 	 * but with a `.hbm.xml` extension. Otherwise, the path will be the temp directory located
 	 * at `saveDirectory{entity name}.hbm.xml`.
 	 * 
-	 * @param entity The EntityRecord instance for which to build an hbm.xml path
+	 * @param name The name of the entity.
+	 * @param path The path to the entity file.
 	 */
-	private Path getXMLPathForEntity( EntityRecord entity ) {
-		IStruct	meta	= entity.getMetadata();
-		String	name	= meta.getAsString( Key._name );
-		String	path	= meta.getAsString( Key.path );
-		String	fileExt	= path.substring( path.lastIndexOf( '.' ) );
+	private Path getXMLPathForEntity( String name, String path ) {
+		try {
+			path = Path.of( path ).toRealPath().toString();
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( "Failed to resolve real path for entity: " + name + ". Meta path: " + path, e );
+		}
+		String fileExt = path.substring( path.lastIndexOf( '.' ) );
 		return this.saveAlongsideEntity
 		    ? Path.of( path.replace( fileExt, MappingGenerator.HBM_XML_EXT ) )
 		    : Path.of( this.saveDirectory, name + MappingGenerator.HBM_XML_EXT );
@@ -559,6 +566,7 @@ public class MappingGenerator {
 	public EntityRecord entityLookup( String className, Key datasourceName ) {
 		Optional<DynamicObject>	runnableLookup	= classLocator.safeLoad( context, className, ClassLocator.BX_PREFIX,
 		    context.getCurrentImports() );
+
 		String					lookupClassName	= runnableLookup.isPresent()
 		    ? runnableLookup.get().getTargetClass().getName().replace( ORMService.BX_CLASS_SUFFIX, "" ).replace( ORMService.CFC_CLASS_SUFFIX, "" )
 		    : null;
@@ -571,6 +579,8 @@ public class MappingGenerator {
 			    // 3. The class name matches the entity's lookup class or entity name
 			// @formatter:off
 			    return (
+					e.getEntityName().equalsIgnoreCase( className )
+			        ||
 					e.getClassName().equalsIgnoreCase( className )
 			        ||
 			        e.getClassFQN().equalsIgnoreCase( className )

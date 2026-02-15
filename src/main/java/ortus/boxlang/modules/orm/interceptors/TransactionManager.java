@@ -70,13 +70,25 @@ public class TransactionManager extends BaseInterceptor {
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormContext.getSession( datasource );
+			// We should never hit this conditional as long as BoxLang does not support nested transactions
+			if ( ormSession.isJoinedToTransaction() ) {
+				if ( logger.isDebugEnabled() ) {
+					logger.debug(
+					    "Session [{}] is for datasource [{}] already joined to a transaction",
+					    ormSession,
+					    datasource.getName()
+					);
+				}
+				return;
+			}
+
 			if ( config.autoManageSession ) {
 
 				if ( logger.isDebugEnabled() ) {
 					logger.debug(
 					    "'autoManageSession' is enabled; flushing ORM session [{}] for datasource [{}] prior to transaction begin.",
 					    ormSession,
-					    datasource.getOriginalValue()
+					    datasource.getName()
 					);
 				}
 
@@ -86,20 +98,36 @@ public class TransactionManager extends BaseInterceptor {
 			logger.debug(
 			    "Starting ORM transaction on session [{}] for datasource: [{}]",
 			    ormSession,
-			    datasource.getOriginalValue()
+			    datasource.getName()
 			);
 
-			if ( ormSession.isJoinedToTransaction() ) {
-				// May want to put this behind some kind of compatibility flag...
-				if ( logger.isDebugEnabled() ) {
-					logger.debug(
-					    "Session [{}] is already joined to a transaction, closing transaction and beginning anew",
-					    ormSession
-					);
-				}
-				ormSession.getTransaction().commit();
-			}
 			ormSession.beginTransaction();
+		} );
+	}
+
+	@InterceptionPoint
+	public void onTransactionSetSavepoint( IStruct args ) {
+		IBoxContext	context			= args.getAs( IBoxContext.class, Key.context );
+		String		savepointName	= args.getAsString( Key.savepoint );
+		ORMApp		ormApp			= ormService.getORMAppByContext( context );
+		if ( ormApp == null ) {
+			// Just return as we would already have warned during transaction begin
+			return;
+		}
+		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ormApp.getDatasources().forEach( datasource -> {
+			Session ormSession = ormContext.getSession( datasource );
+
+			if ( logger.isDebugEnabled() ) {
+				logger.debug(
+				    "Setting ORM transaction savepoint [{}] on session [{}] for datasource [{}]",
+				    savepointName,
+				    ormSession,
+				    datasource.getName()
+				);
+			}
+
+			ormSession.flush();
 		} );
 	}
 
@@ -121,11 +149,12 @@ public class TransactionManager extends BaseInterceptor {
 				logger.debug(
 				    "Committing ORM transaction and beginning NEW transaction on session [{}] for datasource [{}]",
 				    ormSession,
-				    datasource.getOriginalValue()
+				    datasource.getName()
 				);
 			}
 
 			ormSession.getTransaction().commit();
+			ormSession.flush();
 			ormSession.beginTransaction();
 		} );
 	}
@@ -150,7 +179,7 @@ public class TransactionManager extends BaseInterceptor {
 				logger.debug(
 				    "Rolling back ORM transaction on session [{}] for datasource [{}]",
 				    ormSession,
-				    datasource.getOriginalValue()
+				    datasource.getName()
 				);
 			}
 
@@ -160,7 +189,8 @@ public class TransactionManager extends BaseInterceptor {
 					logger.debug(
 					    "'autoManageSession' is enabled; clearing ORM session [{}] for datasource [{}] after transaction rollback.",
 					    ormSession,
-					    datasource.getOriginalValue() );
+					    datasource.getName()
+					);
 				}
 				ormSession.clear();
 			}
@@ -168,7 +198,7 @@ public class TransactionManager extends BaseInterceptor {
 			logger.debug(
 			    "Beginning new ORM transaction on session [{}] for datasource [{}]",
 			    ormSession,
-			    datasource.getOriginalValue()
+			    datasource.getName()
 			);
 
 			ormSession.beginTransaction();
@@ -193,12 +223,12 @@ public class TransactionManager extends BaseInterceptor {
 				logger.debug(
 				    "Ending ORM transaction on session [{}] for datasource [{}]",
 				    ormSession,
-				    datasource.getOriginalValue()
+				    datasource.getName()
 				);
 			}
 
-			ormSession.getTransaction().commit();
 			ormSession.flush();
+			ormSession.getTransaction().commit();
 		} );
 	}
 }

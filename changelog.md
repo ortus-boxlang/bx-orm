@@ -17,6 +17,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [BLMODULES-119](https://ortussolutions.atlassian.net/browse/BLMODULES-119) - Add support for `generateMappings=false` (aliased as `autoGenMap` for backwards compatibility) to disable automatic mapping generation and require manual mapping files.
 
+## [1.4.0] - 2026-02-06
+
+### ⛓️‍💥 Changed
+
+- This version is now only compatible with Boxlang Runtime `v1.10.x` and above
+
+### 🐛 Fixed
+
+- [BLMODULES-120](https://ortussolutions.atlassian.net/browse/BLMODULES-120) - Add new settings for `lazy` and `defaultBatchSize` to provide compat implementations
+- [BLMODULES-130](https://ortussolutions.atlassian.net/browse/BLMODULES-130) - Fix collection handling for java List objects - which hibernate returns
+- Transaction management udpates to deal with complex nested transactions
+- Ensure manual flush mode when `autoManageSession` is `false`
+- Add savepoint interception for nested transactions and flush
+
 ## [1.3.0] - 2026-01-07
 
 ### 🐛 Fixed
@@ -192,7 +206,8 @@ No significant changes.
 
 - First iteration of this module
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.3.0...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.3...v1.2.0
 [1.1.3]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.2...v1.1.3
