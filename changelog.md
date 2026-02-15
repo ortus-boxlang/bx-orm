@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🗑 Deprecated
+
+- The `autoGenMap` configuration setting is now deprecated in favor of `generateMappings`. Same function, different name. See [BLMODULES-119](https://ortussolutions.atlassian.net/browse/BLMODULES-119) for details.
+
+### ⭐ Added
+
+- [BLMODULES-119](https://ortussolutions.atlassian.net/browse/BLMODULES-119) - Add support for `generateMappings=false` (aliased as `autoGenMap` for backwards compatibility) to disable automatic mapping generation and require manual mapping files.
+
 ## [1.4.0] - 2026-02-06
 
 ### ⛓️‍💥 Changed
