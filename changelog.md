@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [BLMODULES-119](https://ortussolutions.atlassian.net/browse/BLMODULES-119) - Add support for `generateMappings=false` (aliased as `autoGenMap` for backwards compatibility) to disable automatic mapping generation and require manual mapping files.
 
+### 🐛 Fixed
+
+- [BLMODULES-136](https://ortussolutions.atlassian.net/browse/BLMODULES-136) - Fix issue with naming strategy being double-applied on table and column identifiers.
+
 ## [1.4.0] - 2026-02-06
 
 ### ⛓️‍💥 Changed

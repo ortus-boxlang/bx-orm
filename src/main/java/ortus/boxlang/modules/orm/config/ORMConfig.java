@@ -578,7 +578,7 @@ public class ORMConfig {
 		}
 
 		// Default batch size for collections
-		configuration.setProperty( AvailableSettings.DEFAULT_BATCH_FETCH_SIZE, Integer.toString( this.defaultBatchSize ) );
+		configuration.setProperty( AvailableSettings.DEFAULT_BATCH_FETCH_SIZE, Integer.toString( ORMConfig.defaultBatchSize ) );
 
 		configuration.setProperty( AvailableSettings.USE_SECOND_LEVEL_CACHE, Boolean.toString( this.secondaryCacheEnabled ) );
 		if ( this.secondaryCacheEnabled ) {
