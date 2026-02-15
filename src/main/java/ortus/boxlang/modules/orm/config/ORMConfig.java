@@ -368,11 +368,13 @@ public class ORMConfig {
 		 */
 		if ( properties.containsKey( ORMKeys.autoGenMap ) && properties.get( ORMKeys.autoGenMap ) != null ) {
 			// Backwards-compat alias for generateMappings
-			generateMappings = BooleanCaster.cast( properties.get( ORMKeys.autoGenMap ) );
+			generateMappings	= BooleanCaster.cast( properties.get( ORMKeys.autoGenMap ) );
+			autoGenMap			= generateMappings;
 		}
 		if ( properties.containsKey( ORMKeys.generateMappings ) && properties.get( ORMKeys.generateMappings ) != null ) {
 			// note that generateMappings takes precedence over autoGenMap if both are specified
-			generateMappings = BooleanCaster.cast( properties.get( ORMKeys.generateMappings ) );
+			generateMappings	= BooleanCaster.cast( properties.get( ORMKeys.generateMappings ) );
+			autoGenMap			= generateMappings;
 		}
 		if ( properties.containsKey( ORMKeys.autoManageSession ) && properties.get( ORMKeys.autoManageSession ) != null ) {
 			autoManageSession = BooleanCaster.cast( properties.get( ORMKeys.autoManageSession ) );

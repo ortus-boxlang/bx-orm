@@ -19,8 +19,6 @@ package ortus.boxlang.modules.orm.config;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
@@ -67,19 +65,19 @@ public class ORMConfigTest extends BaseORMTest {
 	@Test
 	public void testDefaultConfig() {
 		ORMConfig config = new ORMConfig( Struct.of(), context );
-		assertFalse( config.secondaryCacheEnabled );
-		assertFalse( config.logSQL );
-		assertFalse( config.eventHandling );
-		assertTrue( config.autoGenMap );
-		assertTrue( config.generateMappings );
-		assertFalse( config.saveMapping );
+		assertThat( config.secondaryCacheEnabled ).isFalse();
+		assertThat( config.logSQL ).isFalse();
+		assertThat( config.eventHandling ).isFalse();
+		assertThat( config.autoGenMap ).isTrue();
+		assertThat( config.generateMappings ).isTrue();
+		assertThat( config.saveMapping ).isFalse();
 
 		// BREAKING CHANGE: These settings are both FALSE by default in BoxLang, but TRUE by default in Lucee.
-		assertFalse( config.flushAtRequestEnd );
-		assertFalse( config.autoManageSession );
+		assertThat( config.flushAtRequestEnd ).isFalse();
+		assertThat( config.autoManageSession ).isFalse();
 
 		// BREAKING CHANGE: In Lucee, this is TRUE by default in the `skipCFCWithError` setting.
-		assertFalse( config.ignoreParseErrors );
+		assertThat( config.ignoreParseErrors ).isFalse();
 	}
 
 	@Test
@@ -135,8 +133,35 @@ public class ORMConfigTest extends BaseORMTest {
 
 		// mapping generation
 		assertThat( config.saveMapping ).isTrue();
-		assertFalse( config.autoGenMap );
-		assertFalse( config.generateMappings );
+		assertThat( config.autoGenMap ).isFalse();
+		assertThat( config.generateMappings ).isFalse();
 		assertThat( config.ignoreParseErrors ).isTrue();
+	}
+
+	@Test
+	public void testAutoGenMap() {
+		ORMConfig config = new ORMConfig( Struct.of(
+		    ORMKeys.autoGenMap, false
+		), context );
+		assertThat( config.autoGenMap ).isFalse();
+		assertThat( config.generateMappings ).isFalse();
+
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.autoGenMap, true
+		), context );
+		assertThat( config.autoGenMap ).isTrue();
+		assertThat( config.generateMappings ).isTrue();
+
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.generateMappings, false
+		), context );
+		assertThat( config.autoGenMap ).isFalse();
+		assertThat( config.generateMappings ).isFalse();
+
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.generateMappings, true
+		), context );
+		assertThat( config.autoGenMap ).isTrue();
+		assertThat( config.generateMappings ).isTrue();
 	}
 }
