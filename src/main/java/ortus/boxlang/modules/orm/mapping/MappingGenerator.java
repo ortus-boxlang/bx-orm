@@ -44,7 +44,6 @@ import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
-import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -86,6 +85,11 @@ public class MappingGenerator {
 	 * The valid file extensions for entity files.
 	 */
 	private static final String[]		ENTITY_EXTENSIONS			= { ".bx", ".cfc" };
+
+	/**
+	 * File extension for XML mapping files.
+	 */
+	private static final String			HBM_XML_EXT					= ".hbm.xml";
 
 	/**
 	 * The maximum number of entities to process synchronously.
@@ -185,15 +189,9 @@ public class MappingGenerator {
 	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
 	 */
 	public static Map<Key, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
-		if ( !ormConfig.autoGenMap ) {
-			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
-			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
-		} else {
-			// generate xml mappings on the fly, saving them either to a temp directory or alongside the entity class files if `ormConfig.saveMapping` is true.
-			return new MappingGenerator( context, ormConfig )
-			    .generateMappings()
-			    .getEntityDatasourceMap();
-		}
+		return new MappingGenerator( context, ormConfig )
+		    .generateMappings()
+		    .getEntityDatasourceMap();
 	}
 
 	/**
@@ -231,7 +229,29 @@ public class MappingGenerator {
 		// Generate XML mapping files for each entity
 		// Change this to a stream if we will be doing parallel processing
 		for ( EntityRecord entity : this.entities ) {
-			entity.setXmlFilePath( writeXMLFile( entity ) );
+			IStruct	meta	= entity.getMetadata();
+			String	name	= meta.getAsString( Key._name );
+			String	path	= meta.getAsString( Key.path );
+			Path	xmlPath	= getXMLPathForEntity( name, path );
+			// We need this for inheritance
+			meta.put( ORMKeys.classFQN, entity.getClassFQN() );
+			// ensure the 'datasource' key is populated with our default logic
+			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
+			// Build the entity metadata
+			entity.setEntityMeta( AbstractEntityMeta.autoDiscoverMetaType( meta ) );
+			if ( config.generateMappings ) {
+				// we reset the XML path just in case there was a parse error and ignoreParseErrors is true.
+				// If this happens we allow the entity to have a null XML file path, and we just continue forward.
+				xmlPath = writeXMLFile( entity, xmlPath );
+			} else {
+				if ( !Files.exists( xmlPath ) ) {
+					String message = String.format(
+					    "Mapping file not found for entity [%s] at expected location: [%s]. When `generateMappings` is false, you must pre-generate the mapping files and place them in the expected location. If you want the mapping generator to generate the mapping files for you, set `generateMappings` to true.",
+					    entity.getEntityName(), xmlPath );
+					throw new BoxRuntimeException( message );
+				}
+			}
+			entity.setXmlFilePath( xmlPath );
 		}
 
 		return this;
@@ -445,24 +465,14 @@ public class MappingGenerator {
 	/**
 	 * Write the XML mapping file for the given entity metadata.
 	 *
-	 * @param entity EntityRecord containing the entity metadata.
+	 * @param entity  EntityRecord containing the entity metadata.
+	 * @param xmlPath The path to write the XML mapping file to.
 	 *
 	 * @return The path to the generated XML mapping file If `saveMappingAlongsideEntity` is true, the path will be the same as the entity file, but with
 	 *         a `.hbm.xml` extension.
 	 */
-	private Path writeXMLFile( EntityRecord entity ) {
-		IStruct	meta	= entity.getMetadata();
-		String	name	= meta.getAsString( Key._name );
-		String	path	= null;
-		try {
-			path = Path.of( meta.getAsString( Key.path ) ).toRealPath().toString();
-		} catch ( IOException e ) {
-			throw new BoxRuntimeException( "Failed to resolve real path for entity: " + name + ". Meta path: " + meta.getAsString( Key.path ), e );
-		}
-		String	fileExt	= path.substring( path.lastIndexOf( '.' ) );
-		Path	xmlPath	= this.saveAlongsideEntity
-		    ? Path.of( path.replace( fileExt, ".hbm.xml" ) )
-		    : Path.of( this.saveDirectory, name + ".hbm.xml" );
+	private Path writeXMLFile( EntityRecord entity, Path xmlPath ) {
+		String name = entity.getMetadata().getAsString( Key._name );
 		try {
 			if ( logger.isDebugEnabled() )
 				logger.debug( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
@@ -494,15 +504,7 @@ public class MappingGenerator {
 	 */
 	private String generateXML( EntityRecord entity ) {
 		try {
-			IStruct meta = entity.getMetadata();
-			// We need this for inheritance
-			meta.put( ORMKeys.classFQN, entity.getClassFQN() );
-			// ensure the 'datasource' key is populated with our default logic
-			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
-			IEntityMeta entityMeta = AbstractEntityMeta.autoDiscoverMetaType( meta );
-			entity.setEntityMeta( entityMeta );
-
-			Document			doc			= new HibernateXMLWriter( entityMeta, this::entityLookup, this.config ).generateXML();
+			Document			doc			= new HibernateXMLWriter( entity.getEntityMeta(), this::entityLookup, this.config ).generateXML();
 
 			TransformerFactory	tf			= TransformerFactory.newInstance();
 			Transformer			transformer	= tf.newTransformer();
@@ -527,6 +529,28 @@ public class MappingGenerator {
 		}
 
 		return "";
+	}
+
+	/**
+	 * Build a path to the XML mapping file for the given entity based on ORM configuration.
+	 * 
+	 * If `saveMappingAlongsideEntity` is true, the path will be the same as the entity file,
+	 * but with a `.hbm.xml` extension. Otherwise, the path will be the temp directory located
+	 * at `saveDirectory{entity name}.hbm.xml`.
+	 * 
+	 * @param name The name of the entity.
+	 * @param path The path to the entity file.
+	 */
+	private Path getXMLPathForEntity( String name, String path ) {
+		try {
+			path = Path.of( path ).toRealPath().toString();
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( "Failed to resolve real path for entity: " + name + ". Meta path: " + path, e );
+		}
+		String fileExt = path.substring( path.lastIndexOf( '.' ) );
+		return this.saveAlongsideEntity
+		    ? Path.of( path.replace( fileExt, MappingGenerator.HBM_XML_EXT ) )
+		    : Path.of( this.saveDirectory, name + MappingGenerator.HBM_XML_EXT );
 	}
 
 	/**

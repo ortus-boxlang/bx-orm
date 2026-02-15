@@ -131,7 +131,7 @@ public class SessionFactoryBuilder {
 	/**
 	 * Build the Hibernate session factory.
 	 * <p>
-	 * This method will generate entity mappings if `ormConfig.autoGenMap` is true, as well as parse the ORM configuration and set up the Hibernate
+	 * This method will generate entity mappings if `ormConfig.generateMappings` is true, as well as parse the ORM configuration and set up the Hibernate
 	 * configuration.
 	 *
 	 * @return a Hibernate session factory ready for use.
