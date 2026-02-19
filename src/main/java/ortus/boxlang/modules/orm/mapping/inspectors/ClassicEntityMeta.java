@@ -31,7 +31,7 @@ import ortus.boxlang.runtime.types.Struct;
  *
  * i.e. handles translating traditional CFML component annotations like `persistent="true"` into the IPropertyMeta interface for consistent reference
  * by the HibernateXMLWriter.
- * 
+ *
  * @since 1.0.0
  */
 public class ClassicEntityMeta extends AbstractEntityMeta {
@@ -39,7 +39,7 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 	public ClassicEntityMeta( IStruct entityMeta ) {
 		super( entityMeta );
 
-		this.annotations.computeIfAbsent( ORMKeys.entityName, key -> this.meta.getAsString( Key._name ) );
+		this.annotations.computeIfAbsent( ORMKeys.entityName, key -> this.meta.getAsString( Key.simpleName ) );
 		this.entityName = this.annotations.getAsString( ORMKeys.entityName );
 
 		this.annotations.computeIfAbsent( ORMKeys.table, key -> this.getEntityName() );

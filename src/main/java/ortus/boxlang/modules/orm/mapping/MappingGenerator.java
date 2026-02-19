@@ -37,9 +37,6 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.commons.lang3.Strings;
 import org.w3c.dom.Document;
 
-import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
-import ortus.boxlang.compiler.parser.Parser;
-import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -57,7 +54,7 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
-import ortus.boxlang.runtime.types.exceptions.ParseException;
+import ortus.boxlang.runtime.util.BoxFQN;
 import ortus.boxlang.runtime.util.FileSystemUtil;
 import ortus.boxlang.runtime.util.ResolvedFilePath;
 
@@ -230,7 +227,7 @@ public class MappingGenerator {
 		// Change this to a stream if we will be doing parallel processing
 		for ( EntityRecord entity : this.entities ) {
 			IStruct	meta	= entity.getMetadata();
-			String	name	= meta.getAsString( Key._name );
+			String	name	= meta.getAsString( Key.simpleName );
 			String	path	= meta.getAsString( Key.path );
 			Path	xmlPath	= getXMLPathForEntity( name, path );
 			// We need this for inheritance
@@ -347,7 +344,16 @@ public class MappingGenerator {
 		if ( logger.isDebugEnabled() )
 			logger.debug( "Loading metadata for class {}", possibleEntity.getAsString( Key.file ) );
 
-		possibleEntity.put( Key.metadata, getClassMeta( Path.of( possibleEntity.getAsString( Key.file ) ), context ) );
+		String	basePath			= possibleEntity.getAsString( ORMKeys.basePath );
+
+		String	expandedBasePath	= FileSystemUtil.expandPath( context, basePath ).absolutePath().toString();
+
+		BoxFQN	fqn					= ResolvedFilePath
+		    .of( Path.of( possibleEntity.getAsString( Key.file ) ).toString().replace( expandedBasePath, basePath ) )
+		    .getBoxFQN();
+
+		possibleEntity.put( Key.metadata,
+		    getClassMeta( fqn, context ) );
 		return possibleEntity;
 	}
 
@@ -418,7 +424,7 @@ public class MappingGenerator {
 			entityName = annotations.getAsString( ORMKeys.entity );
 		}
 		if ( entityName == null || entityName.isBlank() ) {
-			entityName = meta.getAsString( Key._name );
+			entityName = meta.getAsString( Key.simpleName );
 		}
 		return entityName;
 	}
@@ -430,27 +436,40 @@ public class MappingGenerator {
 	 *
 	 * @return The entity metadata struct.
 	 */
-	private IStruct getClassMeta( Path clazzPath, IBoxContext context ) {
+	private IStruct getClassMeta( BoxFQN fqn, IBoxContext context ) {
 		if ( logger.isDebugEnabled() )
-			logger.debug( "Parsing class file: [{}]", clazzPath );
+			logger.debug( "Parsing class file: [{}]", fqn.toString() );
 
-		ParsingResult result = new Parser().parse( new File( clazzPath.toString() ) );
-		if ( !result.isCorrect() ) {
-			throw new ParseException( result.getIssues(), "" );
-		}
-		ClassMetadataVisitor visitor = new ClassMetadataVisitor( context );
+		// Use the ClassLocator to load the class
+		BoxRuntime		runtime	= BoxRuntime.getInstance();
+		ClassLocator	locator	= runtime.getClassLocator();
+
+		// Get static metadata without instantiating the class
 		try {
-			result.getRoot().accept( visitor );
-		} catch ( Throwable e ) {
+			// Load as a BoxLang class
+			DynamicObject	classObj	= locator.load(
+			    context,
+			    fqn.toString(),
+			    ClassLocator.BX_PREFIX,
+			    true,
+			    context.getCurrentImports()
+			);
+			Object			metaObj		= classObj.invokeStatic( context, "getMetaStatic" );
+			if ( metaObj instanceof IStruct classMeta ) {
+				return classMeta;
+			}
+		} catch ( Exception e ) {
 			if ( config.ignoreParseErrors ) {
 				logger.warn(
 				    "ORM Mapping Generator: Failed to parse class metadata for [{}]: {}. If this class is not an ORM entity, you can safely ignore this message.",
-				    clazzPath, e.getMessage() );
-				return Struct.EMPTY; // return empty struct if ignoreParseErrors is true
+				    fqn.toString(), e.getMessage() );
+			} else {
+				throw new BoxRuntimeException( "Failed to get metadata for class: " + fqn.toString(), e );
 			}
-			throw new BoxRuntimeException( "Failed to get metadata for class: " + clazzPath.toString(), e );
 		}
-		return visitor.getMetadata();
+		// return empty struct if ignoreParseErrors is true
+		return Struct.EMPTY;
+
 	}
 
 	/**
@@ -472,7 +491,7 @@ public class MappingGenerator {
 	 *         a `.hbm.xml` extension.
 	 */
 	private Path writeXMLFile( EntityRecord entity, Path xmlPath ) {
-		String name = entity.getMetadata().getAsString( Key._name );
+		String name = entity.getMetadata().getAsString( Key.simpleName );
 		try {
 			if ( logger.isDebugEnabled() )
 				logger.debug( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
@@ -533,11 +552,11 @@ public class MappingGenerator {
 
 	/**
 	 * Build a path to the XML mapping file for the given entity based on ORM configuration.
-	 * 
+	 *
 	 * If `saveMappingAlongsideEntity` is true, the path will be the same as the entity file,
 	 * but with a `.hbm.xml` extension. Otherwise, the path will be the temp directory located
 	 * at `saveDirectory{entity name}.hbm.xml`.
-	 * 
+	 *
 	 * @param name The name of the entity.
 	 * @param path The path to the entity file.
 	 */

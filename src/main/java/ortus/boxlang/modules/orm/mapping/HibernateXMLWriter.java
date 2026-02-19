@@ -751,7 +751,7 @@ public class HibernateXMLWriter {
 			// parsing / generation logic.
 			IStruct	parentAnnotations	= entity.getParentMeta().getAsStruct( Key.annotations );
 			String	extendsClass		= parentAnnotations.getAsString( ORMKeys.entityName );
-			classElement.setAttribute( "extends", extendsClass == null ? entity.getParentMeta().getAsString( Key._name ) : extendsClass );
+			classElement.setAttribute( "extends", extendsClass == null ? entity.getParentMeta().getAsString( Key.simpleName ) : extendsClass );
 			// classElement.setAttribute( "name", CFC_MAPPING_PREFIX + entity.getMeta().getAsString( ORMKeys.classFQN ) );
 			classElement.setAttribute( "lazy", "true" );
 

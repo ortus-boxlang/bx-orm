@@ -21,7 +21,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.file.Path;
@@ -56,8 +55,11 @@ import ortus.boxlang.modules.orm.hibernate.converters.StringConverter;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
+import ortus.boxlang.runtime.interop.DynamicObject;
+import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
@@ -65,6 +67,8 @@ import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.types.exceptions.ParseException;
+import ortus.boxlang.runtime.util.BoxFQN;
+import ortus.boxlang.runtime.util.ResolvedFilePath;
 
 public class HibernateXMLWriterTest {
 
@@ -114,6 +118,8 @@ public class HibernateXMLWriterTest {
 		Document	doc			= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Vehicle", "models.Vehicle" ), ormConfig ).generateXML();
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
+
+		System.out.println( xmlToString( doc ) );
 
 		assertThat( classEl.getAttributes().getNamedItem( "entity-name" ).getTextContent() )
 		    .isEqualTo( "Manufacturer" );
@@ -1330,7 +1336,10 @@ public class HibernateXMLWriterTest {
 	 */
 
 	private IStruct getClassMetaFromFile( String entityFile ) {
-		return getClassMeta( new Parser().parse( new File( entityFile ) ) );
+
+		BoxFQN fqn = ResolvedFilePath.of( entityFile ).getBoxFQN();
+
+		return getClassMeta( fqn, context );
 	}
 
 	private IStruct getClassMetaFromCode( String code ) {
@@ -1352,10 +1361,43 @@ public class HibernateXMLWriterTest {
 	}
 
 	/**
+	 * Parse the given class file and load metadata for the entity using BoxLang's `ClassMetadataVisitor` for speedy metadata parsing.
+	 *
+	 * @param clazzPath Full path to the class file.
+	 *
+	 * @return The entity metadata struct.
+	 */
+	private IStruct getClassMeta( BoxFQN fqn, IBoxContext context ) {
+		// Use the ClassLocator to load the class
+		ClassLocator locator = instance.getClassLocator();
+
+		// Get static metadata without instantiating the class
+		try {
+			// Load as a BoxLang class
+			DynamicObject	classObj	= locator.load(
+			    context,
+			    fqn.toString(),
+			    ClassLocator.BX_PREFIX,
+			    true,
+			    context.getCurrentImports()
+			);
+			Object			metaObj		= classObj.invokeStatic( context, "getMetaStatic" );
+			if ( metaObj instanceof IStruct classMeta ) {
+				return classMeta;
+			}
+		} catch ( Exception e ) {
+			throw new BoxRuntimeException( "Failed to get metadata for class: " + fqn.toString(), e );
+		}
+		// return empty struct if ignoreParseErrors is true
+		return Struct.EMPTY;
+
+	}
+
+	/**
 	 * Debugging utility to convert a Document to a string.
-	 * 
+	 *
 	 * Please leave this in place; it's handy for reviewing the generated output during test development.
-	 * 
+	 *
 	 * @param doc The XML Document to convert to an XML string.
 	 */
 	private String xmlToString( Document doc ) {

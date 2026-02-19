@@ -46,6 +46,9 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	 */
 	private static final BoxRuntime	runtime				= BoxRuntime.getInstance();
 
+	private static final String		ANY_TYPE			= "any";
+	private static final String		STRING_TYPE			= "string";
+
 	/**
 	 * The logger for the ORM application.
 	 */
@@ -102,11 +105,15 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 			}
 		}
 
-		this.annotations.putIfAbsent( ORMKeys.ORMType, annotations.getOrDefault( Key.type, "string" ) );
+		String annotationType = this.annotations.getAsString( Key.type );
+		if ( ANY_TYPE.equals( annotationType ) ) {
+			annotationType = STRING_TYPE;
+		}
+		this.annotations.putIfAbsent( ORMKeys.ORMType, annotationType );
 		this.ormType = annotations.getAsString( ORMKeys.ORMType );
 		if ( this.ormType == null || this.ormType.isBlank() ) {
 			logger.trace( "Annotation `ormtype` is blank for property '{}' on entity '{}'. Defaulting to 'string'.", this.name, this.entityName );
-			this.ormType = "string";
+			this.ormType = STRING_TYPE;
 		}
 
 	}
