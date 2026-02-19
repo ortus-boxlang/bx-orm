@@ -80,7 +80,7 @@ public class ORMConfig {
 
 	/**
 	 * Backwards-compatible alias for `generateMappings`. {@link #generateMappings}
-	 * 
+	 *
 	 * @deprecated Use `generateMappings` instead of this property. This property will be removed in a future release.
 	 */
 	public boolean						autoGenMap				= true;
@@ -270,7 +270,7 @@ public class ORMConfig {
 	/**
 	 * Whether to use proxy-based lazy loading for entities.
 	 */
-	public boolean						proxyLazyLoading		= true;
+	public boolean						proxyLazyLoading		= false;
 
 	/**
 	 * Boxlang context used for class lookups in naming strategies, event handlers, etc.
