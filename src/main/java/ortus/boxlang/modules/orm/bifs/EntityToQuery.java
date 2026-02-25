@@ -35,6 +35,7 @@ import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.Query;
 import ortus.boxlang.runtime.types.QueryColumnType;
+import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 @BoxBIF
@@ -75,6 +76,16 @@ public class EntityToQuery extends BaseORMBIF {
 
 		Object			item			= arguments.get( ORMKeys.entity );
 		if ( item instanceof List entities ) {
+			if ( entities.isEmpty() ) {
+				// if we have an empty list then we'll need to create a blank query
+				if ( entityName == null ) {
+					// we have no meta to work from so just return an empty query with a single id column
+					return new Query( Struct.of( Key.id, null ), 0 );
+				} else {
+					entityRecord = ormApp.lookupEntity( entityName, true );
+					return populateQuery( ArrayCaster.cast( new Object[ 0 ] ), entityRecord );
+				}
+			}
 			if ( entityName == null ) {
 				entityName = getEntityNameOrThrow( entities.getFirst() );
 			}
