@@ -33,6 +33,7 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * This class is used to get a property on a BoxLang class for a Hibernate entity.
@@ -69,10 +70,14 @@ public class BoxPropertyGetter implements Getter {
 			// If the being assigned from an object return the property directly
 			return castRunnable.getVariablesScope().get( mappedProperty.getName() );
 		} else {
-			IBoxContext context = RequestBoxContext.getCurrent();
+			IBoxContext		context	= RequestBoxContext.getCurrent();
 			// Otherwise we assume this is a primary key lookup and load the entity to get the property
-			return ormService.getORMAppByContext( context ).loadEntityById( context, mappedEntity.getEntityName(), owner )
-			    .get( mappedProperty.getName() );
+			IClassRunnable	entity	= ormService.getORMAppByContext( context ).loadEntityById( context, mappedEntity.getEntityName(), owner );
+			if ( entity == null ) {
+				throw new BoxRuntimeException( String.format( "Entity %s with id %s not found for property %s", mappedEntity.getEntityName(), owner,
+				    mappedProperty.getName() ) );
+			}
+			return entity.get( mappedProperty.getName() );
 		}
 	}
 
