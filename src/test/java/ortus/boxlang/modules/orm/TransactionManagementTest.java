@@ -19,6 +19,7 @@ package ortus.boxlang.modules.orm;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -128,5 +129,82 @@ public class TransactionManagementTest extends BaseORMTest {
 		// @formatter:on
 		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
 		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Mitsubishi Corp" );
+	}
+
+	@Disabled( "Fails! Need to prevent inner transaction rollbacks from rolling back the outer transaction." )
+	@DisplayName( "Child transaction cannot roll back parent transaction" )
+	@Test
+	public void testORMChildTransactionCantRollbackParent() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction{
+				newItem = entityNew( "manufacturer", { name : "Child Rollback" } );
+				transaction{
+					transactionRollback();
+				}
+			}
+			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Child Rollback'" );
+			""",
+			context
+		);
+		// @formatter:on
+
+		// Verify they are the same session object (session sharing)
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "Inner transaction can be rolled back from outer" )
+	@Test
+	public void testORMNestedTransactionRollback() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction{
+				transaction{
+					outerManufacturer = entityNew( "manufacturer", { name : "Session Test Corp", address : "500 Session Way" } );
+					entitySave( outerManufacturer );
+				}
+				transactionRollback();
+				outerFound = EntityLoad( "manufacturer", { name = "Session Test Corp" } ).len();
+			}
+
+			// After transaction commits, verify entity was rolled back
+			finalFound = EntityLoad( "manufacturer", { name = "Session Test Corp" } ).len();
+			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Session Test Corp'" );
+			""",
+			context
+		);
+		// @formatter:on
+
+		assertThat( variables.getAsInteger( Key.of( "finalFound" ) ) ).isEqualTo( 0 );
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 0 );
+	}
+
+	@Disabled( "Still working on this test case." )
+	@DisplayName( "Inner transaction shares Hibernate session with outer transaction" )
+	@Test
+	public void testORMNestedTransactionSessionSharing() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction{
+				entityNew( "manufacturer" );
+				outerSession = ORMGetSession();
+				
+				transaction{
+					entityNew( "manufacturer" );
+					innerSession = ORMGetSession();
+				}
+			}
+			outsideTransactionSession = ORMGetSession();
+			""",
+			context
+		);
+		// @formatter:on
+
+		// Verify they are the same session object (session sharing)
+		assertThat( variables.get( Key.of( "outerSession" ) ) ).isSameInstanceAs( variables.get( Key.of( "innerSession" ) ) );
+		assertThat( variables.get( Key.of( "outerSession" ) ) ).isNotSameInstanceAs( variables.get( Key.of( "outsideTransactionSession" ) ) );
 	}
 }
