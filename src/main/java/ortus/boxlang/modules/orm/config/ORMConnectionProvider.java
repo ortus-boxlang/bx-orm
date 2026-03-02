@@ -69,14 +69,20 @@ public class ORMConnectionProvider implements ConnectionProvider {
 		throw new UnsupportedOperationException( "Unimplemented method 'unwrap'" );
 	}
 
+	/**
+	 * Acquire a JDBC connection from BoxLang's connection manager for the configured datasource.
+	 */
 	@Override
 	public Connection getConnection() throws SQLException {
 		DataSource	datasource	= getDatasourceForKey( datasourceName );
-		Connection	connection	= datasource.getConnection();
+		Connection	connection	= datasource.getBoxConnection();
 		logger.debug( "Getting connection {} for datasource: {}", connection, datasourceName.getOriginalValue() );
 		return connection;
 	}
 
+	/**
+	 * Close the JDBC connection, thus releasing it back into the pool for later reuse.
+	 */
 	@Override
 	public void closeConnection( Connection conn ) throws SQLException {
 		// Just do a regular connection.close(); BoxLang's connection pooling strategy
