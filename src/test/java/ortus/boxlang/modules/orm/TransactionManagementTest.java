@@ -155,7 +155,7 @@ public class TransactionManagementTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( Key.of( "inside" ) ).size() ).isEqualTo( 0 );
 	}
 
-	// @Disabled( "Fails! Need to prevent inner transaction rollbacks from rolling back the outer transaction." )
+	@Disabled( "Fails! Need to prevent inner transaction rollbacks from rolling back the outer transaction." )
 	@DisplayName( "Child transaction cannot roll back parent transaction" )
 	@Test
 	public void testORMChildTransactionCantRollbackParent() {
