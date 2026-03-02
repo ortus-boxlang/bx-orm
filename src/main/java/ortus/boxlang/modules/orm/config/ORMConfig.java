@@ -83,6 +83,7 @@ public class ORMConfig {
 	 *
 	 * @deprecated Use `generateMappings` instead of this property. This property will be removed in a future release.
 	 */
+	@Deprecated( since = "1.4.1", forRemoval = true )
 	public boolean						autoGenMap				= true;
 
 	/**
