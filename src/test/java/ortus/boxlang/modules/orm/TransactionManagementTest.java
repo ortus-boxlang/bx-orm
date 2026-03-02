@@ -131,7 +131,31 @@ public class TransactionManagementTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Mitsubishi Corp" );
 	}
 
-	@Disabled( "Fails! Need to prevent inner transaction rollbacks from rolling back the outer transaction." )
+	@DisplayName( "Rollbacks are limited to changes in the transaction context" )
+	@Test
+	public void testORMChildTransactionRollback() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			entitySave( entityNew( "manufacturer", { name : "outside_transaction" } ) );
+			transaction{
+				entitySave( entityNew( "manufacturer", { name : "inside_transaction" } ) );
+				transactionRollback();
+			}
+			outside = queryExecute( "SELECT * FROM manufacturers WHERE name = 'outside_transaction'" );
+			inside = queryExecute( "SELECT * FROM manufacturers WHERE name = 'inside_transaction'" );
+			""",
+			context
+		);
+		// @formatter:on
+
+		// entity created BEFORE transaction block should be committed
+		assertThat( variables.getAsQuery( Key.of( "outside" ) ).size() ).isEqualTo( 1 );
+		// entity created INSIDE transaction block should be rolled back
+		assertThat( variables.getAsQuery( Key.of( "inside" ) ).size() ).isEqualTo( 0 );
+	}
+
+	// @Disabled( "Fails! Need to prevent inner transaction rollbacks from rolling back the outer transaction." )
 	@DisplayName( "Child transaction cannot roll back parent transaction" )
 	@Test
 	public void testORMChildTransactionCantRollbackParent() {
@@ -139,19 +163,23 @@ public class TransactionManagementTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			transaction{
-				newItem = entityNew( "manufacturer", { name : "Child Rollback" } );
+				entitySave( entityNew( "manufacturer", { name : "outer_transaction" } ) );
 				transaction{
+					entitySave( entityNew( "manufacturer", { name : "inner_transaction" } ) );
 					transactionRollback();
 				}
 			}
-			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Child Rollback'" );
+			outside = queryExecute( "SELECT * FROM manufacturers WHERE name = 'outer_transaction'" );
+			inside = queryExecute( "SELECT * FROM manufacturers WHERE name = 'inner_transaction'" );
 			""",
 			context
 		);
 		// @formatter:on
 
-		// Verify they are the same session object (session sharing)
-		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
+		// entity created in OUTER transaction should be committed
+		assertThat( variables.getAsQuery( Key.of( "outside" ) ).size() ).isEqualTo( 1 );
+		// entity created in INNER transaction should be rolled back
+		assertThat( variables.getAsQuery( Key.of( "inside" ) ).size() ).isEqualTo( 0 );
 	}
 
 	@DisplayName( "Inner transaction can be rolled back from outer" )

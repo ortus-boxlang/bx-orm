@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Fixed
 
 - [BLMODULES-136](https://ortussolutions.atlassian.net/browse/BLMODULES-136) - Fix issue with naming strategy being double-applied on table and column identifiers.
+- [BLMODULES-146](https://ortussolutions.atlassian.net/browse/BLMODULES-146)  - Fix issue where rollbacks, commits, etc. inside a transaction block were not properly scoped to the transaction block and could affect the entire session. 
 
 ## [1.4.0] - 2026-02-06
 
