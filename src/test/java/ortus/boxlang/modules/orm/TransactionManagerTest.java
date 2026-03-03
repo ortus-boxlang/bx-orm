@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
-public class TransactionManagementTest extends BaseORMTest {
+public class TransactionManagerTest extends BaseORMTest {
 
 	@DisplayName( "Can save/flush entity modifications outside of a transaction block" )
 	@Test
