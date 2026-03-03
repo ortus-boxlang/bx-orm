@@ -85,19 +85,6 @@ public class TransactionManager extends BaseInterceptor {
 				return;
 			}
 
-			if ( config.autoManageSession ) {
-
-				if ( logger.isDebugEnabled() ) {
-					logger.debug(
-					    "'autoManageSession' is enabled; flushing ORM session [{}] for datasource [{}] prior to transaction begin.",
-					    ormSession,
-					    datasource.getName()
-					);
-				}
-
-				ormSession.flush();
-			}
-
 			logger.debug(
 			    "Starting ORM transaction on session [{}] for datasource: [{}]",
 			    ormSession,
@@ -156,8 +143,8 @@ public class TransactionManager extends BaseInterceptor {
 				);
 			}
 
-			ormSession.getTransaction().commit();
 			ormSession.flush();
+			ormSession.getTransaction().commit();
 			ormSession.beginTransaction();
 		} );
 	}
@@ -185,7 +172,16 @@ public class TransactionManager extends BaseInterceptor {
 				    datasource.getName()
 				);
 			}
-
+			try {
+				ormSession.flush();
+			} catch ( Exception e ) {
+				logger.error(
+				    "Error flushing ORM session [{}] for datasource [{}] during transaction rollback.  This may indicate an issue with the session or pending operations that could not be flushed.  Attempting to continue with transaction rollback and session clear.",
+				    ormSession,
+				    datasource.getName(),
+				    e
+				);
+			}
 			ormSession.getTransaction().rollback();
 			if ( config.autoManageSession ) {
 				if ( logger.isDebugEnabled() ) {
