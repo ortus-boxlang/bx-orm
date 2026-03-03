@@ -167,7 +167,7 @@ public class HibernateXMLWriter {
 	    "update", "updatetext", "upper", "usage", "use", "user", "using", "utc_date", "utc_time", "utc_timestamp", "validate",
 	    "validproc", "value", "values", "varbinary", "varchar", "varchar2", "varcharacter", "variable", "variant", "varying",
 	    "vcat", "view", "volumes", "waitfor", "when", "whenever", "where", "while", "window", "with", "within", "without",
-	    "wlm", "work", "write", "writetext", "xor", "year", "year_month", "zerofill", "zone" );
+	    "wlm", "work", "write", "writetext", "xor", "year", "year_month", "zerofill", "zone", "rank" );
 
 	private static final List<String>		toOneTypes		= List.of( "one-to-one", "many-to-one" );
 
