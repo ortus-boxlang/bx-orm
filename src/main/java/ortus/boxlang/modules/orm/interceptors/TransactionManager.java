@@ -220,7 +220,19 @@ public class TransactionManager extends BaseInterceptor {
 		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session ormSession = ormContext.getSession( datasource );
+			Session	ormSession	= ormContext.getSession( datasource );
+			var		tx			= ormSession.getTransaction();
+
+			if ( !tx.isActive() ) {
+				if ( logger.isDebugEnabled() ) {
+					logger.debug(
+					    "Skipping ORM transaction end on session [{}] for datasource [{}] because Hibernate transaction is not active.",
+					    ormSession,
+					    datasource.getName()
+					);
+				}
+				return;
+			}
 
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
@@ -231,7 +243,7 @@ public class TransactionManager extends BaseInterceptor {
 			}
 
 			ormSession.flush();
-			ormSession.getTransaction().commit();
+			tx.commit();
 		} );
 	}
 }
