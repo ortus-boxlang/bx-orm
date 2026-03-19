@@ -182,6 +182,34 @@ public class TransactionManagerTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( Key.of( "inside" ) ).size() ).isEqualTo( 0 );
 	}
 
+	@DisplayName( "Child transaction cannot commit parent transaction" )
+	@Test
+	public void testORMChildTransactionCantCommitParent() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction{
+				entitySave( entityNew( "manufacturer", { name : "outer_transaction" } ) );
+				transaction{
+					entitySave( entityNew( "manufacturer", { name : "inner_transaction" } ) );
+					transactionCommit();
+				}
+				// should roll back the entire transaction.
+				transactionRollback();
+			}
+			outside = queryExecute( "SELECT * FROM manufacturers WHERE name = 'outer_transaction'" );
+			inside = queryExecute( "SELECT * FROM manufacturers WHERE name = 'inner_transaction'" );
+			""",
+			context
+		);
+		// @formatter:on
+
+		// entity created in OUTER transaction should be committed
+		assertThat( variables.getAsQuery( Key.of( "outside" ) ).size() ).isEqualTo( 0 );
+		// entity created in INNER transaction should be committed
+		assertThat( variables.getAsQuery( Key.of( "inside" ) ).size() ).isEqualTo( 0 );
+	}
+
 	@DisplayName( "Inner transaction can be rolled back from outer" )
 	@Test
 	public void testORMNestedTransactionRollback() {
