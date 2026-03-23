@@ -1306,24 +1306,26 @@ public class HibernateXMLWriterTest {
 	} )
 	// @formatter:on
 	public void testJoinedSubclassGeneration( String sourceCode ) {
-		IStruct		meta		= getClassMetaFromCode( sourceCode );
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
 
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
 
-		Document	doc			= new HibernateXMLWriter( entityMeta,
+		Document	doc				= new HibernateXMLWriter( entityMeta,
 		    ( a, b ) -> new EntityRecord( "cbSubscription", "models.cms.subscriptions.BaseSubscription" ),
 		    ormConfig ).generateXML();
 
-		// String xml = xmlToString( doc );
-		// System.out.println( xml );
-
-		Node		subclassEl	= doc.getDocumentElement().getLastChild();
-		assertThat( subclassEl.getNodeName() ).isEqualTo( "joined-subclass" );
-		NamedNodeMap subclassAttributes = subclassEl.getAttributes();
+		Node		subclassNode	= doc.getDocumentElement().getLastChild();
+		assertThat( subclassNode.getNodeName() ).isEqualTo( "joined-subclass" );
+		NamedNodeMap subclassAttributes = subclassNode.getAttributes();
 		// it's a subclass (uses the same table as the parent), so no table/schema/catalog attrs
 		assertThat( subclassAttributes.getNamedItem( "table" ).getTextContent() ).isEqualTo( "myTable" );
 		assertThat( subclassAttributes.getNamedItem( "schema" ).getTextContent() ).isEqualTo( "mySchema" );
 		assertThat( subclassAttributes.getNamedItem( "catalog" ).getTextContent() ).isEqualTo( "myCatalog" );
+
+		Node keyNode = subclassNode.getFirstChild();
+		assertThat( keyNode.getNodeName() ).isEqualTo( "key" );
+		NamedNodeMap keyAttributes = keyNode.getAttributes();
+		assertThat( keyAttributes.getNamedItem( "column" ).getTextContent() ).isEqualTo( "subscriptionId" );
 	}
 
 	/**
