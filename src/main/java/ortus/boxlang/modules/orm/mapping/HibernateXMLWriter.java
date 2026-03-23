@@ -1105,7 +1105,8 @@ public class HibernateXMLWriter {
 	/**
 	 * Apply Attribute Converters to the given property type, or return the type as-is.
 	 *
-	 * @param normalizedType The normalized type name, like "biginteger" or "timestamp". Must be normalized via {@link toHibernateType()} first
+	 * @param normalizedType The normalized type name, like "biginteger" or "timestamp". Must be normalized via {@link toHibernateType( String
+	 *                       propertyType )} first
 	 */
 	protected String toConverterType( String normalizedType ) {
 		return switch ( normalizedType ) {
