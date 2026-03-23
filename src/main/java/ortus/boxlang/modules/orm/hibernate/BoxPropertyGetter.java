@@ -69,10 +69,15 @@ public class BoxPropertyGetter implements Getter {
 			// If the being assigned from an object return the property directly
 			return castRunnable.getVariablesScope().get( mappedProperty.getName() );
 		} else {
-			IBoxContext context = RequestBoxContext.getCurrent();
+			IBoxContext		context	= RequestBoxContext.getCurrent();
 			// Otherwise we assume this is a primary key lookup and load the entity to get the property
-			return ormService.getORMAppByContext( context ).loadEntityById( context, mappedEntity.getEntityName(), owner )
-			    .get( mappedProperty.getName() );
+			IClassRunnable	entity	= ormService.getORMAppByContext( context ).loadEntityById( context, mappedEntity.getEntityName(), owner );
+			if ( entity == null ) {
+				logger.warn( String.format( "Entity %s with id %s not found for property %s", mappedEntity.getEntityName(), owner,
+				    mappedProperty.getName() ) );
+				return null;
+			}
+			return entity.get( mappedProperty.getName() );
 		}
 	}
 

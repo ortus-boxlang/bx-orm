@@ -37,19 +37,16 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.commons.lang3.Strings;
 import org.w3c.dom.Document;
 
-import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
-import ortus.boxlang.compiler.parser.Parser;
-import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
-import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.ConfigOverrideBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.context.ThreadBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
+import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
@@ -57,7 +54,7 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
-import ortus.boxlang.runtime.types.exceptions.ParseException;
+import ortus.boxlang.runtime.util.BoxFQN;
 import ortus.boxlang.runtime.util.FileSystemUtil;
 import ortus.boxlang.runtime.util.ResolvedFilePath;
 
@@ -85,6 +82,11 @@ public class MappingGenerator {
 	 * The valid file extensions for entity files.
 	 */
 	private static final String[]		ENTITY_EXTENSIONS			= { ".bx", ".cfc" };
+
+	/**
+	 * File extension for XML mapping files.
+	 */
+	private static final String			HBM_XML_EXT					= ".hbm.xml";
 
 	/**
 	 * The maximum number of entities to process synchronously.
@@ -184,15 +186,9 @@ public class MappingGenerator {
 	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
 	 */
 	public static Map<Key, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
-		if ( !ormConfig.autoGenMap ) {
-			// Skip mapping generation and load the pre-generated mappings from `ormConfig.entityPaths`
-			throw new BoxRuntimeException( "ORMConfiguration setting `autoGenMap=false` is currently unsupported." );
-		} else {
-			// generate xml mappings on the fly, saving them either to a temp directory or alongside the entity class files if `ormConfig.saveMapping` is true.
-			return new MappingGenerator( context, ormConfig )
-			    .generateMappings()
-			    .getEntityDatasourceMap();
-		}
+		return new MappingGenerator( context, ormConfig )
+		    .generateMappings()
+		    .getEntityDatasourceMap();
 	}
 
 	/**
@@ -210,11 +206,7 @@ public class MappingGenerator {
 
 			this.entities = classes.parallelStream()
 			    // Parse class metadata
-			    .map( c -> {
-				    // In parallel, we need to use a new context for each entity so they can push their
-				    // "current template" to the stack without collisions
-				    return readMeta( c, new ConfigOverrideBoxContext( context, config -> config ) );
-			    } )
+			    .map( c -> StructCaster.cast( ThreadBoxContext.runInContext( context, ( ctx ) -> readMeta( c, ctx ) ) ) )
 			    // Filter out non-persistent entities
 			    .filter( ( IStruct possibleEntity ) -> isPersistentEntity( possibleEntity.getAsStruct( Key.metadata ) ) )
 			    // Convert to EntityRecord
@@ -234,7 +226,29 @@ public class MappingGenerator {
 		// Generate XML mapping files for each entity
 		// Change this to a stream if we will be doing parallel processing
 		for ( EntityRecord entity : this.entities ) {
-			entity.setXmlFilePath( writeXMLFile( entity ) );
+			IStruct	meta	= entity.getMetadata();
+			String	name	= meta.getAsString( Key.simpleName );
+			String	path	= meta.getAsString( Key.path );
+			Path	xmlPath	= getXMLPathForEntity( name, path );
+			// We need this for inheritance
+			meta.put( ORMKeys.classFQN, entity.getClassFQN() );
+			// ensure the 'datasource' key is populated with our default logic
+			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
+			// Build the entity metadata
+			entity.setEntityMeta( AbstractEntityMeta.autoDiscoverMetaType( meta ) );
+			if ( config.generateMappings ) {
+				// we reset the XML path just in case there was a parse error and ignoreParseErrors is true.
+				// If this happens we allow the entity to have a null XML file path, and we just continue forward.
+				xmlPath = writeXMLFile( entity, xmlPath );
+			} else {
+				if ( !Files.exists( xmlPath ) ) {
+					String message = String.format(
+					    "Mapping file not found for entity [%s] at expected location: [%s]. When `generateMappings` is false, you must pre-generate the mapping files and place them in the expected location. If you want the mapping generator to generate the mapping files for you, set `generateMappings` to true.",
+					    entity.getEntityName(), xmlPath );
+					throw new BoxRuntimeException( message );
+				}
+			}
+			entity.setXmlFilePath( xmlPath );
 		}
 
 		return this;
@@ -330,7 +344,16 @@ public class MappingGenerator {
 		if ( logger.isDebugEnabled() )
 			logger.debug( "Loading metadata for class {}", possibleEntity.getAsString( Key.file ) );
 
-		possibleEntity.put( Key.metadata, getClassMeta( Path.of( possibleEntity.getAsString( Key.file ) ), context ) );
+		String	basePath			= possibleEntity.getAsString( ORMKeys.basePath );
+
+		String	expandedBasePath	= FileSystemUtil.expandPath( context, basePath ).absolutePath().toString();
+
+		BoxFQN	fqn					= ResolvedFilePath
+		    .of( Path.of( possibleEntity.getAsString( Key.file ) ).toString().replace( expandedBasePath, basePath ) )
+		    .getBoxFQN();
+
+		possibleEntity.put( Key.metadata,
+		    getClassMeta( fqn, context ) );
 		return possibleEntity;
 	}
 
@@ -358,9 +381,14 @@ public class MappingGenerator {
 		String	entityName			= readEntityName( meta );
 		String	basePath			= theEntity.getAsString( ORMKeys.basePath );
 		String	expandedBasePath	= FileSystemUtil.expandPath( context, theEntity.getAsString( ORMKeys.basePath ) ).absolutePath().toString();
+		String	fqn					= null;
 		// Make sure our FQN remains the same at all times
-		String	fqn					= ResolvedFilePath.of( Path.of( meta.getAsString( Key.path ).replace( expandedBasePath, basePath ) ) ).getBoxFQN()
-		    .toString();
+		try {
+			fqn = ResolvedFilePath.of( Path.of( meta.getAsString( Key.path ) ).toRealPath().toString().replace( expandedBasePath, basePath ) ).getBoxFQN()
+			    .toString();
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( "Failed to resolve real path for entity: " + entityName + ". Meta path: " + meta.getAsString( Key.path ), e );
+		}
 		if ( fqn == null || fqn.isBlank() ) {
 			throw new BoxRuntimeException( "Failed to generate FQN for entity: " + entityName );
 		}
@@ -396,7 +424,7 @@ public class MappingGenerator {
 			entityName = annotations.getAsString( ORMKeys.entity );
 		}
 		if ( entityName == null || entityName.isBlank() ) {
-			entityName = meta.getAsString( Key._name );
+			entityName = meta.getAsString( Key.simpleName );
 		}
 		return entityName;
 	}
@@ -408,27 +436,40 @@ public class MappingGenerator {
 	 *
 	 * @return The entity metadata struct.
 	 */
-	private IStruct getClassMeta( Path clazzPath, IBoxContext context ) {
+	private IStruct getClassMeta( BoxFQN fqn, IBoxContext context ) {
 		if ( logger.isDebugEnabled() )
-			logger.debug( "Parsing class file: [{}]", clazzPath );
+			logger.debug( "Parsing class file: [{}]", fqn.toString() );
 
-		ParsingResult result = new Parser().parse( new File( clazzPath.toString() ) );
-		if ( !result.isCorrect() ) {
-			throw new ParseException( result.getIssues(), "" );
-		}
-		ClassMetadataVisitor visitor = new ClassMetadataVisitor( context );
+		// Use the ClassLocator to load the class
+		BoxRuntime		runtime	= BoxRuntime.getInstance();
+		ClassLocator	locator	= runtime.getClassLocator();
+
+		// Get static metadata without instantiating the class
 		try {
-			result.getRoot().accept( visitor );
-		} catch ( Throwable e ) {
+			// Load as a BoxLang class
+			DynamicObject	classObj	= locator.load(
+			    context,
+			    fqn.toString(),
+			    ClassLocator.BX_PREFIX,
+			    true,
+			    context.getCurrentImports()
+			);
+			Object			metaObj		= classObj.invokeStatic( context, "getMetaStatic" );
+			if ( metaObj instanceof IStruct classMeta ) {
+				return classMeta;
+			}
+		} catch ( Exception e ) {
 			if ( config.ignoreParseErrors ) {
 				logger.warn(
 				    "ORM Mapping Generator: Failed to parse class metadata for [{}]: {}. If this class is not an ORM entity, you can safely ignore this message.",
-				    clazzPath, e.getMessage() );
-				return Struct.EMPTY; // return empty struct if ignoreParseErrors is true
+				    fqn.toString(), e.getMessage() );
+			} else {
+				throw new BoxRuntimeException( "Failed to get metadata for class: " + fqn.toString(), e );
 			}
-			throw new BoxRuntimeException( "Failed to get metadata for class: " + clazzPath.toString(), e );
 		}
-		return visitor.getMetadata();
+		// return empty struct if ignoreParseErrors is true
+		return Struct.EMPTY;
+
 	}
 
 	/**
@@ -443,19 +484,14 @@ public class MappingGenerator {
 	/**
 	 * Write the XML mapping file for the given entity metadata.
 	 *
-	 * @param entity EntityRecord containing the entity metadata.
+	 * @param entity  EntityRecord containing the entity metadata.
+	 * @param xmlPath The path to write the XML mapping file to.
 	 *
 	 * @return The path to the generated XML mapping file If `saveMappingAlongsideEntity` is true, the path will be the same as the entity file, but with
 	 *         a `.hbm.xml` extension.
 	 */
-	private Path writeXMLFile( EntityRecord entity ) {
-		IStruct	meta	= entity.getMetadata();
-		String	name	= meta.getAsString( Key._name );
-		String	path	= meta.getAsString( Key.path );
-		String	fileExt	= path.substring( path.lastIndexOf( '.' ) );
-		Path	xmlPath	= this.saveAlongsideEntity
-		    ? Path.of( path.replace( fileExt, ".hbm.xml" ) )
-		    : Path.of( this.saveDirectory, name + ".hbm.xml" );
+	private Path writeXMLFile( EntityRecord entity, Path xmlPath ) {
+		String name = entity.getMetadata().getAsString( Key.simpleName );
 		try {
 			if ( logger.isDebugEnabled() )
 				logger.debug( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
@@ -487,15 +523,7 @@ public class MappingGenerator {
 	 */
 	private String generateXML( EntityRecord entity ) {
 		try {
-			IStruct meta = entity.getMetadata();
-			// We need this for inheritance
-			meta.put( ORMKeys.classFQN, entity.getClassFQN() );
-			// ensure the 'datasource' key is populated with our default logic
-			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
-			IEntityMeta entityMeta = AbstractEntityMeta.autoDiscoverMetaType( meta );
-			entity.setEntityMeta( entityMeta );
-
-			Document			doc			= new HibernateXMLWriter( entityMeta, this::entityLookup, this.config ).generateXML();
+			Document			doc			= new HibernateXMLWriter( entity.getEntityMeta(), this::entityLookup, this.config ).generateXML();
 
 			TransformerFactory	tf			= TransformerFactory.newInstance();
 			Transformer			transformer	= tf.newTransformer();
@@ -523,6 +551,28 @@ public class MappingGenerator {
 	}
 
 	/**
+	 * Build a path to the XML mapping file for the given entity based on ORM configuration.
+	 *
+	 * If `saveMappingAlongsideEntity` is true, the path will be the same as the entity file,
+	 * but with a `.hbm.xml` extension. Otherwise, the path will be the temp directory located
+	 * at `saveDirectory{entity name}.hbm.xml`.
+	 *
+	 * @param name The name of the entity.
+	 * @param path The path to the entity file.
+	 */
+	private Path getXMLPathForEntity( String name, String path ) {
+		try {
+			path = Path.of( path ).toRealPath().toString();
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( "Failed to resolve real path for entity: " + name + ". Meta path: " + path, e );
+		}
+		String fileExt = path.substring( path.lastIndexOf( '.' ) );
+		return this.saveAlongsideEntity
+		    ? Path.of( path.replace( fileExt, MappingGenerator.HBM_XML_EXT ) )
+		    : Path.of( this.saveDirectory, name + MappingGenerator.HBM_XML_EXT );
+	}
+
+	/**
 	 * Lookup an entity by class name and (optionally) datasource name.
 	 * <p>
 	 * Useful for determining relationship entity names based off the provided class name.
@@ -535,6 +585,7 @@ public class MappingGenerator {
 	public EntityRecord entityLookup( String className, Key datasourceName ) {
 		Optional<DynamicObject>	runnableLookup	= classLocator.safeLoad( context, className, ClassLocator.BX_PREFIX,
 		    context.getCurrentImports() );
+
 		String					lookupClassName	= runnableLookup.isPresent()
 		    ? runnableLookup.get().getTargetClass().getName().replace( ORMService.BX_CLASS_SUFFIX, "" ).replace( ORMService.CFC_CLASS_SUFFIX, "" )
 		    : null;
@@ -547,6 +598,8 @@ public class MappingGenerator {
 			    // 3. The class name matches the entity's lookup class or entity name
 			// @formatter:off
 			    return (
+					e.getEntityName().equalsIgnoreCase( className )
+			        ||
 					e.getClassName().equalsIgnoreCase( className )
 			        ||
 			        e.getClassFQN().equalsIgnoreCase( className )

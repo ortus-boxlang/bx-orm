@@ -115,7 +115,7 @@ jobs:
 
       - name: Upload Build Artifacts
         if: success()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: boxlang-build
           path: |
@@ -151,7 +151,7 @@ jobs:
           cd $GITHUB_WORKSPACE
 
       - name: Create Github Release
-        uses: taiki-e/create-gh-release-action@v1.9.1
+        uses: taiki-e/create-gh-release-action@v1.9.2
         continue-on-error: true
         if: env.SNAPSHOT == 'false'
         id: create_release
@@ -193,7 +193,7 @@ jobs:
           ref: development
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: boxlang-build
           path: .tmp

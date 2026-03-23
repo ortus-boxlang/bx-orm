@@ -48,13 +48,10 @@ import ortus.boxlang.runtime.scopes.Key;
  */
 public class SessionFactoryBuilder {
 
-	public static final String		BOXLANG_ENTITY_MAP		= "BOXLANG_ENTITY_MAP";
-	public static final String		BOXLANG_EVENT_LISTENER	= "BOXLANG_EVENT_LISTENER";
-
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime					= BoxRuntime.getInstance();
+	private static final BoxRuntime	runtime	= BoxRuntime.getInstance();
 
 	/**
 	 * The logger for this class. We may log warnings or errors if we encounter
@@ -134,7 +131,7 @@ public class SessionFactoryBuilder {
 	/**
 	 * Build the Hibernate session factory.
 	 * <p>
-	 * This method will generate entity mappings if `ormConfig.autoGenMap` is true, as well as parse the ORM configuration and set up the Hibernate
+	 * This method will generate entity mappings if `ormConfig.generateMappings` is true, as well as parse the ORM configuration and set up the Hibernate
 	 * configuration.
 	 *
 	 * @return a Hibernate session factory ready for use.
@@ -155,9 +152,6 @@ public class SessionFactoryBuilder {
 		} finally {
 			Thread.currentThread().setContextClassLoader( oldClassLoader );
 		}
-
-		factory.getProperties().put( BOXLANG_ENTITY_MAP, configuration.getProperties().get( BOXLANG_ENTITY_MAP ) );
-		factory.getProperties().put( BOXLANG_EVENT_LISTENER, this.ormConfig.eventHandler );
 
 		return factory;
 	}
@@ -190,7 +184,6 @@ public class SessionFactoryBuilder {
 		Map<String, EntityRecord> entityMap = this.entities
 		    .stream()
 		    .collect( java.util.stream.Collectors.toMap( entity -> entity.getEntityName().toLowerCase().trim(), entity -> entity ) );
-		properties.put( BOXLANG_ENTITY_MAP, entityMap );
 
 		entityMap.values()
 		    .stream()

@@ -9,7 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ⛓️‍💥 Changed
+
+- This version requires Boxlang Runtime `v1.11.x` and above
+
+### 🗑 Deprecated
+
+- The `autoGenMap` configuration setting is now deprecated in favor of `generateMappings`. Same function, different name. See [BLMODULES-119](https://ortussolutions.atlassian.net/browse/BLMODULES-119) for details.
+
+### ⭐ Added
+
+- [BLMODULES-119](https://ortussolutions.atlassian.net/browse/BLMODULES-119) - Add support for `generateMappings=false` (aliased as `autoGenMap` for backwards compatibility) to disable automatic mapping generation and require manual mapping files.
+
+### 🐛 Fixed
+
+- [BLMODULES-136](https://ortussolutions.atlassian.net/browse/BLMODULES-136) - Fix issue with naming strategy being double-applied on table and column identifiers.
+- [BLMODULES-146](https://ortussolutions.atlassian.net/browse/BLMODULES-146)  - Fix issue where rollbacks, commits, etc. inside a transaction block were not properly scoped to the transaction block and could affect the entire session. 
+
 ## [1.4.0] - 2026-02-06
+
+### ⛓️‍💥 Changed
+
+- This version requires Boxlang Runtime `v1.11.x` and above
+
+### 🐛 Fixed
+
+- [BLMODULES-120](https://ortussolutions.atlassian.net/browse/BLMODULES-120) - Add new settings for `lazy` and `defaultBatchSize` to provide compat implementations
+- [BLMODULES-130](https://ortussolutions.atlassian.net/browse/BLMODULES-130) - Fix collection handling for java List objects - which hibernate returns
+- Transaction management udpates to deal with complex nested transactions
+- Ensure manual flush mode when `autoManageSession` is `false`
+- Add savepoint interception for nested transactions and flush
 
 ## [1.3.0] - 2026-01-07
 

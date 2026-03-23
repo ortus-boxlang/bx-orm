@@ -97,4 +97,20 @@ public class EntityToQueryTest extends BaseORMTest {
 		assertThat( row.get( "features" ) ).isNull();
 		assertThat( row.get( "manufacturer" ) ).isNull();
 	}
+
+	@DisplayName( "It can convert an empty array into a query" )
+	@Test
+	public void testEntityToQueryEmptyArray() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityToQuery(
+				entityLoad( "Vehicle", { "make" : "Blah" }, "model ASC", { maxResults : 3 } )
+			);
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Query.class );
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 0 );
+	}
 }

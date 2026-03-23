@@ -65,11 +65,14 @@ public class TransactionManager extends BaseInterceptor {
 			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
-		ORMContext	ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-		ORMConfig	config		= ormContext.getConfig();
+		IJDBCCapableContext	jdbcContext	= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext			ormContext	= ORMContext.getForContext( jdbcContext );
+		ORMConfig			config		= ormContext.getConfig();
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormContext.getSession( datasource );
+			// Ensure any pending operations are flushed before starting the transaction
+			ormSession.flush();
 			// We should never hit this conditional as long as BoxLang does not support nested transactions
 			if ( ormSession.isJoinedToTransaction() ) {
 				if ( logger.isDebugEnabled() ) {
@@ -80,19 +83,6 @@ public class TransactionManager extends BaseInterceptor {
 					);
 				}
 				return;
-			}
-
-			if ( config.autoManageSession ) {
-
-				if ( logger.isDebugEnabled() ) {
-					logger.debug(
-					    "'autoManageSession' is enabled; flushing ORM session [{}] for datasource [{}] prior to transaction begin.",
-					    ormSession,
-					    datasource.getName()
-					);
-				}
-
-				ormSession.flush();
 			}
 
 			logger.debug(
@@ -111,7 +101,8 @@ public class TransactionManager extends BaseInterceptor {
 		String		savepointName	= args.getAsString( Key.savepoint );
 		ORMApp		ormApp			= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
-			// Just return as we would already have warned during transaction begin
+			logger.warn(
+			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
 		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
@@ -137,7 +128,8 @@ public class TransactionManager extends BaseInterceptor {
 
 		ORMApp		ormApp	= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
-			// Just return as we would already have warned during transaction begin
+			logger.warn(
+			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
 		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
@@ -153,8 +145,8 @@ public class TransactionManager extends BaseInterceptor {
 				);
 			}
 
-			ormSession.getTransaction().commit();
 			ormSession.flush();
+			ormSession.getTransaction().commit();
 			ormSession.beginTransaction();
 		} );
 	}
@@ -165,7 +157,8 @@ public class TransactionManager extends BaseInterceptor {
 
 		ORMApp		ormApp	= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
-			// Just return as we would already have warned during transaction begin
+			logger.warn(
+			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
 		ORMContext	ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
@@ -182,7 +175,16 @@ public class TransactionManager extends BaseInterceptor {
 				    datasource.getName()
 				);
 			}
-
+			try {
+				ormSession.flush();
+			} catch ( Exception e ) {
+				logger.error(
+				    "Error flushing ORM session [{}] for datasource [{}] during transaction rollback.  This may indicate an issue with the session or pending operations that could not be flushed.  Attempting to continue with transaction rollback and session clear.",
+				    ormSession,
+				    datasource.getName(),
+				    e
+				);
+			}
 			ormSession.getTransaction().rollback();
 			if ( config.autoManageSession ) {
 				if ( logger.isDebugEnabled() ) {
@@ -211,13 +213,26 @@ public class TransactionManager extends BaseInterceptor {
 
 		ORMApp		ormApp	= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
-			// Just return as we would already have warned during transaction begin
+			logger.warn(
+			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
 		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session ormSession = ormContext.getSession( datasource );
+			Session	ormSession	= ormContext.getSession( datasource );
+			var		tx			= ormSession.getTransaction();
+
+			if ( !tx.isActive() ) {
+				if ( logger.isDebugEnabled() ) {
+					logger.debug(
+					    "Skipping ORM transaction end on session [{}] for datasource [{}] because Hibernate transaction is not active.",
+					    ormSession,
+					    datasource.getName()
+					);
+				}
+				return;
+			}
 
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
@@ -228,7 +243,7 @@ public class TransactionManager extends BaseInterceptor {
 			}
 
 			ormSession.flush();
-			ormSession.getTransaction().commit();
+			tx.commit();
 		} );
 	}
 }
