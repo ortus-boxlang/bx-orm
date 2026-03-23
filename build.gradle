@@ -18,13 +18,16 @@ ext {
 	buildID = System.getenv( 'BUILD_ID' ) ?: '0'
 	branch = System.getenv( 'BRANCH' ) ?: 'development'
 	testResourceDirectory = 'src/test/resources';
-}
 
-if ( branch == 'development' ) {
-    // If the branch is 'development', ensure the version ends with '-snapshot'
-    // This replaces any existing prerelease identifier with '-snapshot'
-    version = version.contains('-') ? version.replaceAll(/-.*/, '-snapshot') : "${version}-snapshot"
-	boxlangVersion = boxlangVersion.contains('-') ? boxlangVersion.replaceAll(/-.*/, '-snapshot') : "${boxlangVersion}-snapshot"
+	if ( branch == 'development' ) {
+		// If the branch is 'development', ensure the version ends with '-snapshot'
+		// This replaces any existing prerelease identifier with '-snapshot'
+		version = version.contains('-') ? version.replaceAll(/-.*/, '-snapshot') : "${version}-snapshot"
+		boxlangVersion = boxlangVersion.contains('-') ? boxlangVersion.replaceAll(/-.*/, '-snapshot') : "${boxlangVersion}-snapshot"
+	}
+
+	boxlangJarName = "boxlang-${boxlangVersion}.jar"
+	boxlangJarPath = "boxlang/build/libs/${boxlangJarName}"
 }
 
 repositories {
@@ -33,21 +36,25 @@ repositories {
 }
 
 dependencies {
-	// // BoxLang Dependencies
-	if ( file( '../../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' ).exists() ) {
+	// BoxLang Runtime
+	println "Boxlang version is ${boxlangVersion}, looking for ${boxlangJarName} at ${boxlangJarPath}"
+	if ( file( "../../${boxlangJarPath}" ).exists() ) {
 		// Run against a local BoxLang build
 		// You must run `./gradle build -x test` in the BoxLang project
-		compileOnly files( '../../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
-		testImplementation files( '../../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
-	} else if ( file( '../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' ).exists() ) {
+		compileOnly files( "../../${boxlangJarPath}" )
+		testImplementation files( "../../${boxlangJarPath}" )
+	} else if ( file( "../${boxlangJarPath}" ).exists() ) {
 		// Run against a local BoxLang build
 		// You must run `./gradle build -x test` in the BoxLang project
-		compileOnly files( '../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
-		testImplementation files( '../boxlang/build/libs/boxlang-' + boxlangVersion + '.jar' )
-	} else {
+		compileOnly files( "../${boxlangJarPath}" )
+		testImplementation files( "../${boxlangJarPath}" )
+	} else if ( file( "src/test/resources/libs/${boxlangJarName}" ).exists() ) {
 		// Downloaded Dependencies
-		compileOnly files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
-		testImplementation files( 'src/test/resources/libs/boxlang-' + boxlangVersion + '.jar' )
+		compileOnly files( "src/test/resources/libs/${boxlangJarName}" )
+		testImplementation files( "src/test/resources/libs/${boxlangJarName}" )
+	} else {
+		// no snapshots on maven
+		compileOnly "io.boxlang:boxlang:${boxlangVersion.replaceAll(/-snapshot/, '')}"
 	}
 
 	// Implementation Dependencies
