@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-03-23
+
 ### ⛓️‍💥 Changed
 
 - This version requires Boxlang Runtime `v1.11.x` and above
@@ -24,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Fixed
 
 - [BLMODULES-136](https://ortussolutions.atlassian.net/browse/BLMODULES-136) - Fix issue with naming strategy being double-applied on table and column identifiers.
-- [BLMODULES-146](https://ortussolutions.atlassian.net/browse/BLMODULES-146)  - Fix issue where rollbacks, commits, etc. inside a transaction block were not properly scoped to the transaction block and could affect the entire session. 
+- [BLMODULES-146](https://ortussolutions.atlassian.net/browse/BLMODULES-146)  - Fix issue where rollbacks, commits, etc. inside a transaction block were not properly scoped to the transaction block and could affect the entire session.
 
 ## [1.4.0] - 2026-02-06
 
@@ -215,7 +217,8 @@ No significant changes.
 
 - First iteration of this module
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.4.0...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/ortus-boxlang/bx-orm/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.1.3...v1.2.0
