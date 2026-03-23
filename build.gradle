@@ -14,8 +14,6 @@ plugins {
 /**
  * Project Properties
  */
-sourceCompatibility = jdkVersion
-targetCompatibility = jdkVersion
 ext {
 	buildID = System.getenv( 'BUILD_ID' ) ?: '0'
 	branch = System.getenv( 'BRANCH' ) ?: 'development'
@@ -83,6 +81,9 @@ sourceSets {
 }
 
 java {
+	// Set Java version compatibility, Gradle 9-style.
+	sourceCompatibility = jdkVersion
+	targetCompatibility = jdkVersion
     // Produces a javadocs jar
 	withJavadocJar()
 }
@@ -91,7 +92,7 @@ compileJava {
 	// Compiler Options
 	options.incremental = true
 	options.encoding = 'UTF-8'
-	options.debug()
+	options.debug = true
 }
 
 compileTestJava{
@@ -121,7 +122,7 @@ javadoc {
 	options.addBooleanOption( 'html5', true )
 }
 task zipJavadocs( type: Zip ) {
-	group "documentation"
+	group = "documentation"
 	from javadoc.destinationDir
 	archiveFileName = "${project.name}-javadocs-${version}.zip"
 	destinationDirectory = file( "$buildDir/distributions" )
@@ -211,7 +212,7 @@ task createModuleStructure(type: Copy) {
     destinationDir = file( 'build/module' )
 }
 task zipModuleStructure( type: Zip ) {
-    group "distribution"
+    group = "distribution"
     from createModuleStructure.destinationDir
     archiveFileName = "${project.name}-${version}.zip"
     destinationDirectory = file( "$buildDir/distributions" )
