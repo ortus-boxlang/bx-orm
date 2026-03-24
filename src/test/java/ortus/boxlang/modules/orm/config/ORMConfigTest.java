@@ -51,6 +51,38 @@ public class ORMConfigTest extends BaseORMTest {
 	}
 
 	@Test
+	public void testMetadataDefaultsEnabledWhenDialectMissing() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB"
+		), context ).toHibernateConfig();
+
+		assertEquals( "true", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+	}
+
+	@Test
+	public void testMetadataDefaultsDisabledWhenDialectConfigured() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "DerbyTenSeven"
+		), context ).toHibernateConfig();
+
+		assertEquals( "false", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+	}
+
+	@Test
+	public void testMetadataDefaultsEnabledWhenDialectBlank() {
+		ORMConfig ormConfig = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB"
+		), context );
+		ormConfig.dialect = "   ";
+
+		Configuration config = ormConfig.toHibernateConfig();
+
+		assertEquals( "true", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+		assertThat( config.getProperty( AvailableSettings.DIALECT ) ).isNull();
+	}
+
+	@Test
 	public void testGenericSettings() {
 		Configuration config = new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB",

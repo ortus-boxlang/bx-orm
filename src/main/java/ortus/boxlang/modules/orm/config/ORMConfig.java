@@ -560,8 +560,10 @@ public class ORMConfig {
 		}
 		configuration.addProperties( sysEnvProps );
 
-		// Performance improvement.
-		configuration.setProperty( "hibernate.temp.use_jdbc_metadata_defaults", "false" );
+		boolean hasExplicitDialect = this.dialect != null && !this.dialect.isBlank();
+
+		// If no dialect is configured, Hibernate must inspect JDBC metadata to resolve it.
+		configuration.setProperty( "hibernate.temp.use_jdbc_metadata_defaults", hasExplicitDialect ? "false" : "true" );
 
 		if ( this.dbcreate != null ) {
 			switch ( this.dbcreate ) {
@@ -601,7 +603,7 @@ public class ORMConfig {
 			configuration.setProperty( AvailableSettings.LOG_JDBC_WARNINGS, "true" );
 		}
 
-		if ( this.dialect != null ) {
+		if ( hasExplicitDialect ) {
 			// @TODO: Once we migrate to Hibernate 6+, we should drop dialect configuration entirely.
 			// https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/cfg/JdbcSettings.html#DIALECT
 			// configuration.setProperty(AvailableSettings.DIALECT, dialect);
