@@ -43,9 +43,6 @@ dependencies {
 		// Downloaded Dependencies
 		compileOnly files( "src/test/resources/libs/boxlang-${boxlangVersion}.jar" )
 		testImplementation files( "src/test/resources/libs/boxlang-${boxlangVersion}.jar" )
-	} else {
-		// no snapshots on maven
-		compileOnly "io.boxlang:boxlang:${boxlangVersion.replaceAll(/-snapshot/, '')}"
 	}
 
 	// Implementation Dependencies
