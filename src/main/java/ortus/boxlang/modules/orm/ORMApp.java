@@ -157,9 +157,8 @@ public class ORMApp {
 
 			this.datasources.add( datasource );
 
-			SessionFactoryBuilder	builder	= new SessionFactoryBuilder( context, datasource, config, entities );
-			SessionFactory			factory	= builder.build();
-			this.sessionFactories.put( Key.of( datasource ), factory );
+			SessionFactory factory = buildSessionFactoryForDatasource( datasource );
+			this.sessionFactories.put( datasource, factory );
 
 			if ( datasource.equals( this.defaultDataSource ) ) {
 				if ( logger.isDebugEnabled() )
@@ -167,10 +166,19 @@ public class ORMApp {
 				this.defaultSessionFactory = factory;
 			}
 		} );
+		if ( this.defaultSessionFactory == null ) {
+			this.defaultSessionFactory = buildSessionFactoryForDatasource( this.defaultDataSource );
+			this.sessionFactories.put( this.defaultDataSource, this.defaultSessionFactory );
+		}
 
 		configureLoggingPerORMConfig();
 
 		return this;
+	}
+
+	private SessionFactory buildSessionFactoryForDatasource( Key datasource ) {
+		SessionFactoryBuilder builder = new SessionFactoryBuilder( context, datasource, config, entityMap.getOrDefault( datasource, new ArrayList<>() ) );
+		return builder.build();
 	}
 
 	/**
