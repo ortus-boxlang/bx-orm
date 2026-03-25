@@ -21,10 +21,8 @@ import java.util.List;
 import java.util.Set;
 
 import ortus.boxlang.modules.orm.ORMApp;
-import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
-import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIF;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -41,17 +39,11 @@ import ortus.boxlang.runtime.validation.Validator;
 public class EntityNameArray extends BaseORMBIF {
 
 	/**
-	 * ORM Service, responsible for managing ORM applications.
-	 */
-	private ORMService ormService;
-
-	/**
 	 * Constructor
 	 */
 	public EntityNameArray() {
 		super();
-		this.ormService		= ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService );
-		declaredArguments	= new Argument[] {
+		declaredArguments = new Argument[] {
 		    new Argument( false, "String", Key.delimiter, ",", Set.of( Validator.NON_EMPTY ) ),
 		    new Argument( false, "String", Key.datasource, Set.of( Validator.NON_EMPTY ) ),
 		};
