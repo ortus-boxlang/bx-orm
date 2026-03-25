@@ -36,15 +36,20 @@ package ortus.boxlang.modules.orm.bifs;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.jdbc.ConnectionManager;
+import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.services.DatasourceService;
 import tools.BaseORMTest;
 
 public class ORMReloadTest extends BaseORMTest {
 
-	@DisplayName( "It can reload the ORM application" )
+	@DisplayName( "It closes all session factories" )
 	@Test
 	public void testORMReload() {
 		instance.executeSource(
@@ -62,4 +67,36 @@ public class ORMReloadTest extends BaseORMTest {
 		assertThat( variables.get( Key.of( "sessionFactoryPreReload" ) ) ).isNotEqualTo( variables.get( Key.of( "sessionFactoryPostReload" ) ) );
 	}
 
+	@Disabled( "Need to resolve datasource.getUniqueName() not found issue first" )
+	@DisplayName( "It shuts down datasources and connection pools" )
+	@Test
+	public void testORMReloadDatasourceShutdown() {
+		Key					testDB							= Key.of( "TestDB" );
+		Key					dsn2							= Key.of( "dsn2" );
+
+		DatasourceService	datasourceService				= instance.getDataSourceService();
+		ConnectionManager	connectionManager				= context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
+		DataSource			preReloadDatasource				= connectionManager.getDatasource( testDB );
+		DataSource			preReloadDatasource2			= connectionManager.getDatasource( dsn2 );
+		Key					uniqueName						= preReloadDatasource.getUniqueName();
+		DataSource			preReloadDatasourceFromService	= datasourceService.get( uniqueName );
+		var					allDS							= datasourceService.getAll();
+
+		instance.executeSource(
+		    """
+		    result = ormReload();
+		    """,
+		    context
+		);
+
+		DataSource	postReloadDatasource			= connectionManager.getDatasource( testDB );
+		DataSource	postReloadDatasource2			= connectionManager.getDatasource( dsn2 );
+		DataSource	postReloadDatasourceFromService	= datasourceService.get( preReloadDatasource.getUniqueName() );
+		assertThat( preReloadDatasourceFromService.getHikariDataSource().isClosed() ).isTrue();
+		assertThat( preReloadDatasource.getHikariDataSource().isClosed() ).isTrue();
+		assertThat( preReloadDatasource2.getHikariDataSource().isClosed() ).isTrue();
+		assertThat( preReloadDatasource ).isNotSameInstanceAs( postReloadDatasource );
+		assertThat( preReloadDatasource2 ).isNotSameInstanceAs( postReloadDatasource2 );
+		assertThat( preReloadDatasourceFromService ).isNotSameInstanceAs( postReloadDatasourceFromService );
+	}
 }
