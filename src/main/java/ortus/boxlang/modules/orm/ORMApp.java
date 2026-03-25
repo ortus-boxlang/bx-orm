@@ -487,10 +487,6 @@ public class ORMApp {
 			ormDatasource.shutdown();
 		} );
 		this.datasources.clear();
-
-		DataSource defaultDataSource = connectionManager.getDatasource( this.defaultDataSource );
-		logger.debug( "ORMApp.shutdown: Shutting down and removing default datasource: {}", defaultDataSource.getOriginalName() );
-		runtime.getDataSourceService().remove( defaultDataSource.getUniqueName() );
 		this.defaultDataSource = null;
 
 	}
