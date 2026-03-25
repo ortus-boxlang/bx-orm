@@ -19,8 +19,8 @@ package ortus.boxlang.modules.orm;
 
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import org.hibernate.Session;
 import org.hibernate.metadata.ClassMetadata;
@@ -45,6 +45,7 @@ import ortus.boxlang.runtime.services.BaseService;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.util.EncryptionUtil;
 
 /**
  * Java class responsible for constructing and managing the Hibernate ORM
@@ -162,41 +163,68 @@ public class ORMService extends BaseService {
 	 */
 
 	/**
-	 * Stringify the value for ORM configuration uniqueness detection.
-	 *
-	 * @param value The value to stringify. Arrays, structs, and string-castable values are supported.
-	 */
-	public static String stringify( Object value ) {
-		if ( value instanceof Array valArray ) {
-			return valArray.stream()
-			    .map( StringCaster::cast )
-			    .collect( Collectors.joining( "," ) );
-		}
-		if ( value instanceof IStruct valStruct ) {
-			return valStruct.entrySet().stream()
-			    .sorted( Map.Entry.comparingByKey() )
-			    .map( entry -> StringCaster.cast( entry.getKey().getName() ) + "=" + stringify( entry.getValue() ) )
-			    .collect( Collectors.joining( "," ) );
-		}
-		return StringCaster.cast( value );
-	}
-
-	/**
 	 * Helper method to construct ORM based application names, which rely on the unique combination
 	 * of an application name and the application's configuration.
+	 * <p>
+	 * Builds a canonical string representation of the relevant config keys and hashes it.
+	 * No streams or lambdas are used; struct keys are sorted via TreeMap to guarantee
+	 * a deterministic result regardless of insertion order.
 	 *
 	 * @param appName The application name.
 	 * @param config  The application configuration.
 	 *
-	 * @return A unique key for the given application name and configuration.
+	 * @return A deterministic, unique key for the given application name and configuration.
 	 */
 	public static Key buildUniqueAppName( Key appName, IStruct config ) {
-		List<Key>	hashableKeys	= List.of( ORMKeys.ORMEnabled, ORMKeys.ORMSettings, Key.datasource );
-		String		ormSettingKey	= hashableKeys.stream().map( key -> {
-										return stringify( config.containsKey( key ) ? config.get( key ) : "" );
-									} )
-		    .collect( Collectors.joining( "_" ) );
-		return Key.of( new StringBuilder( appName.getNameNoCase() ).append( "_" ).append( ormSettingKey.hashCode() ).toString() );
+		StringBuilder sb = new StringBuilder( 64 );
+		canonicalize( config.containsKey( ORMKeys.ORMEnabled ) ? config.get( ORMKeys.ORMEnabled ) : "", sb );
+		sb.append( '|' );
+		canonicalize( config.containsKey( Key.datasource ) ? config.get( Key.datasource ) : "", sb );
+		sb.append( '|' );
+		canonicalize( config.containsKey( ORMKeys.ORMSettings ) ? config.get( ORMKeys.ORMSettings ) : "", sb );
+		return Key.of( appName.getNameNoCase().trim() + "_" + EncryptionUtil.generate64BitHash( sb.toString() ) );
+	}
+
+	/**
+	 * Writes a canonical, order-independent representation of {@code value} into {@code sb}.
+	 * <p>
+	 * Handles nested {@link IStruct} (keys sorted case-insensitively via TreeMap),
+	 * {@link Array}, and any scalar value via {@link StringCaster}.
+	 * No streams, collectors, or lambdas are used.
+	 *
+	 * @param value The value to canonicalize (IStruct, Array, or scalar).
+	 * @param sb    The StringBuilder to append into.
+	 */
+	private static void canonicalize( Object value, StringBuilder sb ) {
+		if ( value instanceof IStruct valStruct ) {
+			TreeMap<String, Object> sorted = new TreeMap<>( String.CASE_INSENSITIVE_ORDER );
+			for ( Map.Entry<Key, Object> entry : valStruct.entrySet() ) {
+				sorted.put( entry.getKey().getNameNoCase(), entry.getValue() );
+			}
+			sb.append( '{' );
+			boolean first = true;
+			for ( Map.Entry<String, Object> entry : sorted.entrySet() ) {
+				if ( !first ) {
+					sb.append( ',' );
+				}
+				first = false;
+				sb.append( entry.getKey() ).append( '=' );
+				canonicalize( entry.getValue(), sb );
+			}
+			sb.append( '}' );
+		} else if ( value instanceof Array valArray ) {
+			sb.append( '[' );
+			for ( int i = 0, len = valArray.size(); i < len; i++ ) {
+				if ( i > 0 )
+					sb.append( ',' );
+				canonicalize( valArray.get( i ), sb );
+			}
+			sb.append( ']' );
+		} else if ( value != null ) {
+			sb.append( StringCaster.cast( value ) );
+		} else {
+			sb.append( "null" );
+		}
 	}
 
 	/**
