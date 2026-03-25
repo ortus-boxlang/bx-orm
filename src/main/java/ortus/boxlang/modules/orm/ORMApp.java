@@ -464,9 +464,6 @@ public class ORMApp {
 	 */
 	public void shutdown() {
 		logger.debug( "Shutting down ORM App: " + this.name );
-		// @TODO: "It is the responsibility of the application to ensure that there are
-		// no open sessions before calling this method as the impact on those
-		// sessions is indeterminate."
 		for ( SessionFactory sessionFactory : this.sessionFactories.values() ) {
 			logger.debug( "ORMApp.shutdown: Closing session factory: {}", sessionFactory );
 			sessionFactory.close();
@@ -481,8 +478,13 @@ public class ORMApp {
 		this.datasources.forEach( ( datasource ) -> {
 			DataSource ormDatasource = connectionManager.getDatasource( datasource );
 			logger.debug( "ORMApp.shutdown: Shutting down and removing datasource: {}", ormDatasource.getOriginalName() );
-			runtime.getDataSourceService().remove( ormDatasource.getUniqueName() );
-			// ormDatasource.shutdown();
+			Boolean foundAndRemoved = runtime.getDataSourceService().remove( ormDatasource.getUniqueName() );
+			if ( !foundAndRemoved ) {
+				logger.warn(
+				    "ORMApp shutdown: Attempted to remove datasource [{}] from datasource service by unique name [{}], but it was not found. It may have already been removed or never added properly.",
+				    ormDatasource.getOriginalName(), ormDatasource.getUniqueName() );
+			}
+			ormDatasource.shutdown();
 		} );
 		this.datasources.clear();
 
