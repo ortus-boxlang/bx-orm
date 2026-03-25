@@ -39,6 +39,7 @@ import static com.google.common.truth.Truth.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
 public class ORMReloadTest extends BaseORMTest {
@@ -46,8 +47,19 @@ public class ORMReloadTest extends BaseORMTest {
 	@DisplayName( "It can reload the ORM application" )
 	@Test
 	public void testORMReload() {
-		instance.executeSource( "result = ormReload()", context );
+		instance.executeSource(
+		    """
+		    sessionFactoryPreReload = ormGetSessionFactory();
+		    result = ormReload();
+		    sessionFactoryPostReload = ormGetSessionFactory();
+
+		    oldSessionFactoryClosed = sessionFactoryPreReload.isClosed();
+		    """,
+		    context
+		);
 		assertThat( variables.get( result ).getClass().getName() ).isEqualTo( "org.hibernate.internal.SessionFactoryImpl" );
+		assertThat( variables.getAsBoolean( Key.of( "oldSessionFactoryClosed" ) ) ).isTrue();
+		assertThat( variables.get( Key.of( "sessionFactoryPreReload" ) ) ).isNotEqualTo( variables.get( Key.of( "sessionFactoryPostReload" ) ) );
 	}
 
 }
