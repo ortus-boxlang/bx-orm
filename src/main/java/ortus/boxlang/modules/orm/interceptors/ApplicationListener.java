@@ -66,6 +66,7 @@ public class ApplicationListener extends BaseInterceptor {
 	public void onApplicationStart( IStruct args ) {
 		BaseApplicationListener	startingListener	= ( BaseApplicationListener ) args.get( Key.listener );
 		IBoxContext				context				= ( IBoxContext ) args.get( Key.context );
+		this.logger.trace( "onApplicationStart - checking to see if ORM is enabled" );
 		if ( context == null ) {
 			// Fallback for boxlang 1.5.0 which does not provide the context in the args
 			context = RequestBoxContext.getCurrent();
@@ -80,6 +81,7 @@ public class ApplicationListener extends BaseInterceptor {
 		ORMConfig ormConfig = ORMConfig.loadFromContext( requestContext );
 		if ( ormConfig == null ) {
 			// ORM is not enabled for this application
+			this.logger.trace( "onApplicationStart - ORM is not enabled for this application" );
 			return;
 		}
 		// Lazy-load the ORM service if needed, since it was not loaded into the runtime until after module initialization was done
@@ -87,6 +89,7 @@ public class ApplicationListener extends BaseInterceptor {
 			this.ormService = ( ( ORMService ) getRuntime().getGlobalService( ORMKeys.ORMService ) );
 		}
 		if ( this.ormService.getORMAppByContext( requestContext ) == null ) {
+			this.logger.trace( "onApplicationStart fired; Starting ORM application" );
 			this.ormService.startupApp( requestContext, ormConfig, startingListener );
 		}
 	}
