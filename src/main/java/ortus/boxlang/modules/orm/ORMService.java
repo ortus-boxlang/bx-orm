@@ -455,6 +455,16 @@ public class ORMService extends BaseService {
 			}
 		}
 
+		// Step 5: Eagerly install a fresh ORMContext for the reloading request's JDBC context.
+		// The old one was removed in Step 1. Without this, the first ORM call after reload
+		// would lazily create a new ORMContext which is fine, but doing it here ensures the
+		// calling code (e.g. ORMReload BIF) immediately sees the new app — no null window.
+		try {
+			ORMContext.getForContext( jdbcContext );
+		} catch ( Exception e ) {
+			logger.warn( "Could not eagerly initialize new ORMContext after reload: {}", e.getMessage() );
+		}
+
 		return newApp;
 	}
 

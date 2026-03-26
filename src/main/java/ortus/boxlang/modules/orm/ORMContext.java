@@ -172,14 +172,17 @@ public class ORMContext {
 
 	/**
 	 * Retrieve the initialized ORM application for this request context.
+	 * <p>
+	 * Returns the cached reference when it is still the live app in the service.
+	 * Re-fetches from the service only when the cache is null or stale (i.e. the
+	 * service holds a different instance, such as after an {@code ORMReload()} call).
 	 */
 	public ORMApp getORMApp() {
-		// In case the ORMContext was initialized before the ORMApp was fully loaded into the runtime,
-		// attempt to lazy-load the app reference if it's not already set.
-		if ( this.ormApp == null ) {
-			this.ormApp = this.ormService.getORMAppByContext( this.context );
+		ORMApp current = this.ormService.getORMAppByContext( this.context );
+		// Re-use the fast cached path when the service still points at the same instance.
+		if ( current != null && current != this.ormApp ) {
+			this.ormApp = current;
 		}
-
 		return this.ormApp;
 	}
 
@@ -208,7 +211,7 @@ public class ORMContext {
 	 * @return The Hibernate session.
 	 */
 	public Session getSession( Key datasource ) {
-		return getSession( this.ormApp.getDatasourceForNameOrDefault( context, datasource ) );
+		return getSession( getORMApp().getDatasourceForNameOrDefault( context, datasource ) );
 	}
 
 	/**
