@@ -78,11 +78,6 @@ public class ORMApp {
 	private Map<Key, SessionFactory>		sessionFactories	= new ConcurrentHashMap<>();
 
 	/**
-	 * The boxlang context used to create this ORM application.
-	 */
-	private RequestBoxContext				context;
-
-	/**
 	 * The ORM configuration.
 	 */
 	private ORMConfig						config;
@@ -125,14 +120,13 @@ public class ORMApp {
 	 *
 	 * @param context The BoxLang Request context for the application.
 	 * @param config  The ORM configuration for the application.
+	 * @param name    A unique name for this ORM application, typically derived from the BoxLang context.
 	 */
 	public ORMApp( RequestBoxContext context, ORMConfig config, Key name ) {
-		this.context			= context;
 		this.logger				= runtime.getLoggingService().getLogger( "orm" );
 		this.config				= config;
 		this.name				= name;
 		this.defaultDataSource	= this.config.datasource;
-
 		this.logger.debug( "ORMApp created for application: [{}]", name );
 	}
 
@@ -144,39 +138,63 @@ public class ORMApp {
 
 	/**
 	 * Start up the ORM application, creating session factories for all discovered entities and their datasources.
+	 *
+	 * @param context The BoxLang context for this ORM application.
+	 *
+	 * @return The ORMApp instance, with session factories built and ready for use.
 	 */
-	public ORMApp startup() {
-		this.entityMap = MappingGenerator.discoverEntities( this.context, this.config );
+	public ORMApp startup( IBoxContext context ) {
+		IJDBCCapableContext jdbcContext = ( IJDBCCapableContext ) context.getParentOfType( IJDBCCapableContext.class );
 
-		if ( logger.isDebugEnabled() )
+		// Discover entities for this application and group them by datasource.
+		this.entityMap = MappingGenerator.discoverEntities( jdbcContext, this.config );
+		if ( logger.isDebugEnabled() ) {
 			logger.debug( "Discovered entities on [{}] datasources", this.entityMap.size() );
+		}
 
+		// For each datasource with discovered entities, create a session factory and add it to the map. Also track the datasource names in an array for easy
+		// access.
 		this.entityMap.forEach( ( datasource, entities ) -> {
-			if ( logger.isDebugEnabled() )
+			if ( logger.isDebugEnabled() ) {
 				logger.debug( "Creating session factory for datasource: {}", datasource );
+			}
 
 			this.datasources.add( datasource );
-
-			SessionFactory factory = buildSessionFactoryForDatasource( datasource );
+			SessionFactory factory = buildSessionFactoryForDatasource( datasource, jdbcContext );
 			this.sessionFactories.put( datasource, factory );
 
 			if ( datasource.equals( this.defaultDataSource ) ) {
-				if ( logger.isDebugEnabled() )
+				if ( logger.isDebugEnabled() ) {
 					logger.debug( "Setting the default session factory to the default datasource: {}", datasource );
+				}
 				this.defaultSessionFactory = factory;
 			}
 		} );
+
+		// If no entities were discovered for the default datasource, we still need to create a session factory for it so that the ORM application can
+		// function at all. It will just be an empty session factory with no mapped entities.
 		if ( this.defaultSessionFactory == null ) {
-			this.defaultSessionFactory = buildSessionFactoryForDatasource( this.defaultDataSource );
+			this.defaultSessionFactory = buildSessionFactoryForDatasource( this.defaultDataSource, jdbcContext );
 			this.sessionFactories.put( this.defaultDataSource, this.defaultSessionFactory );
 		}
 
+		// Configure logging according to the ORM configuration, after all session factories are built.
+		// This ensures that any logging during session factory construction is not affected by the new configuration, which could cause confusion or issues
+		// if the new configuration is invalid.
 		configureLoggingPerORMConfig();
 
 		return this;
 	}
 
-	private SessionFactory buildSessionFactoryForDatasource( Key datasource ) {
+	/**
+	 * Build a session factory for the given datasource using the provided JDBC context.
+	 *
+	 * @param datasource The datasource for which to build the session factory.
+	 * @param context    The JDBC context to use for building the session factory.
+	 *
+	 * @return A new SessionFactory instance for the given datasource.
+	 */
+	private SessionFactory buildSessionFactoryForDatasource( Key datasource, IJDBCCapableContext context ) {
 		SessionFactoryBuilder builder = new SessionFactoryBuilder( context, datasource, config, entityMap.getOrDefault( datasource, new ArrayList<>() ) );
 		return builder.build();
 	}
@@ -403,31 +421,46 @@ public class ORMApp {
 	 * Get the SessionFactory instantiated for this particular datasource.
 	 *
 	 * @param datasourceName Datasource name to look up the session factory for.
+	 * @param context        The BoxLang context to use for looking up the session factory, which will be used to get the datasource if needed.
+	 *
+	 * @throws BoxRuntimeException if no session factory is found for the given datasource name.
+	 *
+	 * @return the SessionFactory for the given datasource name.
 	 */
-	public SessionFactory getSessionFactoryOrThrow( String datasourceName ) {
-		return getSessionFactoryOrThrow( Key.of( datasourceName ) );
+	public SessionFactory getSessionFactoryOrThrow( String datasourceName, IBoxContext context ) {
+		return getSessionFactoryOrThrow( Key.of( datasourceName ), context );
 	}
 
 	/**
 	 * Get the SessionFactory instantiated for this particular datasource.
 	 *
 	 * @param datasourceName Datasource name to look up the session factory for.
+	 * @param context        The BoxLang context to use for looking up the session factory, which will be used to get the datasource if needed.
+	 *
+	 * @throws BoxRuntimeException if no session factory is found for the given datasource name.
+	 *
+	 * @return the SessionFactory for the given datasource name.
 	 */
-	public SessionFactory getSessionFactoryOrThrow( Key datasourceName ) {
-		IJDBCCapableContext jdbcContext = context.getParentOfType( IJDBCCapableContext.class );
-		return getSessionFactoryOrThrow( jdbcContext.getConnectionManager().getDatasourceOrThrow( datasourceName ) );
+	public SessionFactory getSessionFactoryOrThrow( Key datasourceName, IBoxContext context ) {
+		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
+		return getSessionFactoryOrThrow(
+		    connectionManager.getDatasourceOrThrow( datasourceName )
+		);
 	}
 
 	/**
 	 * Get the SessionFactory instantiated for this particular datasource.
 	 *
 	 * @param datasource The datasource for which to get the session factory.
+	 *
+	 * @throws BoxRuntimeException if no session factory is found for the given datasource.
+	 *
+	 * @return the SessionFactory for the given datasource.
 	 */
 	public SessionFactory getSessionFactoryOrThrow( DataSource datasource ) {
 		if ( !this.sessionFactories.containsKey( Key.of( datasource.getOriginalName() ) ) ) {
 			throw new BoxRuntimeException( "No session factory found for datasource: " + datasource.getOriginalName() );
 		}
-
 		return this.sessionFactories.get( Key.of( datasource.getOriginalName() ) );
 	}
 
@@ -448,7 +481,7 @@ public class ORMApp {
 	 */
 	public DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {
 		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
-		return datasourceName != null ? connectionManager.getDatasourceOrThrow( datasourceName )
+		return ( datasourceName != null ) ? connectionManager.getDatasourceOrThrow( datasourceName )
 		    : connectionManager.getDefaultDatasourceOrThrow();
 	}
 
@@ -464,30 +497,27 @@ public class ORMApp {
 	 */
 	public void shutdown() {
 		logger.debug( "Shutting down ORM App: " + this.name );
-		for ( SessionFactory sessionFactory : this.sessionFactories.values() ) {
-			logger.debug( "ORMApp.shutdown: Closing session factory: {}", sessionFactory );
-			sessionFactory.close();
-		}
-		// This SHOULD be a redundant call, and SHOULD no-op if it was closed above.
-		logger.debug( "ORMApp.shutdown: Closing default session factory: {}", this.defaultSessionFactory );
-		this.defaultSessionFactory.close();
-		this.sessionFactories.clear();
 
-		// shouldn't this be performed by BoxLang Core?
-		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
-		this.datasources.forEach( ( datasource ) -> {
-			DataSource ormDatasource = connectionManager.getDatasource( datasource );
-			logger.debug( "ORMApp.shutdown: Shutting down and removing datasource: {}", ormDatasource.getOriginalName() );
-			Boolean foundAndRemoved = runtime.getDataSourceService().remove( ormDatasource.getUniqueName() );
-			if ( !foundAndRemoved ) {
-				logger.warn(
-				    "ORMApp shutdown: Attempted to remove datasource [{}] from datasource service by unique name [{}], but it was not found. It may have already been removed or never added properly.",
-				    ormDatasource.getOriginalName(), ormDatasource.getUniqueName() );
+		// Close all session factories, which should also close any open sessions and connections.
+		// Log each close for visibility into shutdown progress, since it can
+		for ( Map.Entry<Key, SessionFactory> entry : this.sessionFactories.entrySet() ) {
+			try {
+				logger.debug( "ORMApp.shutdown: Closing session factory: {}", entry.getKey() );
+				entry.getValue().close();
+			} catch ( Exception e ) {
+				logger.error( "ORMApp.shutdown: Error closing session factory [{}]: {}", entry.getKey(), e.getMessage() );
 			}
-			ormDatasource.shutdown();
-		} );
-		this.datasources.clear();
-		this.defaultDataSource = null;
+		}
 
+		// Clear the map and null the default reference; no second close() call needed
+		// since defaultSessionFactory is always in sessionFactories.values() already.
+		this.sessionFactories.clear();
+		this.sessionFactories		= null;
+		this.defaultSessionFactory	= null;
+		this.datasources.clear();
+		this.datasources		= null;
+		this.defaultDataSource	= null;
+		this.config				= null;
+		this.entityMap			= null;
 	}
 }

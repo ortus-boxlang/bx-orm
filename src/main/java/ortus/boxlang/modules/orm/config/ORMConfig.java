@@ -71,6 +71,18 @@ public class ORMConfig {
 	private BoxLangLogger				logger;
 
 	/**
+	 * Holds the BootstrapServiceRegistry built by {@link #toHibernateConfig()} so that
+	 * {@link ortus.boxlang.modules.orm.SessionFactoryBuilder} can close it on the
+	 * <em>failure</em> path (i.e., when {@code buildSessionFactory()} throws).
+	 * <p>
+	 * On success this registry must remain open: it is the root of the Hibernate service
+	 * hierarchy and is closed transitively via {@code SessionFactory.close()}.
+	 * Closing it early destroys the registry chain and causes {@code UnknownServiceException}
+	 * on the next {@code openSession()} call.
+	 */
+	private BootstrapServiceRegistry	bootstrapRegistry;
+
+	/**
 	 * Specifies whether ColdFusion should automatically generate entity mappings
 	 * for the persistent CFCs. If generateMappings=false, the mapping should be
 	 * provided in the form of <code>hbm.xml</code> files stored ALONGSIDE the persistent CFCs. If true, the ORM will generate the mapping XML files on
@@ -532,16 +544,18 @@ public class ORMConfig {
 	 */
 	public Configuration toHibernateConfig() {
 		// Load the event handler class if it is specified, else null
-		DynamicObject				eventHandlerClass	= this.eventHandler != null
+		DynamicObject eventHandlerClass = this.eventHandler != null
 		    ? loadBoxLangClassByFQN( this.eventHandler )
 		    : null;
-		BootstrapServiceRegistry	bootstrapRegistry	= new BootstrapServiceRegistryBuilder()
+		// Build the BootstrapServiceRegistry with the event listener integrator if an event handler class was specified. This registry will be closed by
+		// SessionFactoryBuilder if session factory construction fails to prevent leaks; on success it remains open as the root of the Hibernate service
+		// hierarchy and is closed transitively via SessionFactory.close().
+		this.bootstrapRegistry = new BootstrapServiceRegistryBuilder()
 		    .applyIntegrator( new EventListener( eventHandlerClass ) )
 		    .build();
-		Configuration				configuration		= new Configuration( bootstrapRegistry );
-		var							sysEnvProps			= new Properties();
-
-		Field[]						availableSettings	= AvailableSettings.class.getFields();
+		Configuration	configuration		= new Configuration( this.bootstrapRegistry );
+		var				sysEnvProps			= new Properties();
+		Field[]			availableSettings	= AvailableSettings.class.getFields();
 		for ( var prop : System.getProperties().entrySet() ) {
 			String settingName = ( ( String ) prop.getKey() ).toUpperCase();
 			if ( settingName.startsWith( "HIBERNATE_" ) ) {
@@ -690,6 +704,29 @@ public class ORMConfig {
 		    true,
 		    this.context.getCurrentImports()
 		).invokeConstructor( this.context );
+	}
+
+	/**
+	 * Close the BootstrapServiceRegistry that was created during {@link #toHibernateConfig()}.
+	 * <p>
+	 * Called by {@link ortus.boxlang.modules.orm.SessionFactoryBuilder} only on the
+	 * <em>failure</em> path (when {@code buildSessionFactory()} throws) to prevent
+	 * classloader and integrator leaks from an orphaned registry.
+	 * <p>
+	 * On the success path this method must NOT be called: the registry remains live as
+	 * the top of the Hibernate service hierarchy and is closed transitively when
+	 * {@code SessionFactory.close()} is called.
+	 */
+	public void closeBootstrapRegistry() {
+		if ( this.bootstrapRegistry != null ) {
+			try {
+				this.bootstrapRegistry.close();
+			} catch ( Exception ignored ) {
+				// Hibernate may have already closed it on success; ignore the error.
+			} finally {
+				this.bootstrapRegistry = null;
+			}
+		}
 	}
 
 	/**

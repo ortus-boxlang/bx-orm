@@ -42,7 +42,6 @@ public class BoxPropertySetter implements Setter {
 
 	private Property				mappedProperty;
 	private PersistentClass			mappedEntity;
-	private IBoxContext				context;
 
 	/**
 	 * Runtime
@@ -54,19 +53,36 @@ public class BoxPropertySetter implements Setter {
 	 */
 	private BoxLangLogger			logger;
 
+	/**
+	 * Constructor for the BoxPropertySetter.
+	 *
+	 * @param context        The BoxLang context for the application.
+	 * @param mappedProperty The Hibernate property mapping that this setter will set values for.
+	 * @param mappedEntity   The Hibernate entity mapping that this property belongs to, used for logging purposes to provide context about which entity
+	 *                       the property belongs to when logging.
+	 */
 	public BoxPropertySetter( IBoxContext context, Property mappedProperty, PersistentClass mappedEntity ) {
 		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 		this.mappedProperty	= mappedProperty;
 		this.mappedEntity	= mappedEntity;
-		this.context		= context;
 	}
 
 	@Override
 	public void set( Object target, Object value, SessionFactoryImplementor factory ) {
 		Key propertyName = Key.of( mappedProperty.getName() );
-		logger.trace( "Setting property {} on entity {} to value {}", propertyName.getName(), mappedEntity.getEntityName(), value );
+
+		if ( logger.isTraceEnabled() ) {
+			logger.trace(
+			    "BoxPropertySetter - setting property [{}] on entity [{}] to value: {}",
+			    propertyName.getName(),
+			    mappedEntity.getEntityName(),
+			    value
+			);
+		}
+
 		if ( target instanceof IClassRunnable instance ) {
-			instance.getThisScope().put( mappedProperty.getName(), value );
+			// Comenting for now, because properties should be in the variables scope only.
+			// instance.getThisScope().put( propertyName, value );
 			instance.getVariablesScope().put( propertyName, value );
 		}
 	}

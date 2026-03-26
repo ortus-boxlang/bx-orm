@@ -104,7 +104,7 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 	}
 
 	@Override
-	public Class getMappedClass() {
+	public Class<BoxProxy> getMappedClass() {
 		return BoxProxy.class;
 	}
 
@@ -115,8 +115,11 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 
 	@Override
 	protected Setter buildPropertySetter( Property mappedProperty, PersistentClass mappedEntity ) {
-		return new BoxPropertySetter( RequestBoxContext.getCurrent(),
-		    mappedProperty, mappedEntity );
+		return new BoxPropertySetter(
+		    RequestBoxContext.getCurrent(),
+		    mappedProperty,
+		    mappedEntity
+		);
 	}
 
 	@Override

@@ -256,11 +256,12 @@ public class ORMService extends BaseService {
 	 * @return A new or existing ORM application if started already.
 	 */
 	public ORMApp startupApp( RequestBoxContext context, ORMConfig config, BaseApplicationListener startingListener ) {
-		Key appName = ORMService.buildUniqueAppName( startingListener.getAppName(), startingListener.getSettings() );
+		// Derive the key the same way getORMAppByContext() does so lookups always hit.
+		Key appName = ORMService.getAppNameFromContext( context );
 		// Atomically create or get the ORMApp for the given context.
 		return this.ormApps.computeIfAbsent(
 		    appName,
-		    key -> new ORMApp( context, config, appName ).startup()
+		    key -> new ORMApp( context, config, appName ).startup( context )
 		);
 	}
 
@@ -356,8 +357,25 @@ public class ORMService extends BaseService {
 	 * @param context The IBoxContext for the application.
 	 */
 	public void shutdownApp( IBoxContext context ) {
+		// Close all open Hibernate sessions BEFORE tearing down the SessionFactories.
+		// Skipping this causes open Sessions to hold a strong reference to the old
+		// SessionFactory (and its entire QuerySpacesImpl / LoadPlanImpl tree), preventing
+		// GC after every ORMReload() — the primary cause of the heap leak seen in the dump.
+		IBoxContext jdbcContext = context.getParentOfType( IJDBCCapableContext.class );
+		if ( jdbcContext == null ) {
+			jdbcContext = context;
+		}
+		if ( jdbcContext.hasAttachment( ORMKeys.ORMContext ) ) {
+			ORMContext ormContext = ( ORMContext ) jdbcContext.getAttachment( ORMKeys.ORMContext );
+			try {
+				ormContext.shutdown();
+			} catch ( Exception e ) {
+				logger.warn( "Error closing ORM sessions before app shutdown: {}", e.getMessage() );
+			}
+			jdbcContext.removeAttachment( ORMKeys.ORMContext );
+		}
+		// Now it is safe to close the SessionFactories and datasources.
 		this.shutdownApp( ORMService.getAppNameFromContext( context ) );
-		context.removeAttachment( ORMKeys.ORMContext );
 	}
 
 	/**
@@ -370,10 +388,15 @@ public class ORMService extends BaseService {
 	public void shutdownApp( Key uniqueAppName ) {
 		// We remove it first to prevent further access to the ORMApp
 		ORMApp app = this.ormApps.remove( uniqueAppName );
+
+		// Shutdhown the app if it exists, which will close all session factories and datasources associated with the app.
 		if ( app != null ) {
 			logger.debug( "Shutting down ORMApp for unique name [{}]", uniqueAppName );
 			app.shutdown();
 		}
+
+		// Try to get the current thread context and remove any ORMContext attachments, just in case there are any lingering references to the old app that
+		// could cause issues if the same app name is restarted.
 		IBoxContext context = RequestBoxContext.getCurrent();
 		if ( context == null ) {
 			return; // No context to remove from
@@ -396,12 +419,43 @@ public class ORMService extends BaseService {
 		if ( requestContext == null ) {
 			throw new BoxRuntimeException( "No request context available to reload ORM application." );
 		}
-		shutdownApp( requestContext );
-		return startupApp(
-		    requestContext,
-		    ORMConfig.loadFromContext( requestContext ),
-		    requestContext.getApplicationListener()
-		);
+
+		// Step 1: Close any open Hibernate sessions BEFORE rebuilding factories.
+		// This must happen first so sessions don't hold stale factory references.
+		IBoxContext jdbcContext = requestContext.getParentOfType( IJDBCCapableContext.class );
+		if ( jdbcContext == null ) {
+			jdbcContext = requestContext;
+		}
+		if ( jdbcContext.hasAttachment( ORMKeys.ORMContext ) ) {
+			ORMContext ormContext = ( ORMContext ) jdbcContext.getAttachment( ORMKeys.ORMContext );
+			try {
+				ormContext.shutdown();
+			} catch ( Exception e ) {
+				logger.warn( "Error closing ORM sessions during reload: {}", e.getMessage() );
+			}
+			jdbcContext.removeAttachment( ORMKeys.ORMContext );
+		}
+
+		// Step 2: Build the new ORMApp BEFORE touching the map so there is never a
+		// window where getORMAppByContext() returns null (which breaks concurrent
+		// callers such as cborm module activation running in a parallel thread).
+		Key		appName	= ORMService.getAppNameFromContext( requestContext );
+		ORMApp	newApp	= new ORMApp( requestContext, ORMConfig.loadFromContext( requestContext ), appName ).startup( context );
+
+		// Step 3: Atomically swap — put the new app into the map and retrieve the old one.
+		ORMApp	oldApp	= this.ormApps.put( appName, newApp );
+
+		// Step 4: Shut down the old app's session factories AFTER the new one is live,
+		// minimising the disruption window for any requests still using the old factory.
+		if ( oldApp != null ) {
+			try {
+				oldApp.shutdown();
+			} catch ( Exception e ) {
+				logger.warn( "Error shutting down old ORMApp during reload: {}", e.getMessage() );
+			}
+		}
+
+		return newApp;
 	}
 
 	/**

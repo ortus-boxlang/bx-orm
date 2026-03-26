@@ -58,26 +58,30 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 public class ORMContext {
 
 	/**
-	 * Runtime
+	 * Static reference to the BoxLang runtime, for accessing services and logging.
 	 */
 	private static final BoxRuntime			runtime				= BoxRuntime.getInstance();
 
 	/**
 	 * Shutdown listener
 	 */
+	// @formatter:off
 	private static Consumer<IBoxContext>	shutdownListener	= ctx -> {
 
-																	if ( !ctx.hasAttachment( ORMKeys.ORMContext ) ) {
-																		return;
-																	}
+		// If the context doesn't have an ORMContext attachment, then there's no ORM state to shut down, so we can skip it.
+		if ( !ctx.hasAttachment( ORMKeys.ORMContext ) ) {
+			return;
+		}
 
-																	runtime.getLoggingService().getLogger( "orm" )
-																	    .debug( "onRequestEnd - Shutting down ORM request" );
-																	ORMContext ormRequestContext = ctx.getAttachment( ORMKeys.ORMContext );
-																	ormRequestContext.shutdown();
-																	ctx.removeAttachment( ORMKeys.ORMContext );
-
-																};
+		// Log the shutdown and shut down the ORM context, which will close all sessions attached to the context.
+		runtime.getLoggingService()
+			.getLogger( "orm" )
+			.debug( "onRequestEnd - Shutting down ORM request" );
+		ORMContext ormRequestContext = ctx.getAttachment( ORMKeys.ORMContext );
+		ormRequestContext.shutdown();
+		ctx.removeAttachment( ORMKeys.ORMContext );
+	};
+	// @formatter:on
 
 	/**
 	 * The logger for the ORM application.
@@ -89,10 +93,19 @@ public class ORMContext {
 	 */
 	private ORMService						ormService;
 
+	/**
+	 * The ORM application for this context.
+	 */
 	private ORMApp							ormApp;
 
+	/**
+	 * The BoxLang context for this ORM context; should be a JDBC-capable context (request or thread).
+	 */
 	private IBoxContext						context;
 
+	/**
+	 * The ORM configuration for this context.
+	 */
 	private ORMConfig						config;
 
 	/**
@@ -146,7 +159,7 @@ public class ORMContext {
 		this.config		= config;
 		this.ormService	= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
 		this.ormApp		= this.ormService.getORMAppByContext( context );
-		this.logger		= runtime.getLoggingService().getLogger( "orm" );
+		this.logger		= this.ormService.getLogger();
 		this.logger.debug( "Initializing ORM context on context type: {}", context.getClass().getSimpleName() );
 	}
 
@@ -161,6 +174,12 @@ public class ORMContext {
 	 * Retrieve the initialized ORM application for this request context.
 	 */
 	public ORMApp getORMApp() {
+		// In case the ORMContext was initialized before the ORMApp was fully loaded into the runtime,
+		// attempt to lazy-load the app reference if it's not already set.
+		if ( this.ormApp == null ) {
+			this.ormApp = this.ormService.getORMAppByContext( this.context );
+		}
+
 		return this.ormApp;
 	}
 
@@ -231,12 +250,12 @@ public class ORMContext {
 		// Auto-flush all sessions at the end of the request
 		// Should we move this to an onRequestEnd() method in case ORMContext.shutdown is called mid-request?
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
-			logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
+			this.logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
 			this.sessions.forEach( ( key, session ) -> session.flush() );
 		}
 
 		// Close all ORM sessions
-		logger.debug( "onRequestEnd - closing ORM sessions" );
+		this.logger.debug( "onRequestEnd - closing ORM sessions" );
 		this.closeAllSessions();
 
 		return this;
@@ -249,12 +268,12 @@ public class ORMContext {
 	 */
 	public ORMContext closeAllSessions() {
 		this.sessions.forEach( ( key, session ) -> {
-			logger.debug( "Closing session on datasource {}", key );
+			this.logger.debug( "Closing session on datasource {}", key );
 			try {
 				closeSessionAndTransaction( session );
 				this.sessions.remove( key );
 			} catch ( Exception e ) {
-				logger.error( "Error closing session or session factory on datasource {}", key.getName(), e );
+				this.logger.error( "Error closing session or session factory on datasource {}", key.getName(), e );
 				// ensure we continue to close other sessions
 			}
 		} );
@@ -264,6 +283,10 @@ public class ORMContext {
 
 	/**
 	 * Close the Hibernate session on the given datasource, and ensure it is removed from the session map.
+	 *
+	 * @param datasourceName The datasource name of the session to close.
+	 *
+	 * @return this ORMContext, for chaining.
 	 */
 	public ORMContext closeSession( Key datasourceName ) {
 		Session session = null;
@@ -282,15 +305,19 @@ public class ORMContext {
 	 * Close the Hibernate session on the given datasource.
 	 * <p>
 	 * Attempts a transaction commit prior to closing the session, if an active transaction is present.
+	 *
+	 * @param session The session to close.
+	 *
+	 * @return this ORMContext, for chaining.
 	 */
 	private ORMContext closeSessionAndTransaction( Session session ) {
 		var tx = session.getTransaction();
 		if ( tx.isActive() ) {
-			logger.trace( "Session has an active transaction; committing before flushing" );
+			this.logger.trace( "Session has an active transaction; committing before flushing" );
 			try {
 				tx.commit();
 			} catch ( Exception e ) {
-				logger.error( "Error committing transaction on session", e );
+				this.logger.error( "Error committing transaction on session", e );
 				tx.rollback();
 			}
 		}
