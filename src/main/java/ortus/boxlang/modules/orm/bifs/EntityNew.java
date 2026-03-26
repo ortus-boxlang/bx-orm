@@ -92,11 +92,17 @@ public class EntityNew extends BaseORMBIF {
 			entity.getVariablesScope().putAll( properties );
 		}
 
-		interceptorService.announce( ORMKeys.EVENT_POST_NEW, Struct.of(
-		    ORMKeys.entityName, entityRecord.getEntityName(),
-		    ORMKeys.entity, entity,
-		    Key.context, context
-		) );
+		// Only announce if we have a state on it.
+		if ( interceptorService.hasState( ORMKeys.EVENT_POST_NEW ) ) {
+			interceptorService.announce(
+			    ORMKeys.EVENT_POST_NEW,
+			    () -> Struct.of(
+			        ORMKeys.entityName, entityRecord.getEntityName(),
+			        ORMKeys.entity, entity,
+			        Key.context, context
+			    )
+			);
+		}
 
 		return entity;
 	}

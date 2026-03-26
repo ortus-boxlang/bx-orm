@@ -34,6 +34,7 @@ import ortus.boxlang.modules.orm.hibernate.BoxProxy;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.BaseApplicationListener;
+import ortus.boxlang.runtime.context.ApplicationBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
@@ -170,6 +171,8 @@ public class ORMService extends BaseService {
 	 * No streams or lambdas are used; struct keys are sorted via TreeMap to guarantee
 	 * a deterministic result regardless of insertion order.
 	 *
+	 * @deprecated This method is no longer used to build application names, unless we ever allow it.
+	 *
 	 * @param appName The application name.
 	 * @param config  The application configuration.
 	 *
@@ -235,12 +238,11 @@ public class ORMService extends BaseService {
 	 * @return A unique key for the given application name and configuration.
 	 */
 	public static Key getAppNameFromContext( IBoxContext context ) {
-		RequestBoxContext requestContext = context.getRequestContext();
-		if ( requestContext == null ) {
-			throw new BoxRuntimeException( "No request context available to build unique ORM application name." );
+		ApplicationBoxContext appContext = context.getApplicationContext();
+		if ( appContext == null ) {
+			throw new BoxRuntimeException( "No application context available to retrieve ORM application." );
 		}
-		IStruct settings = requestContext.getApplicationListener().getSettings();
-		return buildUniqueAppName( context.getApplicationContext().getApplication().getName(), settings );
+		return appContext.getApplication().getName();
 	}
 
 	/**
@@ -477,13 +479,11 @@ public class ORMService extends BaseService {
 	 * @return The ORM application for the given context or null if not found
 	 */
 	public ORMApp getORMAppByContext( IBoxContext context ) {
-		RequestBoxContext requestContext = context.getRequestContext();
-		if ( requestContext == null ) {
-			throw new BoxRuntimeException( "No request context available to get ORM application." );
+		ApplicationBoxContext appContext = context.getApplicationContext();
+		if ( appContext == null ) {
+			throw new BoxRuntimeException( "No application context available to retrieve ORM application." );
 		}
-		IStruct	settings	= requestContext.getApplicationListener().getSettings();
-		Key		appName		= ORMService.buildUniqueAppName( context.getApplicationContext().getApplication().getName(), settings );
-		return getORMApp( appName );
+		return getORMApp( appContext.getApplication().getName() );
 	}
 
 	/**

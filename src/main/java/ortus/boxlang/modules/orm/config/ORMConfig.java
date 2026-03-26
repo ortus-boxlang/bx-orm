@@ -43,6 +43,7 @@ import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.services.InterceptorService;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
@@ -286,11 +287,6 @@ public class ORMConfig {
 	public boolean						proxyLazyLoading		= false;
 
 	/**
-	 * Boxlang context used for class lookups in naming strategies, event handlers, etc.
-	 */
-	private IBoxContext					context;
-
-	/**
 	 * The instantiated naming strategy object.
 	 */
 	private PhysicalNamingStrategy		instantiatedNamingStrategy;
@@ -306,19 +302,30 @@ public class ORMConfig {
 		if ( properties == null ) {
 			properties = new Struct();
 		}
-		this.context = context;
+		final IStruct		finalProperties		= properties;
+		InterceptorService	interceptorService	= runtime.getInterceptorService();
 
-		runtime.getInterceptorService().announce( ORMKeys.EVENT_ORM_PRE_CONFIG_LOAD, Struct.of(
-		    Key.properties, properties,
-		    "context", context
-		) );
+		if ( interceptorService.hasState( ORMKeys.EVENT_ORM_PRE_CONFIG_LOAD ) ) {
+			interceptorService.announce(
+			    ORMKeys.EVENT_ORM_PRE_CONFIG_LOAD,
+			    () -> Struct.of(
+			        Key.properties, finalProperties,
+			        Key.context, context
+			    )
+			);
+		}
 
-		process( properties );
+		process( properties, context );
 
-		runtime.getInterceptorService().announce( ORMKeys.EVENT_ORM_POST_CONFIG_LOAD, Struct.of(
-		    Key.properties, properties,
-		    "context", context
-		) );
+		if ( interceptorService.hasState( ORMKeys.EVENT_ORM_POST_CONFIG_LOAD ) ) {
+			interceptorService.announce(
+			    ORMKeys.EVENT_ORM_POST_CONFIG_LOAD,
+			    () -> Struct.of(
+			        Key.properties, finalProperties,
+			        Key.context, context
+			    )
+			);
+		}
 	}
 
 	/**
@@ -369,8 +376,9 @@ public class ORMConfig {
 	 * accordingly.
 	 *
 	 * @param properties Struct of ORM configuration properties.
+	 * @param context    The IBoxContext object for the current request.
 	 */
-	private void process( IStruct properties ) {
+	private void process( IStruct properties, IBoxContext context ) {
 		if ( properties == null ) {
 			return;
 		}
@@ -445,7 +453,7 @@ public class ORMConfig {
 			}
 		}
 		if ( datasource == null || datasource.equals( Key.EMPTY ) ) {
-			datasource = getAppDefaultDatasource();
+			datasource = getAppDefaultDatasource( context );
 		}
 
 		if ( properties.containsKey( ORMKeys.dbcreate ) && properties.get( ORMKeys.dbcreate ) != null
@@ -504,10 +512,17 @@ public class ORMConfig {
 
 	/**
 	 * Read the default datasource name from application settings.
+	 *
+	 * @param context The IBoxContext to read the application settings from.
+	 *
+	 * @throws BoxRuntimeException if a default datasource is not found in the application settings, or if the default datasource specified is not found
+	 *                             in the datasources struct of the application settings.
+	 *
+	 * @return The default datasource name specified in the application settings, or null if not found.
 	 */
-	private Key getAppDefaultDatasource() {
-		Key		defaultDatasource	= Key.of( ( String ) this.context.getConfigItems( new Key[] { Key.defaultDatasource } ) );
-		IStruct	configDatasources	= ( IStruct ) this.context.getConfigItems( new Key[] { Key.datasources } );
+	private Key getAppDefaultDatasource( IBoxContext context ) {
+		Key		defaultDatasource	= Key.of( ( String ) context.getConfigItems( new Key[] { Key.defaultDatasource } ) );
+		IStruct	configDatasources	= ( IStruct ) context.getConfigItems( new Key[] { Key.datasources } );
 		if ( !defaultDatasource.isEmpty() && configDatasources.containsKey( defaultDatasource ) ) {
 			return defaultDatasource;
 		} else if ( !defaultDatasource.isEmpty() ) {
@@ -697,13 +712,15 @@ public class ORMConfig {
 	 * @return The loaded class.
 	 */
 	private DynamicObject loadBoxLangClassByFQN( String fqn ) {
-		return CLASS_LOCATOR.load(
-		    this.context,
-		    fqn,
-		    ClassLocator.BX_PREFIX,
-		    true,
-		    this.context.getCurrentImports()
-		).invokeConstructor( this.context );
+		return ( DynamicObject ) RequestBoxContext.runInContext( ctx -> {
+			return CLASS_LOCATOR.load(
+			    ctx,
+			    fqn,
+			    ClassLocator.BX_PREFIX,
+			    true,
+			    ctx.getCurrentImports()
+			).invokeConstructor( ctx );
+		} );
 	}
 
 	/**
