@@ -452,22 +452,25 @@ public class MappingGenerator {
 		// Get static metadata without instantiating the class
 		try {
 			// Load as a BoxLang class
-			DynamicObject	classObj	= locator.load(
+			DynamicObject classObj = locator.load(
 			    context,
 			    fqn.toString(),
 			    ClassLocator.BX_PREFIX,
 			    true,
 			    context.getCurrentImports()
 			);
-			Object			metaObj		= classObj.invokeStatic( context, "getMetaStatic" );
-			if ( metaObj instanceof IStruct classMeta ) {
-				return classMeta;
+			if ( classObj.hasMethodNoCase( "getMetaStatic" ) ) {
+				Object metaObj = classObj.invokeStatic( context, "getMetaStatic" );
+				if ( metaObj instanceof IStruct classMeta ) {
+					return classMeta;
+				}
 			}
 		} catch ( Exception e ) {
 			if ( config.ignoreParseErrors ) {
 				logger.warn(
 				    "ORM Mapping Generator: Failed to parse class metadata for [{}]: {}. If this class is not an ORM entity, you can safely ignore this message.",
-				    fqn.toString(), e.getMessage() );
+				    fqn.toString(), e.getMessage()
+				);
 			} else {
 				throw new BoxRuntimeException( "Failed to get metadata for class: " + fqn.toString(), e );
 			}
