@@ -148,7 +148,12 @@ public class MappingGenerator {
 		this.context				= context;
 
 		if ( !this.saveAlongsideEntity ) {
-			this.saveDirectory = Path.of( FileSystemUtil.getTempDirectory(), ENTITY_TEMP_FOLDER, String.valueOf( config.hashCode() ) ).toString();
+			// Use a deterministic directory name based on config content rather than
+			// Object.hashCode() (identity-based), so that repeated ORMReload() calls
+			// reuse the same directory and overwrite mapping files in place instead of
+			// creating a new unique subdirectory each time.
+			String dirKey = String.valueOf( Math.abs( java.util.Objects.hash( config.datasource, config.entityPaths ) ) );
+			this.saveDirectory = Path.of( FileSystemUtil.getTempDirectory(), ENTITY_TEMP_FOLDER, dirKey ).toString();
 			new File( this.saveDirectory ).mkdirs();
 		}
 
@@ -479,6 +484,20 @@ public class MappingGenerator {
 	 */
 	public Map<Key, List<EntityRecord>> getEntityDatasourceMap() {
 		return this.entities.stream().collect( java.util.stream.Collectors.groupingBy( EntityRecord::getDatasource ) );
+	}
+
+	/**
+	 * Return the temporary directory used to store generated {@code .hbm.xml} mapping files, or
+	 * {@code null} if {@code saveMapping=true} (in which case files are saved alongside the entity
+	 * files and no cleanup is needed).
+	 * <p>
+	 * The caller ({@link ortus.boxlang.modules.orm.ORMApp}) uses this to delete the directory on
+	 * shutdown, preventing unbounded disk growth across repeated {@code ORMReload()} calls.
+	 *
+	 * @return Absolute path string of the temp mapping directory, or {@code null}.
+	 */
+	public String getSaveDirectory() {
+		return this.saveAlongsideEntity ? null : this.saveDirectory;
 	}
 
 	/**
