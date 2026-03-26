@@ -81,8 +81,7 @@ public class BoxPropertySetter implements Setter {
 		}
 
 		if ( target instanceof IClassRunnable instance ) {
-			// Comenting for now, because properties should be in the variables scope only.
-			// instance.getThisScope().put( propertyName, value );
+			instance.getThisScope().put( propertyName, value );
 			instance.getVariablesScope().put( propertyName, value );
 		}
 	}
