@@ -23,6 +23,7 @@ import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -152,7 +153,11 @@ public class MappingGenerator {
 			// Object.hashCode() (identity-based), so that repeated ORMReload() calls
 			// reuse the same directory and overwrite mapping files in place instead of
 			// creating a new unique subdirectory each time.
-			String dirKey = String.valueOf( Math.abs( java.util.Objects.hash( config.datasource, config.entityPaths ) ) );
+			String dirKey = String.valueOf(
+			    Math.abs(
+			        java.util.Objects.hash( config.datasource, Arrays.deepHashCode( config.entityPaths ) )
+			    )
+			);
 			this.saveDirectory = Path.of( FileSystemUtil.getTempDirectory(), ENTITY_TEMP_FOLDER, dirKey ).toString();
 			new File( this.saveDirectory ).mkdirs();
 		}

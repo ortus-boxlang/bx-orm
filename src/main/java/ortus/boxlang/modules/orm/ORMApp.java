@@ -144,7 +144,12 @@ public class ORMApp {
 	 * @return The ORMApp instance, with session factories built and ready for use.
 	 */
 	public ORMApp startup( IBoxContext context ) {
-		IJDBCCapableContext jdbcContext = ( IJDBCCapableContext ) context.getParentOfType( IJDBCCapableContext.class );
+		IJDBCCapableContext jdbcContext = context.getParentOfType( IJDBCCapableContext.class );
+
+		// Guard against startup without a JDBC-capable context, which is required to build session factories and use the ORM application at all.
+		if ( jdbcContext == null ) {
+			throw new BoxRuntimeException( "No JDBC-capable context found for ORMApp startup" );
+		}
 
 		// Discover entities for this application and group them by datasource.
 		this.entityMap = MappingGenerator.discoverEntities( jdbcContext, this.config );
