@@ -512,12 +512,10 @@ public class ORMApp {
 		// Clear the map and null the default reference; no second close() call needed
 		// since defaultSessionFactory is always in sessionFactories.values() already.
 		this.sessionFactories.clear();
-		this.sessionFactories		= null;
-		this.defaultSessionFactory	= null;
+		this.defaultSessionFactory = null;
 		this.datasources.clear();
-		this.datasources		= null;
 		this.defaultDataSource	= null;
 		this.config				= null;
-		this.entityMap			= null;
+		this.entityMap.clear();
 	}
 }

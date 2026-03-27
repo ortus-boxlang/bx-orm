@@ -178,10 +178,8 @@ public class ORMContext {
 	 * service holds a different instance, such as after an {@code ORMReload()} call).
 	 */
 	public ORMApp getORMApp() {
-		ORMApp current = this.ormService.getORMAppByContext( this.context );
-		// Re-use the fast cached path when the service still points at the same instance.
-		if ( current != null && current != this.ormApp ) {
-			this.ormApp = current;
+		if ( !hasORMApp() ) {
+			this.ormApp = this.ormService.getORMAppByContext( this.context );
 		}
 		return this.ormApp;
 	}

@@ -391,7 +391,7 @@ public class ORMService extends BaseService {
 		// We remove it first to prevent further access to the ORMApp
 		ORMApp app = this.ormApps.remove( uniqueAppName );
 
-		// Shutdhown the app if it exists, which will close all session factories and datasources associated with the app.
+		// Shutdown the app if it exists, which will close all session factories and datasources associated with the app.
 		if ( app != null ) {
 			logger.debug( "Shutting down ORMApp for unique name [{}]", uniqueAppName );
 			app.shutdown();

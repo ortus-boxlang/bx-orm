@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- `SessionFactoryBuilder` If for some reason the session factory failed to build, wipe the boostrap registry to avoid leaks
+- `SessionFactoryBuilder` If for some reason the session factory failed to build, wipe the bootstrap registry to avoid leaks
 - Use a deterministic directory name based on config content rather than a hashcode of the config file path for generated mapping files to avoid issues with different absolute paths across environments and ensure consistent mapping file usage.
 
 ## [1.4.1] - 2026-03-23
