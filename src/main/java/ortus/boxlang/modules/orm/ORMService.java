@@ -58,26 +58,26 @@ import ortus.boxlang.runtime.util.EncryptionUtil;
  */
 public class ORMService extends BaseService {
 
-	public static final String BX_CLASS_SUFFIX = "$bx";
-	public static final String CFC_CLASS_SUFFIX = "$cfc";
-	public static final String COMPILED_CLASS_PREFIX = "boxgenerated.class.";
+	public static final String	BX_CLASS_SUFFIX			= "$bx";
+	public static final String	CFC_CLASS_SUFFIX		= "$cfc";
+	public static final String	COMPILED_CLASS_PREFIX	= "boxgenerated.class.";
 
 	/**
 	 * The logger for the ORMEngine.
 	 */
-	private BoxLangLogger logger;
+	private BoxLangLogger		logger;
 
 	/**
 	 * A map of ORM applications, keyed by the unique name of the ORM application.
 	 */
-	private Map<Key, ORMApp> ormApps = new ConcurrentHashMap<>();
+	private Map<Key, ORMApp>	ormApps					= new ConcurrentHashMap<>();
 
 	/**
 	 * Interception points for the ORM service.
 	 */
-	private static final Key[] ORM_INTERCEPTION_POINTS = List.of(
-			ORMKeys.EVENT_POST_NEW,
-			ORMKeys.EVENT_POST_LOAD).toArray(new Key[0]);
+	private static final Key[]	ORM_INTERCEPTION_POINTS	= List.of(
+	    ORMKeys.EVENT_POST_NEW,
+	    ORMKeys.EVENT_POST_LOAD ).toArray( new Key[ 0 ] );
 
 	/**
 	 * --------------------------------------------------------------------------
@@ -89,7 +89,7 @@ public class ORMService extends BaseService {
 	 * public no-arg constructor for the ServiceProvider
 	 */
 	public ORMService() {
-		this(BoxRuntime.getInstance());
+		this( BoxRuntime.getInstance() );
 	}
 
 	/**
@@ -97,32 +97,32 @@ public class ORMService extends BaseService {
 	 *
 	 * @param runtime The BoxRuntime
 	 */
-	public ORMService(BoxRuntime runtime) {
-		super(runtime, ORMKeys.ORMService);
-		getLogger().trace("ORMService built");
+	public ORMService( BoxRuntime runtime ) {
+		super( runtime, ORMKeys.ORMService );
+		getLogger().trace( "ORMService built" );
 
 		// Attach appender to Hibernate logging categories
-		String[] hibernateCategories = {
-				"org.hibernate.SQL",
-				"org.hibernate.type.descriptor.sql",
-				"org.hibernate.event",
-				"org.hibernate.cache",
-				"org.hibernate.stat"
+		String[]		hibernateCategories	= {
+		    "org.hibernate.SQL",
+		    "org.hibernate.type.descriptor.sql",
+		    "org.hibernate.event",
+		    "org.hibernate.cache",
+		    "org.hibernate.stat"
 		};
 
 		// TODO: Make this configurable. For now, log debug so it can assist us in
 		// debugging.
-		LoggerContext loggerContext = runtime.getLoggingService().getLoggerContext();
-		for (String category : hibernateCategories) {
-			Logger hibernateLogger = loggerContext.getLogger(category);
+		LoggerContext	loggerContext		= runtime.getLoggingService().getLoggerContext();
+		for ( String category : hibernateCategories ) {
+			Logger hibernateLogger = loggerContext.getLogger( category );
 			// hibernateLogger.addAppender( consoleAppender );
-			hibernateLogger.addAppender(getLogger().getAppender("orm"));
+			hibernateLogger.addAppender( getLogger().getAppender( "orm" ) );
 			// Add a console appender to the Hibernate logger
-			hibernateLogger.setLevel(logger.isDebugEnabled() ? Level.DEBUG : Level.INFO);
-			hibernateLogger.setAdditive(false); // Prevent messages from going to parent loggers
+			hibernateLogger.setLevel( logger.isDebugEnabled() ? Level.DEBUG : Level.INFO );
+			hibernateLogger.setAdditive( false ); // Prevent messages from going to parent loggers
 		}
 
-		runtime.getInterceptorService().registerInterceptionPoint(ORM_INTERCEPTION_POINTS);
+		runtime.getInterceptorService().registerInterceptionPoint( ORM_INTERCEPTION_POINTS );
 	}
 
 	/**
@@ -146,16 +146,16 @@ public class ORMService extends BaseService {
 	 */
 	@Override
 	public void onStartup() {
-		getLogger().debug("+ ORMService started");
+		getLogger().debug( "+ ORMService started" );
 	}
 
 	/**
 	 * Shut down the ORM service, including all ORM applications.
 	 */
 	@Override
-	public void onShutdown(Boolean force) {
-		getLogger().debug("+ ORMService shutdown requested");
-		this.ormApps.forEach((key, ormApp) -> ormApp.shutdown());
+	public void onShutdown( Boolean force ) {
+		getLogger().debug( "+ ORMService shutdown requested" );
+		this.ormApps.forEach( ( key, ormApp ) -> ormApp.shutdown() );
 		this.ormApps.clear();
 	}
 
@@ -185,14 +185,14 @@ public class ORMService extends BaseService {
 	 * @return A deterministic, unique key for the given application name and
 	 *         configuration.
 	 */
-	public static Key buildUniqueAppName(Key appName, IStruct config) {
-		StringBuilder sb = new StringBuilder(64);
-		canonicalize(config.containsKey(ORMKeys.ORMEnabled) ? config.get(ORMKeys.ORMEnabled) : "", sb);
-		sb.append('|');
-		canonicalize(config.containsKey(Key.datasource) ? config.get(Key.datasource) : "", sb);
-		sb.append('|');
-		canonicalize(config.containsKey(ORMKeys.ORMSettings) ? config.get(ORMKeys.ORMSettings) : "", sb);
-		return Key.of(appName.getNameNoCase().trim() + "_" + EncryptionUtil.generate64BitHash(sb.toString()));
+	public static Key buildUniqueAppName( Key appName, IStruct config ) {
+		StringBuilder sb = new StringBuilder( 64 );
+		canonicalize( config.containsKey( ORMKeys.ORMEnabled ) ? config.get( ORMKeys.ORMEnabled ) : "", sb );
+		sb.append( '|' );
+		canonicalize( config.containsKey( Key.datasource ) ? config.get( Key.datasource ) : "", sb );
+		sb.append( '|' );
+		canonicalize( config.containsKey( ORMKeys.ORMSettings ) ? config.get( ORMKeys.ORMSettings ) : "", sb );
+		return Key.of( appName.getNameNoCase().trim() + "_" + EncryptionUtil.generate64BitHash( sb.toString() ) );
 	}
 
 	/**
@@ -206,35 +206,35 @@ public class ORMService extends BaseService {
 	 * @param value The value to canonicalize (IStruct, Array, or scalar).
 	 * @param sb    The StringBuilder to append into.
 	 */
-	private static void canonicalize(Object value, StringBuilder sb) {
-		if (value instanceof IStruct valStruct) {
-			TreeMap<String, Object> sorted = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-			for (Map.Entry<Key, Object> entry : valStruct.entrySet()) {
-				sorted.put(entry.getKey().getNameNoCase(), entry.getValue());
+	private static void canonicalize( Object value, StringBuilder sb ) {
+		if ( value instanceof IStruct valStruct ) {
+			TreeMap<String, Object> sorted = new TreeMap<>( String.CASE_INSENSITIVE_ORDER );
+			for ( Map.Entry<Key, Object> entry : valStruct.entrySet() ) {
+				sorted.put( entry.getKey().getNameNoCase(), entry.getValue() );
 			}
-			sb.append('{');
+			sb.append( '{' );
 			boolean first = true;
-			for (Map.Entry<String, Object> entry : sorted.entrySet()) {
-				if (!first) {
-					sb.append(',');
+			for ( Map.Entry<String, Object> entry : sorted.entrySet() ) {
+				if ( !first ) {
+					sb.append( ',' );
 				}
 				first = false;
-				sb.append(entry.getKey()).append('=');
-				canonicalize(entry.getValue(), sb);
+				sb.append( entry.getKey() ).append( '=' );
+				canonicalize( entry.getValue(), sb );
 			}
-			sb.append('}');
-		} else if (value instanceof Array valArray) {
-			sb.append('[');
-			for (int i = 0, len = valArray.size(); i < len; i++) {
-				if (i > 0)
-					sb.append(',');
-				canonicalize(valArray.get(i), sb);
+			sb.append( '}' );
+		} else if ( value instanceof Array valArray ) {
+			sb.append( '[' );
+			for ( int i = 0, len = valArray.size(); i < len; i++ ) {
+				if ( i > 0 )
+					sb.append( ',' );
+				canonicalize( valArray.get( i ), sb );
 			}
-			sb.append(']');
-		} else if (value != null) {
-			sb.append(StringCaster.cast(value));
+			sb.append( ']' );
+		} else if ( value != null ) {
+			sb.append( StringCaster.cast( value ) );
 		} else {
-			sb.append("null");
+			sb.append( "null" );
 		}
 	}
 
@@ -245,10 +245,10 @@ public class ORMService extends BaseService {
 	 *
 	 * @return A unique key for the given application name and configuration.
 	 */
-	public static Key getAppNameFromContext(IBoxContext context) {
+	public static Key getAppNameFromContext( IBoxContext context ) {
 		ApplicationBoxContext appContext = context.getApplicationContext();
-		if (appContext == null) {
-			throw new BoxRuntimeException("No application context available to retrieve ORM application.");
+		if ( appContext == null ) {
+			throw new BoxRuntimeException( "No application context available to retrieve ORM application." );
 		}
 		return appContext.getApplication().getName();
 	}
@@ -267,13 +267,13 @@ public class ORMService extends BaseService {
 	 *
 	 * @return A new or existing ORM application if started already.
 	 */
-	public ORMApp startupApp(RequestBoxContext context, ORMConfig config, BaseApplicationListener startingListener) {
+	public ORMApp startupApp( RequestBoxContext context, ORMConfig config, BaseApplicationListener startingListener ) {
 		// Derive the key the same way getORMAppByContext() does so lookups always hit.
-		Key appName = ORMService.getAppNameFromContext(context);
+		Key appName = ORMService.getAppNameFromContext( context );
 		// Atomically create or get the ORMApp for the given context.
 		return this.ormApps.computeIfAbsent(
-				appName,
-				key -> new ORMApp(config, appName).startup(context));
+		    appName,
+		    key -> new ORMApp( config, appName ).startup( context ) );
 	}
 
 	/**
@@ -283,20 +283,20 @@ public class ORMService extends BaseService {
 	 *
 	 * @return
 	 */
-	public static String getEntityName(Object entity) {
-		if (entity instanceof BoxProxy proxyEntity) {
+	public static String getEntityName( Object entity ) {
+		if ( entity instanceof BoxProxy proxyEntity ) {
 			return proxyEntity.getHibernateLazyInitializer().getEntityName();
-		} else if (entity instanceof IClassRunnable boxClass) {
-			return getEntityName(boxClass);
+		} else if ( entity instanceof IClassRunnable boxClass ) {
+			return getEntityName( boxClass );
 		} else {
-			if (entity instanceof String entityString) {
+			if ( entity instanceof String entityString ) {
 				throw new BoxRuntimeException(
-						"The string provided " + entityString + " is not a valid BoxLang ORM entity or proxy.");
+				    "The string provided " + entityString + " is not a valid BoxLang ORM entity or proxy." );
 			} else {
 
 				throw new BoxRuntimeException(
-						"The entity instance of " + entity.getClass().getName()
-								+ " is not a valid BoxLang ORM entity or proxy.");
+				    "The entity instance of " + entity.getClass().getName()
+				        + " is not a valid BoxLang ORM entity or proxy." );
 			}
 		}
 	}
@@ -306,17 +306,17 @@ public class ORMService extends BaseService {
 	 *
 	 * @param entity Instance of IClassRunnable, aka the compiled/parsed entity.
 	 */
-	public static String getEntityName(IClassRunnable entity) {
+	public static String getEntityName( IClassRunnable entity ) {
 		// @TODO: Should we look up the EntityRecord and use that to grab the class
 		// name?
 		IStruct annotations = entity.getAnnotations();
-		if (annotations.containsKey(ORMKeys.entity) && !annotations.getAsString(ORMKeys.entity).isBlank()) {
-			return annotations.getAsString(ORMKeys.entity);
-		} else if (annotations.containsKey(ORMKeys.entityName)
-				&& !annotations.getAsString(ORMKeys.entityName).isBlank()) {
-			return annotations.getAsString(ORMKeys.entityName);
+		if ( annotations.containsKey( ORMKeys.entity ) && !annotations.getAsString( ORMKeys.entity ).isBlank() ) {
+			return annotations.getAsString( ORMKeys.entity );
+		} else if ( annotations.containsKey( ORMKeys.entityName )
+		    && !annotations.getAsString( ORMKeys.entityName ).isBlank() ) {
+			return annotations.getAsString( ORMKeys.entityName );
 		} else {
-			return getClassNameFromFQN(entity.bxGetName().getName());
+			return getClassNameFromFQN( entity.bxGetName().getName() );
 		}
 	}
 
@@ -325,8 +325,8 @@ public class ORMService extends BaseService {
 	 *
 	 * @param fqn Boxlang class FQN, like models.orm.foo
 	 */
-	public static String getClassNameFromFQN(String fqn) {
-		return fqn.substring(fqn.lastIndexOf('.') + 1);
+	public static String getClassNameFromFQN( String fqn ) {
+		return fqn.substring( fqn.lastIndexOf( '.' ) + 1 );
 	}
 
 	/**
@@ -336,12 +336,12 @@ public class ORMService extends BaseService {
 	 *
 	 * @return The primary key value for the given entity instance.
 	 */
-	public static Object getEntityIdentifier(IClassRunnable entity) {
+	public static Object getEntityIdentifier( IClassRunnable entity ) {
 		IBoxContext context = RequestBoxContext.getCurrent();
-		if (context == null) {
-			throw new BoxRuntimeException("No current request context available to retrieve entity identifier.");
+		if ( context == null ) {
+			throw new BoxRuntimeException( "No current request context available to retrieve entity identifier." );
 		}
-		return getEntityIdentifier(entity, context);
+		return getEntityIdentifier( entity, context );
 	}
 
 	/**
@@ -352,15 +352,15 @@ public class ORMService extends BaseService {
 	 *
 	 * @return The primary key value for the given entity instance.
 	 */
-	public static Object getEntityIdentifier(IClassRunnable entity, IBoxContext context) {
-		IBoxContext jdbcContext = context.getParentOfType(IJDBCCapableContext.class);
-		ORMContext ormContext = ORMContext.getForContext(jdbcContext);
-		ORMApp ormApp = ormContext.getORMApp();
-		String entityName = getEntityName(entity);
-		EntityRecord entityRecord = ormApp.lookupEntity(entityName, true);
-		Session session = ormContext.getSession(entityRecord.getDatasource());
-		ClassMetadata metadata = session.getSessionFactory().getClassMetadata(entityRecord.getEntityName());
-		return metadata.getIdentifier(entity);
+	public static Object getEntityIdentifier( IClassRunnable entity, IBoxContext context ) {
+		IBoxContext		jdbcContext		= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext		ormContext		= ORMContext.getForContext( jdbcContext );
+		ORMApp			ormApp			= ormContext.getORMApp();
+		String			entityName		= getEntityName( entity );
+		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
+		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
+		ClassMetadata	metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
+		return metadata.getIdentifier( entity );
 	}
 
 	/**
@@ -371,28 +371,28 @@ public class ORMService extends BaseService {
 	 *
 	 * @param context The IBoxContext for the application.
 	 */
-	public void shutdownApp(IBoxContext context) {
+	public void shutdownApp( IBoxContext context ) {
 		// Close all open Hibernate sessions BEFORE tearing down the SessionFactories.
 		// Skipping this causes open Sessions to hold a strong reference to the old
 		// SessionFactory (and its entire QuerySpacesImpl / LoadPlanImpl tree),
 		// preventing
 		// GC after every ORMReload() — the primary cause of the heap leak seen in the
 		// dump.
-		IBoxContext jdbcContext = context.getParentOfType(IJDBCCapableContext.class);
-		if (jdbcContext == null) {
+		IBoxContext jdbcContext = context.getParentOfType( IJDBCCapableContext.class );
+		if ( jdbcContext == null ) {
 			jdbcContext = context;
 		}
-		if (jdbcContext.hasAttachment(ORMKeys.ORMContext)) {
-			ORMContext ormContext = (ORMContext) jdbcContext.getAttachment(ORMKeys.ORMContext);
+		if ( jdbcContext.hasAttachment( ORMKeys.ORMContext ) ) {
+			ORMContext ormContext = ( ORMContext ) jdbcContext.getAttachment( ORMKeys.ORMContext );
 			try {
 				ormContext.shutdown();
-			} catch (Exception e) {
-				logger.warn("Error closing ORM sessions before app shutdown: {}", e.getMessage(), e);
+			} catch ( Exception e ) {
+				logger.warn( "Error closing ORM sessions before app shutdown: {}", e.getMessage(), e );
 			}
-			jdbcContext.removeAttachment(ORMKeys.ORMContext);
+			jdbcContext.removeAttachment( ORMKeys.ORMContext );
 		}
 		// Now it is safe to close the SessionFactories and datasources.
-		this.shutdownApp(ORMService.getAppNameFromContext(context));
+		this.shutdownApp( ORMService.getAppNameFromContext( context ) );
 	}
 
 	/**
@@ -403,14 +403,14 @@ public class ORMService extends BaseService {
 	 *
 	 * @param uniqueAppName The unique name of the ORM application to shut down.
 	 */
-	public void shutdownApp(Key uniqueAppName) {
+	public void shutdownApp( Key uniqueAppName ) {
 		// We remove it first to prevent further access to the ORMApp
-		ORMApp app = this.ormApps.remove(uniqueAppName);
+		ORMApp app = this.ormApps.remove( uniqueAppName );
 
 		// Shutdown the app if it exists, which will close all session factories and
 		// datasources associated with the app.
-		if (app != null) {
-			logger.debug("Shutting down ORMApp for unique name [{}]", uniqueAppName);
+		if ( app != null ) {
+			logger.debug( "Shutting down ORMApp for unique name [{}]", uniqueAppName );
 			app.shutdown();
 		}
 
@@ -418,12 +418,12 @@ public class ORMService extends BaseService {
 		// just in case there are any lingering references to the old app that
 		// could cause issues if the same app name is restarted.
 		IBoxContext context = RequestBoxContext.getCurrent();
-		if (context == null) {
+		if ( context == null ) {
 			return; // No context to remove from
 		}
 		RequestBoxContext requestContext = context.getRequestContext();
-		if (requestContext != null && requestContext.hasAttachment(ORMKeys.ORMContext)) {
-			requestContext.removeAttachment(ORMKeys.ORMContext);
+		if ( requestContext != null && requestContext.hasAttachment( ORMKeys.ORMContext ) ) {
+			requestContext.removeAttachment( ORMKeys.ORMContext );
 		}
 	}
 
@@ -434,47 +434,47 @@ public class ORMService extends BaseService {
 	 *
 	 * @return The reloaded ORM application.
 	 */
-	public ORMApp reloadApp(IBoxContext context) {
+	public ORMApp reloadApp( IBoxContext context ) {
 		RequestBoxContext requestContext = context instanceof RequestBoxContext castedContext ? castedContext
-				: context.getRequestContext();
-		if (requestContext == null) {
-			throw new BoxRuntimeException("No request context available to reload ORM application.");
+		    : context.getRequestContext();
+		if ( requestContext == null ) {
+			throw new BoxRuntimeException( "No request context available to reload ORM application." );
 		}
 
 		// Step 1: Close any open Hibernate sessions BEFORE rebuilding factories.
 		// This must happen first so sessions don't hold stale factory references.
-		IBoxContext jdbcContext = requestContext.getParentOfType(IJDBCCapableContext.class);
-		if (jdbcContext == null) {
+		IBoxContext jdbcContext = requestContext.getParentOfType( IJDBCCapableContext.class );
+		if ( jdbcContext == null ) {
 			jdbcContext = requestContext;
 		}
-		if (jdbcContext.hasAttachment(ORMKeys.ORMContext)) {
-			ORMContext ormContext = (ORMContext) jdbcContext.getAttachment(ORMKeys.ORMContext);
+		if ( jdbcContext.hasAttachment( ORMKeys.ORMContext ) ) {
+			ORMContext ormContext = ( ORMContext ) jdbcContext.getAttachment( ORMKeys.ORMContext );
 			try {
 				ormContext.shutdown();
-			} catch (Exception e) {
-				logger.warn("Error closing ORM sessions during reload: {}", e.getMessage());
+			} catch ( Exception e ) {
+				logger.warn( "Error closing ORM sessions during reload: {}", e.getMessage(), e );
 			}
-			jdbcContext.removeAttachment(ORMKeys.ORMContext);
+			jdbcContext.removeAttachment( ORMKeys.ORMContext );
 		}
 
 		// Step 2: Build the new ORMApp BEFORE touching the map so there is never a
 		// window where getORMAppByContext() returns null (which breaks concurrent
 		// callers such as cborm module activation running in a parallel thread).
-		Key appName = ORMService.getAppNameFromContext(requestContext);
-		ORMApp newApp = new ORMApp(ORMConfig.loadFromContext(requestContext), appName).startup(context);
+		Key		appName	= ORMService.getAppNameFromContext( requestContext );
+		ORMApp	newApp	= new ORMApp( ORMConfig.loadFromContext( requestContext ), appName ).startup( context );
 
 		// Step 3: Atomically swap — put the new app into the map and retrieve the old
 		// one.
-		ORMApp oldApp = this.ormApps.put(appName, newApp);
+		ORMApp	oldApp	= this.ormApps.put( appName, newApp );
 
 		// Step 4: Shut down the old app's session factories AFTER the new one is live,
 		// minimising the disruption window for any requests still using the old
 		// factory.
-		if (oldApp != null) {
+		if ( oldApp != null ) {
 			try {
 				oldApp.shutdown();
-			} catch (Exception e) {
-				logger.warn("Error shutting down old ORMApp during reload: {}", e.getMessage());
+			} catch ( Exception e ) {
+				logger.warn( "Error shutting down old ORMApp during reload: {}", e.getMessage(), e );
 			}
 		}
 
@@ -487,9 +487,9 @@ public class ORMService extends BaseService {
 		// calling code (e.g. ORMReload BIF) immediately sees the new app — no null
 		// window.
 		try {
-			ORMContext.getForContext(jdbcContext);
-		} catch (Exception e) {
-			logger.warn("Could not eagerly initialize new ORMContext after reload: {}", e.getMessage());
+			ORMContext.getForContext( jdbcContext );
+		} catch ( Exception e ) {
+			logger.warn( "Could not eagerly initialize new ORMContext after reload: {}", e.getMessage(), e );
 		}
 
 		return newApp;
@@ -505,12 +505,12 @@ public class ORMService extends BaseService {
 	 *
 	 * @return The ORM application for the given context or null if not found
 	 */
-	public ORMApp getORMAppByContext(IBoxContext context) {
+	public ORMApp getORMAppByContext( IBoxContext context ) {
 		ApplicationBoxContext appContext = context.getApplicationContext();
-		if (appContext == null) {
-			throw new BoxRuntimeException("No application context available to retrieve ORM application.");
+		if ( appContext == null ) {
+			throw new BoxRuntimeException( "No application context available to retrieve ORM application." );
 		}
-		return getORMApp(appContext.getApplication().getName());
+		return getORMApp( appContext.getApplication().getName() );
 	}
 
 	/**
@@ -520,8 +520,8 @@ public class ORMService extends BaseService {
 	 *
 	 * @return The ORM application, if it exists, or null.
 	 */
-	public ORMApp getORMApp(Key appName) {
-		return this.ormApps.containsKey(appName) ? this.ormApps.get(appName) : null;
+	public ORMApp getORMApp( Key appName ) {
+		return this.ormApps.containsKey( appName ) ? this.ormApps.get( appName ) : null;
 	}
 
 	/**
@@ -531,8 +531,8 @@ public class ORMService extends BaseService {
 	 *
 	 * @return True if the ORM application exists, false otherwise.
 	 */
-	public boolean hasORMApp(Key appName) {
-		return this.ormApps.containsKey(appName);
+	public boolean hasORMApp( Key appName ) {
+		return this.ormApps.containsKey( appName );
 	}
 
 	/**
@@ -550,7 +550,7 @@ public class ORMService extends BaseService {
 	 * @return An array list of all the ORM applications currently running.
 	 */
 	public List<String> getORMAppNames() {
-		return List.copyOf(this.ormApps.keySet().stream().map(Key::getName).toList());
+		return List.copyOf( this.ormApps.keySet().stream().map( Key::getName ).toList() );
 	}
 
 	/**
@@ -563,10 +563,10 @@ public class ORMService extends BaseService {
 	 * Get the ORM logger that logs to the "orm" category.
 	 */
 	public BoxLangLogger getLogger() {
-		if (this.logger == null) {
-			synchronized (ORMService.class) {
-				if (this.logger == null) {
-					this.logger = runtime.getLoggingService().getLogger("orm");
+		if ( this.logger == null ) {
+			synchronized ( ORMService.class ) {
+				if ( this.logger == null ) {
+					this.logger = runtime.getLoggingService().getLogger( "orm" );
 				}
 			}
 		}
