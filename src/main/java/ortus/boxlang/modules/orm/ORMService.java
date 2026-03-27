@@ -263,7 +263,7 @@ public class ORMService extends BaseService {
 		// Atomically create or get the ORMApp for the given context.
 		return this.ormApps.computeIfAbsent(
 		    appName,
-		    key -> new ORMApp( context, config, appName ).startup( context )
+		    key -> new ORMApp( config, appName ).startup( context )
 		);
 	}
 
@@ -442,7 +442,7 @@ public class ORMService extends BaseService {
 		// window where getORMAppByContext() returns null (which breaks concurrent
 		// callers such as cborm module activation running in a parallel thread).
 		Key		appName	= ORMService.getAppNameFromContext( requestContext );
-		ORMApp	newApp	= new ORMApp( requestContext, ORMConfig.loadFromContext( requestContext ), appName ).startup( context );
+		ORMApp	newApp	= new ORMApp( ORMConfig.loadFromContext( requestContext ), appName ).startup( context );
 
 		// Step 3: Atomically swap — put the new app into the map and retrieve the old one.
 		ORMApp	oldApp	= this.ormApps.put( appName, newApp );

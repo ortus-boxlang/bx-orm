@@ -40,7 +40,6 @@ import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
-import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
 import ortus.boxlang.runtime.dynamic.casters.KeyCaster;
@@ -118,11 +117,10 @@ public class ORMApp {
 	/**
 	 * Constructor for ORMApp.
 	 *
-	 * @param context The BoxLang Request context for the application.
-	 * @param config  The ORM configuration for the application.
-	 * @param name    A unique name for this ORM application, typically derived from the BoxLang context.
+	 * @param config The ORM configuration for the application.
+	 * @param name   A unique name for this ORM application, typically derived from the BoxLang context.
 	 */
-	public ORMApp( RequestBoxContext context, ORMConfig config, Key name ) {
+	public ORMApp( ORMConfig config, Key name ) {
 		this.logger				= runtime.getLoggingService().getLogger( "orm" );
 		this.config				= config;
 		this.name				= name;
