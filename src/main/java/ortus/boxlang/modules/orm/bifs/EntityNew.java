@@ -34,8 +34,8 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
-import ortus.boxlang.runtime.validation.Validator;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.validation.Validator;
 
 @BoxBIF
 public class EntityNew extends BaseORMBIF {
@@ -57,17 +57,19 @@ public class EntityNew extends BaseORMBIF {
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
-	 * 
+	 *
 	 * @argument.entityName The name of the entity to create.
-	 * 
+	 *
 	 * @argument.properties A struct of properties to populate on the new entity.
-	 * 
+	 *
 	 * @argument.ignoreExtras If false, an error will be thrown if properties are provided that do not exist on the entity. Not implemented.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		ORMContext	ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 		ORMApp		ormApp		= ormContext.getORMApp();
 		String		entityName	= arguments.getAsString( ORMKeys.entityName );
+
+		// If the ORM application is not initialized, we cannot create an entity.
 		if ( ormApp == null ) {
 			throw new BoxRuntimeException( "ORM application is not initialized." );
 		}
@@ -75,20 +77,32 @@ public class EntityNew extends BaseORMBIF {
 		EntityRecord				entityRecord		= ormApp.lookupEntity( entityName, true );
 		IStruct						properties			= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 
-		SessionFactoryImplementor	sessionFactoryImpl	= ( SessionFactoryImplementor ) ormApp.getSessionFactoryOrThrow( entityRecord.getDatasource() );
-		IClassRunnable				entity				= ( IClassRunnable ) sessionFactoryImpl.getMetamodel().entityPersister( entityRecord.getEntityName() )
-		    .getEntityMetamodel().getTuplizer().instantiate();
+		SessionFactoryImplementor	sessionFactoryImpl	= ( SessionFactoryImplementor ) ormApp.getSessionFactoryOrThrow(
+		    entityRecord.getDatasource(),
+		    context
+		);
+		IClassRunnable				entity				= ( IClassRunnable ) sessionFactoryImpl.getMetamodel()
+		    .entityPersister( entityRecord.getEntityName() )
+		    .getEntityMetamodel()
+		    .getTuplizer()
+		    .instantiate();
 
 		// @TODO: Find a more correct location for the entity population logic. Surely we repeat this somewhere else?
 		if ( properties != null && !properties.isEmpty() ) {
 			entity.getVariablesScope().putAll( properties );
 		}
 
-		interceptorService.announce( ORMKeys.EVENT_POST_NEW, Struct.of(
-		    ORMKeys.entityName, entityRecord.getEntityName(),
-		    ORMKeys.entity, entity,
-		    "context", context
-		) );
+		// Only announce if we have a state on it.
+		if ( interceptorService.hasState( ORMKeys.EVENT_POST_NEW ) ) {
+			interceptorService.announce(
+			    ORMKeys.EVENT_POST_NEW,
+			    () -> Struct.of(
+			        ORMKeys.entityName, entityRecord.getEntityName(),
+			        ORMKeys.entity, entity,
+			        Key.context, context
+			    )
+			);
+		}
 
 		return entity;
 	}

@@ -54,7 +54,9 @@ public class ORMGetSessionFactory extends BaseORMBIF {
 	public SessionFactory _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String datasourceName = StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
 		if ( !datasourceName.isBlank() ) {
-			return this.ormService.getORMAppByContext( context ).getSessionFactoryOrThrow( Key.of( datasourceName ) );
+			return this.ormService
+			    .getORMAppByContext( context )
+			    .getSessionFactoryOrThrow( Key.of( datasourceName ), context );
 		}
 		return this.ormService.getORMAppByContext( context ).getDefaultSessionFactoryOrThrow();
 	}

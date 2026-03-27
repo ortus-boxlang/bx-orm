@@ -34,7 +34,7 @@ import ortus.boxlang.runtime.types.IStruct;
  * <p>
  * This interceptor uses application startup and shutdown events to construct and destroy the ORM service. (Which is itself responsible for
  * constructing the ORM session factories, etc.)
- * 
+ *
  * @since 1.0.0
  */
 public class ApplicationListener extends BaseInterceptor {
@@ -108,7 +108,7 @@ public class ApplicationListener extends BaseInterceptor {
 		}
 
 		// If the orm app doesn't exist, this is a no-op
-		this.ormService.shutdownApp( ORMService.buildUniqueAppName( application.getName(), application.getStartingListener().getSettings() ) );
+		this.ormService.shutdownApp( application.getName() );
 	}
 
 }

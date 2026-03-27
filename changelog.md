@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- **Memory leak on ORM reload** — all open Hibernate sessions are now closed before tearing down `SessionFactory` instances, preventing stale session/factory references from blocking garbage collection after every `ORMReload()`.
+- **Memory leak on session factory build failure** — `SessionFactoryBuilder` now wipes the `BootstrapServiceRegistry` when `buildSessionFactory()` throws, so the registry is not orphaned on the failure path.
+- **Stale ORM context after reload** — the old `ORMContext` is removed from the JDBC context before rebuilding, and a fresh one is eagerly installed after the new app is live, eliminating null-window races for concurrent callers.
+- **Null context in threaded scenarios** — `EntityTuplizer` and related components now obtain the box context safely when executing in a non-request thread.
+- **Null pointer when the method does not exist on a tuplizer call** — added an existence check before invoking optional methods.
+- Improved exception logging to include full stack traces throughout the ORM lifecycle.
+
+### ⭐ Added
+
+- Use a deterministic directory name based on config content rather than a hashcode of the config file path for generated mapping files, ensuring consistent mapping file usage across different environments and absolute paths.
+
+### ⚡ Changed
+
+- **Hot-path interception performance** — all `interceptorService.announce()` calls on hot code paths (entity instantiation, config load) are now guarded with `hasState()` checks and use lazy `Struct` suppliers, avoiding unnecessary struct allocation when no listeners are registered.
+- `ORMConfig` now receives and threads the `IBoxContext` through `process()` and `getAppDefaultDatasource()` so the correct application datasource is resolved in all execution contexts.
+- `ORMService.reloadApp()` now performs an atomic put-and-swap of the new/old `ORMApp` in the registry to minimize the disruption window for requests running concurrently with a reload.
+
 ## [1.4.1] - 2026-03-23
 
 ### ⛓️‍💥 Changed

@@ -23,6 +23,7 @@ import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -148,7 +149,16 @@ public class MappingGenerator {
 		this.context				= context;
 
 		if ( !this.saveAlongsideEntity ) {
-			this.saveDirectory = Path.of( FileSystemUtil.getTempDirectory(), ENTITY_TEMP_FOLDER, String.valueOf( config.hashCode() ) ).toString();
+			// Use a deterministic directory name based on config content rather than
+			// Object.hashCode() (identity-based), so that repeated ORMReload() calls
+			// reuse the same directory and overwrite mapping files in place instead of
+			// creating a new unique subdirectory each time.
+			String dirKey = String.valueOf(
+			    Math.abs(
+			        java.util.Objects.hash( config.datasource, Arrays.deepHashCode( config.entityPaths ) )
+			    )
+			);
+			this.saveDirectory = Path.of( FileSystemUtil.getTempDirectory(), ENTITY_TEMP_FOLDER, dirKey ).toString();
 			new File( this.saveDirectory ).mkdirs();
 		}
 
@@ -447,22 +457,25 @@ public class MappingGenerator {
 		// Get static metadata without instantiating the class
 		try {
 			// Load as a BoxLang class
-			DynamicObject	classObj	= locator.load(
+			DynamicObject classObj = locator.load(
 			    context,
 			    fqn.toString(),
 			    ClassLocator.BX_PREFIX,
 			    true,
 			    context.getCurrentImports()
 			);
-			Object			metaObj		= classObj.invokeStatic( context, "getMetaStatic" );
-			if ( metaObj instanceof IStruct classMeta ) {
-				return classMeta;
+			if ( classObj.hasMethodNoCase( "getMetaStatic" ) ) {
+				Object metaObj = classObj.invokeStatic( context, "getMetaStatic" );
+				if ( metaObj instanceof IStruct classMeta ) {
+					return classMeta;
+				}
 			}
 		} catch ( Exception e ) {
 			if ( config.ignoreParseErrors ) {
 				logger.warn(
 				    "ORM Mapping Generator: Failed to parse class metadata for [{}]: {}. If this class is not an ORM entity, you can safely ignore this message.",
-				    fqn.toString(), e.getMessage() );
+				    fqn.toString(), e.getMessage()
+				);
 			} else {
 				throw new BoxRuntimeException( "Failed to get metadata for class: " + fqn.toString(), e );
 			}
@@ -479,6 +492,20 @@ public class MappingGenerator {
 	 */
 	public Map<Key, List<EntityRecord>> getEntityDatasourceMap() {
 		return this.entities.stream().collect( java.util.stream.Collectors.groupingBy( EntityRecord::getDatasource ) );
+	}
+
+	/**
+	 * Return the temporary directory used to store generated {@code .hbm.xml} mapping files, or
+	 * {@code null} if {@code saveMapping=true} (in which case files are saved alongside the entity
+	 * files and no cleanup is needed).
+	 * <p>
+	 * The caller ({@link ortus.boxlang.modules.orm.ORMApp}) uses this to delete the directory on
+	 * shutdown, preventing unbounded disk growth across repeated {@code ORMReload()} calls.
+	 *
+	 * @return Absolute path string of the temp mapping directory, or {@code null}.
+	 */
+	public String getSaveDirectory() {
+		return this.saveAlongsideEntity ? null : this.saveDirectory;
 	}
 
 	/**

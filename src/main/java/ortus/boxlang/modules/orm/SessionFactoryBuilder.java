@@ -43,7 +43,7 @@ import ortus.boxlang.runtime.scopes.Key;
 
 /**
  * Configures and starts up Hibernate - specifically, configures and starts up a session factory specific to a single datasource.
- * 
+ *
  * @since 1.0.0
  */
 public class SessionFactoryBuilder {
@@ -144,13 +144,21 @@ public class SessionFactoryBuilder {
 		Thread.currentThread().setContextClassLoader( moduleRecord.classLoader );
 
 		// Make sure we clean up the classloader when we're done.
-		SessionFactory	factory;
+		SessionFactory	factory	= null;
 		Configuration	configuration;
 		try {
 			configuration	= buildConfiguration();
 			factory			= configuration.buildSessionFactory();
 		} finally {
 			Thread.currentThread().setContextClassLoader( oldClassLoader );
+			// Only close the BootstrapServiceRegistry on failure. On the success path,
+			// Hibernate's service registry chain (BootstrapRegistry → StandardServiceRegistry
+			// → SessionFactoryServiceRegistry) remains live and is torn down transitively when
+			// SessionFactory.close() is called. Closing it here on success destroys that chain
+			// immediately, causing UnknownServiceException on the next openSession() call.
+			if ( factory == null ) {
+				ormConfig.closeBootstrapRegistry();
+			}
 		}
 
 		return factory;
