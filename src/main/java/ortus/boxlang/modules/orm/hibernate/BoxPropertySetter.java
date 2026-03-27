@@ -24,8 +24,9 @@ import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.property.access.spi.Setter;
 
+import ortus.boxlang.modules.orm.ORMService;
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
@@ -40,13 +41,15 @@ import ortus.boxlang.runtime.scopes.Key;
  */
 public class BoxPropertySetter implements Setter {
 
-	private Property				mappedProperty;
-	private PersistentClass			mappedEntity;
-
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime	= BoxRuntime.getInstance();
+	private static final BoxRuntime	runtime		= BoxRuntime.getInstance();
+
+	/**
+	 * The ORM service, used to load entities by id when Hibernate requests a property value via a primary-key lookup.
+	 */
+	private static final ORMService	ormService	= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
 
 	/**
 	 * The logger for the ORM application.
@@ -54,15 +57,25 @@ public class BoxPropertySetter implements Setter {
 	private BoxLangLogger			logger;
 
 	/**
+	 * The property mapping that this setter will set values for.
+	 */
+	private Property				mappedProperty;
+
+	/**
+	 * The entity mapping that this property belongs to, used for logging purposes to provide context about which entity the property belongs to when
+	 * logging.
+	 */
+	private PersistentClass			mappedEntity;
+
+	/**
 	 * Constructor for the BoxPropertySetter.
 	 *
-	 * @param context        The BoxLang context for the application.
 	 * @param mappedProperty The Hibernate property mapping that this setter will set values for.
 	 * @param mappedEntity   The Hibernate entity mapping that this property belongs to, used for logging purposes to provide context about which entity
 	 *                       the property belongs to when logging.
 	 */
-	public BoxPropertySetter( IBoxContext context, Property mappedProperty, PersistentClass mappedEntity ) {
-		this.logger			= runtime.getLoggingService().getLogger( "orm" );
+	public BoxPropertySetter( Property mappedProperty, PersistentClass mappedEntity ) {
+		this.logger			= ormService.getLogger();
 		this.mappedProperty	= mappedProperty;
 		this.mappedEntity	= mappedEntity;
 	}
