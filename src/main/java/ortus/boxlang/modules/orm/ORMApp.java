@@ -150,7 +150,10 @@ public class ORMApp {
 		}
 
 		// Discover entities for this application and group them by datasource.
-		this.entityMap = MappingGenerator.discoverEntities( jdbcContext, this.config );
+		// Use the full context (not just jdbcContext) so that the class loader has access
+		// to the complete context chain, including application-level mappings (e.g. /CFIDE)
+		// needed to resolve entity parent classes and interfaces during startup.
+		this.entityMap = MappingGenerator.discoverEntities( context, this.config );
 		if ( logger.isDebugEnabled() ) {
 			logger.debug( "Discovered entities on [{}] datasources", this.entityMap.size() );
 		}

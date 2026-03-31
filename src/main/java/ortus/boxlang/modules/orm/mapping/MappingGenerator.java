@@ -44,7 +44,6 @@ import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.ThreadBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StructCaster;
@@ -132,17 +131,17 @@ public class MappingGenerator {
 	private List<EntityRecord>			entities					= new ArrayList<>();
 
 	/**
-	 * The JDBC-capable boxlang context, used to look up datasources referenced in the ORM config or on the entities themselves.
+	 * The boxlang context, used for class loading and path resolution during entity discovery.
 	 */
-	private IJDBCCapableContext			context;
+	private IBoxContext					context;
 
 	/**
 	 * Construct a new MappingGenerator instance.
 	 *
-	 * @param context The JDBC-capable context.
+	 * @param context The full boxlang context (e.g. RequestBoxContext) providing the class resolver chain needed during entity discovery.
 	 * @param config  The ORM configuration.
 	 */
-	public MappingGenerator( IJDBCCapableContext context, ORMConfig config ) {
+	public MappingGenerator( IBoxContext context, ORMConfig config ) {
 		this.logger					= runtime.getLoggingService().getLogger( "orm" );
 		this.config					= config;
 		this.saveAlongsideEntity	= config.saveMapping;
@@ -190,12 +189,12 @@ public class MappingGenerator {
 	 * Retrieve the entity map for this session factory, constructing them if necessary.
 	 * We return a Map of datasource names to a list of EntityRecords.
 	 *
-	 * @param context   The JDBC-capable context.
+	 * @param context   The full boxlang context for entity discovery (class loading and path resolution).
 	 * @param ormConfig The ORM configuration.
 	 *
 	 * @return a map of datasource UNIQUE names to a list of EntityRecords.
 	 */
-	public static Map<Key, List<EntityRecord>> discoverEntities( IJDBCCapableContext context, ORMConfig ormConfig ) {
+	public static Map<Key, List<EntityRecord>> discoverEntities( IBoxContext context, ORMConfig ormConfig ) {
 		return new MappingGenerator( context, ormConfig )
 		    .generateMappings()
 		    .getEntityDatasourceMap();

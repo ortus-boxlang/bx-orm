@@ -24,7 +24,6 @@ import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.types.Array;
@@ -117,7 +116,7 @@ public class GenerateMappings {
 
 			RequestBoxContext.runInContext( ( ctx ) -> {
 				MappingGenerator generator = new MappingGenerator(
-				    ( IJDBCCapableContext ) ctx,
+				    ctx,
 				    ormConfig );
 
 				generator.generateMappings();
