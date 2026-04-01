@@ -309,7 +309,7 @@ public class ORMApp {
 		} else {
 			id = ( Serializable ) GenericCaster.cast( context, keyValue, keyClass.getSimpleName() );
 		}
-		var				entity			= session.get( entityRecord.getEntityName(), id );
+		var entity = session.get( entityRecord.getEntityName(), id );
 		if ( entity instanceof BoxProxy castProxy ) {
 			return castProxy.getRunnable();
 		} else {
