@@ -38,7 +38,7 @@ public class EntityLoadByPK extends BaseORMBIF {
 		super();
 		declaredArguments = new Argument[] {
 		    new Argument( true, "String", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
-		    new Argument( true, "String", Key.id, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		    new Argument( true, "Any", Key.id, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
 		    new Argument( false, "String", ORMKeys.unique, Set.of( Validator.NOT_IMPLEMENTED ) )
 		};
 	}

@@ -31,6 +31,7 @@ import org.hibernate.proxy.ProxyFactory;
 import org.hibernate.tuple.Instantiator;
 import org.hibernate.tuple.entity.AbstractEntityTuplizer;
 import org.hibernate.tuple.entity.EntityMetamodel;
+import org.hibernate.type.ComponentType;
 
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
@@ -120,6 +121,27 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 		if ( id instanceof Key keyClass ) {
 			id = keyClass.getName();
 		}
+
+		// For composite (embedded) identifiers, Hibernate's default DynamicMapComponentTuplizer
+		// calls Map.put(String, value) on the entity. IClassRunnable implements Map<Key, Object>,
+		// so the String key fails the runtime cast to Key due to Java generics type erasure.
+		// We set composite ID properties directly using Key.of() to match the contract.
+		EntityMetamodel model = getEntityMetamodel();
+		if ( model.getIdentifierProperty().isEmbedded() ) {
+			ComponentType	componentType	= ( ComponentType ) model.getIdentifierProperty().getType();
+			String[]		propertyNames	= componentType.getPropertyNames();
+			Object[]		values			= componentType.getPropertyValues( id, getEntityMode() );
+
+			if ( entity instanceof IClassRunnable instance ) {
+				for ( int i = 0; i < propertyNames.length; i++ ) {
+					Key propertyKey = Key.of( propertyNames[ i ] );
+					instance.getThisScope().put( propertyKey, values[ i ] );
+					instance.getVariablesScope().put( propertyKey, values[ i ] );
+				}
+			}
+			return; // Skip super.setIdentifier() which routes through DynamicMapComponentTuplizer
+		}
+
 		super.setIdentifier( entity, id, session );
 	}
 
