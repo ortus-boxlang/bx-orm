@@ -296,7 +296,7 @@ public class ORMApp {
 
 		if ( java.util.Map.class.isAssignableFrom( keyClass ) ) {
 			// Composite key: Hibernate expects a HashMap<String, Object> with String keys (not Key objects)
-			if ( !( keyValue instanceof IStruct compositeStruct ) ) {
+			if ( ! ( keyValue instanceof IStruct compositeStruct ) ) {
 				throw new BoxRuntimeException(
 				    "Entity '" + entityName + "' has a composite primary key. "
 				        + "Pass a struct of { propertyName: value } pairs to entityLoadByPK()." );
