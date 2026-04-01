@@ -126,8 +126,9 @@ public class EntityTuplizer extends AbstractEntityTuplizer {
 		// calls Map.put(String, value) on the entity. IClassRunnable implements Map<Key, Object>,
 		// so the String key fails the runtime cast to Key due to Java generics type erasure.
 		// We set composite ID properties directly using Key.of() to match the contract.
-		if ( entityMetamodel.getIdentifierProperty().isEmbedded() ) {
-			ComponentType	componentType	= ( ComponentType ) entityMetamodel.getIdentifierProperty().getType();
+		EntityMetamodel model = getEntityMetamodel();
+		if ( model.getIdentifierProperty().isEmbedded() ) {
+			ComponentType	componentType	= ( ComponentType ) model.getIdentifierProperty().getType();
 			String[]		propertyNames	= componentType.getPropertyNames();
 			Object[]		values			= componentType.getPropertyValues( id, getEntityMode() );
 
