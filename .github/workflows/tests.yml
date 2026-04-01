@@ -60,7 +60,7 @@ jobs:
           gradle shadowJar test --stacktrace --console=plain -PboxlangVersion="${{ matrix.boxlangVersion }}"
 
       - name: Publish Test Reports
-        uses: mikepenz/action-junit-report@v6.3.0
+        uses: mikepenz/action-junit-report@v6.4.0
         if: always()
         with:
           report_paths: |
