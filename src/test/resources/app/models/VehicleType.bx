@@ -1,0 +1,25 @@
+class entityName="VehicleType" table="vehicle_types" persistent="true" {
+
+	property
+	    name="make"
+	    column="make"
+	    type="string"
+	    ormtype="string"
+	    fieldtype="id"
+	    generator="assigned";
+
+	property
+	    name="model"
+	    column="model"
+	    type="string"
+	    ormtype="string"
+	    fieldtype="id"
+	    generator="assigned";
+
+	property
+	    name="description"
+	    column="description"
+	    type="string"
+	    ormtype="string";
+
+}

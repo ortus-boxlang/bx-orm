@@ -493,4 +493,38 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( item ).isInstanceOf( Array.class );
 	}
 
+	@DisplayName( "It can query composite-key entities via HQL" )
+	@Test
+	public void testHQLWithCompositeKey() {
+		// @formatter:off
+		instance.executeSource( """
+			result = ormExecuteQuery( "FROM VehicleType WHERE make = :make", { make: "Ford" } );
+		""", context );
+		// @formatter:on
+		Object list = variables.get( result );
+		assertThat( list ).isInstanceOf( Array.class );
+		assertThat( ( ( Array ) list ).size() ).isEqualTo( 2 );
+		IClassRunnable first = ( IClassRunnable ) ( ( Array ) list ).get( 0 );
+		assertThat( first.get( Key.of( "make" ) ) ).isEqualTo( "Ford" );
+	}
+
+	@DisplayName( "It can query a single composite-key entity via HQL with unique" )
+	@Test
+	public void testHQLWithCompositeKeyUnique() {
+		// @formatter:off
+		instance.executeSource( """
+			result = ormExecuteQuery(
+				"FROM VehicleType WHERE make = :make AND model = :model",
+				{ make: "Honda", model: "Civic" },
+				true
+			);
+		""", context );
+		// @formatter:on
+		Object item = variables.get( result );
+		assertThat( item ).isInstanceOf( IClassRunnable.class );
+		IClassRunnable vehicleType = ( IClassRunnable ) item;
+		assertThat( vehicleType.get( Key.of( "model" ) ) ).isEqualTo( "Civic" );
+		assertThat( vehicleType.get( Key.of( "description" ) ) ).isEqualTo( "Compact sedan" );
+	}
+
 }
