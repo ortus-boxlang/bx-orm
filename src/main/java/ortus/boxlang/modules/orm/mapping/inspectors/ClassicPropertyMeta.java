@@ -279,10 +279,10 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			column.put( Key._name, annotations.getAsString( Key.column ) );
 		}
 		if ( annotations.containsKey( Key.length ) ) {
-			column.put( Key.length, annotations.getAsString( Key.length ) );
+			column.put( Key.length, StringCaster.cast( annotations.get( Key.length ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.precision ) ) {
-			column.put( ORMKeys.precision, annotations.getAsString( ORMKeys.precision ) );
+			column.put( ORMKeys.precision, StringCaster.cast( annotations.get( ORMKeys.precision ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.scale ) ) {
 			column.put( ORMKeys.scale, annotations.getAsString( ORMKeys.scale ) );
@@ -306,7 +306,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			column.put( ORMKeys.schema, annotations.getAsString( ORMKeys.schema ) );
 		}
 		if ( annotations.containsKey( ORMKeys.dbDefault ) ) {
-			column.put( Key._DEFAULT, annotations.getAsString( ORMKeys.dbDefault ) );
+			column.put( Key._DEFAULT, StringCaster.cast( annotations.get( ORMKeys.dbDefault ) ) );
 		}
 		if ( annotations.containsKey( Key.sqltype ) ) {
 			column.put( Key.sqltype, annotations.getAsString( Key.sqltype ) );
@@ -335,7 +335,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			generator.put( ORMKeys.generated, annotations.getAsString( ORMKeys.generated ) );
 		}
 		if ( annotations.containsKey( ORMKeys.sequence ) ) {
-			generator.put( ORMKeys.sequence, annotations.getAsString( ORMKeys.sequence ) );
+			generator.put( ORMKeys.sequence, StringCaster.cast( annotations.get( ORMKeys.sequence ) ) );
 		}
 		if ( annotations.containsKey( Key.params ) ) {
 			IStruct	theParams	= null;

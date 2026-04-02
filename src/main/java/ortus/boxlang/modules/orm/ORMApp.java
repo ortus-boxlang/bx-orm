@@ -19,6 +19,7 @@ package ortus.boxlang.modules.orm;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -150,7 +151,8 @@ public class ORMApp {
 		}
 
 		// Discover entities for this application and group them by datasource.
-		this.entityMap = MappingGenerator.discoverEntities( jdbcContext, this.config );
+		// We use the Request Context for discovery, so all mappings are discovered
+		this.entityMap = MappingGenerator.discoverEntities( context.getRequestContext(), this.config );
 		if ( logger.isDebugEnabled() ) {
 			logger.debug( "Discovered entities on [{}] datasources", this.entityMap.size() );
 		}
@@ -290,10 +292,25 @@ public class ORMApp {
 		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
 		Session			session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 
-		// @TODO: Support composite keys.
-		String			keyType			= getKeyJavaType( session, entityName ).getSimpleName();
-		Serializable	id				= ( Serializable ) GenericCaster.cast( context, keyValue, keyType );
-		var				entity			= session.get( entityRecord.getEntityName(), id );
+		Class<?>		keyClass		= getKeyJavaType( session, entityName );
+		Serializable	id;
+
+		if ( java.util.Map.class.isAssignableFrom( keyClass ) ) {
+			// Composite key: Hibernate expects a HashMap<String, Object> with String keys (not Key objects)
+			if ( ! ( keyValue instanceof IStruct compositeStruct ) ) {
+				throw new BoxRuntimeException(
+				    "Entity '" + entityName + "' has a composite primary key. "
+				        + "Pass a struct of { propertyName: value } pairs to entityLoadByPK()." );
+			}
+			HashMap<String, Object> compositeId = new HashMap<>();
+			for ( Key k : compositeStruct.keySet() ) {
+				compositeId.put( k.getName(), compositeStruct.get( k ) );
+			}
+			id = compositeId;
+		} else {
+			id = ( Serializable ) GenericCaster.cast( context, keyValue, keyClass.getSimpleName() );
+		}
+		var entity = session.get( entityRecord.getEntityName(), id );
 		if ( entity instanceof BoxProxy castProxy ) {
 			return castProxy.getRunnable();
 		} else {

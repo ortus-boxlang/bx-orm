@@ -44,6 +44,7 @@ public class JDBCTestUtils {
 	public static void resetTables( DataSource datasource, IBoxContext context ) {
 		datasource.execute( "DELETE FROM vehicles", context );
 		datasource.execute( "DELETE FROM manufacturers", context );
+		datasource.execute( "DELETE FROM vehicle_types", context );
 		datasource.execute(
 		    """
 		    INSERT INTO manufacturers ( id, name, address ) VALUES
@@ -60,6 +61,15 @@ public class JDBCTestUtils {
 		    ('1HGCM82633A789012','Honda', 'Ridgeline', 42 ),
 		    ('9ABAZ85656A776723','Ford', 'Fusion', 1 ),
 		    ('0SB123','Studebaker', 'Studious', NULL )
+		    """, context );
+
+		datasource.execute(
+		    """
+		    INSERT INTO vehicle_types (make, model, description) VALUES
+		    ( 'Ford',  'Fusion',   'Mid-size sedan' ),
+		    ( 'Ford',  'F-150',    'Full-size pickup truck' ),
+		    ( 'Honda', 'Accord',   'Mid-size sedan' ),
+		    ( 'Honda', 'Civic',    'Compact sedan' )
 		    """, context );
 
 		//@formatter:off
