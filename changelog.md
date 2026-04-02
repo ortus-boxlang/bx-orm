@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Adds support for composite IDs.
 
+### 🐛 Fixed
+
+- Fixes an issue of lost mappings on entity discoveries, due to wrong parent context being sent.
+
 ## [1.5.0] - 2026-03-27
 
 ### 🐛 Fixed
