@@ -151,7 +151,8 @@ public class ORMApp {
 		}
 
 		// Discover entities for this application and group them by datasource.
-		this.entityMap = MappingGenerator.discoverEntities( jdbcContext, this.config );
+		// We use the Request Context for discovery, so all mappings are discovered
+		this.entityMap = MappingGenerator.discoverEntities( context.getRequestContext(), this.config );
 		if ( logger.isDebugEnabled() ) {
 			logger.debug( "Discovered entities on [{}] datasources", this.entityMap.size() );
 		}
