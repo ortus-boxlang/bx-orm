@@ -204,7 +204,7 @@ jobs:
 
       - name: Bump Version
         run: |
-          ./gradlew bumpMinorVersion --stacktrace --console=plain
+          ./gradlew bumpPatchVersion --stacktrace --console=plain
           git pull
 
       - name: Commit Version Bump
