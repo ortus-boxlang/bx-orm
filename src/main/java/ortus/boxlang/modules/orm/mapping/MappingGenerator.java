@@ -280,7 +280,6 @@ public class MappingGenerator {
 			    String mappedPath = record.getAsString( ORMKeys.mappedPath );
 			    Path path		= Path.of( record.getAsString( ORMKeys.expandedPath ) );
 			    try {
-				    // TODO: Return path.parent() alongside each discovered entity file so we know the entity location / mapping and can get a correct FQN.
 				    return Files.walk( path )
 				        // only files
 				        .filter( Files::isRegularFile )
@@ -467,7 +466,9 @@ public class MappingGenerator {
 			if ( classObj.hasMethodNoCase( "getMetaStatic" ) ) {
 				Object metaObj = classObj.invokeStatic( context, "getMetaStatic" );
 				if ( metaObj instanceof IStruct classMeta ) {
-					return classMeta;
+					// Defensive copy: getMetaStatic() returns a shared class-level struct.
+					// We must not mutate it, or altered values will leak across applications.
+					return new Struct( classMeta );
 				}
 			}
 		} catch ( Exception e ) {
