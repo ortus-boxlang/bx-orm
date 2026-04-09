@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- [BLMODULES-173](https://ortussolutions.atlassian.net/browse/BLMODULES-173) - Fixed issue with mutated entity metadata leaking across BoxLang applications.
+
 ## [1.6.1] - 2026-04-09
 
 ### 🐛 Fixed

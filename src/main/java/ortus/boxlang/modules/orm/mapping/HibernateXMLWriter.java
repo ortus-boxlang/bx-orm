@@ -980,7 +980,8 @@ public class HibernateXMLWriter {
 		Key				datasourceName		= this.entity.getDatasource().isEmpty() ? this.ormConfig.datasource : Key.of( this.entity.getDatasource() );
 		EntityRecord	associatedEntity	= entityLookup.apply( relationClassName, datasourceName );
 		if ( associatedEntity == null ) {
-			String message = String.format( "Could not find entity '%s' referenced in property '%s' on entity '%s'", relationClassName, prop.getName(),
+			String message = String.format( "Could not find entity '%s' on datasource '%s' referenced in property '%s' on entity '%s'", relationClassName,
+			    datasourceName, prop.getName(),
 			    prop.getDefiningEntity().getEntityName() );
 			if ( !this.ormConfig.ignoreParseErrors ) {
 				throw new BoxRuntimeException( message );
