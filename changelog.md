@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- Fixed issue with `scale` annotation not properly cast to a string in `ClassicPropertyMeta`.
+
 ## [1.6.0] - 2026-04-02
 
 ### ⭐ Added
@@ -29,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Null context in threaded scenarios** — `EntityTuplizer` and related components now obtain the box context safely when executing in a non-request thread.
 - **Null pointer when the method does not exist on a tuplizer call** — added an existence check before invoking optional methods.
 - Improved exception logging to include full stack traces throughout the ORM lifecycle.
+- Fixed issue with `dbdefault` annotation not properly cast to a string in `ClassicPropertyMeta`.
 
 ### ⭐ Added
 
