@@ -285,7 +285,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			column.put( ORMKeys.precision, StringCaster.cast( annotations.get( ORMKeys.precision ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.scale ) ) {
-			column.put( ORMKeys.scale, annotations.getAsString( ORMKeys.scale ) );
+			column.put( ORMKeys.scale, StringCaster.cast( annotations.get( ORMKeys.scale ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.unique ) ) {
 			column.put( ORMKeys.unique, BooleanCaster.cast( annotations.get( ORMKeys.unique ) ) );
