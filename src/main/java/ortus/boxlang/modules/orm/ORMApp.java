@@ -44,6 +44,7 @@ import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
 import ortus.boxlang.runtime.dynamic.casters.KeyCaster;
+import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
@@ -445,12 +446,9 @@ public class ORMApp {
 	 * @throws BoxRuntimeException if no session factory is found for the given datasource name.
 	 *
 	 * @return the SessionFactory for the given datasource name.
-	 * 
-	 * @deprecated Use {@link #getSessionFactory(Key)} instead. This method will be removed in a future release.
 	 */
-	@Deprecated( since = "1.6.3", forRemoval = true )
 	public SessionFactory getSessionFactoryOrThrow( String datasourceName, IBoxContext context ) {
-		return getSessionFactory( Key.of( datasourceName ) );
+		return getSessionFactoryOrThrow( Key.of( datasourceName ), context );
 	}
 
 	/**
@@ -462,12 +460,12 @@ public class ORMApp {
 	 * @throws BoxRuntimeException if no session factory is found for the given datasource name.
 	 *
 	 * @return the SessionFactory for the given datasource name.
-	 * 
-	 * @deprecated Use {@link #getSessionFactory(Key)} instead. This method will be removed in a future release.
 	 */
-	@Deprecated( since = "1.6.3", forRemoval = true )
 	public SessionFactory getSessionFactoryOrThrow( Key datasourceName, IBoxContext context ) {
-		return getSessionFactory( datasourceName );
+		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
+		return getSessionFactoryOrThrow(
+		    connectionManager.getDatasourceOrThrow( datasourceName )
+		);
 	}
 
 	/**
@@ -478,54 +476,22 @@ public class ORMApp {
 	 * @throws BoxRuntimeException if no session factory is found for the given datasource.
 	 *
 	 * @return the SessionFactory for the given datasource.
-	 * 
-	 * @deprecated Use {@link #getSessionFactory(Key)} instead. This method will be removed in a future release.
 	 */
-	@Deprecated( since = "1.6.3", forRemoval = true )
 	public SessionFactory getSessionFactoryOrThrow( DataSource datasource ) {
-		return getSessionFactory( Key.of( datasource.getOriginalName() ) );
+		if ( !this.sessionFactories.containsKey( Key.of( datasource.getOriginalName() ) ) ) {
+			throw new BoxRuntimeException( "No session factory found for datasource: " + datasource.getOriginalName() );
+		}
+		return this.sessionFactories.get( Key.of( datasource.getOriginalName() ) );
 	}
 
 	/**
 	 * Get the default session factory for this ORM application.
-	 * 
-	 * @deprecated Use {@link #getDefaultSessionFactory()} instead. This method will be removed in a future release.
 	 */
-	@Deprecated( since = "1.6.3", forRemoval = true )
 	public SessionFactory getDefaultSessionFactoryOrThrow() {
-		return getDefaultSessionFactory();
-	}
-
-	/**
-	 * Get the default session factory for this ORM application.
-	 * 
-	 * @throws BoxRuntimeException if no default session factory is set for this ORM application.
-	 */
-	public SessionFactory getDefaultSessionFactory() {
 		if ( this.defaultSessionFactory == null ) {
 			throw new BoxRuntimeException( "No default session factory set for ORM application" );
 		}
 		return this.defaultSessionFactory;
-	}
-
-	/**
-	 * Get the SessionFactory instantiated for this particular datasource name.
-	 * 
-	 * @param factoryName The name of the session factory to retrieve. In practice, this is the same as the datasource name since we create one session
-	 *                    factory per datasource, but this allows for future flexibility if we want to support multiple session factories per datasource.
-	 * 
-	 * @return the SessionFactory for the given name.
-	 * 
-	 * @throws BoxRuntimeException if no session factory is found for the given name.
-	 */
-	public SessionFactory getSessionFactory( Key factoryName ) {
-		if ( factoryName == null ) {
-			return getDefaultSessionFactory();
-		}
-		if ( !this.sessionFactories.containsKey( factoryName ) ) {
-			throw new BoxRuntimeException( "No session factory found for name: " + factoryName );
-		}
-		return this.sessionFactories.get( factoryName );
 	}
 
 	/**

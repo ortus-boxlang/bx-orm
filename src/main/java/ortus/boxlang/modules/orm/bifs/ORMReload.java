@@ -33,7 +33,7 @@ public class ORMReload extends BaseORMBIF {
 	 * @param arguments Argument scope for the BIF.
 	 */
 	public SessionFactory _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		return this.ormService.reloadApp( context ).getDefaultSessionFactory();
+		return this.ormService.reloadApp( context ).getDefaultSessionFactoryOrThrow();
 	}
 
 }
