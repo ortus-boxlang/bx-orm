@@ -197,8 +197,7 @@ public class ORMContext {
 	 * @return The Hibernate session.
 	 */
 	public Session getSession() {
-		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
-		return getSession( connectionManager.getDefaultDatasourceOrThrow() );
+		return getSession( getConnectionManager().getDefaultDatasourceOrThrow() );
 	}
 
 	/**
@@ -209,7 +208,7 @@ public class ORMContext {
 	 * @return The Hibernate session.
 	 */
 	public Session getSession( Key datasource ) {
-		return getSession( getORMApp().getDatasource( context, datasource ) );
+		return getSession( getDatasource( datasource ) );
 	}
 
 	/**
@@ -234,9 +233,22 @@ public class ORMContext {
 	}
 
 	/**
+	 * Get the datasource for a given name, falling back to the default datasource if the name is null.
+	 * 
+	 * @param datasourceName The name of the datasource to retrieve, or null to retrieve the default datasource.
+	 *
+	 * @throws BoxRuntimeException if neither the named nor a default datasource could be found.
+	 */
+	public DataSource getDatasource( Key datasourceName ) {
+		ConnectionManager connectionManager = getConnectionManager();
+		return ( datasourceName != null ) ? connectionManager.getDatasourceOrThrow( datasourceName )
+		    : connectionManager.getDefaultDatasourceOrThrow();
+	}
+
+	/**
 	 * Getter for this ORM context's ORM configuration.
 	 *
-	 * @return
+	 * @return The ORM configuration for this context.
 	 */
 	public ORMConfig getConfig() {
 		return this.config;
@@ -324,5 +336,14 @@ public class ORMContext {
 		}
 		session.close();
 		return this;
+	}
+
+	/**
+	 * Retrieve the connection manager from the parent JDBC-capable context.
+	 * 
+	 * @return BoxLang ConnectionManager instance
+	 */
+	private ConnectionManager getConnectionManager() {
+		return this.context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
 	}
 }

@@ -504,18 +504,7 @@ public class ORMApp {
 	 */
 	@Deprecated( since = "1.6.3", forRemoval = true )
 	public DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {
-		return getDatasource( context, datasourceName );
-	}
-
-	/**
-	 * Get the datasource for a given name, falling back to the default datasource if the name is null.
-	 *
-	 * @throws BoxRuntimeException if neither the named nor a default datasource could be found.
-	 */
-	public DataSource getDatasource( IBoxContext context, Key datasourceName ) {
-		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
-		return ( datasourceName != null ) ? connectionManager.getDatasourceOrThrow( datasourceName )
-		    : connectionManager.getDefaultDatasourceOrThrow();
+		return ORMContext.getForContext( context ).getDatasource( datasourceName );
 	}
 
 	/**
