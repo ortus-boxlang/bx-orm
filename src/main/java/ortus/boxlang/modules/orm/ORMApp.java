@@ -498,8 +498,21 @@ public class ORMApp {
 	 * Get the datasource for a given name, falling back to the default datasource if the name is null.
 	 *
 	 * Will throw a BoxRuntimeException if the datasource is not found.
+	 * 
+	 * @deprecated Use {@link #getDatasource(IBoxContext, Key)} instead, which requires the context to look up the datasource and is more consistent with
+	 *             how other methods in this class work. This method will be removed in a future release.
 	 */
+	@Deprecated( since = "1.6.3", forRemoval = true )
 	public DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {
+		return getDatasource( context, datasourceName );
+	}
+
+	/**
+	 * Get the datasource for a given name, falling back to the default datasource if the name is null.
+	 *
+	 * @throws BoxRuntimeException if neither the named nor a default datasource could be found.
+	 */
+	public DataSource getDatasource( IBoxContext context, Key datasourceName ) {
 		ConnectionManager connectionManager = context.getParentOfType( IJDBCCapableContext.class ).getConnectionManager();
 		return ( datasourceName != null ) ? connectionManager.getDatasourceOrThrow( datasourceName )
 		    : connectionManager.getDefaultDatasourceOrThrow();

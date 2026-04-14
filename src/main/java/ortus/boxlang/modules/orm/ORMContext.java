@@ -209,7 +209,7 @@ public class ORMContext {
 	 * @return The Hibernate session.
 	 */
 	public Session getSession( Key datasource ) {
-		return getSession( getORMApp().getDatasourceForNameOrDefault( context, datasource ) );
+		return getSession( getORMApp().getDatasource( context, datasource ) );
 	}
 
 	/**
