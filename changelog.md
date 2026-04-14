@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-04-09
+
 ### 🐛 Fixed
 
 - [BLMODULES-173](https://ortussolutions.atlassian.net/browse/BLMODULES-173) - Fixed issue with mutated entity metadata leaking across BoxLang applications.
@@ -259,7 +261,8 @@ No significant changes.
 
 - First iteration of this module
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.1...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.2...HEAD
+[1.6.2]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.4.1...v1.5.0
