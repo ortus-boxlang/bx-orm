@@ -56,9 +56,10 @@ public class ORMGetSessionFactory extends BaseORMBIF {
 		if ( !datasourceName.isBlank() ) {
 			return this.ormService
 			    .getORMAppByContext( context )
-			    .getSessionFactoryOrThrow( Key.of( datasourceName ), context );
+			    .getSessionFactory( Key.of( datasourceName ) );
 		}
-		return this.ormService.getORMAppByContext( context ).getDefaultSessionFactoryOrThrow();
+		return this.ormService.getORMAppByContext( context ).getDefaultSessionFactory();
+
 	}
 
 }

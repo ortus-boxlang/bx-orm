@@ -77,10 +77,7 @@ public class EntityNew extends BaseORMBIF {
 		EntityRecord				entityRecord		= ormApp.lookupEntity( entityName, true );
 		IStruct						properties			= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 
-		SessionFactoryImplementor	sessionFactoryImpl	= ( SessionFactoryImplementor ) ormApp.getSessionFactoryOrThrow(
-		    entityRecord.getDatasource(),
-		    context
-		);
+		SessionFactoryImplementor	sessionFactoryImpl	= ( SessionFactoryImplementor ) ormApp.getSessionFactory( entityRecord.getDatasource() );
 		IClassRunnable				entity				= ( IClassRunnable ) sessionFactoryImpl.getMetamodel()
 		    .entityPersister( entityRecord.getEntityName() )
 		    .getEntityMetamodel()

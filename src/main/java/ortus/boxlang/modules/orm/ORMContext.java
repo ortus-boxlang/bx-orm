@@ -223,7 +223,7 @@ public class ORMContext {
 		return this.sessions.computeIfAbsent( sessionKey, ( key ) -> {
 			logger.debug( "opening NEW session for key: {}", sessionKey.getName() );
 
-			SessionFactory	sessionFactory	= this.ormApp.getSessionFactoryOrThrow( datasource );
+			SessionFactory	sessionFactory	= this.ormApp.getSessionFactory( sessionKey );
 			Session			session			= sessionFactory.openSession();
 			if ( !config.autoManageSession ) {
 				session.setHibernateFlushMode( org.hibernate.FlushMode.MANUAL );
