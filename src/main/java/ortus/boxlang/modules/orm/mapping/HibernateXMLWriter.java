@@ -329,8 +329,12 @@ public class HibernateXMLWriter {
 
 		}
 
-		if ( association.containsKey( ORMKeys.inverseJoinColumn ) ) {
+		if ( association.containsKey( ORMKeys.inverseJoinColumn ) && association.getAsString( Key.type ).equals( "many-to-many" ) ) {
 			addColumnNames( toManyNode, association.getAsString( ORMKeys.inverseJoinColumn ) );
+		} else {
+			logger.warn(
+			    "InverseJoinColumn attribute is not supported on one-to-many associations. Found on property '{}' of entity '{}'. This attribute will be ignored.",
+			    prop.getName(), this.entity.getEntityName() );
 		}
 
 		if ( association.containsKey( Key._CLASS ) ) {
