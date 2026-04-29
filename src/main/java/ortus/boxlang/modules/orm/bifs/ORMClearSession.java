@@ -60,6 +60,9 @@ public class ORMClearSession extends BaseORMBIF {
 
 		// If no ORM app found then ignore
 		if ( ormContext.hasORMApp() ) {
+			if ( logger.isDebugEnabled() ) {
+				logger.debug( "Clearing Hibernate session for datasource: [{}]", datasourceName.isEmpty() ? "default" : datasourceName );
+			}
 			ormContext.getSession( datasourceName.isEmpty() ? null : datasourceName ).clear();
 			return true;
 		}

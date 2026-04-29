@@ -136,6 +136,7 @@ class
 		fieldtype   ="one-to-many"
 		cfc         ="Page"
 		fkcolumn    ="FK_authorID"
+		inversejoincolumn="authorID"
 		inverse     ="true"
 		lazy        ="true"
 		cascade     ="save-update"
