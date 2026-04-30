@@ -28,6 +28,8 @@ import org.hibernate.metadata.ClassMetadata;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.hibernate.BoxProxy;
@@ -114,10 +116,11 @@ public class ORMService extends BaseService {
 		// debugging.
 		LoggerContext	loggerContext		= runtime.getLoggingService().getLoggerContext();
 		for ( String category : hibernateCategories ) {
-			Logger hibernateLogger = loggerContext.getLogger( category );
-			// hibernateLogger.addAppender( consoleAppender );
-			hibernateLogger.addAppender( getLogger().getAppender( "orm" ) );
-			// Add a console appender to the Hibernate logger
+			Logger					hibernateLogger	= loggerContext.getLogger( category );
+			Appender<ILoggingEvent>	ormAppender		= getLogger().getAppender( "orm" );
+			if ( ormAppender != null ) {
+				hibernateLogger.addAppender( ormAppender );
+			}
 			hibernateLogger.setLevel( logger.isDebugEnabled() ? Level.DEBUG : Level.INFO );
 			hibernateLogger.setAdditive( false ); // Prevent messages from going to parent loggers
 		}
