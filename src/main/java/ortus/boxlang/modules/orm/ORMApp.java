@@ -299,8 +299,10 @@ public class ORMApp {
 			// Composite key: Hibernate expects a HashMap<String, Object> with String keys (not Key objects)
 			if ( ! ( keyValue instanceof IStruct compositeStruct ) ) {
 				throw new BoxRuntimeException(
-				    "Entity '" + entityName + "' has a composite primary key. "
-				        + "Pass a struct of { propertyName: value } pairs to entityLoadByPK()." );
+				    String.format(
+				        "Entity '%s' has a composite primary key. Pass a struct of { propertyName: value } pairs to entityLoadByPK().",
+				        entityName
+				    ) );
 			}
 			HashMap<String, Object> compositeId = new HashMap<>();
 			for ( Key k : compositeStruct.keySet() ) {
@@ -499,8 +501,8 @@ public class ORMApp {
 	 *
 	 * Will throw a BoxRuntimeException if the datasource is not found.
 	 * 
-	 * @deprecated Use {@link #getDatasource(IBoxContext, Key)} instead, which requires the context to look up the datasource and is more consistent with
-	 *             how other methods in this class work. This method will be removed in a future release.
+	 * @deprecated Use {@link ORMContext#getDatasource(IBoxContext, Key)} instead, which requires the context to look up the datasource and is more
+	 *             consistent with how other methods in this class work. This method will be removed in a future release.
 	 */
 	@Deprecated( since = "1.6.3", forRemoval = true )
 	public DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {
