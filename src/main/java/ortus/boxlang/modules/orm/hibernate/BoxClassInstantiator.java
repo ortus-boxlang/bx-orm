@@ -252,9 +252,9 @@ public class BoxClassInstantiator implements Instantiator {
 	@Override
 	public boolean isInstance( Object object ) {
 		if ( object instanceof IClassRunnable theClass ) {
-			logger.debug( "Checking to see if {} is an instance of {}", theClass.getClass().getName(), this.entityName );
+			logger.trace( "Checking to see if {} is an instance of {}", theClass.getClass().getName(), this.entityName );
 			String objectEntityName = entityNameResolver.resolveEntityName( theClass );
-			logger.debug( "Looking at annotations, found entity name {}", objectEntityName );
+			logger.trace( "Looking at annotations, found entity name {}", objectEntityName );
 			return this.entityName.equals( objectEntityName )
 			    || subclassClassNames.contains( objectEntityName );
 		}
