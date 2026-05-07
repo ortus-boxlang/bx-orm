@@ -165,7 +165,9 @@ public class ORMApp {
 			}
 
 			this.datasources.add( datasource );
-			SessionFactory factory = buildSessionFactoryForDatasource( datasource, jdbcContext );
+			long			sfBuildStart	= System.currentTimeMillis();
+			SessionFactory	factory			= buildSessionFactoryForDatasource( datasource, jdbcContext );
+			logger.debug( "ORM startup metric - Hibernate SessionFactory build time [{}]: {}ms", datasource, System.currentTimeMillis() - sfBuildStart );
 			this.sessionFactories.put( datasource, factory );
 
 			if ( datasource.equals( this.defaultDataSource ) ) {
@@ -179,7 +181,10 @@ public class ORMApp {
 		// If no entities were discovered for the default datasource, we still need to create a session factory for it so that the ORM application can
 		// function at all. It will just be an empty session factory with no mapped entities.
 		if ( this.defaultSessionFactory == null ) {
+			long sfBuildStart = System.currentTimeMillis();
 			this.defaultSessionFactory = buildSessionFactoryForDatasource( this.defaultDataSource, jdbcContext );
+			logger.debug( "ORM startup metric - Hibernate SessionFactory build time [{}]: {}ms", this.defaultDataSource,
+			    System.currentTimeMillis() - sfBuildStart );
 			this.sessionFactories.put( this.defaultDataSource, this.defaultSessionFactory );
 		}
 

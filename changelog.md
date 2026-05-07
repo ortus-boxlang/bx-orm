@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+### ⭐ Added
+
+
+
 ### 🐛 Fixed
 
 * [BLMODULES-191](https://ortussolutions.atlassian.net/browse/BLMODULES-191) - Defensive code against disabled ORM logging causing boxlang cli startup failure.
