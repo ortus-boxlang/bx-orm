@@ -316,7 +316,7 @@ public class HibernateXMLWriter {
 		// <bag>, <map>, <set>, etc.
 		Element		collectionNode		= generateCollectionElement( prop, association, columnInfo );
 
-		List<Key>	stringProperties	= List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.catalog );
+		List<Key>	stringProperties	= List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.catalog, ORMKeys.missingRowIgnored );
 		populateStringAttributes( collectionNode, association, stringProperties );
 
 		// <one-to-many> or <many-to-many>
@@ -503,6 +503,10 @@ public class HibernateXMLWriter {
 		List<Key> stringProperties = List.of( Key._NAME, ORMKeys.cascade, ORMKeys.fetch, ORMKeys.mappedBy, ORMKeys.access,
 		    ORMKeys.lazy, ORMKeys.embedXML, ORMKeys.foreignKey );
 		populateStringAttributes( theNode, association, stringProperties );
+		// One-to-one associations cannot have missing-row behavior. See hibernate-mapping-3.0.dtd
+		if ( !type.equals( "one-to-one" ) ) {
+			populateStringAttributes( theNode, association, List.of( ORMKeys.missingRowIgnored ) );
+		}
 
 		if ( !type.equals( "one-to-one" ) && association.containsKey( ORMKeys.nullable ) ) {
 			theNode.setAttribute( "not-null", trueFalseFormat( !association.getAsBoolean( ORMKeys.nullable ) ) );
@@ -1067,7 +1071,7 @@ public class HibernateXMLWriter {
 				return "order-by";
 			case "uniquekey" :
 				return "unique-key";
-			case "missingRowIgnored" :
+			case "missingrowignored" :
 				return "not-found";
 			default :
 				return name;

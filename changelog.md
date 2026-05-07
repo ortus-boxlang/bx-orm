@@ -12,11 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ⭐ Added
 
-
+- Added debug logging for ORM startup metrics, including entity metadata parsing and Hibernate SessionFactory build times.
 
 ### 🐛 Fixed
 
 * [BLMODULES-191](https://ortussolutions.atlassian.net/browse/BLMODULES-191) - Defensive code against disabled ORM logging causing boxlang cli startup failure.
+* [BLMODULES-198](https://ortussolutions.atlassian.net/browse/BLMODULES-198) - Fix `missingRowIgnored` annotation not being applied to collection relationships.
 
 ## [1.6.3] - 2026-04-29
 
