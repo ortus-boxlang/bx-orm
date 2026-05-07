@@ -152,9 +152,12 @@ public class ORMApp {
 
 		// Discover entities for this application and group them by datasource.
 		// We use the Request Context for discovery, so all mappings are discovered
+		long discoverStart = System.currentTimeMillis();
 		this.entityMap = MappingGenerator.discoverEntities( context.getRequestContext(), this.config );
 		if ( logger.isDebugEnabled() ) {
 			logger.debug( "Discovered entities on [{}] datasources", this.entityMap.size() );
+			logger.debug( "ORM startup metric - total entity discovery, parsing and meta collection: {}ms", System.currentTimeMillis() - discoverStart,
+			    this.entityMap.size() );
 		}
 
 		// For each datasource with discovered entities, create a session factory and add it to the map. Also track the datasource names in an array for easy
