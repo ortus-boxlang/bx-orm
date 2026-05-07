@@ -119,8 +119,6 @@ public class HibernateXMLWriterTest {
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 
-		System.out.println( xmlToString( doc ) );
-
 		assertThat( classEl.getAttributes().getNamedItem( "entity-name" ).getTextContent() )
 		    .isEqualTo( "Manufacturer" );
 	}
