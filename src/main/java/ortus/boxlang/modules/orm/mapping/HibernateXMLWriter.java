@@ -316,7 +316,7 @@ public class HibernateXMLWriter {
 		// <bag>, <map>, <set>, etc.
 		Element		collectionNode		= generateCollectionElement( prop, association, columnInfo );
 
-		List<Key>	stringProperties	= List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.catalog, ORMKeys.missingRowIgnored );
+		List<Key>	stringProperties	= List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.catalog );
 		populateStringAttributes( collectionNode, association, stringProperties );
 
 		// <one-to-many> or <many-to-many>
@@ -343,6 +343,8 @@ public class HibernateXMLWriter {
 			throw new BoxRuntimeException(
 			    "Missing required class name for relationship '%s' on entity '%s'".formatted( prop.getName(), this.entity.getEntityName() ) );
 		}
+
+		populateStringAttributes( toManyNode, association, List.of( ORMKeys.missingRowIgnored ) );
 
 		collectionNode.appendChild( toManyNode );
 		return collectionNode;

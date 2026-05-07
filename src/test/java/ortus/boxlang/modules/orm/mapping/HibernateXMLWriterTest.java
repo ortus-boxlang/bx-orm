@@ -1357,7 +1357,6 @@ public class HibernateXMLWriterTest {
 		assertEquals( "many-to-one", collectionNode.getNodeName() );
 
 		NamedNodeMap attrs = collectionNode.getAttributes();
-
 		assertEquals( "ignore", attrs.getNamedItem( "not-found" ).getTextContent() );
 	}
 
