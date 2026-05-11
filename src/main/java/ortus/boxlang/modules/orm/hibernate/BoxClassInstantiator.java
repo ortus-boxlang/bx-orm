@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.hibernate.EntityNameResolver;
+import org.hibernate.Hibernate;
 import org.hibernate.collection.internal.PersistentBag;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.tuple.Instantiator;
@@ -313,6 +314,10 @@ public class BoxClassInstantiator implements Instantiator {
 			    Object		collection	= scope.get( collectionKey );
 
 			    if ( collection == null ) {
+				    return false;
+			    }
+
+			    if ( !Hibernate.isInitialized( collection ) ) {
 				    return false;
 			    }
 
