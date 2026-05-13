@@ -152,9 +152,12 @@ public class ORMApp {
 
 		// Discover entities for this application and group them by datasource.
 		// We use the Request Context for discovery, so all mappings are discovered
+		long discoverStart = System.currentTimeMillis();
 		this.entityMap = MappingGenerator.discoverEntities( context.getRequestContext(), this.config );
 		if ( logger.isDebugEnabled() ) {
 			logger.debug( "Discovered entities on [{}] datasources", this.entityMap.size() );
+			logger.debug( "ORM startup metric - total entity discovery, parsing and meta collection: {}ms", System.currentTimeMillis() - discoverStart,
+			    this.entityMap.size() );
 		}
 
 		// For each datasource with discovered entities, create a session factory and add it to the map. Also track the datasource names in an array for easy
@@ -165,7 +168,9 @@ public class ORMApp {
 			}
 
 			this.datasources.add( datasource );
-			SessionFactory factory = buildSessionFactoryForDatasource( datasource, jdbcContext );
+			long			sfBuildStart	= System.currentTimeMillis();
+			SessionFactory	factory			= buildSessionFactoryForDatasource( datasource, jdbcContext );
+			logger.debug( "ORM startup metric - Hibernate SessionFactory build time [{}]: {}ms", datasource, System.currentTimeMillis() - sfBuildStart );
 			this.sessionFactories.put( datasource, factory );
 
 			if ( datasource.equals( this.defaultDataSource ) ) {
@@ -179,7 +184,10 @@ public class ORMApp {
 		// If no entities were discovered for the default datasource, we still need to create a session factory for it so that the ORM application can
 		// function at all. It will just be an empty session factory with no mapped entities.
 		if ( this.defaultSessionFactory == null ) {
+			long sfBuildStart = System.currentTimeMillis();
 			this.defaultSessionFactory = buildSessionFactoryForDatasource( this.defaultDataSource, jdbcContext );
+			logger.debug( "ORM startup metric - Hibernate SessionFactory build time [{}]: {}ms", this.defaultDataSource,
+			    System.currentTimeMillis() - sfBuildStart );
 			this.sessionFactories.put( this.defaultDataSource, this.defaultSessionFactory );
 		}
 
@@ -299,8 +307,10 @@ public class ORMApp {
 			// Composite key: Hibernate expects a HashMap<String, Object> with String keys (not Key objects)
 			if ( ! ( keyValue instanceof IStruct compositeStruct ) ) {
 				throw new BoxRuntimeException(
-				    "Entity '" + entityName + "' has a composite primary key. "
-				        + "Pass a struct of { propertyName: value } pairs to entityLoadByPK()." );
+				    String.format(
+				        "Entity '%s' has a composite primary key. Pass a struct of { propertyName: value } pairs to entityLoadByPK().",
+				        entityName
+				    ) );
 			}
 			HashMap<String, Object> compositeId = new HashMap<>();
 			for ( Key k : compositeStruct.keySet() ) {
@@ -499,8 +509,8 @@ public class ORMApp {
 	 *
 	 * Will throw a BoxRuntimeException if the datasource is not found.
 	 * 
-	 * @deprecated Use {@link #getDatasource(IBoxContext, Key)} instead, which requires the context to look up the datasource and is more consistent with
-	 *             how other methods in this class work. This method will be removed in a future release.
+	 * @deprecated Use {@link ORMContext#getDatasource(IBoxContext, Key)} instead, which requires the context to look up the datasource and is more
+	 *             consistent with how other methods in this class work. This method will be removed in a future release.
 	 */
 	@Deprecated( since = "1.6.3", forRemoval = true )
 	public DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {

@@ -207,8 +207,18 @@ public class MappingGenerator {
 	 * This method will generate the XML mapping files for all discovered entities and store them in the entity map.
 	 */
 	public MappingGenerator generateMappings() {
-		ArrayList<IStruct>	classes		= discoverBLClasses( this.entityPaths );
-		boolean				doParallel	= config.enableThreadedMapping && classes.size() > MAX_SYNCHRONOUS_ENTITIES;
+		// Phase 1: Discover all class files in the entity paths
+		long				discoverStart	= System.currentTimeMillis();
+		ArrayList<IStruct>	classes			= discoverBLClasses( this.entityPaths );
+		long				discoverTime	= System.currentTimeMillis() - discoverStart;
+		long				metaParseStart	= System.currentTimeMillis();
+
+		if ( logger.isDebugEnabled() ) {
+			logger.debug( "ORM startup metric - entity file discovery: {}ms ({} candidate files found)", discoverTime, classes.size() );
+		}
+
+		// Phase 2: Parse entity metadata and build EntityRecords
+		boolean doParallel = config.enableThreadedMapping && classes.size() > MAX_SYNCHRONOUS_ENTITIES;
 
 		if ( doParallel ) {
 
@@ -233,8 +243,15 @@ public class MappingGenerator {
 			    .toList();
 		}
 
-		// Generate XML mapping files for each entity
+		if ( logger.isDebugEnabled() ) {
+			long metaParseTime = System.currentTimeMillis() - metaParseStart;
+			logger.debug( "ORM startup metric - entity metadata parsing: {}ms ({} persistent entities found, {} mode)",
+			    metaParseTime, this.entities.size(), doParallel ? "parallel" : "sequential" );
+		}
+
+		// Phase 3: Generate XML mapping files for each entity
 		// Change this to a stream if we will be doing parallel processing
+		long xmlGenStart = System.currentTimeMillis();
 		for ( EntityRecord entity : this.entities ) {
 			IStruct	meta	= entity.getMetadata();
 			String	name	= meta.getAsString( Key.simpleName );
@@ -259,6 +276,12 @@ public class MappingGenerator {
 				}
 			}
 			entity.setXmlFilePath( xmlPath );
+		}
+
+		if ( logger.isDebugEnabled() ) {
+			long	xmlGenTime	= System.currentTimeMillis() - xmlGenStart;
+			String	genMode		= config.generateMappings ? "generated" : "pre-generated";
+			logger.debug( "ORM startup metric - XML mapping generation: {}ms ({} mapping files {})", xmlGenTime, this.entities.size(), genMode );
 		}
 
 		return this;

@@ -193,6 +193,7 @@ public class SessionFactoryBuilder {
 		    .stream()
 		    .collect( java.util.stream.Collectors.toMap( entity -> entity.getEntityName().toLowerCase().trim(), entity -> entity ) );
 
+		// collect XML mapping files and add them to the Hibernate configuration
 		entityMap.values()
 		    .stream()
 		    .map( EntityRecord::getXmlFilePath )

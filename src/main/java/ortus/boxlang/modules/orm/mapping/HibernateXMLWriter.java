@@ -344,6 +344,8 @@ public class HibernateXMLWriter {
 			    "Missing required class name for relationship '%s' on entity '%s'".formatted( prop.getName(), this.entity.getEntityName() ) );
 		}
 
+		populateStringAttributes( toManyNode, association, List.of( ORMKeys.missingRowIgnored ) );
+
 		collectionNode.appendChild( toManyNode );
 		return collectionNode;
 	}
@@ -503,6 +505,10 @@ public class HibernateXMLWriter {
 		List<Key> stringProperties = List.of( Key._NAME, ORMKeys.cascade, ORMKeys.fetch, ORMKeys.mappedBy, ORMKeys.access,
 		    ORMKeys.lazy, ORMKeys.embedXML, ORMKeys.foreignKey );
 		populateStringAttributes( theNode, association, stringProperties );
+		// One-to-one associations cannot have missing-row behavior. See hibernate-mapping-3.0.dtd
+		if ( !type.equals( "one-to-one" ) ) {
+			populateStringAttributes( theNode, association, List.of( ORMKeys.missingRowIgnored ) );
+		}
 
 		if ( !type.equals( "one-to-one" ) && association.containsKey( ORMKeys.nullable ) ) {
 			theNode.setAttribute( "not-null", trueFalseFormat( !association.getAsBoolean( ORMKeys.nullable ) ) );
@@ -1067,7 +1073,7 @@ public class HibernateXMLWriter {
 				return "order-by";
 			case "uniquekey" :
 				return "unique-key";
-			case "missingRowIgnored" :
+			case "missingrowignored" :
 				return "not-found";
 			default :
 				return name;

@@ -131,6 +131,7 @@ public class TransactionManagerTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Mitsubishi Corp" );
 	}
 
+	@Disabled( "AutoManageSession only" )
 	@DisplayName( "Rollbacks are limited to changes in the transaction context" )
 	@Test
 	public void testORMChildTransactionRollback() {

@@ -119,8 +119,6 @@ public class HibernateXMLWriterTest {
 
 		Node		classEl		= doc.getDocumentElement().getFirstChild();
 
-		System.out.println( xmlToString( doc ) );
-
 		assertThat( classEl.getAttributes().getNamedItem( "entity-name" ).getTextContent() )
 		    .isEqualTo( "Manufacturer" );
 	}
@@ -868,10 +866,10 @@ public class HibernateXMLWriterTest {
 		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), ormConfig ).generateXML();
 
 		Node		classEL			= doc.getDocumentElement().getFirstChild();
-		Node		oneToOneNode	= classEL.getFirstChild();
-		assertEquals( "many-to-one", oneToOneNode.getNodeName() );
+		Node		collectionNode	= classEL.getFirstChild();
+		assertEquals( "many-to-one", collectionNode.getNodeName() );
 
-		NamedNodeMap attrs = oneToOneNode.getAttributes();
+		NamedNodeMap attrs = collectionNode.getAttributes();
 
 		assertEquals( "owner", attrs.getNamedItem( "name" ).getTextContent() );
 		assertEquals( "all", attrs.getNamedItem( "cascade" ).getTextContent() );
@@ -1328,10 +1326,43 @@ public class HibernateXMLWriterTest {
 		assertThat( keyAttributes.getNamedItem( "column" ).getTextContent() ).isEqualTo( "subscriptionId" );
 	}
 
+	// @formatter:off
+	@DisplayName( "It handles missingRowIgnored=true" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+			property
+				name="myEnt"
+				fieldtype="one-to-one"
+				cfc="Person"
+				fkcolumn="no"
+				lazy="false"
+				missingrowIgnored="true";
+		}
+	    """
+	} )
+	// @formatter:on
+	public void testMissingRowIgnored( String sourceCode ) {
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+
+		Document	doc				= new HibernateXMLWriter( entityMeta, ( a, b ) -> new EntityRecord( "Person", "models.Person" ), ormConfig ).generateXML();
+
+		String		xml				= xmlToString( doc );
+
+		Node		classEL			= doc.getDocumentElement().getFirstChild();
+		Node		collectionNode	= classEL.getFirstChild();
+		assertEquals( "many-to-one", collectionNode.getNodeName() );
+
+		NamedNodeMap attrs = collectionNode.getAttributes();
+		assertEquals( "ignore", attrs.getNamedItem( "not-found" ).getTextContent() );
+	}
+
 	/**
 	 * @TODO: The following ORM annotations are still lacking tests at either the entity level, the property level, or both:
 	 *        embedXml
-	 *        missingRowIgnored
 	 *        inverse
 	 *        structkeydatatype ?? ACF only?
 	 *        unSavedValue - deprecated
