@@ -9,21 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.4] - 2026-05-13
+
 ### ⭐ Added
 
 - Added debug logging for ORM startup metrics, including entity metadata parsing and Hibernate SessionFactory build times.
 
 ### 🐛 Fixed
 
-* [BLMODULES-191](https://ortussolutions.atlassian.net/browse/BLMODULES-191) - Defensive code against disabled ORM logging causing boxlang cli startup failure.
-* [BLMODULES-198](https://ortussolutions.atlassian.net/browse/BLMODULES-198) - Fix `missingRowIgnored` annotation not being applied to collection relationships.
-* [BLMODULES-204](https://ortussolutions.atlassian.net/browse/BLMODULES-204) - Ensure transaction open only flushes session if `autoManageSession` is enabled.
+- [BLMODULES-191](https://ortussolutions.atlassian.net/browse/BLMODULES-191) - Defensive code against disabled ORM logging causing boxlang cli startup failure.
+- [BLMODULES-198](https://ortussolutions.atlassian.net/browse/BLMODULES-198) - Fix `missingRowIgnored` annotation not being applied to collection relationships.
+- [BLMODULES-204](https://ortussolutions.atlassian.net/browse/BLMODULES-204) - Ensure transaction open only flushes session if `autoManageSession` is enabled.
 
 ## [1.6.3] - 2026-04-29
 
 ### 🐛 Fixed
 
-* [BLMODULES-190](https://ortussolutions.atlassian.net/browse/BLMODULES-190) - Fix error on `one-to-many` associations when `inversejoincolumn` attribute is specified
+- [BLMODULES-190](https://ortussolutions.atlassian.net/browse/BLMODULES-190) - Fix error on `one-to-many` associations when `inversejoincolumn` attribute is specified
 
 ## [1.6.2] - 2026-04-09
 
@@ -277,7 +279,8 @@ No significant changes.
 
 - First iteration of this module
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.3...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.4...HEAD
+[1.6.4]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.0...v1.6.1
