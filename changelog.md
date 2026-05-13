@@ -18,8 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * [BLMODULES-191](https://ortussolutions.atlassian.net/browse/BLMODULES-191) - Defensive code against disabled ORM logging causing boxlang cli startup failure.
 * [BLMODULES-198](https://ortussolutions.atlassian.net/browse/BLMODULES-198) - Fix `missingRowIgnored` annotation not being applied to collection relationships.
+* [BLMODULES-204](https://ortussolutions.atlassian.net/browse/BLMODULES-204) - Ensure transaction open only flushes session if `autoManageSession` is enabled.
 
 ## [1.6.3] - 2026-04-29
+
+### 🐛 Fixed
+
+* [BLMODULES-190](https://ortussolutions.atlassian.net/browse/BLMODULES-190) - Fix error on `one-to-many` associations when `inversejoincolumn` attribute is specified
 
 ## [1.6.2] - 2026-04-09
 

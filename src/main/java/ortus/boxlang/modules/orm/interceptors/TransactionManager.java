@@ -71,8 +71,12 @@ public class TransactionManager extends BaseInterceptor {
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormContext.getSession( datasource );
-			// Ensure any pending operations are flushed before starting the transaction
-			// ormSession.flush();
+			if ( config.autoManageSession ) {
+				// Ensure any pending operations are flushed before starting the transaction
+				// Lucee compat:
+				// https://github.com/Ortus-Solutions/extension-hibernate/blob/857aef3241c7aebaf179cdeb2217a0a3e4ff6be6/extension/src/main/java/ortus/extension/orm/HibernateORMTransaction.java#L48
+				ormSession.flush();
+			}
 			// We should never hit this conditional as long as BoxLang does not support nested transactions
 			if ( ormSession.isJoinedToTransaction() ) {
 				if ( logger.isDebugEnabled() ) {
