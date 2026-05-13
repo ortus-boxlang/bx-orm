@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ⚡ Updates
 
 - Toned down logging on the `ORMConnectionProvider` to avoid noisy logs on every connection acquisition.
-- Dropped "No ORM application found" logs when ORM is disabled. 
+- Dropped "No ORM application found" logs when ORM is disabled.
 
 ## [1.6.5] - 2026-05-26
 
