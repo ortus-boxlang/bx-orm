@@ -72,7 +72,7 @@ public class TransactionManager extends BaseInterceptor {
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormContext.getSession( datasource );
 			// Ensure any pending operations are flushed before starting the transaction
-			ormSession.flush();
+			// ormSession.flush();
 			// We should never hit this conditional as long as BoxLang does not support nested transactions
 			if ( ormSession.isJoinedToTransaction() ) {
 				if ( logger.isDebugEnabled() ) {
