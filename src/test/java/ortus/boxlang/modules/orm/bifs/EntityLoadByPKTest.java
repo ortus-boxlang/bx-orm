@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -243,5 +242,24 @@ public class EntityLoadByPKTest extends BaseORMTest {
 		);
 		// @formatter:on
 		assertEquals( "Entry", variables.get( result ) );
+	}
+
+	@DisplayName( "It will add isDetached method" )
+	@Test
+	public void testEntityIsDetachedMethod() {
+
+		// @formatter:off
+		instance.executeStatement( """
+			vehicle = entityLoadByPK( 'Vehicle', '1HGCM82633A123456' );
+			result = vehicle.$isDetached();
+			
+			ormGetSession().evict( vehicle );
+			resultAfterEvict = vehicle.$isDetached();
+
+			""", context );
+		// @formatter:on
+		assertThat( variables.get( result ) instanceof Boolean ).isTrue();
+		assertThat( variables.getAsBoolean( result ) ).isFalse();
+		assertThat( variables.getAsBoolean( Key.of( "resultAfterEvict" ) ) ).isTrue();
 	}
 }

@@ -122,7 +122,7 @@ public class EntityNewTest extends BaseORMTest {
 		assertThat( variables.getAsBoolean( hasManufacturerInternalAccessPost ) ).isTrue();
 	}
 
-	@DisplayName( "It supports hasManufacturer() with NO value argument comparison" )
+	@DisplayName( "It supports has*() method calls with NO value argument comparison" )
 	@Test
 	public void testHasMethodNoValue() {
 		// @formatter:off
@@ -149,7 +149,7 @@ public class EntityNewTest extends BaseORMTest {
 		assertThat( variables.getAsBoolean( afterSet ) ).isTrue();
 	}
 
-	@DisplayName( "It supports hasManufacturer() with value argument comparison" )
+	@DisplayName( "It supports has*() method calls with value argument comparison" )
 	@Test
 	public void testHasValueComparison() {
 		// @formatter:off
