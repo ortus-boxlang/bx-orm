@@ -117,15 +117,7 @@ public class BoxClassInstantiator implements Instantiator {
 	 */
 
 	public IClassRunnable instantiate( IBoxContext context, EntityRecord entityRecord, IStruct properties ) {
-		IClassRunnable	theEntity		= ( IClassRunnable ) RequestBoxContext.runInContext( context,
-		    ( ctx ) -> loadBoxClass( ctx, entityRecord.getClassFQN() ) );
-
-		DynamicFunction	isDetachedUDF	= getIsDetachedMethod( entityRecord );
-		if ( !theEntity.getThisScope().containsKey( isDetachedUDF.getName() ) ) {
-			logger.trace( "Adding '{}' method for entity '{}", isDetachedUDF.getName().getName(), entityRecord.getEntityName() );
-			theEntity.getThisScope().put( isDetachedUDF.getName(), isDetachedUDF );
-			theEntity.getVariablesScope().put( isDetachedUDF.getName(), isDetachedUDF );
-		}
+		IClassRunnable theEntity = ( IClassRunnable ) RequestBoxContext.runInContext( context, ( ctx ) -> loadBoxClass( ctx, entityRecord.getClassFQN() ) );
 
 		entityRecord.getEntityMeta().getAssociations().stream()
 		    .forEach( prop -> {
@@ -490,40 +482,6 @@ public class BoxClassInstantiator implements Instantiator {
 		    },
 		    "class",
 		    String.format( "Remove the provided entity from the {} collection.", collectionKey.getName() ),
-		    Struct.EMPTY
-		);
-	}
-
-	/**
-	 * Create an `$isDetached()` method for the entity, which checks to see if the entity is detached from the current Hibernate session.
-	 *
-	 * @param entityRecord The EntityRecord for this class
-	 * 
-	 * @return A DynamicFunction that can be injected into the entity class.
-	 */
-	public DynamicFunction getIsDetachedMethod( EntityRecord entityRecord ) {
-		Key		methodName	= Key.of( "$isDetached" );
-		String	idProp		= this.entityMetamodel.getIdentifierProperty() != null ? this.entityMetamodel.getIdentifierProperty().getName() : null;
-
-		return new DynamicFunction(
-		    methodName,
-		    ( context, function ) -> {
-			    IClassRunnable target = context.getThisClass();
-			    VariablesScope scope = target.getVariablesScope();
-
-			    // If it has no ID, it is transient, not detached
-			    if ( idProp == null || scope.get( Key.of( idProp ) ) == null ) {
-				    return false;
-			    }
-
-			    IBoxContext			bxContext	= RequestBoxContext.getCurrent();
-			    org.hibernate.Session session	= ORMContext.getForContext( bxContext ).getSession( entityRecord.getDatasource() );
-
-			    return !session.contains( target );
-		    },
-		    new Argument[] {},
-		    "boolean",
-		    "Returns true if the entity has an identity but is not managed by the current Hibernate Session.",
 		    Struct.EMPTY
 		);
 	}
