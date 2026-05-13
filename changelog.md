@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-
 ### ⭐ Added
 
 - Added debug logging for ORM startup metrics, including entity metadata parsing and Hibernate SessionFactory build times.
