@@ -109,8 +109,8 @@ public class TransactionManager extends BaseInterceptor {
 			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
-		ORMContext	ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-		ORMConfig	config		= ormContext.getConfig();
+		ORMContext	ormContext						= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		boolean		isChildTransactionEndSavepoint	= savepointName.startsWith( "CHILD_" ) && savepointName.endsWith( "_END" );
 		ormApp.getDatasources().forEach( datasource -> {
 			Session ormSession = ormContext.getSession( datasource );
 
@@ -122,7 +122,7 @@ public class TransactionManager extends BaseInterceptor {
 				    datasource.getName()
 				);
 			}
-			if ( config.autoManageSession ) {
+			if ( isChildTransactionEndSavepoint ) {
 				ormSession.flush();
 			}
 		} );
