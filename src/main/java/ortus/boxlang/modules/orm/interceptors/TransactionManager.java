@@ -24,7 +24,6 @@ import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
@@ -42,12 +41,7 @@ import ortus.boxlang.runtime.types.IStruct;
 public class TransactionManager extends BaseInterceptor {
 
 	// The properties to configure the interceptor with
-	private ORMService	ormService;
-
-	/**
-	 * Enable or disable support for nested transactions.
-	 */
-	private boolean		enableNestedTransactions	= BoxRuntime.getInstance().getConfiguration().enableNestedTransactions;
+	private ORMService ormService;
 
 	/**
 	 * This method is called by the BoxLang runtime to configure the interceptor
