@@ -31,6 +31,7 @@ Due to issues with JPA requiring native java classes in entity configuration, bx
 - **Documentation**: Extensive documentation and examples are provided to help users understand and extend the module.
 
 ## Usage Guidance for Copilot
+
 - Follow the established directory structure when adding new features.
 - Prefer extending existing interfaces and base classes for new ORM features.
 - Ensure new code is covered by tests in the `src/main/test/java/ortus/` directory.
@@ -38,7 +39,39 @@ Due to issues with JPA requiring native java classes in entity configuration, bx
 
 ## Tooling
 
-* Gradle is used for building/compiling the java sources, running junit tests, and building the final boxlang module structure into a zip file for uploading to forgebox.io.
-* Hibernate 5.6.15-FINAL serves as the ORM engine under the hood.
-* Spotless is used for java source formatting.
-* Docker-compose is used to stand up a simple mysql database for integration testing.
+- Gradle is used for building/compiling the java sources, running junit tests, and building the final boxlang module structure into a zip file for uploading to forgebox.io.
+- Hibernate 5.6.15-FINAL serves as the ORM engine under the hood.
+- Spotless is used for java source formatting.
+- Docker-compose is used to stand up a simple mysql database for integration testing.
+
+## Available Skills
+
+Skills in `.agents/skills/` provide specialized workflows for AI agents. Install them via `npx skills experimental_install .agents/skills <target>`.
+
+### BoxLang Core Development
+
+- **boxlang-core-dev-async-tasks** — Async programming, BoxFuture, AsyncService, executors, BaseScheduler, ScheduledTask API, cron scheduling, task lifecycle
+- **boxlang-core-dev-bif-development** — Creating BIFs with @BoxBIF annotation, invoke() method, argument handling, member functions, registering via modules
+- **boxlang-core-dev-component-development** — Custom tags/components, attribute declarations, body/output handling, registering component paths
+- **boxlang-core-dev-interceptors** — Observer/Intercepting Filter patterns, interceptor pools, BoxLang/Java/lambda interceptors, registration, interception points
+- **boxlang-core-dev-logging** — Obtaining loggers via LoggingService, BoxLangLogger API, parameterized messages, logging configuration
+- **boxlang-core-dev-module-development** — ModuleConfig.bx structure, lifecycle methods, registering interceptors/BIFs, Gradle build, ForgeBox publishing
+- **boxlang-core-dev-runtime-architecture** — BoxRuntime services, IBoxContext hierarchy, scope chain, DynamicObject, type system, parsing pipeline, class loader isolation
+
+### Java & Testing
+
+- **java-expert** — Java services, API design, concurrency, performance profiling, dependency management, testing strategy, production hardening
+- **junit-expert** — JUnit 5 lifecycle, parameterized tests, extensions, assertions, dynamic tests, test organization, parallel execution
+- **mockito-expert** — Mock creation, argument matchers, stubbing, verification, argument captors, Answer implementations, Spy objects
+- **testcontainers-expert** — Container lifecycle, reusable containers, network config, wait strategies, custom images, modules (PostgreSQL, MySQL, Kafka, Redis, LocalStack)
+
+### Code Quality
+
+- **code-reviewer** — PR review, architecture drift detection, bug risk assessment, severity-ranked findings
+- **code-documenter** — Inline comments, docstrings, API references, onboarding guides, runbooks, consistency audits
+
+### Engineering & Infrastructure
+
+- **ortus-java-coding-standards** — Ortus formatting rules: indentation, spacing, brace placement, naming, alignment, comments
+- **security-expert** — Authentication, authorization, secrets handling, input validation, secure coding, threat modeling
+- **github-action-authoring** — Composite GitHub Actions, platform support, PATH issues, PowerShell steps, CI test jobs

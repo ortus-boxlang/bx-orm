@@ -33,6 +33,14 @@ To get started hacking on bx-orm:
 3. Download the [MySQL JDBC driver module](https://s3.amazonaws.com/downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-mysql/1.0.0/bx-mysql-1.0.0-snapshot.zip) and unzip it to to `src/test/resources/libs/modules/`
 4. Run `docker-compose up -d mysql` in the root
 
+## Skills
+
+This project includes AI agent skills in `.agents/skills/` to assist with development. To install them for use by your agents:
+
+```bash
+npx skills experimental_install
+```
+
 ## Ortus Sponsors
 
 BoxLang is a professional open-source project and it is completely funded by the [community](https://patreon.com/ortussolutions) and [Ortus Solutions, Corp](https://www.ortussolutions.com).  Ortus Patreons get many benefits like a cfcasts account, a FORGEBOX Pro account and so much more.  If you are interested in becoming a sponsor, please visit our patronage page: [https://patreon.com/ortussolutions](https://patreon.com/ortussolutions)
