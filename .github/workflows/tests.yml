@@ -29,7 +29,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest"] # "windows-latest"
         jdkVersion: ["21"]
-        boxlangVersion: [ "1.11.0" ]
+        boxlangVersion: [ "1.13.0" ]
         experimental: [false]
     steps:
       - name: Checkout Repository
@@ -60,7 +60,7 @@ jobs:
           gradle shadowJar test --stacktrace --console=plain -PboxlangVersion="${{ matrix.boxlangVersion }}"
 
       - name: Publish Test Reports
-        uses: mikepenz/action-junit-report@v6.4.0
+        uses: mikepenz/action-junit-report@v6.4.1
         if: always()
         with:
           report_paths: |

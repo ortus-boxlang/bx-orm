@@ -13,6 +13,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ⭐ Added
 
+- New AI skills under `.agents/skills` and custom skills under `.agents/skills-custom`
+- New Custom Skills for AI agents under `.agents/skills-custom` for ORM configuration and troubleshooting.
+- Consolidation of AI instruction files to `AGENTS.md` with a pointer from `CLAUDE.md`
+
+
+### ⚡ Updates
+
+- Updated readme with AI skills information and setup.
+- Dependabot quarterly
+- Updated BoxLang testing to v1.13.0
+
+### 🐛 Fixed
+
+- Fix `ClassCastException` when saving entities with `ormtype="float"` properties containing Integer values (e.g., `default="0"`). Added missing `FloatConverter` and registered it in `HibernateXMLWriter`.
+
+## [1.6.4] - 2026-05-13
+
+### ⭐ Added
+
 - Added debug logging for ORM startup metrics, including entity metadata parsing and Hibernate SessionFactory build times.
 
 ### 🐛 Fixed

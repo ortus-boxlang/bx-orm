@@ -109,7 +109,8 @@ public class TransactionManager extends BaseInterceptor {
 			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
-		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMContext	ormContext						= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		boolean		isChildTransactionEndSavepoint	= savepointName.startsWith( "CHILD_" ) && savepointName.endsWith( "_END" );
 		ormApp.getDatasources().forEach( datasource -> {
 			Session ormSession = ormContext.getSession( datasource );
 
@@ -121,8 +122,9 @@ public class TransactionManager extends BaseInterceptor {
 				    datasource.getName()
 				);
 			}
-
-			ormSession.flush();
+			if ( isChildTransactionEndSavepoint ) {
+				ormSession.flush();
+			}
 		} );
 	}
 
@@ -177,16 +179,6 @@ public class TransactionManager extends BaseInterceptor {
 				    "Rolling back ORM transaction on session [{}] for datasource [{}]",
 				    ormSession,
 				    datasource.getName()
-				);
-			}
-			try {
-				ormSession.flush();
-			} catch ( Exception e ) {
-				logger.error(
-				    "Error flushing ORM session [{}] for datasource [{}] during transaction rollback.  This may indicate an issue with the session or pending operations that could not be flushed.  Attempting to continue with transaction rollback and session clear.",
-				    ormSession,
-				    datasource.getName(),
-				    e
 				);
 			}
 			ormSession.getTransaction().rollback();

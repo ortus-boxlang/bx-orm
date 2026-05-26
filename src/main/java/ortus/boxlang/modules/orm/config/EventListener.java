@@ -320,8 +320,8 @@ public class EventListener
 		}
 
 		if ( hasMethod ) {
-			if ( logger.isDebugEnabled() ) {
-				logger.debug( "Ready to invoke {} on global EventHandler with args {}", eventType.getName(), args.toString() );
+			if ( logger.isTraceEnabled() ) {
+				logger.trace( "Ready to invoke {} on global EventHandler with args {}", eventType.getName(), args.toString() );
 			}
 			// Fire the method on the global event handler
 			RequestBoxContext.runInContext( ( ctx ) -> this.globalListener.dereferenceAndInvoke( ctx, eventType, args, false ) );
@@ -330,8 +330,8 @@ public class EventListener
 
 	private void announceEntityEvent( Key eventType, IClassRunnable entity, IStruct args ) {
 		if ( entity.containsKey( eventType ) ) {
-			if ( logger.isDebugEnabled() ) {
-				logger.debug( "Ready to invoke {} on entity with args {}", eventType.getName(), args.toString() );
+			if ( logger.isTraceEnabled() ) {
+				logger.trace( "Ready to invoke {} on entity with args {}", eventType.getName(), args.toString() );
 			}
 
 			// Fire the method on the entity itself
@@ -349,23 +349,23 @@ public class EventListener
 	 * @param entity            The entity to test for altered values.
 	 */
 	private void updateEntityEventState( Object[] state, String[] persistProperties, IClassRunnable entity ) {
-		if ( logger.isDebugEnabled() ) {
-			logger.debug( String.format( "Updating state changes on state properties %s", Arrays.toString( persistProperties ) ) );
+		if ( logger.isTraceEnabled() ) {
+			logger.trace( String.format( "Updating state changes on state properties %s", Arrays.toString( persistProperties ) ) );
 		}
 		for ( int i = 0; i < persistProperties.length; i++ ) {
 			Key		propertyName	= Key.of( persistProperties[ i ] );
 			Object	propertyValue	= entity.getVariablesScope().get( propertyName );
 			Object	oldValue		= state[ i ];
 			if ( Objects.equals( oldValue, propertyValue ) ) {
-				if ( logger.isDebugEnabled() ) {
-					logger.debug( String.format( " - No change on property %s, value remains %s", propertyName, oldValue ) );
+				if ( logger.isTraceEnabled() ) {
+					logger.trace( String.format( " - No change on property %s, value remains %s", propertyName, oldValue ) );
 				}
 				// no change
 				continue;
 			}
 			state[ i ] = propertyValue;
-			if ( logger.isDebugEnabled() ) {
-				logger.debug( String.format( " - Updated property %s from %s to value %s", propertyName, oldValue, propertyValue ) );
+			if ( logger.isTraceEnabled() ) {
+				logger.trace( String.format( " - Updated property %s from %s to value %s", propertyName, oldValue, propertyValue ) );
 			}
 		}
 	}

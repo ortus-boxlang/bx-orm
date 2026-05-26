@@ -29,3 +29,7 @@ boxlang_modules/
 
 ## HBXML Files
 src/test/resources/app/models/**/*.hbm*
+
+### AI Files ###
+.agents/skills/**
+.agents/guidelines/**
