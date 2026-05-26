@@ -36,6 +36,7 @@ Due to issues with JPA requiring native java classes in entity configuration, bx
 - Prefer extending existing interfaces and base classes for new ORM features.
 - Ensure new code is covered by tests in the `src/main/test/java/ortus/` directory.
 - Ensure new features, bug fixes, security updates, etc. are added to `changelog.md` under `## [Unreleased]`.
+- **Before any commit**, run `gradle spotlessApply` to auto-format Java sources, and run `npx markdownlint-cli2 "**/*.md"` to lint all Markdown files. Fix any issues before committing.
 
 ## Tooling
 
