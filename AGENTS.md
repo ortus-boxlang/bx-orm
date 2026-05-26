@@ -20,6 +20,8 @@ Due to issues with JPA requiring native java classes in entity configuration, bx
 - src/main/test/java/ortus/tools/**: Base test files and util classes for assistance in writing junit tests
 - src/main/test/resources/app/**: Test boxlang files for a test app. Includes ORM models, ORM configuration in Application.bx, and other boxlang test files.
 - src/main/resources/**: Resource files such as configuration, metadata, and licensing.
+- .agents/skills/**: General-purpose agent skills for BoxLang core development, Java, testing, and code quality.
+- .agents/skills-custom/**: Project-specific skills for the BoxLang ↔ Hibernate bridge (entity mapping, tuplizers, session management, configuration, events, BIFs, type conversion, caching, testing).
 - build/**: Build artifacts, generated sources, and documentation.
 - bin/**: Packaged module binaries and metadata for distribution.
 
@@ -37,6 +39,7 @@ Due to issues with JPA requiring native java classes in entity configuration, bx
 - Ensure new code is covered by tests in the `src/main/test/java/ortus/` directory.
 - Ensure new features, bug fixes, security updates, etc. are added to `changelog.md` under `## [Unreleased]`.
 - **Before any commit**, run `gradle spotlessApply` to auto-format Java sources, and run `npx markdownlint-cli2 "**/*.md"` to lint all Markdown files. Fix any issues before committing.
+- When working on ORM/Hibernate bridge code, consult the corresponding custom skill in `.agents/skills-custom/` for architecture patterns, class references, and best practices before making changes.
 
 ## Tooling
 
@@ -48,6 +51,7 @@ Due to issues with JPA requiring native java classes in entity configuration, bx
 ## Available Skills
 
 Skills in `.agents/skills/` provide specialized workflows for AI agents. Install them via `npx skills experimental_install .agents/skills <target>`.
+Skills in `.agents/skills-custom/` are project-specific ORM/Hibernate bridge skills — no installation needed; they are local to this repository.
 
 ### BoxLang Core Development
 
@@ -76,3 +80,17 @@ Skills in `.agents/skills/` provide specialized workflows for AI agents. Install
 - **ortus-java-coding-standards** — Ortus formatting rules: indentation, spacing, brace placement, naming, alignment, comments
 - **security-expert** — Authentication, authorization, secrets handling, input validation, secure coding, threat modeling
 - **github-action-authoring** — Composite GitHub Actions, platform support, PATH issues, PowerShell steps, CI test jobs
+
+### BoxLang ORM / Hibernate Bridge (Custom)
+
+Custom skills in `.agents/skills-custom/` covering the full BoxLang ↔ Hibernate bridge architecture:
+
+- **bx-orm-entity-mapping** — Entity discovery via `MappingGenerator`, `EntityRecord` construction, metadata inspection (`IEntityMeta`, `ClassicEntityMeta`), HBM XML generation via `HibernateXMLWriter`, property metadata, entity file scanning
+- **bx-orm-hibernate-bridge** — Tuplizer architecture (`EntityTuplizer`), `BoxProxy`/`BoxProxyFactory`, `BoxLazyInitializer`, `BoxClassInstantiator`, `BoxPropertyGetter`/`BoxPropertySetter`, `EntityMode.MAP`, Key normalization, `IClassRunnable` integration
+- **bx-orm-session-management** — `ORMService` → `ORMApp` → `ORMContext` lifecycle, `SessionFactoryBuilder`, `HQLQuery`, session open/close/flush/eviction, shutdown listeners, request/thread context management
+- **bx-orm-configuration** — `ORMConfig` properties, `ORMConnectionProvider` (BoxLang datasource → Hibernate bridge), naming strategies (`MacroCaseNamingStrategy`, `BoxLangClassNamingStrategy`), `BootstrapServiceRegistry` lifecycle, `ORMKeys` constants
+- **bx-orm-event-system** — `EventListener` (Hibernate `Integrator`), 13 event types (PRE_INSERT, POST_LOAD, etc.), global/entity listeners, `TransactionManager` interceptor, `ApplicationListener`, BoxLang interception points
+- **bx-orm-bif-development** — Building ORM BIFs (`EntityLoad`, `EntitySave`, `EntityDelete`, `EntityNew`, `ORMExecuteQuery`, etc.), extending `BaseORMBIF`, `@BoxBIF` annotation, argument patterns, entity name resolution, session BIFs
+- **bx-orm-type-conversion** — JPA `AttributeConverter`s (`DateTimeConverter`, `StringConverter`, numeric converters), `@Converter(autoApply=true)`, BoxLang dynamic types → JDBC type mapping, BoxLang caster integration
+- **bx-orm-cache-integration** — `BoxHibernateCache` (JSR-107 `Cache`), `BoxHibernateCacheManager`, `BoxHibernateCachingProvider`, BoxLang `CacheService` bridge, cache strategies (read-only/read-write/nonstrict-read-write), cache regions
+- **bx-orm-testing** — `BaseORMTest` patterns, JUnit 5 setup, Docker Compose MySQL integration, `seed.sql` data, `Application.bx` test config, entity model fixtures, BIF and transaction testing
