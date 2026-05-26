@@ -11,8 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ⭐ Added
 
-- Dependabot quarterly
-- Updated BoxLang testing to v1.13.0
 - New AI skills under `.agents/skills` and custom skills under `.agents/skills-custom`
 - New Custom Skills for AI agents under `.agents/skills-custom` for ORM configuration and troubleshooting.
 - Consolidation of AI instruction files to `AGENTS.md` with a pointer from `CLAUDE.md`
@@ -21,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ⚡ Updates
 
 - Updated readme with AI skills information and setup.
+- Dependabot quarterly
+- Updated BoxLang testing to v1.13.0
 
 ### 🐛 Fixed
 
