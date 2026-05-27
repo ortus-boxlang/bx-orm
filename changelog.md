@@ -11,8 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.6.5] - 2026-05-26
 
-## [1.6.4] - 2026-05-13
-
 ### ⭐ Added
 
 - New AI skills under `.agents/skills` and custom skills under `.agents/skills-custom`
