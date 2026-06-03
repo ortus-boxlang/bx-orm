@@ -33,11 +33,11 @@ import ortus.boxlang.runtime.scopes.Key;
 
 /**
  * Hibernate ConnectionProvider implementation for retrieving JDBC connections on a specific datasource from BoxLang's connection manager.
- * 
+ *
  * Built once at ORM startup for each datasource/session factory.
- * 
+ *
  * @see org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
- * 
+ *
  * @since 1.0.0
  */
 public class ORMConnectionProvider implements ConnectionProvider {
@@ -65,7 +65,6 @@ public class ORMConnectionProvider implements ConnectionProvider {
 
 	@Override
 	public <T> T unwrap( Class<T> unwrapType ) {
-		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException( "Unimplemented method 'unwrap'" );
 	}
 
@@ -76,7 +75,7 @@ public class ORMConnectionProvider implements ConnectionProvider {
 	public Connection getConnection() throws SQLException {
 		DataSource	datasource	= getDatasourceForKey( datasourceName );
 		Connection	connection	= datasource.getBoxConnection();
-		logger.debug( "Getting connection {} for datasource: {}", connection, datasourceName.getOriginalValue() );
+		logger.trace( "Getting connection {} for datasource: {}", connection, datasourceName.getOriginalValue() );
 		return connection;
 	}
 
@@ -88,7 +87,7 @@ public class ORMConnectionProvider implements ConnectionProvider {
 		// Just do a regular connection.close(); BoxLang's connection pooling strategy
 		// (currently HikariCP) will intercept this and carefully release the
 		// connection back into the pool for later reuse.
-		logger.debug( "closing connection {} for datasource: {}", conn, datasourceName.getOriginalValue() );
+		logger.trace( "closing connection {} for datasource: {}", conn, datasourceName.getOriginalValue() );
 		conn.close();
 	}
 
@@ -99,13 +98,12 @@ public class ORMConnectionProvider implements ConnectionProvider {
 
 	@Override
 	public boolean isUnwrappableAs( Class unwrapType ) {
-		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException( "Unimplemented method 'isUnwrappableAs'" );
 	}
 
 	/**
 	 * Retrieve the datasource for the configured datasource name - either the defined entity datasource, or the default datasource.
-	 * 
+	 *
 	 * @param datasourceName Datasource name to look up.
 	 */
 	private DataSource getDatasourceForKey( Key datasourceName ) {

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ⚡ Updates
+
+- Toned down logging on the `ORMConnectionProvider` to avoid noisy logs on every connection acquisition.
+
 ## [1.6.5] - 2026-05-26
 
 ### ⭐ Added
