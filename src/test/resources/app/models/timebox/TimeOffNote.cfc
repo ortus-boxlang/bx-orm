@@ -1,6 +1,5 @@
-component persistent="true" table="projectNote" extends="AbstractNote" {
-
-    property
+component persistent="true" table     ="projectNote" extends   ="AbstractNote" {
+	property
         name="request"
         notnull="true"
         fieldtype="many-to-one"

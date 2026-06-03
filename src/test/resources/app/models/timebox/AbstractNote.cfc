@@ -1,16 +1,15 @@
 /**
  * This is the base class for all note types
  */
-component mappedsuperclass="true" accessors="true" extends="BaseEntity" {
-
-    property
+component mappedsuperclass="true" accessors       ="true" extends         ="BaseEntity" {
+	property
         name="noteId"
         fieldtype="id"
         generator="uuid"
         ormtype="string"
         setter="false";
 
-    property
+	property
         name="notes"
         ormtype="text"
         notnull="true"
@@ -23,4 +22,5 @@ component mappedsuperclass="true" accessors="true" extends="BaseEntity" {
 		cfc="Employee"
 		fkcolumn="FK_userId"
 		lazy="true";
+
 }

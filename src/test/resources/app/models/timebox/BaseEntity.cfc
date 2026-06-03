@@ -1,11 +1,10 @@
-﻿/**
+/**
  * This is the base class for all persistent entities
  */
-component mappedsuperclass="true" accessors="true" {
-
-	/* *********************************************************************
-	 **							PROPERTIES
-	 ********************************************************************* */
+component mappedsuperclass="true" accessors       ="true" {
+	/**********************************************************************
+	 * **							PROPERTIES
+	 **********************************************************************/
 
 	property
 		name="createdDate"
@@ -27,6 +26,5 @@ component mappedsuperclass="true" accessors="true" {
 		default="true"
 		dbdefault="true"
 		notnull="true";
-
 
 }

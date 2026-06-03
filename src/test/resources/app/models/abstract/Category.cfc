@@ -1,11 +1,10 @@
-﻿component
+component
 	persistent="true"
 	table     ="abstract_categories"
 	extends   ="Abstract"
 	cachename ="abstract_categories"
 	cacheuse  ="read-write"
 {
-
 	property
 		name     ="catid"
 		column   ="category_id"
@@ -22,7 +21,7 @@
 		update ="false"
 		ormtype="timestamp";
 
-	function init(){
+	function init() {
 		this.created = now();
 	}
 

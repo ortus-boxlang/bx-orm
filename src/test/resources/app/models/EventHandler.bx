@@ -1,55 +1,62 @@
-class{
+class {
+	property name="eventLog" type="array" persistent="false";
 
-    property name="eventLog" type="array" persistent="false";
+	function init() {
+		eventLog = [];
+	}
 
-    function init(){
-        eventLog = [];
-    }
+	// these events will ONLY fire upon the global event handler
+	function onEvict() {
+		getEventLog().append( "onEvict" );
+	}
 
-    // these events will ONLY fire upon the global event handler
-    function onEvict(){
-        getEventLog().append( "onEvict" );
-    }
-    function onDirtyCheck(){
-        getEventLog().append( "onDirtyCheck" );
-    }
-    function onClear(){
-        getEventLog().append( "onClear" );
-    }
-    function onAutoFlush(){
-        getEventLog().append( "onAutoFlush" );
-    }
-    function onFlush(){
-        getEventLog().append( "onFlush" );
-    }
+	function onDirtyCheck() {
+		getEventLog().append( "onDirtyCheck" );
+	}
 
-    // These events will fire upon the entity as well
+	function onClear() {
+		getEventLog().append( "onClear" );
+	}
 
-    function preLoad(){
-        getEventLog().append( "preLoad" );
-    }
-    function postLoad(){
-        getEventLog().append( "postLoad" );
-    }
+	function onAutoFlush() {
+		getEventLog().append( "onAutoFlush" );
+	}
 
-    function preInsert(){
-        getEventLog().append( "preInsert" );
-    }
-    function postInsert(){
-        getEventLog().append( "postInsert" );
-    }
+	function onFlush() {
+		getEventLog().append( "onFlush" );
+	}
 
-    function preUpdate(){
-        getEventLog().append( "preUpdate" );
-    }
-    function postUpdate(){
-        getEventLog().append( "postUpdate" );
-    }
+	// These events will fire upon the entity as well
 
-    function preDelete(){
-        getEventLog().append( "preDelete" );
-    }
-    function postDelete(){
-        getEventLog().append( "postDelete" );
-    }
+	function preLoad() {
+		getEventLog().append( "preLoad" );
+	}
+
+	function postLoad() {
+		getEventLog().append( "postLoad" );
+	}
+
+	function preInsert() {
+		getEventLog().append( "preInsert" );
+	}
+
+	function postInsert() {
+		getEventLog().append( "postInsert" );
+	}
+
+	function preUpdate() {
+		getEventLog().append( "preUpdate" );
+	}
+
+	function postUpdate() {
+		getEventLog().append( "postUpdate" );
+	}
+
+	function preDelete() {
+		getEventLog().append( "preDelete" );
+	}
+
+	function postDelete() {
+		getEventLog().append( "postDelete" );
+	}
 }

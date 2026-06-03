@@ -9,7 +9,6 @@ component
 	cachename ="cbSubscription"
 	cacheuse  ="read-write"
 {
-
 	property
 		name   ="createdDate"
 		column ="createdDate"
@@ -32,9 +31,9 @@ component
 		notnull="true"
 		default="false";
 
-	/* *********************************************************************
-	 **                          PROPERTIES
-	 ********************************************************************* */
+	/**********************************************************************
+	 * **                          PROPERTIES
+	 **********************************************************************/
 
 	property
 		name     ="subscriptionID"

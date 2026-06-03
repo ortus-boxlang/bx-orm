@@ -1,12 +1,11 @@
 component mappedSuperClass="true" {
-
 	property name="testValue" notnull="false";
 
-	function init(){
+	function init() {
 		return this;
 	}
 
-	function getData(){
+	function getData() {
 		return website;
 	}
 

@@ -9,8 +9,7 @@ class
 	cachename          ="cbContent"
 	cacheuse           ="read-write"
 	discriminatorColumn="contentType"
-{
-
+ {
 	property
 		name   ="createdDate"
 		column ="createdDate"
@@ -235,7 +234,6 @@ class
 		inverse     ="true"
 		cascade     ="all-delete-orphan";
 
-
 	// M20 -> Parent Page loaded as a proxy
 	property
 		name     ="parent"
@@ -305,5 +303,6 @@ class
 		name   ="numberOfVersions"
 		formula="select count(*) from cb_contentVersion versions where versions.FK_contentID=contentID"
 		default="0";
+
 
 }

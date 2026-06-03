@@ -1,5 +1,4 @@
-class entityName="VehicleType" table="vehicle_types" persistent="true" {
-
+class entityName="VehicleType" table     ="vehicle_types" persistent="true" {
 	property
 	    name="make"
 	    column="make"
@@ -21,5 +20,6 @@ class entityName="VehicleType" table="vehicle_types" persistent="true" {
 	    column="description"
 	    type="string"
 	    ormtype="string";
+
 
 }

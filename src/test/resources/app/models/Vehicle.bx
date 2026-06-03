@@ -1,21 +1,20 @@
-class entityName="Vehicle" table="vehicles" persistent="true" {
-
-    property
+class entityName="Vehicle" table     ="vehicles" persistent="true" {
+	property
         name="vin"
         type="string"
         fieldtype="id"
         ormtype="string"
         generator="assigned";
 
-    property
+	property
         name="make"
         type="string";
 
-    property
+	property
         name="model"
         type="string";
 
-    property
+	property
         name="features"
         singularName="feature"
         type="array"
@@ -27,52 +26,56 @@ class entityName="Vehicle" table="vehicles" persistent="true" {
         lazy="false"
         cascade="all";
 
-    property
+	property
         name="manufacturer"
         fieldtype="many-to-one"
         cfc="Manufacturer"
         fkcolumn="FK_manufacturer"
         lazy="true";
 
-    property name="eventLog" type="array" persistent="false";
+	property name="eventLog" type="array" persistent="false";
 
-    function init(){
-        eventLog = [];
-        return this;
-    }
+	function init() {
+		eventLog = [];
+		return this;
+	}
 
-    /**
-     * Used for testing internal access to generated methods.
-     */
-    function checkHasManufacturer(){
-        return hasManufacturer();
-    }
+	/**
+	 * Used for testing internal access to generated methods.
+	 */
+	function checkHasManufacturer() {
+		return hasManufacturer();
+	}
 
-    function preLoad(){
-        getEventLog().append( "preLoad" );
-    }
-    function postLoad(){
-        getEventLog().append( "postLoad" );
-    }
+	function preLoad() {
+		getEventLog().append( "preLoad" );
+	}
 
-    function preInsert(){
-        getEventLog().append( "preInsert" );
-    }
-    function postInsert(){
-        getEventLog().append( "postInsert" );
-    }
+	function postLoad() {
+		getEventLog().append( "postLoad" );
+	}
 
-    function preUpdate(){
-        getEventLog().append( "preUpdate" );
-    }
-    function postUpdate(){
-        getEventLog().append( "postUpdate" );
-    }
+	function preInsert() {
+		getEventLog().append( "preInsert" );
+	}
 
-    function preDelete(){
-        getEventLog().append( "preDelete" );
-    }
-    function postDelete(){
-        getEventLog().append( "postDelete" );
-    }
+	function postInsert() {
+		getEventLog().append( "postInsert" );
+	}
+
+	function preUpdate() {
+		getEventLog().append( "preUpdate" );
+	}
+
+	function postUpdate() {
+		getEventLog().append( "postUpdate" );
+	}
+
+	function preDelete() {
+		getEventLog().append( "preDelete" );
+	}
+
+	function postDelete() {
+		getEventLog().append( "postDelete" );
+	}
 }

@@ -1,20 +1,19 @@
-﻿/**
+/**
  * Test Author!
+ * Note we are using a reserved word in the `table attribute` for testing
  */
 class
 	persistent="true"
 	entityname="cbAuthor"
-	// we are using a reserved word here for testing
 	table     ="users"
 	batchsize ="25"
 	extends   ="BaseEntity"
 	cachename ="cbAuthor"
 	cacheuse  ="read-write"
-{
-
-	/* *********************************************************************
-	 **							PROPERTIES
-	 ********************************************************************* */
+ {
+	/**********************************************************************
+	 * **							PROPERTIES
+	 **********************************************************************/
 
 	property
 		name     ="authorID"
@@ -110,9 +109,9 @@ class
 		default="false"
 		index  ="idx_2factorauth";
 
-	/* *********************************************************************
-	 **							RELATIONSHIPS
-	 ********************************************************************* */
+	/**********************************************************************
+	 * **							RELATIONSHIPS
+	 **********************************************************************/
 
 	// O2M -> Entries
 	property
@@ -160,18 +159,15 @@ class
 				lazy="extra"
 				cascade="delete";
 
-
-	function preInsert( entity ){
+	function preInsert( entity ) {
 		println( "In Author preInsert" );
 		entity.setCreatedDate( now() );
 		setLastLogin( now() );
 		setModifiedDate( now() );
 	}
 
-	function preUpdate( entity ){
+	function preUpdate( entity ) {
 		println( "In Author preUpdate" );
 		setModifiedDate( now() );
 	}
-
-
 }

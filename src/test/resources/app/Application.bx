@@ -1,45 +1,45 @@
-class{
+class {
 	this.name = "BXORMTest";
 
 	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
 
-	this.datasources={
-		"TestDB" = {
-			"driver"                 = "mysql",
-			"database"               = "test",
-			"host"                   = "#getSystemSetting( "DB_HOST", "127.0.0.1" )#",
-			"port"                   = "#getSystemSetting( "DB_PORT", 3306 )#",
-			"username"               = "#getSystemSetting( "DB_USER", "root" )#",
-			"password"               = "#getSystemSetting( "DB_PASSWORD", "root" )#",
-			"LeakDetectionThreshold" = 3
+	this.datasources = {
+		"TestDB": {
+			"driver"                : "mysql",
+			"database"              : "test",
+			"host"                  : "#getSystemSetting( "DB_HOST", "127.0.0.1" )#",
+			"port"                  : "#getSystemSetting( "DB_PORT", 3306 )#",
+			"username"              : "#getSystemSetting( "DB_USER", "root" )#",
+			"password"              : "#getSystemSetting( "DB_PASSWORD", "root" )#",
+			"LeakDetectionThreshold": 3
 		},
 		"dsn2": {
-			"driver"                 = "mysql",
-			"database"               = "dsn2",
-			"host"                   = "#getSystemSetting( "DB_HOST", "127.0.0.1" )#",
-			"port"                   = "#getSystemSetting( "DB_PORT", 3306 )#",
-			"username"               = "#getSystemSetting( "DB_USER", "root" )#",
-			"password"               = "#getSystemSetting( "DB_PASSWORD", "root" )#",
-			"LeakDetectionThreshold" = 3
+			"driver"                : "mysql",
+			"database"              : "dsn2",
+			"host"                  : "#getSystemSetting( "DB_HOST", "127.0.0.1" )#",
+			"port"                  : "#getSystemSetting( "DB_PORT", 3306 )#",
+			"username"              : "#getSystemSetting( "DB_USER", "root" )#",
+			"password"              : "#getSystemSetting( "DB_PASSWORD", "root" )#",
+			"LeakDetectionThreshold": 3
 		}
 	};
 	this.datasource = "TestDB";
 
-	//println( "root expanded: " & this.mappings[ "/root" ] );
-	//println( "expanded expansion: " & expandPath( "/root/models" ) );
+	// println( "root expanded: " & this.mappings[ "/root" ] );
+	// println( "expanded expansion: " & expandPath( "/root/models" ) );
 
-	this.ormSettings={
-		"datasource"    : "TestDB",
+	this.ormSettings = {
+		"datasource"           : "TestDB",
 		// we use the mapping here to make sure class resolver issues and path walking are handled
-		"entityPaths"   : [ "/root/models" ],
-		"saveMapping"   : "true",
-		"logSQL"        : "false",
-		"dialect"       : "MySQLDialect",
-		"dbcreate"      : "dropcreate",
-		"cacheprovider" : "ConcurrentHashMap",
-		"secondarycacheenabled" : true,
-		"eventHandler" : "root.models.events.EventHandler",
-		"ignoreParseErrors" : true
-	}
+		"entityPaths"          : [ "/root/models"],
+		"saveMapping"          : "true",
+		"logSQL"               : "false",
+		"dialect"              : "MySQLDialect",
+		"dbcreate"             : "dropcreate",
+		"cacheprovider"        : "ConcurrentHashMap",
+		"secondarycacheenabled": true,
+		"eventHandler"         : "root.models.events.EventHandler",
+		"ignoreParseErrors"    : true
+	};
 	this.ormEnabled = "true";
 }

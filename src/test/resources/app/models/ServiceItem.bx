@@ -1,0 +1,23 @@
+class entityName="ServiceItem" table     ="service_items" persistent="true" {
+	property
+	    name="id"
+	    column="id"
+	    type="string"
+	    ormtype="string"
+	    fieldtype="id"
+	    generator="uuid";
+
+	property
+	    name="name"
+	    column="name"
+	    type="string"
+	    ormtype="string";
+
+	property
+	    name="description"
+	    column="description"
+	    type="string"
+	    ormtype="string";
+
+
+}

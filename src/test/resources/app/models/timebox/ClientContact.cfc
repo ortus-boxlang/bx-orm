@@ -1,11 +1,10 @@
 component
-	persistent="true"
-	table="clientContact"
-	extends="User"
-	joinColumn="userId"
+	persistent        ="true"
+	table             ="clientContact"
+	extends           ="User"
+	joinColumn        ="userId"
 	discriminatorValue="clientContact"
 {
-
 	property
 		name="isPrimaryContact"
 		ormtype="boolean"
@@ -21,4 +20,5 @@ component
 		cfc="Client"
 		fkcolumn="FK_clientId"
 		lazy="true";
+
 }
