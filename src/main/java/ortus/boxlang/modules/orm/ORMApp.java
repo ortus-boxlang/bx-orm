@@ -218,7 +218,7 @@ public class ORMApp {
 	private void configureLoggingPerORMConfig() {
 		if ( this.config.logSQL ) {
 			LoggerContext loggerContext = runtime.getLoggingService().getLoggerContext();
-			loggerContext.getLogger( "org.hibernate.SQL" ).setLevel( logger.isDebugEnabled() ? Level.TRACE : Level.DEBUG );
+			loggerContext.getLogger( "org.hibernate.SQL" ).setLevel( logger.isDebugEnabled() ? Level.DEBUG : Level.INFO );
 			loggerContext.getLogger( "org.hibernate.type.descriptor.sql" ).setLevel( logger.isDebugEnabled() ? Level.TRACE : Level.DEBUG );
 		}
 	}
