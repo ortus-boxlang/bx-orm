@@ -1,5 +1,7 @@
-class extends="foo.bar.Blah"{
-   /**
-	* Empty component to test the `ignoreParseErrors` config setting
-	*/
+class extends="foo.bar.Blah" {
+
+
+	/**
+	 * Empty component to test the `ignoreParseErrors` config setting
+	 */
 }

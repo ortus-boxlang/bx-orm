@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Test Page!
  */
 class
@@ -11,11 +11,10 @@ class
 	extends           ="BaseContent"
 	joinColumn        ="contentID"
 	discriminatorValue="Page"
-{
-
-	/* *********************************************************************
-	 **							PROPERTIES
-	 ********************************************************************* */
+ {
+	/**********************************************************************
+	 * **							PROPERTIES
+	 **********************************************************************/
 
 	/**
 	 * The layout in a theme that will be used to render the page out
@@ -58,5 +57,6 @@ class
 		ormtype="text"
 		default=""
 		length ="8000";
+
 
 }

@@ -5,20 +5,19 @@
  * A TimeBox Employee
  */
 component
-	persistent="true"
-	table="employee"
-	extends="User"
-	joinColumn="userId"
+	persistent        ="true"
+	table             ="employee"
+	extends           ="User"
+	joinColumn        ="userId"
 	discriminatorValue="employee"
 {
-
 	property name="log" inject="logbox:logger:{this}" persistent="false";
 
 	property name="employeeService" inject="EmployeeService" persistent="false";
 
-	/* *********************************************************************
-	 **							PROPERTIES
-	 ********************************************************************* */
+	/**********************************************************************
+	 * **							PROPERTIES
+	 **********************************************************************/
 
 	property
 		name="startDate"
@@ -104,10 +103,9 @@ component
 		ormtype="binary"
 		notnull="false";
 
-
-	/* *********************************************************************
-	 **						RELATIONSHIPS
-	 ********************************************************************* */
+	/**********************************************************************
+	 * **						RELATIONSHIPS
+	 **********************************************************************/
 
 	// O2M -> Employee Time Off Requests
 	property
@@ -141,19 +139,17 @@ component
 		persistent="false"
 		type="struct";
 
-
-	/* *********************************************************************
-	 **							CALCULATED FIELDS
-	 ********************************************************************* */
+	/**********************************************************************
+	 * **							CALCULATED FIELDS
+	 **********************************************************************/
 
 	property
 		name="numberOfPendingTimeOffRequests"
 		formula="select count(*) from timeOff where timeOff.FK_userId=userId and timeOff.status = 'pending'";
 
-
-	/* *********************************************************************
-	 **							FUNCTIONS
-	 ********************************************************************* */
+	/**********************************************************************
+	 * **							FUNCTIONS
+	 **********************************************************************/
 
 	/**
 	 * Constructor
@@ -170,35 +166,68 @@ component
 		variables.baseHours = 30;
 		variables.compensationType = "salary";
 
-		appendToMemento( [
-			"startDate",
-			"endDate",
-			"costRate",
-			"baseHours",
-			"salary",
-			"sickTimePerYear",
-			"ptoPerYear",
-			"hasPayroll",
-			"hasTimeOff",
-			"ptoBalance",
-			"sickTimeBalance",
-			"taxId",
-			"numberOfPendingTimeOffRequests",
-			"compensationType"
-		] );
+		appendToMemento(
+			[
+				"startDate",
+				"endDate",
+				"costRate",
+				"baseHours",
+				"salary",
+				"sickTimePerYear",
+				"ptoPerYear",
+				"hasPayroll",
+				"hasTimeOff",
+				"ptoBalance",
+				"sickTimeBalance",
+				"taxId",
+				"numberOfPendingTimeOffRequests",
+				"compensationType"
+			]
+		);
 
 		// Validation Constraints
-		this.constraints.append( {
-			"startDate": { required: false, type: "date" },
-			"endDate": { required: false, type: "date" },
-			"costRate": { required: false, type: "float" },
-			"salary": { required: false, type: "float" },
-			"sickTimePerYear": { required: false, type: "float" },
-			"ptoPerYear": { required: false, type: "float" },
-			"hasPayroll": { required: true, type: "boolean" },
-			"hasTimeOff": { required: true, type: "boolean" },
-			"compensationType": { required: true, regex: "(salary|hourly)" }
-		} );
+		this
+			.constraints
+			.append(
+				{
+					"startDate": {
+						required: false,
+						type    : "date"
+					},
+					"endDate": {
+						required: false,
+						type    : "date"
+					},
+					"costRate": {
+						required: false,
+						type    : "float"
+					},
+					"salary": {
+						required: false,
+						type    : "float"
+					},
+					"sickTimePerYear": {
+						required: false,
+						type    : "float"
+					},
+					"ptoPerYear": {
+						required: false,
+						type    : "float"
+					},
+					"hasPayroll": {
+						required: true,
+						type    : "boolean"
+					},
+					"hasTimeOff": {
+						required: true,
+						type    : "boolean"
+					},
+					"compensationType": {
+						required: true,
+						regex   : "(salary|hourly)"
+					}
+				}
+			);
 
 		return super.init();
 	}
@@ -209,7 +238,9 @@ component
 	 * @result number of the remaining hours (PTOPerYear)
 	 */
 	numeric function getPtoBalance() {
-		log.info( "ptobalance at #now()# - #getTickCount()#" );
+		log.info(
+				"ptobalance at #now()# - #getTickCount()#"
+			);
 		return variables.employeeService.getPtoBalance( this );
 	}
 
@@ -219,7 +250,9 @@ component
 	 * @result number of the remaining hours (SickTimePerYear)
 	 */
 	numeric function getSickTimeBalance() {
-		log.info( "sicktimebalance at #now()# - #getTickCount()#" );
+		log.info(
+				"sicktimebalance at #now()# - #getTickCount()#"
+			);
 		return variables.employeeService.getSickTimeBalance( this );
 	}
 

@@ -61,8 +61,6 @@ public class TransactionManager extends BaseInterceptor {
 		IBoxContext	context	= args.getAs( IBoxContext.class, Key.context );
 		ORMApp		ormApp	= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
-			logger.warn(
-			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
 		IJDBCCapableContext	jdbcContext	= context.getParentOfType( IJDBCCapableContext.class );
@@ -105,8 +103,6 @@ public class TransactionManager extends BaseInterceptor {
 		String		savepointName	= args.getAsString( Key.savepoint );
 		ORMApp		ormApp			= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
-			logger.warn(
-			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
 		ORMContext	ormContext						= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
@@ -134,8 +130,6 @@ public class TransactionManager extends BaseInterceptor {
 
 		ORMApp		ormApp	= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
-			logger.warn(
-			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
 		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
@@ -163,8 +157,6 @@ public class TransactionManager extends BaseInterceptor {
 
 		ORMApp		ormApp	= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
-			logger.warn(
-			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
 		ORMContext	ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
@@ -209,8 +201,6 @@ public class TransactionManager extends BaseInterceptor {
 
 		ORMApp		ormApp	= ormService.getORMAppByContext( context );
 		if ( ormApp == null ) {
-			logger.warn(
-			    "No ORM application found during transaction request.  Either the ORM service is not properly configured or the application has not yet started." );
 			return;
 		}
 		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );

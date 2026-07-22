@@ -1,15 +1,10 @@
 /**
  * Test Base Entity!
  */
-class
-	mappedsuperclass="true"
-	accessors       ="true"
-	extends         ="BaseEntityMethods"
-{
-
-	/* *********************************************************************
-	 **							PROPERTIES
-	 ********************************************************************* */
+class mappedsuperclass="true" accessors       ="true" extends         ="BaseEntityMethods" {
+	/**********************************************************************
+	 * **							PROPERTIES
+	 **********************************************************************/
 
 	property
 		name      ="createdDate"
@@ -35,5 +30,6 @@ class
 		notnull   ="true"
 		default   ="false"
 		persistent="true";
+
 
 }

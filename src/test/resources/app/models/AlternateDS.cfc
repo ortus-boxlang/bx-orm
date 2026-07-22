@@ -1,6 +1,5 @@
-component entityName="AlternateDS" table="alternate_ds" datasource="dsn2"  persistent="true" {
-
-    property 
+component entityName="AlternateDS" table     ="alternate_ds" datasource="dsn2" persistent="true" {
+	property 
         name="id" 
         type="string" 
         fieldtype="id" 
@@ -8,7 +7,8 @@ component entityName="AlternateDS" table="alternate_ds" datasource="dsn2"  persi
         length="40"
         generator="assigned";
 
-    property 
+	property 
         name="name" 
         type="string";
+
 }

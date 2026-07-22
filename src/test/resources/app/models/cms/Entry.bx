@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Test Entry!
  */
 class
@@ -9,13 +9,13 @@ class
 	cachename         ="cbEntry"
 	cacheuse          ="read-write"
 	extends           ="BaseContent"
-	// We are leaving the join column off of this entity to ensure no regresions related to BLMODULES-18
 	discriminatorValue="Entry"
-{
+ {
+	// We are leaving the join column off of this entity to ensure no regresions related to BLMODULES-18
 
-	/* *********************************************************************
-	 **							PROPERTIES
-	 ********************************************************************* */
+	/**********************************************************************
+	 * **							PROPERTIES
+	 **********************************************************************/
 
 	property
 		name   ="excerpt"
@@ -24,5 +24,6 @@ class
 		ormtype="text"
 		default=""
 		length ="8000";
+
 
 }

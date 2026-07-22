@@ -7,5 +7,4 @@ class {
 		// This is a dummy function to allow for something in this class we can use
 		return "foo";
 	}
-
 }

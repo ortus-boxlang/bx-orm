@@ -30,17 +30,21 @@ jobs:
       contents: read
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.3.0
         with:
           distribution: "temurin"
           java-version: 21
 
-      - uses: Ortus-Solutions/commandbox-action@v1.0.3
-        with:
-          cmd: run-script format:check
-
       - name: Verify Code Formatting
         run: ./gradlew spotlessCheck
+
+      - name: Setup BoxLang
+        uses: ortus-boxlang/setup-boxlang@1.4.0
+        with:
+          with-commandbox: true
+
+      - name: Format BoxLang Source
+        run: boxlang format --check --source ./src/test/resources/app

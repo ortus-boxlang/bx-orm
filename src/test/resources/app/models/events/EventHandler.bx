@@ -1,100 +1,131 @@
 /**
  * Fabulous event handler
  */
- import java:java.lang.System;
+import java:java.lang.System;
 
 class {
 
 	/**
 	 * preLoad called by hibernate which in turn announces a coldbox interception: ORMPreLoad
 	 */
-	public void function preLoad( any entity ){
-		System.out.println( "EventHandler action firing: ORMPreLoad" );
+	public void function preLoad( any entity ) {
+		System.out.println(
+				"EventHandler action firing: ORMPreLoad"
+			);
 	}
 
 	/**
 	 * postLoad called by hibernate which in turn announces a coldbox interception: ORMPostLoad
 	 */
-	public void function postLoad( any entity ){
-		System.out.println( "EventHandler action firing: ORMPostLoad" );
+	public void function postLoad( any entity ) {
+		System.out.println(
+				"EventHandler action firing: ORMPostLoad"
+			);
 	}
 
 	/**
 	 * postDelete called by hibernate which in turn announces a coldbox interception: ORMPostDelete
 	 */
-	public void function postDelete( any entity ){
-		System.out.println( "EventHandler action firing: ORMPostDelete" );
+	public void function postDelete( any entity ) {
+		System
+			.out
+			.println(
+				"EventHandler action firing: ORMPostDelete"
+			);
 	}
 
 	/**
 	 * preDelete called by hibernate which in turn announces a coldbox interception: ORMPreDelete
 	 */
-	public void function preDelete( any entity ){
-		System.out.println( "EventHandler action firing: ORMPreDelete" );
+	public void function preDelete( any entity ) {
+		System.out.println(
+				"EventHandler action firing: ORMPreDelete"
+			);
 	}
 
 	/**
 	 * preUpdate called by hibernate which in turn announces a coldbox interception: ORMPreUpdate
 	 */
-	public void function preUpdate( any entity, Struct oldData = {} ){
-		System.out.println( "EventHandler action firing: ORMPreUpdate" );
+	public void function preUpdate( any entity, Struct oldData = {} ) {
+		System.out.println(
+				"EventHandler action firing: ORMPreUpdate"
+			);
 	}
 
 	/**
 	 * postUpdate called by hibernate which in turn announces a coldbox interception: ORMPostUpdate
 	 */
-	public void function postUpdate( any entity ){
-		System.out.println( "EventHandler action firing: ORMPostUpdate" );
+	public void function postUpdate( any entity ) {
+		System
+			.out
+			.println(
+				"EventHandler action firing: ORMPostUpdate"
+			);
 	}
 
 	/**
 	 * preInsert called by hibernate which in turn announces a coldbox interception: ORMPreInsert
 	 */
-	public void function preInsert( any entity ){
-		System.out.println( "EventHandler action firing: ORMPreInsert" );
+	public void function preInsert( any entity ) {
+		System.out.println(
+				"EventHandler action firing: ORMPreInsert"
+			);
 	}
 
 	/**
 	 * postInsert called by hibernate which in turn announces a coldbox interception: ORMPostInsert
 	 */
-	public void function postInsert( any entity ){
-		System.out.println( "EventHandler action firing: ORMPostInsert" );
+	public void function postInsert( any entity ) {
+		System
+			.out
+			.println(
+				"EventHandler action firing: ORMPostInsert"
+			);
 	}
 
 	/**
 	 * preSave called by ColdBox Base service before save() calls
 	 */
-	public void function preSave( any entity ){
-		System.out.println( "EventHandler action firing: ORMPreSave" );
+	public void function preSave( any entity ) {
+		System.out.println(
+				"EventHandler action firing: ORMPreSave"
+			);
 	}
 
 	/**
 	 * postSave called by ColdBox Base service after transaction commit or rollback via the save() method
 	 */
-	public void function postSave( any entity ){
-		System.out.println( "EventHandler action firing: ORMPostSave" );
+	public void function postSave( any entity ) {
+		System.out.println(
+				"EventHandler action firing: ORMPostSave"
+			);
 	}
 
 	/**
 	 * Called before the session is flushed.
 	 */
-	public void function preFlush( any entities ){
-		System.out.println( "EventHandler action firing: ORMPreFlush" );
+	public void function preFlush( any entities ) {
+		System.out.println(
+				"EventHandler action firing: ORMPreFlush"
+			);
 	}
 
 	/**
 	 * Called after the session is flushed.
 	 */
-	public void function postFlush( any entities ){
-		System.out.println( "EventHandler action firing: ORMPostFlush" );
+	public void function postFlush( any entities ) {
+		System.out.println(
+				"EventHandler action firing: ORMPostFlush"
+			);
 	}
 
 	/**
 	 * postNew called by ColdBox which in turn announces a coldbox interception: ORMPostNew
 	 */
-	public void function postNew( any entity, any entityName ){
+	public void function postNew( any entity, any entityName ) {
 		// Process the announcement
-		System.out.println( "EventHandler action firing: ORMPostNew" );
+		System.out.println(
+				"EventHandler action firing: ORMPostNew"
+			);
 	}
-
 }
