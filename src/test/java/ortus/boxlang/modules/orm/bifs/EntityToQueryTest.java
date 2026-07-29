@@ -98,6 +98,43 @@ public class EntityToQueryTest extends BaseORMTest {
 		assertThat( row.get( "manufacturer" ) ).isNull();
 	}
 
+	@DisplayName( "It includes properties from a parent entity in the query columns" )
+	@Test
+	public void testEntityToQueryIncludesParentProperties() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityToQuery(
+				entityLoadByPK( 'cbPage', '779cd2de-a444-11eb-ab6f-0290cc502ae3' )
+			);
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Query.class );
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
+
+		IStruct row = variables.getAsQuery( result ).getRowAsStruct( 0 );
+
+		// child entity properties should be present
+		assertThat( row.containsKey( "layout" ) ).isTrue();
+		assertThat( row.containsKey( "order" ) ).isTrue();
+		assertThat( row.containsKey( "showInMenu" ) ).isTrue();
+		assertThat( row.containsKey( "excerpt" ) ).isTrue();
+
+		// parent (BaseContent) properties should also be present
+		assertThat( row.containsKey( "contentID" ) ).isTrue();
+		assertThat( row.containsKey( "title" ) ).isTrue();
+		assertThat( row.containsKey( "slug" ) ).isTrue();
+		assertThat( row.containsKey( "createdDate" ) ).isTrue();
+		assertThat( row.containsKey( "isPublished" ) ).isTrue();
+
+		// verify actual values from seed data
+		assertThat( row.get( "contentID" ) ).isEqualTo( "779cd2de-a444-11eb-ab6f-0290cc502ae3" );
+		assertThat( row.get( "title" ) ).isEqualTo( "support" );
+		assertThat( row.get( "slug" ) ).isEqualTo( "support" );
+		assertThat( row.get( "layout" ) ).isEqualTo( "pages" );
+	}
+
 	@DisplayName( "It can convert an empty array into a query" )
 	@Test
 	public void testEntityToQueryEmptyArray() {
