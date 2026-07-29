@@ -171,6 +171,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		    // Default to true to support @mappedSuperClass without a value. Otherwise, mappedSuperClass=false will be parsed as boolean.
 		    && BooleanCaster.cast( parentAnnotations.getOrDefault( ORMKeys.mappedSuperClass, true ) );
 
+		Array	parentProperties			= superMeta.getAsArray( Key.properties );
 		if ( !isParentPersistent && isParentMappedSuperClass ) {
 			// recurse upwards first
 			IStruct superSuperMeta = superMeta.getAsStruct( Key._EXTENDS );
@@ -178,13 +179,14 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 				addParentMeta( superSuperMeta );
 			}
 			// now apppend our parent properties
-			this.allProperties.addAll( superMeta.getAsArray( Key.properties ) );
+			this.allProperties.addAll( parentProperties );
 		} else if ( isParentPersistent
 		    && ( this.annotations.containsKey( ORMKeys.joinColumn ) || this.annotations.containsKey( ORMKeys.discriminatorValue ) ) ) {
-			this.isSubclass	= true;
-			this.joinColumn	= this.annotations.getAsString( ORMKeys.joinColumn );
+			this.isSubclass = true;
+			this.allProperties.addAll( parentProperties );
+			this.joinColumn = this.annotations.getAsString( ORMKeys.joinColumn );
 			if ( this.joinColumn == null ) {
-				IStruct idColumn = superMeta.getAsArray( Key.properties )
+				IStruct idColumn = parentProperties
 				    .stream()
 				    .map( StructCaster::cast )
 				    .filter( item -> item.containsKey( Key.annotations ) )
@@ -417,7 +419,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	}
 
 	/**
-	 * Gets ALL entity properties, including id,version,timestamp,relationship, and regular properties.
+	 * Gets ALL entity properties, including id,version,timestamp,relationship, and regular properties on all entities within the inheritance chain.
 	 *
 	 * @return all ORM properties.
 	 */
