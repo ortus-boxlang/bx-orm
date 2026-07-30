@@ -443,8 +443,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	}
 
 	/**
-	 * Gets entity properties, including id,version,timestamp,relationship, and regular properties on local entity only, excluding any parent (inherited)
-	 * properties.
+	 * Gets persistent ORM properties that are mapped on this entity (the current table), including any @mappedSuperClass ancestors,
+	 * but excluding properties that belong to a persistent parent entity in a joined/discriminator inheritance hierarchy.
 	 *
 	 * @return ORM properties for the local entity.
 	 */
