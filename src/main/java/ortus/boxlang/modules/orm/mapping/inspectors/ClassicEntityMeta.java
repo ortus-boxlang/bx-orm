@@ -76,7 +76,7 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 			this.cache.computeIfAbsent( ORMKeys.include, key -> this.annotations.getAsString( ORMKeys.cacheInclude ) );
 		}
 
-		this.allPersistentProperties	= this.allProperties.stream()
+		this.localPersistentProperties	= this.allProperties.stream()
 		    .map( IStruct.class::cast )
 		    .filter( ( IStruct prop ) -> {
 											    var annotations = prop.getAsStruct( Key.annotations );
@@ -87,12 +87,12 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop, this ) )
 		    .collect( Collectors.toList() );
 
-		this.idProperties				= this.allPersistentProperties.stream()
+		this.idProperties				= this.localPersistentProperties.stream()
 		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ID )
 		    .collect( Collectors.toList() );
 
 		if ( !this.isSubclass && this.idProperties.size() == 0 ) {
-			this.idProperties = this.allPersistentProperties.stream()
+			this.idProperties = this.localPersistentProperties.stream()
 			    .filter( ( IPropertyMeta prop ) -> prop.getName().equalsIgnoreCase( "id" ) )
 			    .collect( Collectors.toList() );
 
@@ -106,14 +106,14 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 			this.idProperties.forEach( ( IPropertyMeta prop ) -> prop.setFieldType( IPropertyMeta.FIELDTYPE.ID ) );
 		}
 
-		this.properties			= this.allPersistentProperties.stream().filter( (
+		this.properties			= this.localPersistentProperties.stream().filter( (
 		    IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.COLUMN ).collect( Collectors.toList() );
 
-		this.versionProperty	= this.allPersistentProperties.stream().filter( (
+		this.versionProperty	= this.localPersistentProperties.stream().filter( (
 		    IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.VERSION || prop.getFieldType() == IPropertyMeta.FIELDTYPE.TIMESTAMP )
 		    .findFirst().orElse( null );
 
-		this.associations		= this.allPersistentProperties.stream().filter( (
+		this.associations		= this.localPersistentProperties.stream().filter( (
 		    IPropertyMeta prop ) -> prop.isAssociationType() ).collect( Collectors.toList() );
 	}
 }

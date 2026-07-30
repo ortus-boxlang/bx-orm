@@ -60,9 +60,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 */
 	protected Array					allProperties;
 
-	protected List<IPropertyMeta>	allPersistentProperties;
-
-	protected List<IPropertyMeta>	parentPersistentProperties;
+	protected List<IPropertyMeta>	localPersistentProperties;
 
 	protected List<IPropertyMeta>	idProperties;
 
@@ -71,6 +69,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	protected List<IPropertyMeta>	associations;
 
 	protected IPropertyMeta			versionProperty;
+
+	protected List<IPropertyMeta>	inheritedProperties;
 
 	protected String				datasource;
 
@@ -142,6 +142,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.selectBeforeUpdate, false ) );
 
 		this.associations			= new ArrayList<>();
+		this.inheritedProperties	= new ArrayList<>();
 		this.allProperties			= new Array();
 
 		// Parse extended entity metadata
@@ -160,18 +161,26 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	}
 
 	private void addParentMeta( IStruct superMeta ) {
-		IStruct	parentAnnotations			= superMeta.getAsStruct( Key.annotations );
+		IStruct						parentAnnotations				= superMeta.getAsStruct( Key.annotations );
 		// @Entity
-		boolean	isParentPersistent			= parentAnnotations.containsKey( ORMKeys.entity )
+		boolean						isParentPersistent				= parentAnnotations.containsKey( ORMKeys.entity )
 		    // persistent="false"
 		    || ( parentAnnotations.containsKey( ORMKeys.persistent )
 		        && BooleanCaster.cast( parentAnnotations.getOrDefault( ORMKeys.persistent, false ) ) );
 		// @mappedSuperClass
-		boolean	isParentMappedSuperClass	= parentAnnotations.containsKey( ORMKeys.mappedSuperClass )
+		boolean						isParentMappedSuperClass		= parentAnnotations.containsKey( ORMKeys.mappedSuperClass )
 		    // Default to true to support @mappedSuperClass without a value. Otherwise, mappedSuperClass=false will be parsed as boolean.
 		    && BooleanCaster.cast( parentAnnotations.getOrDefault( ORMKeys.mappedSuperClass, true ) );
 
-		Array	parentProperties			= superMeta.getAsArray( Key.properties );
+		Array						parentProperties				= superMeta.getAsArray( Key.properties );
+
+		// properties from MappedSuperClass parents should be included in certain entity serializations, entityToQuery(), etc.
+		List<ClassicPropertyMeta>	inheritedPersistentProperties	= parentProperties
+		    .stream()
+		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), ( IStruct ) prop, this ) )
+		    // exclude properties explicitly marked as persistent="false"
+		    .filter( prop -> BooleanCaster.cast( prop.getAnnotations().getOrDefault( ORMKeys.persistent, true ) ) )
+		    .toList();
 		if ( !isParentPersistent && isParentMappedSuperClass ) {
 			// recurse upwards first
 			IStruct superSuperMeta = superMeta.getAsStruct( Key._EXTENDS );
@@ -180,11 +189,14 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 			}
 			// now apppend our parent properties
 			this.allProperties.addAll( parentProperties );
+			// properties from MappedSuperClass parents should be included in certain entity serializations, entityToQuery(), etc.
+			this.inheritedProperties.addAll( inheritedPersistentProperties );
 		} else if ( isParentPersistent
 		    && ( this.annotations.containsKey( ORMKeys.joinColumn ) || this.annotations.containsKey( ORMKeys.discriminatorValue ) ) ) {
-			this.isSubclass = true;
-			this.allProperties.addAll( parentProperties );
-			this.joinColumn = this.annotations.getAsString( ORMKeys.joinColumn );
+			this.isSubclass	= true;
+			this.joinColumn	= this.annotations.getAsString( ORMKeys.joinColumn );
+			// properties from persistent parents should be included in certain entity serializations, entityToQuery(), etc.
+			this.inheritedProperties.addAll( inheritedPersistentProperties );
 			if ( this.joinColumn == null ) {
 				IStruct idColumn = parentProperties
 				    .stream()
@@ -424,7 +436,19 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 * @return all ORM properties.
 	 */
 	public List<IPropertyMeta> getAllPersistentProperties() {
-		return this.allPersistentProperties;
+		List<IPropertyMeta> allProperties = new ArrayList<>( this.localPersistentProperties );
+		allProperties.addAll( this.inheritedProperties );
+		return allProperties;
+	}
+
+	/**
+	 * Gets entity properties, including id,version,timestamp,relationship, and regular properties on local entity only, excluding any parent (inherited)
+	 * properties.
+	 *
+	 * @return ORM properties for the local entity.
+	 */
+	public List<IPropertyMeta> getLocalPersistentProperties() {
+		return this.localPersistentProperties;
 	}
 
 	/**
@@ -455,21 +479,21 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	}
 
 	/**
+	 * Gets properties from parent entities.
+	 * 
+	 * @return a List of IPropertyMeta containing the properties from parent entities.
+	 */
+	public List<IPropertyMeta> getInheritedProperties() {
+		return this.inheritedProperties;
+	}
+
+	/**
 	 * Gets all persistent property names as an Array of Keys for comparison
 	 *
 	 * @return An Array containing keys of the names of all persistent properties.
 	 */
 	public Array getPropertyNamesArray() {
-		Array	properties	= getAllPersistentProperties().stream().map( property -> KeyCaster.cast( property.getName() ) )
+		return getAllPersistentProperties().stream().map( property -> KeyCaster.cast( property.getName() ) )
 		    .collect( BLCollector.toArray() );
-
-		Array	parentMeta	= getParentMeta().getAsArray( Key.properties );
-		if ( parentMeta != null ) {
-			properties.addAll(
-			    parentMeta.stream().map( StructCaster::cast )
-			        .map( prop -> KeyCaster.cast( prop.getAsStruct( Key.annotations ).get( Key._NAME ) ) ).collect( BLCollector.toArray() )
-			);
-		}
-		return properties;
 	}
 }

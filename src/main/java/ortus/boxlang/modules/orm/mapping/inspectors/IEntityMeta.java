@@ -136,9 +136,17 @@ public interface IEntityMeta {
 	/**
 	 * Property methods
 	 */
+	/**
+	 * Gets entity properties, including id,version,timestamp,relationship, and regular properties on local entity only, excluding any parent (inherited)
+	 * properties.
+	 *
+	 * @return ORM properties for the local entity.
+	 */
+	public List<IPropertyMeta> getLocalPersistentProperties();
 
 	/**
-	 * Retrieve a list of all persistent (ORM) properties
+	 * Retrieve a list of persistent (ORM) properties from all entities in the inheritance hierarchy, including parent entities, but excluding any
+	 * transient or non-persistent regular properties.
 	 *
 	 * Includes:
 	 * <ul>
@@ -150,6 +158,13 @@ public interface IEntityMeta {
 	 * </ul>
 	 */
 	public List<IPropertyMeta> getAllPersistentProperties();
+
+	/**
+	 * Gets persistent properties from parent entities.
+	 * 
+	 * @return a List of IPropertyMeta containing the properties from parent entities.
+	 */
+	public List<IPropertyMeta> getInheritedProperties();
 
 	/**
 	 * Retrieve a list of all key properties.
