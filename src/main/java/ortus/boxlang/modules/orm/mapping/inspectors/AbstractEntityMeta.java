@@ -56,10 +56,13 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	protected IStruct				parentMeta;
 
 	/**
-	 * All properties of the entity, including transient properties and parent properties.
+	 * All properties of the local entity, before filtering out non-persistent properties.
 	 */
-	protected Array					allProperties;
+	protected Array					localProperties;
 
+	/**
+	 * All persistent properties of the local entity and mapped super class (if any), after filtering out non-persistent properties.
+	 */
 	protected List<IPropertyMeta>	localPersistentProperties;
 
 	protected List<IPropertyMeta>	idProperties;
@@ -143,7 +146,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 
 		this.associations			= new ArrayList<>();
 		this.inheritedProperties	= new ArrayList<>();
-		this.allProperties			= new Array();
+		this.localProperties		= new Array();
 
 		// Parse extended entity metadata
 		this.parentMeta				= this.isExtended
@@ -157,7 +160,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		}
 
 		// Only add the current entity's properties after first adding any parent properties.
-		this.allProperties.addAll( this.meta.getAsArray( Key.properties ) );
+		this.localProperties.addAll( this.meta.getAsArray( Key.properties ) );
 	}
 
 	private void addParentMeta( IStruct superMeta ) {
@@ -187,10 +190,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 			if ( superSuperMeta != null && !superSuperMeta.isEmpty() ) {
 				addParentMeta( superSuperMeta );
 			}
-			// now apppend our parent properties
-			this.allProperties.addAll( parentProperties );
-			// properties from MappedSuperClass parents should be included in certain entity serializations, entityToQuery(), etc.
-			this.inheritedProperties.addAll( inheritedPersistentProperties );
+			// For mappedSuperClass parents, we want to include their properties in the local entity's properties - not treat them as inherited properties.
+			this.localProperties.addAll( parentProperties );
 		} else if ( isParentPersistent
 		    && ( this.annotations.containsKey( ORMKeys.joinColumn ) || this.annotations.containsKey( ORMKeys.discriminatorValue ) ) ) {
 			this.isSubclass	= true;

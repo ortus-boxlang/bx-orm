@@ -76,7 +76,7 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 			this.cache.computeIfAbsent( ORMKeys.include, key -> this.annotations.getAsString( ORMKeys.cacheInclude ) );
 		}
 
-		this.localPersistentProperties	= this.allProperties.stream()
+		this.localPersistentProperties	= this.localProperties.stream()
 		    .map( IStruct.class::cast )
 		    .filter( ( IStruct prop ) -> {
 											    var annotations = prop.getAsStruct( Key.annotations );
