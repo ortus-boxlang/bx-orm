@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Bug Fixes
+
+- Updated CI `GRADLE_VERSION` to `9.6.1` to match the Gradle wrapper and fix `NoSuchMethodError` with Shadow plugin 9.6.1
+
 ## [1.6.6] - 2026-07-22
 
 ### ⚡ Updates
