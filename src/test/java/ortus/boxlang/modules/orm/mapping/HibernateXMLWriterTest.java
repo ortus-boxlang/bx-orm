@@ -20,6 +20,7 @@ package ortus.boxlang.modules.orm.mapping;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -423,6 +424,55 @@ public class HibernateXMLWriterTest {
 		assertNotNull( generatorNode );
 		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
 		    .isEqualTo( expectedGenerator );
+	}
+
+	@DisplayName( "It accepts a valid custom generator class on the classpath" )
+	@Test
+	public void testCustomGeneratorClassAccepted() {
+		// org.hibernate.id.UUIDGenerator is a real Hibernate IdentifierGenerator on the classpath
+		String		sourceCode		= """
+		                              class persistent {
+		                              	property
+		                              		name="the_id"
+		                              		fieldtype="id"
+		                              		generator="org.hibernate.id.UUIDGenerator";
+		                              }
+		                              """;
+
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+
+		Node		classEl			= doc.getDocumentElement().getFirstChild();
+		Node		idNode			= classEl.getFirstChild();
+		NodeList	idChildren		= idNode.getChildNodes();
+		Node		generatorNode	= null;
+		for ( int i = 0; i < idChildren.getLength(); i++ ) {
+			Node child = idChildren.item( i );
+			if ( child.getNodeType() == Node.ELEMENT_NODE && "generator".equals( child.getNodeName() ) ) {
+				generatorNode = child;
+				break;
+			}
+		}
+		assertNotNull( generatorNode );
+		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
+		    .isEqualTo( "org.hibernate.id.UUIDGenerator" );
+	}
+
+	@DisplayName( "It throws a BoxRuntimeException for an unrecognized generator name" )
+	@Test
+	public void testInvalidGeneratorThrowsException() {
+		String	sourceCode	= """
+		                      class persistent {
+		                      	property
+		                      		name="the_id"
+		                      		fieldtype="id"
+		                      		generator="bogusGenerator";
+		                      }
+		                      """;
+
+		IStruct	meta		= getClassMetaFromCode( sourceCode );
+		assertThrows( BoxRuntimeException.class, () -> AbstractEntityMeta.autoDiscoverMetaType( meta ) );
 	}
 
 	// @formatter:off

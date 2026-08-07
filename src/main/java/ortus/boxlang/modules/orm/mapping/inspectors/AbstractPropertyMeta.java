@@ -17,15 +17,20 @@
  */
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
+import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
  * Abstract base class for property metadata in the ORM framework.
@@ -118,7 +123,9 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.association	= parseAssociation( this.annotations );
 
 		if ( !this.generator.isEmpty() && this.generator.containsKey( Key._CLASS ) ) {
-			if ( INTEGER_GENERATORS.contains( normalizeGeneratorClass( this.generator.getAsString( Key._CLASS ) ) ) ) {
+			String normalizedClass = normalizeGeneratorClass( this.generator.getAsString( Key._CLASS ) );
+			this.generator.put( Key._CLASS, normalizedClass );
+			if ( INTEGER_GENERATORS.contains( normalizedClass ) ) {
 				this.annotations.putIfAbsent( ORMKeys.ORMType, "integer" );
 			}
 		}
@@ -327,6 +334,41 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 			return normalizedGenerator;
 		}
 
-		return generatorClass.trim();
+		// Not a built-in generator – treat as a fully-qualified Java class name and verify it exists.
+		String				className		= generatorClass.trim();
+		List<ClassLoader>	classLoaders	= new ArrayList<>();
+
+		// Include the ORM module classloader so custom generators packaged in modules are resolved.
+		try {
+			ModuleRecord ormModule = runtime.getModuleService().getModuleRecord( ORMKeys.moduleName );
+			if ( ormModule != null && ormModule.classLoader != null ) {
+				classLoaders.add( ormModule.classLoader );
+			}
+		} catch ( Exception ignored ) {
+			// Module may not be registered during unit tests; fall through to other loaders.
+		}
+		classLoaders.add( runtime.getClass().getClassLoader() );
+		classLoaders.add( Thread.currentThread().getContextClassLoader() );
+
+		for ( ClassLoader classLoader : classLoaders ) {
+			if ( classLoader == null ) {
+				continue;
+			}
+			try {
+				classLoader.loadClass( className );
+				return className;
+			} catch ( ClassNotFoundException ignored ) {
+				// try next loader
+			}
+		}
+
+		String validGenerators = NORMALIZED_GENERATORS.stream()
+		    .sorted()
+		    .collect( Collectors.joining( ", " ) );
+		throw new BoxRuntimeException(
+		    "Invalid ORM generator '" + generatorClass + "' on property '" + this.name + "' of entity '" + this.entityName + "'. "
+		        + "Built-in generators are: " + validGenerators + ". "
+		        + "If you intended to use a custom generator, ensure the fully-qualified class name is on the classpath."
+		);
 	}
 }
