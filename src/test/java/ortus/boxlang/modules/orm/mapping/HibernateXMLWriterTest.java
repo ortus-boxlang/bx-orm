@@ -389,10 +389,10 @@ public class HibernateXMLWriterTest {
 	@DisplayName( "It normalizes generator names regardless of case" )
 	@ParameterizedTest
 	@CsvSource( {
-	    "UUID,uuid,true",
-	    "IdEnTiTy,identity,false"
+	    "UUID,uuid,string",
+	    "IdEnTiTy,identity,integer"
 	} )
-	public void testGeneratorCaseNormalization( String generator, String expectedGenerator, boolean shouldUseStringConverter ) {
+	public void testGeneratorCaseNormalization( String generator, String expectedGenerator, String expectedType ) {
 		String		sourceCode		= """
 		                              class persistent {
 		                              	property
@@ -419,7 +419,7 @@ public class HibernateXMLWriterTest {
 		}
 
 		assertThat( idNode.getAttributes().getNamedItem( "type" ).getTextContent() )
-		    .isEqualTo( shouldUseStringConverter ? "converted::" + StringConverter.class.getName() : "integer" );
+		    .isEqualTo( expectedType );
 		assertNotNull( generatorNode );
 		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
 		    .isEqualTo( expectedGenerator );
