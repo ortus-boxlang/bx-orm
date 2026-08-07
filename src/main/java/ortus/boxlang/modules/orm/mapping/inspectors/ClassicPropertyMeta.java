@@ -323,7 +323,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 	protected IStruct parseGeneratorAnnotations( IStruct annotations ) {
 		IStruct generator = new Struct();
 		if ( annotations.containsKey( ORMKeys.generator ) ) {
-			generator.put( Key._CLASS, annotations.getAsString( ORMKeys.generator ) );
+			generator.put( Key._CLASS, normalizeGeneratorClass( annotations.getAsString( ORMKeys.generator ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.property ) ) {
 			generator.put( ORMKeys.property, annotations.getAsString( ORMKeys.property ) );

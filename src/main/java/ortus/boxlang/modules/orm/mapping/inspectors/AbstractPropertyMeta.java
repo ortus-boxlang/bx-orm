@@ -17,7 +17,8 @@
  */
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
-import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -48,6 +49,23 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
 	private static final String		ANY_TYPE			= "any";
 	private static final String		STRING_TYPE			= "string";
+	private static final Set<String>	NORMALIZED_GENERATORS	= Set.of(
+	    "assigned",
+	    "foreign",
+	    "guid",
+	    "identity",
+	    "increment",
+	    "native",
+	    "select",
+	    "sequence",
+	    "sequence-identity",
+	    "uuid"
+	);
+	private static final Set<String>	INTEGER_GENERATORS		= Set.of(
+	    "identity",
+	    "increment",
+	    "native"
+	);
 
 	/**
 	 * The logger for the ORM application.
@@ -100,7 +118,7 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.association	= parseAssociation( this.annotations );
 
 		if ( !this.generator.isEmpty() && this.generator.containsKey( Key._CLASS ) ) {
-			if ( List.of( "identity", "native", "increment" ).contains( this.generator.getAsString( Key._CLASS ) ) ) {
+			if ( INTEGER_GENERATORS.contains( this.generator.getAsString( Key._CLASS ) ) ) {
 				this.annotations.putIfAbsent( ORMKeys.ORMType, "integer" );
 			}
 		}
@@ -297,5 +315,18 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	 */
 	public IStruct getCache() {
 		return this.cache;
+	}
+
+	protected String normalizeGeneratorClass( String generatorClass ) {
+		if ( generatorClass == null ) {
+			return null;
+		}
+
+		String normalizedGenerator = generatorClass.trim().toLowerCase( Locale.ROOT );
+		if ( NORMALIZED_GENERATORS.contains( normalizedGenerator ) ) {
+			return normalizedGenerator;
+		}
+
+		return generatorClass.trim();
 	}
 }

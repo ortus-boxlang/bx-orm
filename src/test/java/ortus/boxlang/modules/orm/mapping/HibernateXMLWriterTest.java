@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
@@ -383,6 +384,36 @@ public class HibernateXMLWriterTest {
 
 		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
 		    .isEqualTo( "increment" );
+	}
+
+	@DisplayName( "It normalizes generator names regardless of case" )
+	@ParameterizedTest
+	@CsvSource( {
+	    "UUID,uuid,converted::" + StringConverter.class.getName(),
+	    "IdEnTiTy,identity,integer"
+	} )
+	public void testGeneratorCaseNormalization( String generator, String expectedGenerator, String expectedType ) {
+		String sourceCode = """
+		    class persistent {
+		    	property
+		    		name="the_id"
+		    		fieldtype="id"
+		    		generator="%s";
+		    }
+		    """.formatted( generator );
+
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+
+		Node		classEl		= doc.getDocumentElement().getFirstChild();
+		Node		idNode		= classEl.getFirstChild();
+		Node		generatorNode	= idNode.getLastChild();
+
+		assertThat( idNode.getAttributes().getNamedItem( "type" ).getTextContent() )
+		    .isEqualTo( expectedType );
+		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
+		    .isEqualTo( expectedGenerator );
 	}
 
 	// @formatter:off
