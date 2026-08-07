@@ -19,7 +19,6 @@ package ortus.boxlang.modules.orm.mapping.inspectors;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -329,7 +328,7 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 			return null;
 		}
 
-		String normalizedGenerator = generatorClass.trim().toLowerCase( Locale.ROOT );
+		String normalizedGenerator = generatorClass.trim().toLowerCase();
 		if ( NORMALIZED_GENERATORS.contains( normalizedGenerator ) ) {
 			return normalizedGenerator;
 		}
