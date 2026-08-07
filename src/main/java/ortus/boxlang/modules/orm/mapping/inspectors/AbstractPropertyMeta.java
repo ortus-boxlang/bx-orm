@@ -45,10 +45,10 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime				= BoxRuntime.getInstance();
+	private static final BoxRuntime		runtime					= BoxRuntime.getInstance();
 
-	private static final String		ANY_TYPE			= "any";
-	private static final String		STRING_TYPE			= "string";
+	private static final String			ANY_TYPE				= "any";
+	private static final String			STRING_TYPE				= "string";
 	private static final Set<String>	NORMALIZED_GENERATORS	= Set.of(
 	    "assigned",
 	    "foreign",
@@ -70,31 +70,31 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	/**
 	 * The logger for the ORM application.
 	 */
-	protected BoxLangLogger			logger;
+	protected BoxLangLogger				logger;
 
-	protected IStruct				meta;
-	protected IEntityMeta			definingEntity;
-	protected IStruct				annotations;
+	protected IStruct					meta;
+	protected IEntityMeta				definingEntity;
+	protected IStruct					annotations;
 
 	/**
 	 * Parent entity name, for logging purposes
 	 */
-	protected String				entityName;
-	protected String				name;
-	protected boolean				isImmutable			= false;
-	protected boolean				isOptimisticLock	= true;
-	protected String				lazy;
-	protected String				formula;
-	protected String				sqlType;
-	protected String				ormType;
-	protected IStruct				generator;
-	protected IStruct				column;
-	protected IStruct				association;
-	protected String				unsavedValue;
+	protected String					entityName;
+	protected String					name;
+	protected boolean					isImmutable				= false;
+	protected boolean					isOptimisticLock		= true;
+	protected String					lazy;
+	protected String					formula;
+	protected String					sqlType;
+	protected String					ormType;
+	protected IStruct					generator;
+	protected IStruct					column;
+	protected IStruct					association;
+	protected String					unsavedValue;
 
-	protected FIELDTYPE				fieldType;
+	protected FIELDTYPE					fieldType;
 
-	protected IStruct				cache				= Struct.EMPTY;
+	protected IStruct					cache					= Struct.EMPTY;
 
 	public AbstractPropertyMeta( String entityName, IStruct meta, IEntityMeta definingEntity ) {
 		this.logger			= runtime.getLoggingService().getLogger( "orm" );

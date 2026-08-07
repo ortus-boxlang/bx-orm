@@ -393,25 +393,34 @@ public class HibernateXMLWriterTest {
 	    "IdEnTiTy,identity,integer"
 	} )
 	public void testGeneratorCaseNormalization( String generator, String expectedGenerator, String expectedType ) {
-		String sourceCode = """
-		    class persistent {
-		    	property
-		    		name="the_id"
-		    		fieldtype="id"
-		    		generator="%s";
-		    }
-		    """.formatted( generator );
+		String		sourceCode		= """
+		                              class persistent {
+		                              	property
+		                              		name="the_id"
+		                              		fieldtype="id"
+		                              		generator="%s";
+		                              }
+		                              """.formatted( generator );
 
-		IStruct		meta		= getClassMetaFromCode( sourceCode );
-		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
-		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+		IStruct		meta			= getClassMetaFromCode( sourceCode );
+		IEntityMeta	entityMeta		= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc				= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
 
-		Node		classEl		= doc.getDocumentElement().getFirstChild();
-		Node		idNode		= classEl.getFirstChild();
-		Node		generatorNode	= idNode.getLastChild();
+		Node		classEl			= doc.getDocumentElement().getFirstChild();
+		Node		idNode			= classEl.getFirstChild();
+		NodeList	idChildren		= idNode.getChildNodes();
+		Node		generatorNode	= null;
+		for ( int i = 0; i < idChildren.getLength(); i++ ) {
+			Node child = idChildren.item( i );
+			if ( child.getNodeType() == Node.ELEMENT_NODE && "generator".equals( child.getNodeName() ) ) {
+				generatorNode = child;
+				break;
+			}
+		}
 
 		assertThat( idNode.getAttributes().getNamedItem( "type" ).getTextContent() )
 		    .isEqualTo( expectedType );
+		assertNotNull( generatorNode );
 		assertThat( generatorNode.getAttributes().getNamedItem( "class" ).getTextContent() )
 		    .isEqualTo( expectedGenerator );
 	}
