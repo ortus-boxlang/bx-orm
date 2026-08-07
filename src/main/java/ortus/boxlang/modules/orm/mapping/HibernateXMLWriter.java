@@ -19,6 +19,7 @@ package ortus.boxlang.modules.orm.mapping;
 
 import java.util.List;
 import java.util.Set;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
@@ -831,9 +832,9 @@ public class HibernateXMLWriter {
 
 		// generate keys, aka <id> elements
 		if ( !entity.isSubclass() ) {
-			List<IPropertyMeta> idProperties = entity.getIdProperties();
+			Set<IPropertyMeta> idProperties = entity.getIdProperties();
 			if ( idProperties.size() == 1 ) {
-				entityElement.appendChild( generateIdElement( "id", idProperties.get( 0 ) ) );
+				entityElement.appendChild( generateIdElement( "id", idProperties.iterator().next() ) );
 			} else if ( idProperties.size() > 1 ) {
 				Element compositeIdNode = this.document.createElement( "composite-id" );
 				idProperties.stream().forEach( ( prop ) -> {

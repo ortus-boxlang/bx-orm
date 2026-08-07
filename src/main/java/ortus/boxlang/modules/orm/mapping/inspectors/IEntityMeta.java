@@ -18,7 +18,7 @@
  */
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
-import java.util.List;
+import java.util.Set;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.scopes.Key;
@@ -142,10 +142,10 @@ public interface IEntityMeta {
 	 *
 	 * @return ORM properties for the local entity.
 	 */
-	public List<IPropertyMeta> getLocalPersistentProperties();
+	public Set<IPropertyMeta> getLocalPersistentProperties();
 
 	/**
-	 * Retrieve a list of persistent (ORM) properties from all entities in the inheritance hierarchy, including parent entities, but excluding any
+	 * Retrieve a set of persistent (ORM) properties from all entities in the inheritance hierarchy, including parent entities, but excluding any
 	 * transient or non-persistent regular properties.
 	 *
 	 * Includes:
@@ -157,19 +157,19 @@ public interface IEntityMeta {
 	 * <li>other (normal) properties</li>
 	 * </ul>
 	 */
-	public List<IPropertyMeta> getAllPersistentProperties();
+	public Set<IPropertyMeta> getAllPersistentProperties();
 
 	/**
 	 * Gets persistent properties from parent entities.
 	 * 
-	 * @return a List of IPropertyMeta containing the properties from parent entities.
+	 * @return a Set of IPropertyMeta containing the properties from parent entities.
 	 */
-	public List<IPropertyMeta> getInheritedProperties();
+	public Set<IPropertyMeta> getInheritedProperties();
 
 	/**
-	 * Retrieve a list of all key properties.
+	 * Retrieve a set of all key properties.
 	 */
-	public List<IPropertyMeta> getIdProperties();
+	public Set<IPropertyMeta> getIdProperties();
 
 	/**
 	 * Retrieve the version property, if it exists.
@@ -177,16 +177,16 @@ public interface IEntityMeta {
 	public IPropertyMeta getVersionProperty();
 
 	/**
-	 * Retrieve a list of all "normal" properties.
+	 * Retrieve a set of all "normal" properties.
 	 * <p>
 	 * Excludes fieldtype=ID, fieldtype=version, fieldtype=timestamp, relationship fieldtypes, etc.
 	 */
-	public List<IPropertyMeta> getProperties();
+	public Set<IPropertyMeta> getProperties();
 
 	/**
-	 * Retrieve a list of all association properties.
+	 * Retrieve a set of all association properties.
 	 * <p>
-	 * Retrieves a list of association properties of one of these types:
+	 * Retrieves a set of association properties of one of these types:
 	 * <ul>
 	 * <li>one-to-one</li>
 	 * <li>one-to-many</li>
@@ -194,7 +194,7 @@ public interface IEntityMeta {
 	 * <li>many-to-many</li>
 	 * </ul>
 	 */
-	public List<IPropertyMeta> getAssociations();
+	public Set<IPropertyMeta> getAssociations();
 
 	/**
 	 * Gets all persistent property names as an Array of Keys for comparison

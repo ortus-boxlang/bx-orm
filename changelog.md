@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- BL-2612 - `entityToQuery()` now includes inherited persistent properties (e.g., from a persistent parent entity) in query columns. Property collections internally use `LinkedHashSet` to prevent duplicate properties across the inheritance chain.
+
 ## [1.6.6] - 2026-07-22
 
 ### ⚡ Updates

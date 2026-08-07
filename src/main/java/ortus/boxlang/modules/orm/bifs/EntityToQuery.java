@@ -17,7 +17,7 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import java.util.List;
+import java.util.Set;
 
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMContext;
@@ -108,7 +108,7 @@ public class EntityToQuery extends BaseORMBIF {
 	}
 
 	private Query populateQuery( Array entities, EntityRecord entityRecord ) {
-		List<IPropertyMeta>	props	= entityRecord.getEntityMeta().getAllPersistentProperties();
+		Set<IPropertyMeta>	props	= entityRecord.getEntityMeta().getAllPersistentProperties();
 		Query				result	= new Query();
 		for ( IPropertyMeta prop : props ) {
 			result.addColumn( Key.of( prop.getName() ), QueryColumnType.fromString( prop.getORMType() ) );

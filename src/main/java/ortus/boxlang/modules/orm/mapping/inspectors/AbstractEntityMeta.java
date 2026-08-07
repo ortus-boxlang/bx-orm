@@ -17,8 +17,9 @@
  */
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -63,17 +64,17 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	/**
 	 * All persistent properties of the local entity and mapped super class (if any), after filtering out non-persistent properties.
 	 */
-	protected List<IPropertyMeta>	localPersistentProperties;
+	protected Set<IPropertyMeta>	localPersistentProperties;
 
-	protected List<IPropertyMeta>	idProperties;
+	protected Set<IPropertyMeta>	idProperties;
 
-	protected List<IPropertyMeta>	properties;
+	protected Set<IPropertyMeta>	properties;
 
-	protected List<IPropertyMeta>	associations;
+	protected Set<IPropertyMeta>	associations;
 
 	protected IPropertyMeta			versionProperty;
 
-	protected List<IPropertyMeta>	inheritedProperties;
+	protected Set<IPropertyMeta>	inheritedProperties;
 
 	protected String				datasource;
 
@@ -144,8 +145,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		this.isSelectBeforeUpdate	= this.annotations.containsKey( ORMKeys.selectBeforeUpdate )
 		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.selectBeforeUpdate, false ) );
 
-		this.associations			= new ArrayList<>();
-		this.inheritedProperties	= new ArrayList<>();
+		this.associations			= new LinkedHashSet<>();
+		this.inheritedProperties	= new LinkedHashSet<>();
 		this.localProperties		= new Array();
 
 		// Parse extended entity metadata
@@ -427,7 +428,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 *
 	 * @return the ID properties of the entity.
 	 */
-	public List<IPropertyMeta> getIdProperties() {
+	public Set<IPropertyMeta> getIdProperties() {
 		return this.idProperties;
 	}
 
@@ -436,8 +437,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 *
 	 * @return all ORM properties.
 	 */
-	public List<IPropertyMeta> getAllPersistentProperties() {
-		List<IPropertyMeta> allProperties = new ArrayList<>( this.localPersistentProperties );
+	public Set<IPropertyMeta> getAllPersistentProperties() {
+		Set<IPropertyMeta> allProperties = new LinkedHashSet<>( this.localPersistentProperties );
 		allProperties.addAll( this.inheritedProperties );
 		return allProperties;
 	}
@@ -448,7 +449,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 *
 	 * @return ORM properties for the local entity.
 	 */
-	public List<IPropertyMeta> getLocalPersistentProperties() {
+	public Set<IPropertyMeta> getLocalPersistentProperties() {
 		return this.localPersistentProperties;
 	}
 
@@ -457,7 +458,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 *
 	 * @return the properties of the entity.
 	 */
-	public List<IPropertyMeta> getProperties() {
+	public Set<IPropertyMeta> getProperties() {
 		return this.properties;
 	}
 
@@ -475,16 +476,16 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 	 *
 	 * @return the associations of the entity.
 	 */
-	public List<IPropertyMeta> getAssociations() {
+	public Set<IPropertyMeta> getAssociations() {
 		return this.associations;
 	}
 
 	/**
 	 * Gets properties from parent entities.
 	 * 
-	 * @return a List of IPropertyMeta containing the properties from parent entities.
+	 * @return a Set of IPropertyMeta containing the properties from parent entities.
 	 */
-	public List<IPropertyMeta> getInheritedProperties() {
+	public Set<IPropertyMeta> getInheritedProperties() {
 		return this.inheritedProperties;
 	}
 

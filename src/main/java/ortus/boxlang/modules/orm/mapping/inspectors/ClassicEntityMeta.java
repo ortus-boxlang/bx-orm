@@ -17,6 +17,7 @@
  */
 package ortus.boxlang.modules.orm.mapping.inspectors;
 
+import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -85,21 +86,21 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 											    );
 										    } )
 		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop, this ) )
-		    .collect( Collectors.toList() );
+		    .collect( Collectors.toCollection( LinkedHashSet::new ) );
 
 		this.idProperties				= this.localPersistentProperties.stream()
 		    .filter( ( IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.ID )
-		    .collect( Collectors.toList() );
+		    .collect( Collectors.toCollection( LinkedHashSet::new ) );
 
 		if ( !this.isSubclass && this.idProperties.size() == 0 ) {
 			this.idProperties = this.localPersistentProperties.stream()
 			    .filter( ( IPropertyMeta prop ) -> prop.getName().equalsIgnoreCase( "id" ) )
-			    .collect( Collectors.toList() );
+			    .collect( Collectors.toCollection( LinkedHashSet::new ) );
 
 			if ( this.idProperties.size() > 0 ) {
 				logger.warn(
 				    "Entity {} has no ID properties; am mutating property {} to an id fieldtype. Please mark your property as fieldtype='id' to avoid this implicit and deprecated behavior",
-				    this.entityName, idProperties.get( 0 ).getName() );
+				    this.entityName, idProperties.iterator().next().getName() );
 			}
 
 			// This ensures it is marked as an ID property, and will NOT be included in the standard COLUMN properties
@@ -107,13 +108,13 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		}
 
 		this.properties			= this.localPersistentProperties.stream().filter( (
-		    IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.COLUMN ).collect( Collectors.toList() );
+		    IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.COLUMN ).collect( Collectors.toCollection( LinkedHashSet::new ) );
 
 		this.versionProperty	= this.localPersistentProperties.stream().filter( (
 		    IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.VERSION || prop.getFieldType() == IPropertyMeta.FIELDTYPE.TIMESTAMP )
 		    .findFirst().orElse( null );
 
 		this.associations		= this.localPersistentProperties.stream().filter( (
-		    IPropertyMeta prop ) -> prop.isAssociationType() ).collect( Collectors.toList() );
+		    IPropertyMeta prop ) -> prop.isAssociationType() ).collect( Collectors.toCollection( LinkedHashSet::new ) );
 	}
 }
