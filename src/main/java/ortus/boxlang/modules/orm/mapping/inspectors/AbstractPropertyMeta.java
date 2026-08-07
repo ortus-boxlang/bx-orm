@@ -118,7 +118,7 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.association	= parseAssociation( this.annotations );
 
 		if ( !this.generator.isEmpty() && this.generator.containsKey( Key._CLASS ) ) {
-			if ( INTEGER_GENERATORS.contains( this.generator.getAsString( Key._CLASS ) ) ) {
+			if ( INTEGER_GENERATORS.contains( normalizeGeneratorClass( this.generator.getAsString( Key._CLASS ) ) ) ) {
 				this.annotations.putIfAbsent( ORMKeys.ORMType, "integer" );
 			}
 		}
