@@ -9,7 +9,7 @@ on:
 
 env:
   MODULE_ID: ${{ github.event.repository.name }}
-  GRADLE_VERSION: 8.14.1
+  GRADLE_VERSION: 9.6.1
 
 jobs:
   tests:
