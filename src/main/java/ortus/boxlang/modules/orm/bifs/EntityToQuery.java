@@ -17,6 +17,7 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import java.util.List;
 import java.util.Set;
 
 import ortus.boxlang.modules.orm.ORMApp;
