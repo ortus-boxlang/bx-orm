@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.7] - 2026-08-13
+
 ### 🐛 Fixed
 
 - BL-2612 - `entityToQuery()` now includes inherited persistent properties (e.g., from a persistent parent entity) in query columns. Property collections internally use `LinkedHashSet` to prevent duplicate properties across the inheritance chain.
@@ -311,7 +313,8 @@ No significant changes.
 
 - First iteration of this module
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.6...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.7...HEAD
+[1.6.7]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.6...v1.6.7
 [1.6.6]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.5...v1.6.6
 [1.6.5]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.4...v1.6.5
 [1.6.4]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.3...v1.6.4
