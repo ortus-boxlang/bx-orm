@@ -121,6 +121,51 @@ public class EntityToQueryTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( result ).getRowAsStruct( 2 ).get( "vin" ) ).isEqualTo( "1HGCM82633A789012" );
 	}
 
+	@DisplayName( "It can convert one entity into a single-row query when entity name is provided" )
+	@Test
+	public void testEntityToQuerySingleEntityWithName() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityToQuery(
+				entityLoadByPK( 'Vehicle', '1HGCM82633A123456' ),
+				'Vehicle'
+			);
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Query.class );
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
+
+		IStruct row = variables.getAsQuery( result ).getRowAsStruct( 0 );
+
+		assertThat( row.get( "vin" ) ).isEqualTo( "1HGCM82633A123456" );
+		assertThat( row.get( "make" ) ).isEqualTo( "Honda" );
+		assertThat( row.get( "model" ) ).isEqualTo( "Accord" );
+	}
+
+	@DisplayName( "It can convert an entity array into a multi-row query when entity name is provided" )
+	@Test
+	public void testEntityToQueryArrayWithName() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityToQuery( [
+				entityLoadByPK( 'Vehicle', '1HGCM82633A123456' ),
+				entityLoadByPK( 'Vehicle', '2HGCM82633A654321' ),
+				entityLoadByPK( 'Vehicle', '1HGCM82633A789012' )
+			], 'Vehicle' );
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Query.class );
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 3 );
+
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "vin" ) ).isEqualTo( "1HGCM82633A123456" );
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 1 ).get( "vin" ) ).isEqualTo( "2HGCM82633A654321" );
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 2 ).get( "vin" ) ).isEqualTo( "1HGCM82633A789012" );
+	}
+
 	@DisplayName( "It includes properties from a parent entity in the query columns" )
 	@Test
 	public void testEntityToQueryIncludesParentProperties() {
