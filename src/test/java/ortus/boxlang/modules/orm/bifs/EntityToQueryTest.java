@@ -98,6 +98,29 @@ public class EntityToQueryTest extends BaseORMTest {
 		assertThat( row.get( "manufacturer" ) ).isNull();
 	}
 
+	@DisplayName( "It can convert an explicit array of multiple entities into a multi-row query" )
+	@Test
+	public void testEntityToQueryMultipleEntitiesArray() {
+		// @formatter:off
+		instance.executeSource( """
+			entities = [
+				entityLoadByPK( 'Vehicle', '1HGCM82633A123456' ),
+				entityLoadByPK( 'Vehicle', '2HGCM82633A654321' ),
+				entityLoadByPK( 'Vehicle', '1HGCM82633A789012' )
+			];
+			result = entityToQuery( entities );
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( result ) ).isNotNull();
+		assertThat( variables.get( result ) ).isInstanceOf( Query.class );
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 3 );
+
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "vin" ) ).isEqualTo( "1HGCM82633A123456" );
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 1 ).get( "vin" ) ).isEqualTo( "2HGCM82633A654321" );
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 2 ).get( "vin" ) ).isEqualTo( "1HGCM82633A789012" );
+	}
+
 	@DisplayName( "It includes properties from a parent entity in the query columns" )
 	@Test
 	public void testEntityToQueryIncludesParentProperties() {
