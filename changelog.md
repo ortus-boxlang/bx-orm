@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- BL-2612 - `entityToQuery()` now includes inherited persistent properties (e.g., from a persistent parent entity) in query columns. Property collections internally use `LinkedHashSet` to prevent duplicate properties across the inheritance chain.
+- Updated CI `GRADLE_VERSION` to `9.6.1` to match the Gradle wrapper and fix `NoSuchMethodError` with Shadow plugin 9.6.1
+- Normalized ORM field generator values to be case-insensitive for built-in generators (including `uuid`) so mixed-case declarations are handled correctly.
+- Custom generator values (non-built-in) are now validated against the classpath at mapping time; an invalid generator name throws a descriptive `BoxRuntimeException` listing valid built-in generators.
+
 ## [1.6.6] - 2026-07-22
 
 ### ⚡ Updates
