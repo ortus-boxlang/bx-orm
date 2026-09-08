@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [BLMODULES-287](https://ortussolutions.atlassian.net/browse/BLMODULES-287) - Added `entityIsAttached()` to check whether an entity is attached to the ORM session for its datasource.
 
+### 🐛 Fixed
+
+- [BLMODULES-288](https://ortussolutions.atlassian.net/browse/BLMODULES-288) - Fixed support for Hibernate's built-in `uuid2` ORM generator.
+
 ## [1.6.7] - 2026-08-13
 
 ### 🐛 Fixed
