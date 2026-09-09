@@ -391,7 +391,7 @@ public class HibernateXMLWriterTest {
 	@ParameterizedTest
 	@CsvSource( {
 	    "UUID,uuid,string",
-	    "uuid2,uuid2,string",
+	    "UuId2,uuid2,string",
 	    "IdEnTiTy,identity,integer"
 	} )
 	public void testGeneratorCaseNormalization( String generator, String expectedGenerator, String expectedType ) {
