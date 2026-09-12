@@ -737,7 +737,9 @@ public class ORMConfig {
 		Properties fileProperties = new Properties();
 		try ( FileInputStream inputStream = new FileInputStream( ormConfigFile ) ) {
 			fileProperties.load( inputStream );
-		} catch ( IOException e ) {
+		} catch ( IOException | IllegalArgumentException e ) {
+			// IllegalArgumentException covers a malformed Unicode escape sequence, which Properties.load() throws
+			// in addition to IOException.
 			logger.error( "Unable to read ORM Configuration `ormConfig` file [{}]: {}", ormConfigPath, e.getMessage() );
 			return;
 		}

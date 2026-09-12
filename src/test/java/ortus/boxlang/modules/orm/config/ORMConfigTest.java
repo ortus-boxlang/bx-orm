@@ -255,6 +255,18 @@ public class ORMConfigTest extends BaseORMTest {
 	}
 
 	@Test
+	public void testMalformedOrmConfigFileDoesNotThrow() {
+		// Properties.load() throws IllegalArgumentException (not IOException) on a malformed Unicode escape.
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.ormConfig, "src/test/resources/app/hibernate-malformed.properties"
+		), context ).toHibernateConfig();
+
+		// No exception thrown; the rest of the configuration is unaffected.
+		assertEquals( "true", config.getProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION ) );
+	}
+
+	@Test
 	public void testAutoGenMap() {
 		ORMConfig config = new ORMConfig( Struct.of(
 		    ORMKeys.autoGenMap, false
