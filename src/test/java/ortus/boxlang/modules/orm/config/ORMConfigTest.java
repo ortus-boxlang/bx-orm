@@ -171,6 +171,102 @@ public class ORMConfigTest extends BaseORMTest {
 	}
 
 	@Test
+	public void testHibernatePropertiesAbsentByDefault() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB"
+		), context ).toHibernateConfig();
+
+		// bx-orm's own hardcoded default is untouched when no `hibernateProperties` struct is supplied.
+		assertEquals( "true", config.getProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION ) );
+	}
+
+	@Test
+	public void testHibernatePropertiesEmptyStructIsNoOp() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.hibernateProperties, Struct.of()
+		), context ).toHibernateConfig();
+
+		assertEquals( "true", config.getProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION ) );
+	}
+
+	@Test
+	public void testHibernatePropertiesAppliedToConfiguration() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.hibernateProperties, Struct.of(
+		        "hibernate.connection.release_mode", "on_close",
+		        "hibernate.custom.some_setting", "someValue"
+		    )
+		), context ).toHibernateConfig();
+
+		assertEquals( "on_close", config.getProperty( "hibernate.connection.release_mode" ) );
+		assertEquals( "someValue", config.getProperty( "hibernate.custom.some_setting" ) );
+	}
+
+	@Test
+	public void testHibernatePropertiesCanOverrideBxOrmDefaults() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.hibernateProperties, Struct.of(
+		        AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION, "false"
+		    )
+		), context ).toHibernateConfig();
+
+		assertEquals( "false", config.getProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION ) );
+	}
+
+	@Test
+	public void testOrmConfigFilePropertiesAreApplied() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.ormConfig, "src/test/resources/app/hibernate-test.properties"
+		), context ).toHibernateConfig();
+
+		assertEquals( "on_close", config.getProperty( "hibernate.connection.release_mode" ) );
+		assertEquals( "fromFile", config.getProperty( "hibernate.custom.orm-config-test-key" ) );
+	}
+
+	@Test
+	public void testHibernatePropertiesTakePrecedenceOverOrmConfigFile() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.ormConfig, "src/test/resources/app/hibernate-test.properties",
+		    ORMKeys.hibernateProperties, Struct.of(
+		        "hibernate.connection.release_mode", "after_transaction"
+		    )
+		), context ).toHibernateConfig();
+
+		// hibernateProperties wins over the ormConfig file on a conflicting key...
+		assertEquals( "after_transaction", config.getProperty( "hibernate.connection.release_mode" ) );
+		// ...but non-conflicting keys from the file are still applied.
+		assertEquals( "fromFile", config.getProperty( "hibernate.custom.orm-config-test-key" ) );
+	}
+
+	@Test
+	public void testMissingOrmConfigFileDoesNotThrow() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.ormConfig, "src/test/resources/app/does-not-exist.properties"
+		), context ).toHibernateConfig();
+
+		// No exception thrown; the rest of the configuration is unaffected.
+		assertEquals( "true", config.getProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION ) );
+	}
+
+	@Test
+	public void testMalformedOrmConfigFileDoesNotThrow() {
+		// Properties.load() throws IllegalArgumentException (not IOException) on a malformed Unicode escape.
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.ormConfig, "src/test/resources/app/hibernate-malformed.properties"
+		), context ).toHibernateConfig();
+
+		// No exception thrown; the rest of the configuration is unaffected.
+		assertEquals( "true", config.getProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION ) );
+	}
+
+	@Test
 	public void testAutoGenMap() {
 		ORMConfig config = new ORMConfig( Struct.of(
 		    ORMKeys.autoGenMap, false
