@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented the previously-unused `ormSettings.ormConfig` setting as a path to a `hibernate.properties`-formatted file, applied the same way as `hibernateProperties` (a conflicting key in `hibernateProperties` takes precedence). The `hibernate.cfg.xml` file format is not yet supported.
 - Added SQLite dialect support. `ormSettings.dialect = "SQLite"` now resolves to `org.sqlite.hibernate.dialect.SQLiteDialect`, provided by the new `com.github.gwenn:sqlite-dialect` dependency (`org.hibernate:hibernate-community-dialects`, which houses the official SQLite dialect, is only published for Hibernate 6+ and is not available while this module is pinned to Hibernate 5).
 
+### 🐛 Fixed
+
+- [BLMODULES-288](https://ortussolutions.atlassian.net/browse/BLMODULES-288) - Fixed support for Hibernate's built-in `uuid2` ORM generator.
+
 ## [1.6.7] - 2026-08-13
 
 ### 🐛 Fixed
