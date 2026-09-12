@@ -54,12 +54,20 @@ dependencies {
 	implementation 'javax.cache:cache-api:1.1.1'
 	// https://mvnrepository.com/artifact/org.ehcache/ehcache
 	implementation 'org.ehcache:ehcache:3.12.0'
+	// SQLite dialect for Hibernate 5.x.
+	// NOTE: `org.hibernate:hibernate-community-dialects` (which houses the official SQLite dialect)
+	// is only published for Hibernate 6+, so it cannot be used while this module is pinned to Hibernate 5.
+	// https://mvnrepository.com/artifact/com.github.gwenn/sqlite-dialect
+	implementation 'com.github.gwenn:sqlite-dialect:0.2.0'
 
     // Testing Dependencies
     // Pinning this because the next version up breaks our tests
     testImplementation "org.junit.jupiter:junit-jupiter:6.+"
 	testImplementation "org.mockito:mockito-core:5.+"
 	testImplementation "com.google.truth:truth:1.+"
+	// SQLite JDBC driver, used to test ORM boot against a SQLite datasource
+	// https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
+	testImplementation "org.xerial:sqlite-jdbc:3.53.4.0"
 	// Explicitly declare the JUnit platform launcher (to avoid deprecation)
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
@@ -219,7 +227,24 @@ task zipModuleStructure( type: Zip ) {
 createModuleStructure.finalizedBy( zipModuleStructure )
 shadowJar.finalizedBy( createModuleStructure )
 
+/**
+ * The ORM module runs in its own isolated classloader (only what's bundled into `build/module/libs`),
+ * so a JDBC driver added as a plain `testImplementation` dependency is invisible to it: `DriverManager`
+ * refuses to hand out a driver to a caller outside its loading classloader's lineage.
+ * This copies test-only JDBC driver jars (not shipped in the module's distribution zip, since it
+ * runs after `zipModuleStructure`) into the live `build/module/libs` folder so ORM tests that need a
+ * real JDBC connection (e.g. SQLite) can resolve their driver.
+ */
+task copyTestJdbcDrivers( type: Copy, dependsOn: createModuleStructure ) {
+	// Must run after the module zip is built, so the test-only driver never ends up in the
+	// distributed module zip (only in the live build/module folder used by the test harness).
+	mustRunAfter zipModuleStructure
+	from configurations.testRuntimeClasspath.filter { it.name.startsWith( 'sqlite-jdbc' ) }
+	into 'build/module/libs'
+}
+
 test {
+	dependsOn copyTestJdbcDrivers
 	useJUnitPlatform()
 	testLogging {
 		showStandardStreams = true

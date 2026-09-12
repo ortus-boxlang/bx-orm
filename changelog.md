@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ⭐ Added
 
 - [BLMODULES-287](https://ortussolutions.atlassian.net/browse/BLMODULES-287) - Added `entityIsAttached()` to check whether an entity is attached to the ORM session for its datasource.
+- Added SQLite dialect support. `ormSettings.dialect = "SQLite"` now resolves to `org.sqlite.hibernate.dialect.SQLiteDialect`, provided by the new `com.github.gwenn:sqlite-dialect` dependency (`org.hibernate:hibernate-community-dialects`, which houses the official SQLite dialect, is only published for Hibernate 6+ and is not available while this module is pinned to Hibernate 5).
 
 ## [1.6.7] - 2026-08-13
 
