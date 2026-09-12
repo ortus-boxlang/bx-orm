@@ -243,6 +243,19 @@ task copyTestJdbcDrivers( type: Copy, dependsOn: createModuleStructure ) {
 	into 'build/module/libs'
 }
 
+/**
+ * Removes the test-only driver jar(s) copied in by `copyTestJdbcDrivers` once tests are done.
+ * `build/module` is not cleaned between separate Gradle invocations, so without this, a later
+ * packaging task (e.g. `zipModuleStructure`) run in the same workspace without a `clean` in
+ * between could pick up the leftover test-only driver and ship it in the distribution zip.
+ */
+task removeTestJdbcDrivers( type: Delete ) {
+	delete fileTree( 'build/module/libs' ) {
+		include 'sqlite-jdbc-*.jar'
+	}
+}
+test.finalizedBy( removeTestJdbcDrivers )
+
 test {
 	dependsOn copyTestJdbcDrivers
 	useJUnitPlatform()
