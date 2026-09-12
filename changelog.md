@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ⭐ Added
 
 - [BLMODULES-287](https://ortussolutions.atlassian.net/browse/BLMODULES-287) - Added `entityIsAttached()` to check whether an entity is attached to the ORM session for its datasource.
+- New `ormSettings.hibernateProperties` setting: a flat struct of raw Hibernate property name/value pairs applied directly to the Hibernate `Configuration`, letting applications tune settings like `hibernate.connection.release_mode` without a custom Hibernate config file.
+- Implemented the previously-unused `ormSettings.ormConfig` setting as a path to a `hibernate.properties`-formatted file, applied the same way as `hibernateProperties` (a conflicting key in `hibernateProperties` takes precedence). The `hibernate.cfg.xml` file format is not yet supported.
 
 ## [1.6.7] - 2026-08-13
 

@@ -18,6 +18,8 @@
 package ortus.boxlang.modules.orm.config;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Properties;
@@ -210,12 +212,34 @@ public class ORMConfig {
 	public String						namingStrategy;
 
 	/**
-	 * The path to a custom Hibernate configuration file:
-	 *
-	 * - hibernate.properties
-	 * - hibernate.cfc.xml
+	 * The path to a custom Hibernate <code>hibernate.properties</code> file. Every key/value pair in the file is applied to the Hibernate
+	 * {@link Configuration} via {@code setProperty()}, giving application developers a way to set arbitrary Hibernate settings (e.g.
+	 * {@code hibernate.connection.release_mode}) without bx-orm having to special-case each one.
+	 * <p>
+	 * <strong>Note:</strong> only the flat {@code key=value} properties file format is supported. The {@code hibernate.cfg.xml} format is not yet
+	 * implemented.
+	 * <p>
+	 * Applied before {@link #hibernateProperties}, so a matching key in {@link #hibernateProperties} takes precedence.
+	 * <p>
+	 * A handful of settings that are load-bearing for bx-orm's own correctness (the connection provider, classloaders, session context class,
+	 * identifier quoting, and entity mode) are re-applied by {@code SessionFactoryBuilder} <em>after</em> {@link #toHibernateConfig()} runs, so they
+	 * cannot be overridden via this file.
 	 */
 	public String						ormConfig;
+
+	/**
+	 * A flat struct of raw Hibernate property name/value pairs (e.g. <code>{ "hibernate.connection.release_mode" : "on_close" }</code>), applied to
+	 * the Hibernate {@link Configuration} via {@code setProperty()} for every entry.
+	 * <p>
+	 * This is the simplest way for application developers to tune arbitrary Hibernate settings without a custom Hibernate config file. Applied last
+	 * in {@link #toHibernateConfig()}, so it takes precedence over both bx-orm's own hardcoded defaults and any settings loaded from
+	 * {@link #ormConfig}.
+	 * <p>
+	 * A handful of settings that are load-bearing for bx-orm's own correctness (the connection provider, classloaders, session context class,
+	 * identifier quoting, and entity mode) are re-applied by {@code SessionFactoryBuilder} <em>after</em> {@link #toHibernateConfig()} runs, so they
+	 * cannot be overridden via this struct.
+	 */
+	public IStruct						hibernateProperties;
 
 	/**
 	 * If enabled, the ORM will create the Hibernate mapping XML (*.hbmxml) files
@@ -483,6 +507,11 @@ public class ORMConfig {
 			ormConfig = properties.getAsString( ORMKeys.ormConfig );
 		}
 
+		if ( properties.containsKey( ORMKeys.hibernateProperties )
+		    && properties.get( ORMKeys.hibernateProperties ) instanceof IStruct hibernatePropertiesStruct ) {
+			hibernateProperties = hibernatePropertiesStruct;
+		}
+
 		if ( properties.containsKey( ORMKeys.saveMapping ) && properties.get( ORMKeys.saveMapping ) != null ) {
 			saveMapping = BooleanCaster.cast( properties.get( ORMKeys.saveMapping ) );
 		}
@@ -665,15 +694,55 @@ public class ORMConfig {
 			}
 		}
 
-		// @TODO: Implement the remaining configuration settings:
-		// - ormConfig
-
 		// Session and transaction management settings:
 		configuration.setProperty( AvailableSettings.FLUSH_BEFORE_COMPLETION, "false" )
 		    .setProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION, "true" )
 		    .setProperty( AvailableSettings.AUTO_CLOSE_SESSION, "false" );
 
+		// Apply raw Hibernate properties from a `hibernate.properties`-formatted file (ormConfig), then from the inline `hibernateProperties`
+		// struct. Both are applied last so application developers can override any of bx-orm's own defaults above, including per-datasource tuning
+		// like `hibernate.connection.release_mode`. `hibernateProperties` is applied after `ormConfig` so it wins on conflicting keys.
+		// Note: a handful of settings that are load-bearing for bx-orm's own correctness (connection provider, classloaders, session context class,
+		// identifier quoting, entity mode) are re-applied afterward by SessionFactoryBuilder and cannot be overridden here.
+		if ( this.ormConfig != null && !this.ormConfig.isBlank() ) {
+			applyHibernatePropertiesFile( configuration, this.ormConfig );
+		}
+
+		if ( this.hibernateProperties != null ) {
+			this.hibernateProperties.entrySet().stream()
+			    .filter( entry -> entry.getValue() != null )
+			    .forEach( entry -> configuration.setProperty( entry.getKey().getName(), entry.getValue().toString() ) );
+		}
+
 		return configuration;
+	}
+
+	/**
+	 * Load a flat <code>hibernate.properties</code>-formatted file from the given path and apply every entry to the given Hibernate
+	 * {@link Configuration} via {@code setProperty()}.
+	 * <p>
+	 * If the file does not exist or cannot be read, an error is logged and the configuration is left unmodified; it does not throw, matching the
+	 * existing `sqlScript` behavior.
+	 *
+	 * @param configuration The Hibernate configuration to apply properties to.
+	 * @param ormConfigPath Path to the `hibernate.properties`-formatted file.
+	 */
+	private void applyHibernatePropertiesFile( Configuration configuration, String ormConfigPath ) {
+		File ormConfigFile = new File( ormConfigPath );
+		if ( !ormConfigFile.exists() ) {
+			logger.error( "ORM Configuration `ormConfig` file not found: {}", ormConfigPath );
+			return;
+		}
+
+		Properties fileProperties = new Properties();
+		try ( FileInputStream inputStream = new FileInputStream( ormConfigFile ) ) {
+			fileProperties.load( inputStream );
+		} catch ( IOException e ) {
+			logger.error( "Unable to read ORM Configuration `ormConfig` file [{}]: {}", ormConfigPath, e.getMessage() );
+			return;
+		}
+
+		fileProperties.forEach( ( key, value ) -> configuration.setProperty( ( String ) key, ( String ) value ) );
 	}
 
 	/**
