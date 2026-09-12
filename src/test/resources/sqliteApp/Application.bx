@@ -1,0 +1,24 @@
+class {
+	this.name = "BXORMSQLiteTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"SQLiteTestDB": {
+			"connectionString": "jdbc:sqlite:#getSystemSetting( "SQLITE_DB_PATH" )#"
+		}
+	};
+	this.datasource = "SQLiteTestDB";
+
+	this.ormSettings = {
+		"datasource"       : "SQLiteTestDB",
+		"entityPaths"      : [ "/root/models" ],
+		"saveMapping"      : "true",
+		"logSQL"           : "false",
+		"dialect"          : "SQLite",
+		"dbcreate"         : "dropcreate",
+		"cacheprovider"    : "ConcurrentHashMap",
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}

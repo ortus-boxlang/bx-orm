@@ -29,6 +29,7 @@ boxlang_modules/
 
 ## HBXML Files
 src/test/resources/app/models/**/*.hbm*
+src/test/resources/sqliteApp/models/**/*.hbm*
 
 ### AI Files ###
 .agents/skills/**

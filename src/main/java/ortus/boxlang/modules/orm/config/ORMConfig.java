@@ -979,6 +979,8 @@ public class ORMConfig {
 				return "org.hibernate.dialect.RDMSOS2200Dialect";
 			case "SAPDB" :
 				return "org.hibernate.dialect.SAPDBDialect";
+			case "SQLITE" :
+				return "org.sqlite.hibernate.dialect.SQLiteDialect";
 			case "SQLSERVER2005" :
 				return "org.hibernate.dialect.SQLServer2005Dialect";
 			case "SQLSERVER2008" :
