@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-09-14
+
 ### ⭐ Added
 
 - [BLMODULES-287](https://ortussolutions.atlassian.net/browse/BLMODULES-287) - Added `entityIsAttached()` to check whether an entity is attached to the ORM session for its datasource.
@@ -325,7 +327,8 @@ No significant changes.
 
 - First iteration of this module
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.7...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.7...v1.7.0
 [1.6.7]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.6...v1.6.7
 [1.6.6]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.5...v1.6.6
 [1.6.5]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.4...v1.6.5
