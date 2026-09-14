@@ -63,6 +63,7 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	    "select",
 	    "sequence",
 	    "sequence-identity",
+	    "uuid2",
 	    "uuid"
 	);
 	private static final Set<String>	INTEGER_GENERATORS		= Set.of(

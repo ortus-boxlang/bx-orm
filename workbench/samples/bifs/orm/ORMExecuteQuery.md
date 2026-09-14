@@ -10,7 +10,7 @@ var allToyotas = ORMExecuteQuery(
 );
 ```
 
-## Passing parameters
+## Passing Parameters
 
 You can pass parameters to your HQL query using either named parameters (as a struct) or positional parameters (as an array).
 

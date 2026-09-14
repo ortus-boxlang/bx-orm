@@ -62,6 +62,7 @@ public class ORMKeys {
 	public static final Key	expandedPath				= Key.of( "expandedPath" );
 	public static final Key	namingStrategy				= Key.of( "namingStrategy" );
 	public static final Key	ormConfig					= Key.of( "ormConfig" );
+	public static final Key	hibernateProperties			= Key.of( "hibernateProperties" );
 	public static final Key	ORMType						= Key.of( "ORMType" );
 	public static final Key	dataType					= Key.of( "dataType" );
 	public static final Key	persistent					= Key.of( "persistent" );

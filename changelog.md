@@ -9,11 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ⭐ Added
+
+- [BLMODULES-287](https://ortussolutions.atlassian.net/browse/BLMODULES-287) - Added `entityIsAttached()` to check whether an entity is attached to the ORM session for its datasource.
+- New `ormSettings.hibernateProperties` setting: a flat struct of raw Hibernate property name/value pairs applied directly to the Hibernate `Configuration`, letting applications tune settings like `hibernate.connection.release_mode` without a custom Hibernate config file.
+- Implemented the previously-unused `ormSettings.ormConfig` setting as a path to a `hibernate.properties`-formatted file, applied the same way as `hibernateProperties` (a conflicting key in `hibernateProperties` takes precedence). The `hibernate.cfg.xml` file format is not yet supported.
+- Added SQLite dialect support. `ormSettings.dialect = "SQLite"` now resolves to `org.sqlite.hibernate.dialect.SQLiteDialect`, provided by the new `com.github.gwenn:sqlite-dialect` dependency (`org.hibernate:hibernate-community-dialects`, which houses the official SQLite dialect, is only published for Hibernate 6+ and is not available while this module is pinned to Hibernate 5).
+- SQLite dialect resolution now uses JDBC metadata automatically when no explicit dialect is configured.
+
+### 🐛 Fixed
+
+- [BLMODULES-288](https://ortussolutions.atlassian.net/browse/BLMODULES-288) - Fixed support for Hibernate's built-in `uuid2` ORM generator.
+
 ## [1.6.7] - 2026-08-13
 
 ### 🐛 Fixed
 
-- BL-2612 - `entityToQuery()` now includes inherited persistent properties (e.g., from a persistent parent entity) in query columns. Property collections internally use `LinkedHashSet` to prevent duplicate properties across the inheritance chain.
+- [BL-2612](https://ortussolutions.atlassian.net/browse/BL-2612) - `entityToQuery()` now includes inherited persistent properties (e.g., from a persistent parent entity) in query columns. Property collections internally use `LinkedHashSet` to prevent duplicate properties across the inheritance chain.
 - Updated CI `GRADLE_VERSION` to `9.6.1` to match the Gradle wrapper and fix `NoSuchMethodError` with Shadow plugin 9.6.1
 - Normalized ORM field generator values to be case-insensitive for built-in generators (including `uuid`) so mixed-case declarations are handled correctly.
 - Custom generator values (non-built-in) are now validated against the classpath at mapping time; an invalid generator name throws a descriptive `BoxRuntimeException` listing valid built-in generators.
