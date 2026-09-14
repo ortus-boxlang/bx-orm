@@ -15,7 +15,6 @@ class {
 		"entityPaths"      : [ "/root/models" ],
 		"saveMapping"      : "true",
 		"logSQL"           : "false",
-		"dialect"          : "SQLite",
 		"dbcreate"         : "dropcreate",
 		"cacheprovider"    : "ConcurrentHashMap",
 		"ignoreParseErrors": true

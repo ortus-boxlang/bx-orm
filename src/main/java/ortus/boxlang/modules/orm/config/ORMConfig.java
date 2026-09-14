@@ -622,6 +622,9 @@ public class ORMConfig {
 
 		// If no dialect is configured, Hibernate must inspect JDBC metadata to resolve it.
 		configuration.setProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT, hasExplicitDialect ? "disallow" : "allow" );
+		if ( !hasExplicitDialect ) {
+			configuration.setProperty( AvailableSettings.DIALECT_RESOLVERS, SQLiteDialectResolver.class.getName() );
+		}
 
 		if ( this.dbcreate != null ) {
 			switch ( this.dbcreate ) {

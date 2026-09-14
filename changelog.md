@@ -9,12 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-09-14
+
 ### ⭐ Added
 
 - [BLMODULES-287](https://ortussolutions.atlassian.net/browse/BLMODULES-287) - Added `entityIsAttached()` to check whether an entity is attached to the ORM session for its datasource.
 - New `ormSettings.hibernateProperties` setting: a flat struct of raw Hibernate property name/value pairs applied directly to the Hibernate `Configuration`, letting applications tune settings like `hibernate.connection.release_mode` without a custom Hibernate config file.
 - Implemented the previously-unused `ormSettings.ormConfig` setting as a path to a `hibernate.properties`-formatted file, applied the same way as `hibernateProperties` (a conflicting key in `hibernateProperties` takes precedence). The `hibernate.cfg.xml` file format is not yet supported.
 - Added SQLite dialect support. `ormSettings.dialect = "SQLite"` now resolves to `org.sqlite.hibernate.dialect.SQLiteDialect`, provided by the new `com.github.gwenn:sqlite-dialect` dependency (`org.hibernate:hibernate-community-dialects`, which houses the official SQLite dialect, is only published for Hibernate 6+ and is not available while this module is pinned to Hibernate 5).
+- SQLite dialect resolution now uses JDBC metadata automatically when no explicit dialect is configured.
 
 ### 🐛 Fixed
 
@@ -324,7 +327,8 @@ No significant changes.
 
 - First iteration of this module
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.7...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.7...v1.7.0
 [1.6.7]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.6...v1.6.7
 [1.6.6]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.5...v1.6.6
 [1.6.5]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.4...v1.6.5
