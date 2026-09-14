@@ -242,7 +242,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			 * The possible values are:
 			 * persist, merge, delete, save-update, evict, replicate, lock, refresh, all, none
 			 */
-			association.put( ORMKeys.cascade, annotations.getAsString( ORMKeys.cascade ) );
+			association.put( ORMKeys.cascade, translateCascade( annotations.getAsString( ORMKeys.cascade ) ) );
 		}
 		// Alias 'foreignKeyName' to 'foreignKey'
 		if ( annotations.containsKey( ORMKeys.foreignKeyName ) ) {
@@ -389,4 +389,24 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
 		return params;
 	}
+
+	/**
+	 * Translate legacy Hibernate 5 cascade style names to their Hibernate 7 equivalents.
+	 * <p>
+	 * Hibernate 7 removed the <code>save-update</code> cascade style (along with <code>Session.saveOrUpdate()</code>). Its closest
+	 * equivalent is cascading both <code>persist</code> and <code>merge</code>. All other styles pass through unchanged.
+	 *
+	 * @param cascade Comma-separated list of cascade styles as declared on the property.
+	 *
+	 * @return The translated, comma-separated cascade list.
+	 */
+	private static String translateCascade( String cascade ) {
+		return java.util.Arrays.stream( cascade.split( "," ) )
+		    .map( String::trim )
+		    .filter( style -> !style.isEmpty() )
+		    .map( style -> style.equalsIgnoreCase( "save-update" ) ? "persist,merge" : style.toLowerCase() )
+		    .distinct()
+		    .collect( java.util.stream.Collectors.joining( "," ) );
+	}
+
 }

@@ -17,7 +17,6 @@
  */
 package ortus.boxlang.modules.orm.hibernate;
 
-import java.io.Serializable;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -66,7 +65,7 @@ public class BoxProxy implements IClassRunnable, HibernateProxy {
 	 * @param id
 	 * @param session
 	 */
-	public BoxProxy( String entityName, Serializable id, SharedSessionContractImplementor session, PersistentClass mappingInfo ) {
+	public BoxProxy( String entityName, Object id, SharedSessionContractImplementor session, PersistentClass mappingInfo ) {
 		this.lazyInitializer = new BoxLazyInitializer( entityName, id, session );
 	}
 

@@ -621,7 +621,7 @@ public class ORMConfig {
 		boolean hasExplicitDialect = this.dialect != null && !this.dialect.isBlank();
 
 		// If no dialect is configured, Hibernate must inspect JDBC metadata to resolve it.
-		configuration.setProperty( "hibernate.temp.use_jdbc_metadata_defaults", hasExplicitDialect ? "false" : "true" );
+		configuration.setProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT, hasExplicitDialect ? "disallow" : "allow" );
 
 		if ( this.dbcreate != null ) {
 			switch ( this.dbcreate ) {
@@ -905,13 +905,13 @@ public class ORMConfig {
 			case "JDATASTORE" :
 				return "org.hibernate.dialect.JDataStoreDialect";
 			case "MARIADB102" :
-				return "org.hibernate.dialect.MariaDB102Dialect";
+				return "org.hibernate.dialect.MariaDBDialect";
 			case "MARIADB103" :
-				return "org.hibernate.dialect.MariaDB103Dialect";
+				return "org.hibernate.dialect.MariaDBDialect";
 			case "MARIADB10" :
-				return "org.hibernate.dialect.MariaDB10Dialect";
+				return "org.hibernate.dialect.MariaDBDialect";
 			case "MARIADB53" :
-				return "org.hibernate.dialect.MariaDB53Dialect";
+				return "org.hibernate.dialect.MariaDBDialect";
 			case "MARIADB" :
 				return "org.hibernate.dialect.MariaDBDialect";
 			case "MCKOI" :
@@ -921,22 +921,22 @@ public class ORMConfig {
 			case "MIMERSQL" :
 				return "org.hibernate.dialect.MimerSQLDialect";
 			case "MYSQL55" :
-				return "org.hibernate.dialect.MySQL55Dialect";
+				return "org.hibernate.dialect.MySQLDialect";
 			case "MYSQL57" :
-				return "org.hibernate.dialect.MySQL57Dialect";
+				return "org.hibernate.dialect.MySQLDialect";
 			case "MYSQL57INNODB" :
-				return "org.hibernate.dialect.MySQL57InnoDBDialect";
+				return "org.hibernate.dialect.MySQLDialect";
 			case "MYSQL5" :
-				return "org.hibernate.dialect.MySQL5Dialect";
+				return "org.hibernate.dialect.MySQLDialect";
 			case "MYSQL5INNODB" :
-				return "org.hibernate.dialect.MySQL5InnoDBDialect";
+				return "org.hibernate.dialect.MySQLDialect";
 			case "MYSQL8" :
 			case "MYSQL" :
-				return "org.hibernate.dialect.MySQL8Dialect";
+				return "org.hibernate.dialect.MySQLDialect";
 			case "MYSQLINNODB" :
-				return "org.hibernate.dialect.MySQLInnoDBDialect";
+				return "org.hibernate.dialect.MySQLDialect";
 			case "MYSQLMYISAM" :
-				return "org.hibernate.dialect.MySQLMyISAMDialect";
+				return "org.hibernate.dialect.MySQLDialect";
 			case "ORACLE10G" :
 				return "org.hibernate.dialect.Oracle10gDialect";
 			case "ORACLE12C" :
@@ -980,7 +980,7 @@ public class ORMConfig {
 			case "SAPDB" :
 				return "org.hibernate.dialect.SAPDBDialect";
 			case "SQLITE" :
-				return "org.sqlite.hibernate.dialect.SQLiteDialect";
+				return "org.hibernate.community.dialect.SQLiteDialect";
 			case "SQLSERVER2005" :
 				return "org.hibernate.dialect.SQLServer2005Dialect";
 			case "SQLSERVER2008" :

@@ -23,7 +23,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.hibernate.Session;
-import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -362,8 +362,7 @@ public class ORMService extends BaseService {
 		String			entityName		= getEntityName( entity );
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
-		ClassMetadata	metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
-		return metadata.getIdentifier( entity );
+		return ormApp.getEntityPersister( session, entityName ).getIdentifier( entity, ( SharedSessionContractImplementor ) session );
 	}
 
 	/**

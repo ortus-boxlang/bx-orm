@@ -24,14 +24,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import org.hibernate.EntityMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMConnectionProvider;
-import ortus.boxlang.modules.orm.hibernate.EntityTuplizer;
+import ortus.boxlang.modules.orm.hibernate.BoxPersisterFactory;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -180,18 +179,15 @@ public class SessionFactoryBuilder {
 		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasourceName ) );
 		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
 		properties.put( AvailableSettings.CLASSLOADERS, classLoaders );
-		properties.put( AvailableSettings.TC_CLASSLOADER, "org.hibernate.boot.registry.classloading.internal.AggregatedClassLoader" );
 		properties.put( AvailableSettings.GLOBALLY_QUOTED_IDENTIFIERS, StringCaster.cast( ormConfig.quoteIdentifiers ) );
-
-		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.MAP, EntityTuplizer.class );
-		configuration.getEntityTuplizerFactory().registerDefaultTuplizerClass( EntityMode.POJO, EntityTuplizer.class );
-
-		// Don't pretend our BL entities are POJOs.
-		configuration.setProperty( AvailableSettings.DEFAULT_ENTITY_MODE, "dynamic-map" );
 
 		Map<String, EntityRecord> entityMap = this.entities
 		    .stream()
 		    .collect( java.util.stream.Collectors.toMap( entity -> entity.getEntityName().toLowerCase().trim(), entity -> entity ) );
+
+		// Route every entity persister through the BoxLang representation strategy (Hibernate 6+/7+ replacement for the
+		// Hibernate 5 tuplizer). See BoxPersisterFactory for why this goes through the persister factory service.
+		properties.put( "hibernate.persister.factory", new BoxPersisterFactory( entityMap ) );
 
 		// collect XML mapping files and add them to the Hibernate configuration
 		entityMap.values()

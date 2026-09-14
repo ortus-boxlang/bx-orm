@@ -72,13 +72,27 @@ public class EntitySave extends BaseORMBIF {
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		Boolean			forceInsert		= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
 
-		if ( forceInsert ) {
-			session.save( entityName, entity );
-		} else {
-			session.saveOrUpdate( entityName, entity );
+		if ( forceInsert || !session.contains( entityName, entity ) && isTransient( session, entityName, entity ) ) {
+			session.persist( entityName, entity );
+		} else if ( !session.contains( entityName, entity ) ) {
+			// Detached instance: Hibernate 7 removed update()/saveOrUpdate(), so a detached entity can only be re-attached via merge().
+			session.merge( entityName, entity );
 		}
 
 		return null;
+	}
+
+	/**
+	 * Determine whether an entity has never been persisted, using the same unsaved-value/version/snapshot rules Hibernate's
+	 * former <code>saveOrUpdate()</code> used to decide between an insert and a re-attach.
+	 */
+	private boolean isTransient( Session session, String entityName, IClassRunnable entity ) {
+		return org.hibernate.engine.internal.ForeignKeys.isTransient(
+		    entityName,
+		    entity,
+		    null,
+		    ( org.hibernate.engine.spi.SharedSessionContractImplementor ) session
+		);
 	}
 
 }

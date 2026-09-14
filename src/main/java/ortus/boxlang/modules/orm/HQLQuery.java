@@ -353,10 +353,10 @@ public class HQLQuery {
 		hqlQuery.setCacheMode( org.hibernate.CacheMode.NORMAL );
 
 		if ( this.options.containsKey( Key.offset ) ) {
-			hqlQuery.getQueryOptions().setFirstRow( this.options.getAsInteger( Key.offset ) );
+			hqlQuery.setFirstResult( this.options.getAsInteger( Key.offset ) );
 		}
 		if ( this.options.containsKey( ORMKeys.maxResults ) ) {
-			hqlQuery.getQueryOptions().setMaxRows( this.options.getAsInteger( ORMKeys.maxResults ) );
+			hqlQuery.setMaxResults( this.options.getAsInteger( ORMKeys.maxResults ) );
 		}
 		if ( this.options.containsKey( ORMKeys.readOnly ) ) {
 			hqlQuery.setReadOnly( BooleanCaster.cast( this.options.get( ORMKeys.readOnly ) ) );

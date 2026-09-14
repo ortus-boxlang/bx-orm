@@ -18,8 +18,8 @@
 package ortus.boxlang.modules.orm.hibernate;
 
 import java.lang.reflect.Method;
+import java.util.Map;
 
-import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.property.access.spi.Setter;
@@ -81,7 +81,7 @@ public class BoxPropertySetter implements Setter {
 	}
 
 	@Override
-	public void set( Object target, Object value, SessionFactoryImplementor factory ) {
+	public void set( Object target, Object value ) {
 		Key propertyName = Key.of( mappedProperty.getName() );
 
 		if ( logger.isTraceEnabled() ) {
@@ -96,6 +96,11 @@ public class BoxPropertySetter implements Setter {
 		if ( target instanceof IClassRunnable instance ) {
 			instance.getThisScope().put( propertyName, value );
 			instance.getVariablesScope().put( propertyName, value );
+		} else if ( target instanceof Map<?, ?> idMap ) {
+			// Composite (embedded) identifier: Hibernate populates the id map itself
+			@SuppressWarnings( "unchecked" )
+			Map<String, Object> castMap = ( Map<String, Object> ) idMap;
+			castMap.put( propertyName.getName(), value );
 		}
 	}
 

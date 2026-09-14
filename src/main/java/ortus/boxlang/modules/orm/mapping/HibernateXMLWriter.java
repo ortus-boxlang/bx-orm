@@ -273,6 +273,11 @@ public class HibernateXMLWriter {
 		if ( prop.getFormula() != null ) {
 			theNode.setAttribute( "formula", "( " + prop.getFormula() + " )" );
 		} else {
+			// Hibernate 6+ sizes a "text" column by its length (e.g. varchar(8000)) instead of always emitting a LOB column the way
+			// Hibernate 5 did. Drop the length for text types so the dialect keeps generating a real text/longtext column.
+			if ( "text".equals( toHibernateType( prop.getORMType() ) ) ) {
+				columnInfo.remove( ORMKeys.length );
+			}
 			String[] columnName = columnInfo.getOrDefault( Key._name, "" ).toString().split( "," );
 			for ( String column : columnName ) {
 				columnInfo.put( Key._name, column.trim() );

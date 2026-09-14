@@ -17,7 +17,6 @@
  */
 package ortus.boxlang.modules.orm;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,11 +24,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Order;
-import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.persister.entity.EntityPersister;
+import org.hibernate.query.Query;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -301,7 +300,7 @@ public class ORMApp {
 		Session			session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 
 		Class<?>		keyClass		= getKeyJavaType( session, entityName );
-		Serializable	id;
+		Object			id;
 
 		if ( java.util.Map.class.isAssignableFrom( keyClass ) ) {
 			// Composite key: Hibernate expects a HashMap<String, Object> with String keys (not Key objects)
@@ -318,7 +317,7 @@ public class ORMApp {
 			}
 			id = compositeId;
 		} else {
-			id = ( Serializable ) GenericCaster.cast( context, keyValue, keyClass.getSimpleName() );
+			id = GenericCaster.cast( context, keyValue, keyClass.getSimpleName() );
 		}
 		var entity = session.get( entityRecord.getEntityName(), id );
 		if ( entity instanceof BoxProxy castProxy ) {
@@ -337,11 +336,12 @@ public class ORMApp {
 	 * @param options    Struct of options, including maxResults, offset, order, etc.
 	 */
 	public Array loadEntitiesByFilter( IBoxContext context, String entityName, IStruct filter, IStruct options ) {
-		EntityRecord			entityRecord	= this.lookupEntity( entityName, true );
-		Session					session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
-		org.hibernate.Criteria	criteria		= session.createCriteria( entityRecord.getEntityName() );
+		EntityRecord		entityRecord	= this.lookupEntity( entityName, true );
+		Session				session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+		StringBuilder		hql				= new StringBuilder( "select e from " ).append( entityRecord.getEntityName() ).append( " e" );
+		Map<String, Object>	params			= new HashMap<>();
 
-		if ( filter != null ) {
+		if ( filter != null && !filter.isEmpty() ) {
 
 			Array properties = entityRecord.getEntityMeta().getPropertyNamesArray();
 
@@ -355,24 +355,42 @@ public class ORMApp {
 				        "No persistent filter property found with the name of '" + key.getName() + "' in entity '" + entityName + "'" );
 			    } );
 
+			hql.append( " where" );
+			int index = 0;
 			for ( Key entryKey : filter.keySet() ) {
 				int		propertyIndex	= properties.indexOf( KeyCaster.cast( entryKey ) );
+				String	propertyName	= KeyCaster.cast( properties.get( propertyIndex ) ).getName();
 				Object	propertyValue	= filter.get( entryKey );
-				criteria.add(
-				    propertyValue != null
-				        ? org.hibernate.criterion.Restrictions.eq(
-				            KeyCaster.cast( properties.get( propertyIndex ) ).getName(),
-				            propertyValue
-				        )
-				        : org.hibernate.criterion.Restrictions.isNull(
-				            KeyCaster.cast( properties.get( propertyIndex ) ).getName()
-				        )
-				);
+				if ( index > 0 ) {
+					hql.append( " and" );
+				}
+				if ( propertyValue != null ) {
+					String paramName = "p" + index;
+					hql.append( " e." ).append( propertyName ).append( " = :" ).append( paramName );
+					params.put( paramName, propertyValue );
+				} else {
+					hql.append( " e." ).append( propertyName ).append( " is null" );
+				}
+				index++;
 			}
 		}
 
+		if ( options.containsKey( ORMKeys.orderBy ) ) {
+			List<String> orderClauses = new ArrayList<>();
+			options.getAsArray( ORMKeys.orderBy ).forEach( ( item ) -> {
+				IStruct order = ( IStruct ) item;
+				orderClauses.add( "e." + order.getAsString( ORMKeys.property ) + ( order.getAsBoolean( ORMKeys.ascending ) ? " asc" : " desc" ) );
+			} );
+			if ( !orderClauses.isEmpty() ) {
+				hql.append( " order by " ).append( String.join( ", ", orderClauses ) );
+			}
+		}
+
+		Query<?> query = session.createQuery( hql.toString(), Object.class );
+		params.forEach( query::setParameter );
+
 		return Array.of(
-		    executeCriteriaQuery( criteria, options )
+		    executeFilterQuery( query, options )
 		        .stream()
 		        .map( entity -> ( IClassRunnable ) entity )
 		        .toArray()
@@ -380,57 +398,52 @@ public class ORMApp {
 	}
 
 	/**
-	 * Execute a Criteria query with various options.
+	 * Apply common query options (cacheable, timeout, maxResults, offset) and execute the query.
 	 *
-	 * @param criteria The criteria to execute.
-	 * @param options  Struct of options, including maxResults, offset, order, etc.
+	 * @param query   The query to execute.
+	 * @param options Struct of options, including maxResults, offset, etc.
 	 */
-	public List executeCriteriaQuery( Criteria criteria, IStruct options ) {
+	public List<?> executeFilterQuery( Query<?> query, IStruct options ) {
 		if ( options.containsKey( ORMKeys.cacheable ) ) {
-			criteria.setCacheable( BooleanCaster.cast( options.get( ORMKeys.cacheable ) ) );
+			query.setCacheable( BooleanCaster.cast( options.get( ORMKeys.cacheable ) ) );
 		}
 		if ( options.containsKey( Key.timeout ) ) {
 			Integer timeout = options.getAsInteger( Key.timeout );
 			if ( timeout != null ) {
-				criteria.setTimeout( timeout );
+				query.setTimeout( timeout );
 			}
 		}
 		if ( options.containsKey( ORMKeys.maxResults ) ) {
 			Integer maxResults = options.getAsInteger( ORMKeys.maxResults );
 			if ( maxResults != null ) {
-				criteria.setMaxResults( maxResults );
+				query.setMaxResults( maxResults );
 			}
 		}
 		if ( options.containsKey( Key.offset ) ) {
 			Integer offset = options.getAsInteger( Key.offset );
 			if ( offset != null && offset > 0 ) {
-				criteria.setFirstResult( offset );
+				query.setFirstResult( offset );
 			}
 		}
-
-		if ( options.containsKey( ORMKeys.orderBy ) ) {
-			options.getAsArray( ORMKeys.orderBy ).forEach( ( item ) -> {
-				IStruct	order		= ( IStruct ) item;
-				String	orderColumn	= order.getAsString( ORMKeys.property );
-				if ( order.getAsBoolean( ORMKeys.ascending ) ) {
-					criteria.addOrder( Order.asc( orderColumn ) );
-				} else {
-					criteria.addOrder( Order.desc( orderColumn ) );
-				}
-			} );
-		}
-		return criteria.list();
+		return query.list();
 	}
 
 	/**
 	 * Get the java type for the primary key of an entity.
-	 *
-	 * TODO: We're using Hibernate's deprecated metamodel. Refactor to use JPA metamodel.
 	 */
 	public Class<?> getKeyJavaType( Session session, String entityName ) {
-		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
-		ClassMetadata	metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
-		return metadata.getIdentifierType().getReturnedClass();
+		return getEntityPersister( session, entityName ).getIdentifierType().getReturnedClass();
+	}
+
+	/**
+	 * Get the Hibernate runtime descriptor (persister) for an entity.
+	 *
+	 * @param session    A Hibernate session bound to the entity's datasource.
+	 * @param entityName The name of the entity.
+	 */
+	public EntityPersister getEntityPersister( Session session, String entityName ) {
+		EntityRecord entityRecord = this.lookupEntity( entityName, true );
+		return ( ( SessionFactoryImplementor ) session.getSessionFactory() ).getMappingMetamodel().getEntityDescriptor( entityRecord.getEntityName() );
 	}
 
 	/**

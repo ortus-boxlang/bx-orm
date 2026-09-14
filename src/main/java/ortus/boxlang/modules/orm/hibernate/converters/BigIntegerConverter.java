@@ -19,8 +19,8 @@ package ortus.boxlang.modules.orm.hibernate.converters;
 
 import java.math.BigInteger;
 
-import javax.persistence.AttributeConverter;
-import javax.persistence.Converter;
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
 
 import ortus.boxlang.runtime.dynamic.casters.BigIntegerCaster;
 

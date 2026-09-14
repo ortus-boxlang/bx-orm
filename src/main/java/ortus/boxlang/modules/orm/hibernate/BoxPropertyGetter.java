@@ -19,11 +19,13 @@ package ortus.boxlang.modules.orm.hibernate;
 
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.Map;
 
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
+import org.hibernate.metamodel.model.domain.internal.MapMember;
 import org.hibernate.property.access.spi.Getter;
 
 import ortus.boxlang.modules.orm.ORMService;
@@ -109,6 +111,9 @@ public class BoxPropertyGetter implements Getter {
 		if ( owner instanceof IClassRunnable castRunnable ) {
 			// If the being assigned from an object return the property directly
 			return castRunnable.getVariablesScope().get( mappedProperty.getName() );
+		} else if ( owner instanceof Map<?, ?> idMap ) {
+			// Composite (embedded) identifier: Hibernate hands us the id map itself as the owner
+			return idMap.get( mappedProperty.getName() );
 		} else {
 
 			// Otherwise we assume this is a primary key lookup and load the entity to get the property
@@ -146,9 +151,8 @@ public class BoxPropertyGetter implements Getter {
 	 *
 	 * @return the current value of the mapped property, or {@code null} if unresolvable
 	 */
-	@SuppressWarnings( "rawtypes" )
 	@Override
-	public Object getForInsert( Object owner, Map mergeMap, SharedSessionContractImplementor session ) {
+	public Object getForInsert( Object owner, Map<Object, Object> mergeMap, SharedSessionContractImplementor session ) {
 		return get( owner );
 	}
 
@@ -160,7 +164,12 @@ public class BoxPropertyGetter implements Getter {
 	 * @return {@code Object.class}
 	 */
 	@Override
-	public Class<?> getReturnType() {
+	public Class<?> getReturnTypeClass() {
+		return Object.class;
+	}
+
+	@Override
+	public Type getReturnType() {
 		return Object.class;
 	}
 
@@ -171,9 +180,13 @@ public class BoxPropertyGetter implements Getter {
 	 *
 	 * @return {@code null}
 	 */
+	/**
+	 * BoxLang entities have no Java field or method backing a property. Hibernate's JPA metamodel builder still needs a
+	 * {@link Member} to classify attributes, so we hand back the same synthetic {@link MapMember} it uses for dynamic-map entities.
+	 */
 	@Override
 	public Member getMember() {
-		return null;
+		return new MapMember( mappedProperty.getName(), mappedProperty.getType().getReturnedClass() );
 	}
 
 	/**
