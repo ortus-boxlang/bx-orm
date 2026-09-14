@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `ormSettings.hibernateProperties` setting: a flat struct of raw Hibernate property name/value pairs applied directly to the Hibernate `Configuration`, letting applications tune settings like `hibernate.connection.release_mode` without a custom Hibernate config file.
 - Implemented the previously-unused `ormSettings.ormConfig` setting as a path to a `hibernate.properties`-formatted file, applied the same way as `hibernateProperties` (a conflicting key in `hibernateProperties` takes precedence). The `hibernate.cfg.xml` file format is not yet supported.
 - Added SQLite dialect support. `ormSettings.dialect = "SQLite"` now resolves to `org.sqlite.hibernate.dialect.SQLiteDialect`, provided by the new `com.github.gwenn:sqlite-dialect` dependency (`org.hibernate:hibernate-community-dialects`, which houses the official SQLite dialect, is only published for Hibernate 6+ and is not available while this module is pinned to Hibernate 5).
+- SQLite dialect resolution now uses JDBC metadata automatically when no explicit dialect is configured.
 
 ### 🐛 Fixed
 

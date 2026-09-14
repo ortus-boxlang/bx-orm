@@ -57,6 +57,7 @@ public class ORMConfigTest extends BaseORMTest {
 		), context ).toHibernateConfig();
 
 		assertEquals( "true", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+		assertEquals( SQLiteDialectResolver.class.getName(), config.getProperty( AvailableSettings.DIALECT_RESOLVERS ) );
 	}
 
 	@Test

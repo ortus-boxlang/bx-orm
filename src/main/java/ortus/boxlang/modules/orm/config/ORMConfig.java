@@ -622,6 +622,9 @@ public class ORMConfig {
 
 		// If no dialect is configured, Hibernate must inspect JDBC metadata to resolve it.
 		configuration.setProperty( "hibernate.temp.use_jdbc_metadata_defaults", hasExplicitDialect ? "false" : "true" );
+		if ( !hasExplicitDialect ) {
+			configuration.setProperty( AvailableSettings.DIALECT_RESOLVERS, SQLiteDialectResolver.class.getName() );
+		}
 
 		if ( this.dbcreate != null ) {
 			switch ( this.dbcreate ) {
