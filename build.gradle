@@ -80,6 +80,126 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
+// ==========================================================================
+// JMH performance benchmark suite
+// --------------------------------------------------------------------------
+// Benchmarks ORM boot, entity CRUD, and HQL throughput against an embedded Derby
+// datasource. The module (and therefore Hibernate) is loaded in its own isolated
+// classloader from a module path, so the benchmark's own classpath needs only the
+// BoxLang runtime, JMH, and the JDBC driver (copied into build/module/libs by
+// copyTestJdbcDrivers) - exactly like the standalone boot tests.
+//
+// The module path is swappable via -Dorm.module.path=<dir> so the same benchmarks
+// run against the current build (build/module, Hibernate 7) and a downloaded prior
+// release (Hibernate 5) for a before/after comparison.
+// ==========================================================================
+sourceSets {
+	jmh {
+		java.srcDir 'src/jmh/java'
+		resources.srcDir 'src/jmh/resources'
+	}
+}
+
+// NOTE: jmhImplementation deliberately does NOT extend testImplementation (which transitively
+// extends implementation and would leak Hibernate onto the benchmark's outer classpath). The
+// benchmark must mirror production: only BoxLang + JMH + the module's own compiled classes on the
+// outer classpath, with Hibernate loaded solely inside the module's isolated classloader. That
+// keeps the Hibernate 5 vs Hibernate 7 comparison honest.
+dependencies {
+	jmhImplementation sourceSets.main.output
+	jmhImplementation 'org.openjdk.jmh:jmh-core:1.37'
+	jmhAnnotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
+	if ( file( "../boxlang/build/libs/boxlang-${boxlangVersion}.jar" ).exists() ) {
+		jmhImplementation files( "../boxlang/build/libs/boxlang-${boxlangVersion}.jar" )
+	} else if ( file( "src/test/resources/libs/boxlang-${boxlangVersion}.jar" ).exists() ) {
+		jmhImplementation files( "src/test/resources/libs/boxlang-${boxlangVersion}.jar" )
+	}
+}
+
+task jmh( type: JavaExec, dependsOn: [ 'jmhClasses', 'copyTestJdbcDrivers' ] ) {
+	group = "verification"
+	description = "Run the JMH ORM performance benchmarks against the current build (Hibernate 7)"
+	mainClass = 'org.openjdk.jmh.Main'
+	classpath = sourceSets.jmh.runtimeClasspath
+	// Pass through JMH args, e.g: ./gradlew jmh -PjmhArgs="-f 1 -wi 2 -i 3"
+	if ( project.hasProperty( 'jmhArgs' ) ) {
+		args( project.property( 'jmhArgs' ).toString().split( '\\s+' ) )
+	}
+}
+
+// --------------------------------------------------------------------------
+// Before/after comparison: Hibernate 7 (current build) vs Hibernate 5 (last 5.x
+// release, 1.7.0). The 1.7.0 module is a self-contained shadow jar; we only add a
+// JDBC driver to its libs so it can reach the embedded Derby datasource.
+// Each version is benchmarked in its own forked JVM (a single JVM cannot host both
+// shaded Hibernate versions), then the JSON results are printed side by side.
+//   ./gradlew jmhCompare                       # default rigor
+//   ./gradlew jmhCompare -PperfForks=1 -PperfWarmup=1 -PperfIterations=2   # quick
+// --------------------------------------------------------------------------
+task perfDownloadHib5( type: Download ) {
+	src "https://downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-orm/1.7.0/bx-orm-1.7.0.zip"
+	dest "build/perf/bx-orm-1.7.0.zip"
+	overwrite false
+	onlyIfModified true
+}
+
+task perfSetupHib5( type: Copy, dependsOn: [ perfDownloadHib5, 'copyTestJdbcDrivers' ] ) {
+	from zipTree( "build/perf/bx-orm-1.7.0.zip" )
+	into "build/perf/hib5-module"
+	// Add the Derby driver to the old module's isolated libs so it can connect.
+	into( 'libs' ) {
+		from configurations.testRuntimeClasspath.filter { it.name.startsWith( 'derby' ) }
+	}
+}
+
+def perfForks		= ( project.findProperty( 'perfForks' )			?: '2' ).toString()
+def perfWarmup		= ( project.findProperty( 'perfWarmup' )		?: '3' ).toString()
+def perfIterations	= ( project.findProperty( 'perfIterations' )	?: '5' ).toString()
+
+def perfArgs = { modulePath, jsonOut ->
+	[ 'ortus.boxlang.modules.orm.perf',
+		'-f', perfForks, '-wi', perfWarmup, '-i', perfIterations, '-r', '2', '-w', '2',
+		'-jvmArgsAppend', "-Dorm.module.path=${file( modulePath ).absolutePath}",
+		'-rf', 'json', '-rff', jsonOut ]
+}
+
+task perfBenchHib7( type: JavaExec, dependsOn: [ 'jmhClasses', 'copyTestJdbcDrivers' ] ) {
+	mainClass	= 'org.openjdk.jmh.Main'
+	classpath	= sourceSets.jmh.runtimeClasspath
+	args		= perfArgs( 'build/module', "${buildDir}/perf/hib7.json" )
+	doFirst { file( "${buildDir}/perf" ).mkdirs() }
+}
+
+task perfBenchHib5( type: JavaExec, dependsOn: [ 'jmhClasses', perfSetupHib5 ] ) {
+	mainClass	= 'org.openjdk.jmh.Main'
+	classpath	= sourceSets.jmh.runtimeClasspath
+	args		= perfArgs( 'build/perf/hib5-module', "${buildDir}/perf/hib5.json" )
+	doFirst { file( "${buildDir}/perf" ).mkdirs() }
+}
+
+task jmhCompare( dependsOn: [ perfBenchHib7, perfBenchHib5 ] ) {
+	group = "verification"
+	description = "Benchmark Hibernate 7 (current) vs Hibernate 5 (1.7.0) and print a comparison"
+	doLast {
+		def slurper	= new groovy.json.JsonSlurper()
+		def h7		= slurper.parse( file( "${buildDir}/perf/hib7.json" ) )
+		def h5		= slurper.parse( file( "${buildDir}/perf/hib5.json" ) )
+		def scoreOf	= { data, bench -> data.find { it.benchmark.endsWith( bench ) }?.primaryMetric?.score }
+		def benches	= ( h7*.benchmark.collect { it.tokenize( '.' ).last() } ).unique()
+
+		println "\n================ Hibernate 5 (1.7.0) vs Hibernate 7 (current) ================"
+		printf( "%-18s %16s %16s %12s%n", 'Benchmark', 'Hib5 (us/op)', 'Hib7 (us/op)', 'Hib7 speedup' )
+		benches.each { b ->
+			def s5 = scoreOf( h5, b )
+			def s7 = scoreOf( h7, b )
+			def delta = ( s5 && s7 ) ? String.format( '%.1f%%', ( s5 - s7 ) / s5 * 100 ) : 'n/a'
+			printf( '%-18s %16.2f %16.2f %12s%n', b, ( s5 ?: 0 ), ( s7 ?: 0 ), delta )
+		}
+		println "(lower us/op = faster; positive speedup = Hibernate 7 is faster)"
+		println "Full JSON: ${buildDir}/perf/hib5.json , ${buildDir}/perf/hib7.json"
+	}
+}
+
 // Exclude main resources from IDE classpath to avoid class loading conflicts
 // Resources are still included in the JAR/build outputs
 sourceSets {
