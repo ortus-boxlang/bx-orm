@@ -60,6 +60,16 @@ public class BoxRepresentationResolver implements ManagedTypeRepresentationResol
 		return new BoxEntityRepresentationStrategy( bootDescriptor, runtimeDescriptor, creationContext, entityRecord );
 	}
 
+	/**
+	 * Resolve the representation strategy for an embeddable (a component, or a composite primary key). bx-orm only
+	 * provides a custom strategy for entities; embeddables use Hibernate's built-in handling.
+	 * <p>
+	 * This is the single place where the bridge touches an {@code internal} Hibernate type
+	 * ({@link ManagedTypeRepresentationResolverStandard}). Hibernate exposes no public factory for the default
+	 * embeddable strategy, and this static {@code INSTANCE} has been stable since Hibernate 6. If a future Hibernate
+	 * release relocates or changes it, this one delegation is the only thing to update - see the
+	 * bx-orm-hibernate-bridge skill and AGENTS.md.
+	 */
 	@Override
 	public EmbeddableRepresentationStrategy resolveStrategy( Component bootDescriptor, Supplier<EmbeddableMappingType> runtimeDescriptor,
 	    RuntimeModelCreationContext creationContext ) {

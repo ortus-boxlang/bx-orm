@@ -6,7 +6,7 @@ The `bx-orm` module provides Object-Relational Mapping (ORM) capabilities for th
 
 bx-orm sits as a middleware between the boxlang dynamic JVM language and Hibernate ORM. It abstracts not only database operations, but the verbose Hibernate configuration syntax.
 
-bx-orm runs on Hibernate ORM 7.4.x. BoxLang entities are dynamic maps (`IClassRunnable`, which implements `java.util.Map`) rather than native Java classes, so the module plugs a BoxLang-aware representation strategy into Hibernate. Because Hibernate 6+ hard-codes its `ManagedTypeRepresentationResolver`, the strategy is injected through the pluggable `hibernate.persister.factory` service (see `BoxPersisterFactory`), using only public Hibernate SPIs. All Hibernate integration code targets Hibernate 7, not Hibernate 5.
+bx-orm runs on Hibernate ORM 7.4.x. BoxLang entities are dynamic maps (`IClassRunnable`, which implements `java.util.Map`) rather than native Java classes, so the module plugs a BoxLang-aware representation strategy into Hibernate. Because Hibernate 6+ hard-codes its `ManagedTypeRepresentationResolver`, the strategy is injected through the pluggable `hibernate.persister.factory` service (see `BoxPersisterFactory`), using public Hibernate SPIs. The one exception is `BoxRepresentationResolver`'s embeddable branch (components and composite ids), which delegates to the `internal` `ManagedTypeRepresentationResolverStandard.INSTANCE` because Hibernate exposes no public factory for the default embeddable strategy; that single, guarded delegation is the only internal touch-point, and it is the only thing to revisit if a future Hibernate release relocates it. All Hibernate integration code targets Hibernate 7, not Hibernate 5.
 
 ## Module Structure and Design
 
