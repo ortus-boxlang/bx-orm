@@ -68,6 +68,14 @@ dependencies {
 	// SQLite JDBC driver, used to test ORM boot against a SQLite datasource
 	// https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
 	testImplementation "org.xerial:sqlite-jdbc:3.53.4.0"
+	// Apache Derby (embedded), used for an in-memory ORM boot + CRUD smoke test
+	testImplementation "org.apache.derby:derby:10.16.1.1"
+	testImplementation "org.apache.derby:derbyshared:10.16.1.1"
+	testImplementation "org.apache.derby:derbytools:10.16.1.1"
+	// PostgreSQL JDBC driver, used for a CI-gated ORM boot + CRUD smoke test
+	testImplementation "org.postgresql:postgresql:42.7.4"
+	// MariaDB JDBC driver, used for a CI-gated ORM boot + CRUD smoke test
+	testImplementation "org.mariadb.jdbc:mariadb-java-client:3.4.1"
 	// Explicitly declare the JUnit platform launcher (to avoid deprecation)
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
@@ -239,7 +247,9 @@ task copyTestJdbcDrivers( type: Copy, dependsOn: createModuleStructure ) {
 	// Must run after the module zip is built, so the test-only driver never ends up in the
 	// distributed module zip (only in the live build/module folder used by the test harness).
 	mustRunAfter zipModuleStructure
-	from configurations.testRuntimeClasspath.filter { it.name.startsWith( 'sqlite-jdbc' ) }
+	from configurations.testRuntimeClasspath.filter { jar ->
+		[ 'sqlite-jdbc', 'derby', 'postgresql', 'mariadb-java-client' ].any { jar.name.startsWith( it ) }
+	}
 	into 'build/module/libs'
 }
 
@@ -252,6 +262,11 @@ task copyTestJdbcDrivers( type: Copy, dependsOn: createModuleStructure ) {
 task removeTestJdbcDrivers( type: Delete ) {
 	delete fileTree( 'build/module/libs' ) {
 		include 'sqlite-jdbc-*.jar'
+		include 'derby-*.jar'
+		include 'derbyshared-*.jar'
+		include 'derbytools-*.jar'
+		include 'postgresql-*.jar'
+		include 'mariadb-java-client-*.jar'
 	}
 }
 test.finalizedBy( removeTestJdbcDrivers )

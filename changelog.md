@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Upgraded the ORM engine from Hibernate 5.6.15 to Hibernate 7.4.8.** This is a major internal upgrade. The BoxLang-facing behavior of the ORM BIFs is preserved; the changes below hide Hibernate's breaking changes behind the module's abstraction.
 - Dialect names are now resolved to their Hibernate 7 equivalents. Legacy, version-specific aliases (for example `MySQL57`, `Oracle10g`, `DerbyTenSeven`) continue to work: they are mapped to the current, version-detecting dialect for that database and a one-time deprecation warning is logged. Databases that moved to `hibernate-community-dialects` (SQLite, Derby, Firebird, Informix, Ingres, and others) resolve to that artifact automatically.
 
+### 🚀 Added
+
+- Standalone ORM boot + CRUD smoke tests for Apache Derby, PostgreSQL, and MariaDB. Derby runs everywhere (embedded, in-memory); the PostgreSQL and MariaDB tests are gated on the `ORM_TEST_POSTGRES` and `ORM_TEST_MARIADB` environment variables so they skip locally and run in CI against service containers. This broadens dialect coverage beyond the existing MySQL and SQLite tests.
+
 ### 🐛 Fixed
 
 - `ormExecuteQuery()` again accepts a primary key or an entity instance for an association parameter (for example `WHERE manufacturer = :m`). Hibernate 7's stricter parameter validation rejected these, so the module now resolves such parameters to the managed entity before binding, restoring the Hibernate 5 behavior.
