@@ -17,17 +17,15 @@
  */
 package ortus.boxlang.modules.orm.hibernate;
 
-import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 import org.hibernate.EntityNameResolver;
-import org.hibernate.collection.internal.PersistentBag;
+import org.hibernate.collection.spi.PersistentBag;
+import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.tuple.Instantiator;
-import org.hibernate.tuple.entity.EntityMetamodel;
+import org.hibernate.metamodel.spi.EntityInstantiator;
 
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMContext;
@@ -61,7 +59,7 @@ import ortus.boxlang.runtime.validation.Validator;
  *
  * @since 1.0.0
  */
-public class BoxClassInstantiator implements Instantiator {
+public class BoxClassInstantiator implements EntityInstantiator {
 
 	/**
 	 * Runtime
@@ -73,10 +71,9 @@ public class BoxClassInstantiator implements Instantiator {
 	 */
 	protected BoxLangLogger				logger;
 
-	private EntityMetamodel				entityMetamodel;
-	@SuppressWarnings( "unused" ) // This throws a warning but the declaratio is needed for compilation
-	private PersistentClass				mappingInfo;
 	private String						entityName;
+	private EntityRecord				entityRecord;
+	private List<Key>					identifierKeys		= new ArrayList<>();
 	private List<String>				subclassClassNames	= new ArrayList<>();
 	private EntityNameResolver			entityNameResolver	= new BoxEntityNameResolver();
 
@@ -91,20 +88,22 @@ public class BoxClassInstantiator implements Instantiator {
 	/**
 	 * Constructor
 	 *
-	 * @param entityMetamodel The entity metamodel
-	 * @param mappingInfo
+	 * @param mappingInfo  The Hibernate boot-time descriptor of the entity
+	 * @param entityRecord The BoxLang entity record (class location and metadata) for the entity
 	 */
-	public BoxClassInstantiator( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
-		this.logger				= runtime.getLoggingService().getLogger( "orm" );
-		this.entityMetamodel	= entityMetamodel;
-		this.mappingInfo		= mappingInfo;
-		this.entityName			= mappingInfo.getEntityName();
+	public BoxClassInstantiator( PersistentClass mappingInfo, EntityRecord entityRecord ) {
+		this.logger			= runtime.getLoggingService().getLogger( "orm" );
+		this.entityName		= mappingInfo.getEntityName();
+		this.entityRecord	= entityRecord;
+
+		if ( mappingInfo.hasIdentifierProperty() ) {
+			this.identifierKeys.add( Key.of( mappingInfo.getIdentifierProperty().getName() ) );
+		} else if ( mappingInfo.getIdentifier() instanceof Component compositeId ) {
+			compositeId.getProperties().forEach( idProperty -> this.identifierKeys.add( Key.of( idProperty.getName() ) ) );
+		}
 
 		if ( mappingInfo.hasSubclasses() ) {
-			@SuppressWarnings( "unchecked" )
-			Iterator<PersistentClass> itr = mappingInfo.getSubclassClosureIterator();
-			while ( itr.hasNext() ) {
-				final PersistentClass subclassInfo = itr.next();
+			for ( PersistentClass subclassInfo : mappingInfo.getSubclassClosure() ) {
 				subclassClassNames.add( subclassInfo.getEntityName() );
 			}
 		}
@@ -233,20 +232,20 @@ public class BoxClassInstantiator implements Instantiator {
 	}
 
 	@Override
-	public Object instantiate( Serializable id ) {
-		IBoxContext	context	= RequestBoxContext.getCurrent();
-		ORMApp		ormApp	= ORMContext.getForContext( context ).getORMApp();
-		if ( ormApp == null ) {
-			throw new BoxRuntimeException( "ORM application is not initialized." );
-		}
-		EntityRecord entityRecord = ormApp.lookupEntity( this.entityName, true );
-		// TODO: Because we have an id we should be returning a loded entity. Any attempt to do so, however, creates stack overflows.
-		return instantiate( null, entityRecord, null );
+	public Object instantiate() {
+		return instantiate( RequestBoxContext.getCurrent(), this.entityRecord, null );
 	}
 
+	/**
+	 * Strict class check used by Hibernate to pick the concrete persister in an inheritance hierarchy: true only when
+	 * the object's entity name is exactly this instantiator's entity (subclasses do not match).
+	 */
 	@Override
-	public Object instantiate() {
-		return instantiate( null );
+	public boolean isSameClass( Object object ) {
+		if ( object instanceof IClassRunnable theClass ) {
+			return this.entityName.equals( entityNameResolver.resolveEntityName( theClass ) );
+		}
+		return false;
 	}
 
 	@Override
@@ -430,9 +429,7 @@ public class BoxClassInstantiator implements Instantiator {
 		    methodName,
 		    ( context, function ) -> {
 			    boolean		isArrayCollection	= collectionType == "bag";
-			    List<Key>	keys				= this.entityMetamodel.getIdentifierProperty().getName() != null
-			        ? List.of( Key.of( this.entityMetamodel.getIdentifierProperty().getName() ) )
-			        : new ArrayList<>();
+			    List<Key>	keys				= this.identifierKeys;
 			    IClassRunnable itemToRemove		= ( IClassRunnable ) context.getArgumentsScope().get( collectionKey );
 			    VariablesScope variablesScope	= context.getThisClass().getVariablesScope();
 

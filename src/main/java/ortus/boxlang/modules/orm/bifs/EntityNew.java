@@ -81,10 +81,10 @@ public class EntityNew extends BaseORMBIF {
 		    entityRecord.getDatasource(),
 		    context
 		);
-		IClassRunnable				entity				= ( IClassRunnable ) sessionFactoryImpl.getMetamodel()
-		    .entityPersister( entityRecord.getEntityName() )
-		    .getEntityMetamodel()
-		    .getTuplizer()
+		IClassRunnable				entity				= ( IClassRunnable ) sessionFactoryImpl.getMappingMetamodel()
+		    .getEntityDescriptor( entityRecord.getEntityName() )
+		    .getRepresentationStrategy()
+		    .getInstantiator()
 		    .instantiate();
 
 		// @TODO: Find a more correct location for the entity population logic. Surely we repeat this somewhere else?

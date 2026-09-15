@@ -243,8 +243,9 @@ public class SessionFactoryBuilder {
         // 1. Set Hibernate properties from ORMConfig
         configuration.setProperties( ormConfig.toHibernateProperties() );
 
-        // 2. Register custom components
-        configuration.setEntityTuplizerFactory( EntityTuplizer::new );
+        // 2. Register the BoxLang representation strategy via the pluggable persister factory
+        //    (Hibernate 6+ removed the tuplizer; see the bx-orm-hibernate-bridge skill).
+        configuration.getProperties().put( "hibernate.persister.factory", new BoxPersisterFactory( entityMap ) );
         configuration.setInterceptor( new ORMInterceptor() );
 
         // 3. Set connection provider (BoxLang datasource → JDBC)

@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ⚡ Changed
+
+- **Upgraded the ORM engine from Hibernate 5.6.15 to Hibernate 7.4.8.** This is a major internal upgrade. The BoxLang-facing behavior of the ORM BIFs is preserved; the changes below hide Hibernate's breaking changes behind the module's abstraction.
+- Dialect names are now resolved to their Hibernate 7 equivalents. Legacy, version-specific aliases (for example `MySQL57`, `Oracle10g`, `DerbyTenSeven`) continue to work: they are mapped to the current, version-detecting dialect for that database and a one-time deprecation warning is logged. Databases that moved to `hibernate-community-dialects` (SQLite, Derby, Firebird, Informix, Ingres, and others) resolve to that artifact automatically.
+
+### 🚀 Added
+
+- JMH performance benchmark suite (`src/jmh`) measuring entity CRUD, bulk hydration, and cold ORM boot against embedded Derby. `./gradlew jmh` benchmarks the current build; `./gradlew jmhCompare` benchmarks Hibernate 7 (current) against the last Hibernate 5 release (`1.7.0`) in isolated JVMs and prints a side-by-side comparison. See `src/jmh/README.md`.
+- Standalone ORM boot + CRUD smoke tests for Apache Derby, PostgreSQL, and MariaDB. Derby runs everywhere (embedded, in-memory); the PostgreSQL and MariaDB tests are gated on the `ORM_TEST_POSTGRES` and `ORM_TEST_MARIADB` environment variables so they skip locally and run in CI against service containers. This broadens dialect coverage beyond the existing MySQL and SQLite tests.
+
+### 🐛 Fixed
+
+- Hardened `entityLoad()` filter queries against HQL injection: the `order by` property is now validated and canonicalized against the entity's persistent properties (previously it was interpolated into the HQL unchecked).
+- `entityLoad()` filter queries again accept a primary key or entity instance for a to-one association filter (for example `{ manufacturer : 1 }`); such values are resolved to a managed reference before binding, matching `ormExecuteQuery()` and the Hibernate 5 behavior.
+- `entitySave()` on a detached entity now synchronizes both the `this` and variables scopes back onto the caller's instance after `merge()`, so generated identifiers and event-updated values are no longer left stale on the returned object.
+- `ormExecuteQuery()` list parameters bound to an association (for example `WHERE manufacturer IN (:ids)`) now resolve every list element to a managed reference, not just the first.
+- `entityLoadByExample()` now builds predicates from the inheritance-aware persistent property set (so examples on a subclass also match parent-declared properties) and excludes ids, the version, and associations.
+- `ormExecuteQuery()` again accepts a primary key or an entity instance for an association parameter (for example `WHERE manufacturer = :m`). Hibernate 7's stricter parameter validation rejected these, so the module now resolves such parameters to the managed entity before binding, restoring the Hibernate 5 behavior.
+- `entitySave()` on a detached entity again leaves the passed-in object live and carrying its generated identifier and event changes. Hibernate 7 removed `saveOrUpdate()`, so the module uses `merge()` and copies the managed state back into the caller's instance.
+- Date/time entity properties again retain sub-second (millisecond) precision. The `DateTimeConverter` now maps to `java.sql.Timestamp` so Hibernate 7 binds fractional seconds instead of truncating to whole seconds.
+
 ## [1.7.0] - 2026-09-14
 
 ### ⭐ Added

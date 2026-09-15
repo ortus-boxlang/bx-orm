@@ -37,7 +37,7 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.dialect, "DerbyTenSeven"
 		), context ).toHibernateConfig();
 
-		assertEquals( "org.hibernate.dialect.DerbyTenSevenDialect", config.getProperty( AvailableSettings.DIALECT ) );
+		assertEquals( "org.hibernate.community.dialect.DerbyDialect", config.getProperty( AvailableSettings.DIALECT ) );
 	}
 
 	@Test
@@ -47,7 +47,7 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.dialect, "DerbyTenSevenDialect"
 		), context ).toHibernateConfig();
 
-		assertEquals( "org.hibernate.dialect.DerbyTenSevenDialect", config.getProperty( AvailableSettings.DIALECT ) );
+		assertEquals( "org.hibernate.community.dialect.DerbyDialect", config.getProperty( AvailableSettings.DIALECT ) );
 	}
 
 	@Test
@@ -56,7 +56,7 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.datasource, "TestDB"
 		), context ).toHibernateConfig();
 
-		assertEquals( "true", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+		assertEquals( "allow", config.getProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT ) );
 		assertEquals( SQLiteDialectResolver.class.getName(), config.getProperty( AvailableSettings.DIALECT_RESOLVERS ) );
 	}
 
@@ -67,7 +67,7 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.dialect, "DerbyTenSeven"
 		), context ).toHibernateConfig();
 
-		assertEquals( "false", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+		assertEquals( "disallow", config.getProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT ) );
 	}
 
 	@Test
@@ -79,7 +79,7 @@ public class ORMConfigTest extends BaseORMTest {
 
 		Configuration config = ormConfig.toHibernateConfig();
 
-		assertEquals( "true", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+		assertEquals( "allow", config.getProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT ) );
 		assertThat( config.getProperty( AvailableSettings.DIALECT ) ).isNull();
 	}
 

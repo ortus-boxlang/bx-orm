@@ -23,13 +23,14 @@ import java.util.Set;
 
 import org.hibernate.HibernateException;
 import org.hibernate.boot.Metadata;
+import org.hibernate.boot.spi.BootstrapContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.service.spi.EventListenerRegistry;
-import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.AutoFlushEvent;
 import org.hibernate.event.spi.AutoFlushEventListener;
 import org.hibernate.event.spi.ClearEvent;
 import org.hibernate.event.spi.ClearEventListener;
+import org.hibernate.event.spi.DeleteContext;
 import org.hibernate.event.spi.DeleteEvent;
 import org.hibernate.event.spi.DeleteEventListener;
 import org.hibernate.event.spi.DirtyCheckEvent;
@@ -58,7 +59,6 @@ import org.hibernate.event.spi.PreUpdateEventListener;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.service.spi.SessionFactoryServiceRegistry;
-import org.hibernate.tuple.entity.EntityMetamodel;
 
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
@@ -110,8 +110,8 @@ public class EventListener
 	}
 
 	@Override
-	public void integrate( Metadata metadata, SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry ) {
-		EventListenerRegistry eventListenerRegistry = serviceRegistry.getService( EventListenerRegistry.class );
+	public void integrate( Metadata metadata, BootstrapContext bootstrapContext, SessionFactoryImplementor sessionFactory ) {
+		EventListenerRegistry eventListenerRegistry = sessionFactory.getServiceRegistry().getService( EventListenerRegistry.class );
 
 		eventListenerRegistry.prependListeners( EventType.PRE_INSERT, this );
 		eventListenerRegistry.prependListeners( EventType.POST_INSERT, this );
@@ -141,7 +141,7 @@ public class EventListener
 	}
 
 	@Override
-	public boolean requiresPostCommitHanding( EntityPersister persister ) {
+	public boolean requiresPostCommitHandling( EntityPersister persister ) {
 		return false;
 	}
 
@@ -217,13 +217,13 @@ public class EventListener
 
 	@Override
 	public boolean onPreUpdate( PreUpdateEvent event ) {
-		IStruct			oldData			= new Struct();
-		EntityMetamodel	entityMetamodel	= event.getPersister().getEntityMetamodel();
-		Object[]		oldState		= event.getOldState();
+		IStruct		oldData			= new Struct();
+		String[]	propertyNames	= event.getPersister().getPropertyNames();
+		Object[]	oldState		= event.getOldState();
 		if ( oldState != null ) {
-			Arrays.stream( entityMetamodel.getPropertyNames() ).forEach( propertyName -> {
-				oldData.put( propertyName, oldState[ entityMetamodel.getPropertyIndex( propertyName ) ] );
-			} );
+			for ( int i = 0; i < propertyNames.length; i++ ) {
+				oldData.put( propertyNames[ i ], oldState[ i ] );
+			}
 		}
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
@@ -246,9 +246,8 @@ public class EventListener
 		announceGlobalEvent( ORMKeys.onDelete, event, args );
 	}
 
-	@SuppressWarnings( "rawtypes" )
 	@Override
-	public void onDelete( DeleteEvent event, Set transientEntities ) throws HibernateException {
+	public void onDelete( DeleteEvent event, DeleteContext transientEntities ) throws HibernateException {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event
 		);
@@ -302,7 +301,7 @@ public class EventListener
 		return false;
 	}
 
-	private void announceGlobalEvent( Key eventType, AbstractEvent event, IStruct args ) {
+	private void announceGlobalEvent( Key eventType, Object event, IStruct args ) {
 		if ( globalListener == null ) {
 			return;
 		}

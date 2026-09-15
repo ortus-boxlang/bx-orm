@@ -32,14 +32,18 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
  */
 public class BoxLazyInitializer extends AbstractLazyInitializer implements Serializable {
 
-	public BoxLazyInitializer( String entityName, Serializable id, SharedSessionContractImplementor session ) {
+	public BoxLazyInitializer( String entityName, Object id, SharedSessionContractImplementor session ) {
 		super( entityName, id, session );
 	}
 
-	@SuppressWarnings( "rawtypes" )
 	@Override
-	public Class getPersistentClass() {
+	public Class<?> getPersistentClass() {
 		return BoxProxy.class;
+	}
+
+	@Override
+	public Class<?> getImplementationClass() {
+		return isUninitialized() ? IClassRunnable.class : getImplementation().getClass();
 	}
 
 	/**

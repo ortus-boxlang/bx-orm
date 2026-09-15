@@ -69,7 +69,7 @@ public class EntityDelete extends BaseORMBIF {
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 
-		session.delete( entityName, entity );
+		session.remove( entity );
 
 		return null;
 	}

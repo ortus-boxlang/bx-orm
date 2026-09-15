@@ -17,7 +17,6 @@
  */
 package ortus.boxlang.modules.orm;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,11 +24,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Order;
-import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
+import org.hibernate.persister.entity.EntityPersister;
+import org.hibernate.query.Query;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -301,7 +301,7 @@ public class ORMApp {
 		Session			session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 
 		Class<?>		keyClass		= getKeyJavaType( session, entityName );
-		Serializable	id;
+		Object			id;
 
 		if ( java.util.Map.class.isAssignableFrom( keyClass ) ) {
 			// Composite key: Hibernate expects a HashMap<String, Object> with String keys (not Key objects)
@@ -318,7 +318,7 @@ public class ORMApp {
 			}
 			id = compositeId;
 		} else {
-			id = ( Serializable ) GenericCaster.cast( context, keyValue, keyClass.getSimpleName() );
+			id = GenericCaster.cast( context, keyValue, keyClass.getSimpleName() );
 		}
 		var entity = session.get( entityRecord.getEntityName(), id );
 		if ( entity instanceof BoxProxy castProxy ) {
@@ -337,13 +337,13 @@ public class ORMApp {
 	 * @param options    Struct of options, including maxResults, offset, order, etc.
 	 */
 	public Array loadEntitiesByFilter( IBoxContext context, String entityName, IStruct filter, IStruct options ) {
-		EntityRecord			entityRecord	= this.lookupEntity( entityName, true );
-		Session					session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
-		org.hibernate.Criteria	criteria		= session.createCriteria( entityRecord.getEntityName() );
+		EntityRecord		entityRecord	= this.lookupEntity( entityName, true );
+		Session				session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+		StringBuilder		hql				= new StringBuilder( "select e from " ).append( entityRecord.getEntityName() ).append( " e" );
+		Map<String, Object>	params			= new HashMap<>();
+		Array				properties		= entityRecord.getEntityMeta().getPropertyNamesArray();
 
-		if ( filter != null ) {
-
-			Array properties = entityRecord.getEntityMeta().getPropertyNamesArray();
+		if ( filter != null && !filter.isEmpty() ) {
 
 			// Ensure that all filter keys are valid properties of the entity or its parent
 			filter.keySet()
@@ -355,24 +355,57 @@ public class ORMApp {
 				        "No persistent filter property found with the name of '" + key.getName() + "' in entity '" + entityName + "'" );
 			    } );
 
+			hql.append( " where" );
+			int index = 0;
 			for ( Key entryKey : filter.keySet() ) {
 				int		propertyIndex	= properties.indexOf( KeyCaster.cast( entryKey ) );
+				String	propertyName	= KeyCaster.cast( properties.get( propertyIndex ) ).getName();
 				Object	propertyValue	= filter.get( entryKey );
-				criteria.add(
-				    propertyValue != null
-				        ? org.hibernate.criterion.Restrictions.eq(
-				            KeyCaster.cast( properties.get( propertyIndex ) ).getName(),
-				            propertyValue
-				        )
-				        : org.hibernate.criterion.Restrictions.isNull(
-				            KeyCaster.cast( properties.get( propertyIndex ) ).getName()
-				        )
-				);
+				if ( index > 0 ) {
+					hql.append( " and" );
+				}
+				if ( propertyValue != null ) {
+					String paramName = "p" + index;
+					hql.append( " e." ).append( propertyName ).append( " = :" ).append( paramName );
+					params.put( paramName, propertyValue );
+				} else {
+					hql.append( " e." ).append( propertyName ).append( " is null" );
+				}
+				index++;
 			}
 		}
 
+		if ( options.containsKey( ORMKeys.orderBy ) ) {
+			List<String> orderClauses = new ArrayList<>();
+			options.getAsArray( ORMKeys.orderBy ).forEach( ( item ) -> {
+				IStruct	order			= ( IStruct ) item;
+				// The property name is interpolated into the HQL, so an unvalidated caller value would allow HQL
+				// injection. Validate + canonicalize it against the entity's persistent properties, same as filter keys.
+				int		orderPropIndex	= properties.indexOf( Key.of( order.getAsString( ORMKeys.property ) ) );
+				if ( orderPropIndex < 0 ) {
+					throw new BoxRuntimeException(
+					    "No persistent order-by property found with the name of '" + order.getAsString( ORMKeys.property )
+					        + "' in entity '" + entityName + "'" );
+				}
+				String orderProp = KeyCaster.cast( properties.get( orderPropIndex ) ).getName();
+				orderClauses.add( "e." + orderProp + ( order.getAsBoolean( ORMKeys.ascending ) ? " asc" : " desc" ) );
+			} );
+			if ( !orderClauses.isEmpty() ) {
+				hql.append( " order by " ).append( String.join( ", ", orderClauses ) );
+			}
+		}
+
+		Query<?>			query			= session.createQuery( hql.toString(), Object.class );
+		// A to-one association filter may be supplied as a primary key (for example { manufacturer : 1 }).
+		// Hibernate 7 rejects a raw scalar for an entity-typed parameter, so resolve those to a managed
+		// reference first - the same conversion HQLQuery applies to ORM queries - keeping the Hibernate 5 behavior.
+		Map<String, String>	entityParams	= entityParameterTargets( query );
+		params.forEach( ( name, value ) -> query.setParameter(
+		    name,
+		    entityParams.containsKey( name ) ? resolveEntityReference( session, entityParams.get( name ), value ) : value ) );
+
 		return Array.of(
-		    executeCriteriaQuery( criteria, options )
+		    executeFilterQuery( query, options )
 		        .stream()
 		        .map( entity -> ( IClassRunnable ) entity )
 		        .toArray()
@@ -380,57 +413,110 @@ public class ORMApp {
 	}
 
 	/**
-	 * Execute a Criteria query with various options.
+	 * Apply common query options (cacheable, timeout, maxResults, offset) and execute the query.
 	 *
-	 * @param criteria The criteria to execute.
-	 * @param options  Struct of options, including maxResults, offset, order, etc.
+	 * @param query   The query to execute.
+	 * @param options Struct of options, including maxResults, offset, etc.
 	 */
-	public List executeCriteriaQuery( Criteria criteria, IStruct options ) {
+	public List<?> executeFilterQuery( Query<?> query, IStruct options ) {
 		if ( options.containsKey( ORMKeys.cacheable ) ) {
-			criteria.setCacheable( BooleanCaster.cast( options.get( ORMKeys.cacheable ) ) );
+			query.setCacheable( BooleanCaster.cast( options.get( ORMKeys.cacheable ) ) );
 		}
 		if ( options.containsKey( Key.timeout ) ) {
 			Integer timeout = options.getAsInteger( Key.timeout );
 			if ( timeout != null ) {
-				criteria.setTimeout( timeout );
+				query.setTimeout( timeout );
 			}
 		}
 		if ( options.containsKey( ORMKeys.maxResults ) ) {
 			Integer maxResults = options.getAsInteger( ORMKeys.maxResults );
 			if ( maxResults != null ) {
-				criteria.setMaxResults( maxResults );
+				query.setMaxResults( maxResults );
 			}
 		}
 		if ( options.containsKey( Key.offset ) ) {
 			Integer offset = options.getAsInteger( Key.offset );
 			if ( offset != null && offset > 0 ) {
-				criteria.setFirstResult( offset );
+				query.setFirstResult( offset );
 			}
 		}
-
-		if ( options.containsKey( ORMKeys.orderBy ) ) {
-			options.getAsArray( ORMKeys.orderBy ).forEach( ( item ) -> {
-				IStruct	order		= ( IStruct ) item;
-				String	orderColumn	= order.getAsString( ORMKeys.property );
-				if ( order.getAsBoolean( ORMKeys.ascending ) ) {
-					criteria.addOrder( Order.asc( orderColumn ) );
-				} else {
-					criteria.addOrder( Order.desc( orderColumn ) );
-				}
-			} );
-		}
-		return criteria.list();
+		return query.list();
 	}
 
 	/**
 	 * Get the java type for the primary key of an entity.
-	 *
-	 * TODO: We're using Hibernate's deprecated metamodel. Refactor to use JPA metamodel.
 	 */
 	public Class<?> getKeyJavaType( Session session, String entityName ) {
-		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
-		ClassMetadata	metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
-		return metadata.getIdentifierType().getReturnedClass();
+		return getEntityPersister( session, entityName ).getIdentifierType().getReturnedClass();
+	}
+
+	/**
+	 * Get the Hibernate runtime descriptor (persister) for an entity.
+	 *
+	 * @param session    A Hibernate session bound to the entity's datasource.
+	 * @param entityName The name of the entity.
+	 */
+	public EntityPersister getEntityPersister( Session session, String entityName ) {
+		EntityRecord entityRecord = this.lookupEntity( entityName, true );
+		return ( ( SessionFactoryImplementor ) session.getSessionFactory() ).getMappingMetamodel().getEntityDescriptor( entityRecord.getEntityName() );
+	}
+
+	/**
+	 * Resolve a caller-supplied value into the managed entity Hibernate expects for an association.
+	 * <p>
+	 * Hibernate 5 accepted either a raw primary key or an entity instance wherever an association was expected, silently
+	 * resolving a key to its entity. Hibernate 7's stricter type layer rejects both unless the value is already the managed
+	 * entity. bx-orm is the ORM abstraction, so we preserve the Hibernate 5 behavior by resolving here:
+	 * <ul>
+	 * <li>a primary key (any non-entity scalar) becomes a {@code getReference()} handle to that row;</li>
+	 * <li>an entity instance already tracked by the session is returned as-is;</li>
+	 * <li>a detached entity instance is resolved to a managed reference by its identifier;</li>
+	 * <li>a transient instance with no identifier, or a {@code null}, is passed through unchanged.</li>
+	 * </ul>
+	 *
+	 * @param session    A Hibernate session bound to the entity's datasource.
+	 * @param entityName The Hibernate entity name the association targets.
+	 * @param value      The caller-supplied value: a primary key or an entity instance.
+	 *
+	 * @return The managed entity/reference to bind, or the original value when it cannot be resolved to one.
+	 */
+	public Object resolveEntityReference( Session session, String entityName, Object value ) {
+		if ( value == null ) {
+			return null;
+		}
+		// Already an entity instance (live or detached); BoxProxy implements IClassRunnable too.
+		if ( value instanceof IClassRunnable ) {
+			if ( session.contains( entityName, value ) ) {
+				return value;
+			}
+			Object id = getEntityPersister( session, entityName ).getIdentifier( value, ( SharedSessionContractImplementor ) session );
+			// Transient (no id yet): let Hibernate handle it rather than fabricate a reference.
+			return id == null ? value : session.getReference( entityName, id );
+		}
+		// A raw primary key value.
+		return session.getReference( entityName, value );
+	}
+
+	/**
+	 * Inspect a built query's SQM tree and map each named parameter that targets an entity association to the
+	 * Hibernate entity name it references. Used to resolve association filter values (a primary key or entity
+	 * instance) to a managed reference before binding, as Hibernate 7 rejects a raw scalar for an entity-typed parameter.
+	 *
+	 * @param query The query to inspect.
+	 *
+	 * @return A map of parameter name to the Hibernate entity name it targets (empty when there are none).
+	 */
+	private Map<String, String> entityParameterTargets( Query<?> query ) {
+		Map<String, String> targets = new HashMap<>();
+		if ( query instanceof org.hibernate.query.spi.SqmQuery<?> sqmQuery ) {
+			for ( org.hibernate.query.sqm.tree.expression.SqmParameter<?> sqmParam : sqmQuery.getSqmStatement().getSqmParameters() ) {
+				if ( sqmParam.getName() != null
+				    && sqmParam.getAnticipatedType() instanceof org.hibernate.metamodel.model.domain.EntityDomainType<?> entityType ) {
+					targets.put( sqmParam.getName(), entityType.getHibernateEntityName() );
+				}
+			}
+		}
+		return targets;
 	}
 
 	/**

@@ -18,12 +18,15 @@
 package ortus.boxlang.modules.orm;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.hibernate.Session;
+import org.hibernate.metamodel.model.domain.EntityDomainType;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -353,25 +356,46 @@ public class HQLQuery {
 		hqlQuery.setCacheMode( org.hibernate.CacheMode.NORMAL );
 
 		if ( this.options.containsKey( Key.offset ) ) {
-			hqlQuery.getQueryOptions().setFirstRow( this.options.getAsInteger( Key.offset ) );
+			hqlQuery.setFirstResult( this.options.getAsInteger( Key.offset ) );
 		}
 		if ( this.options.containsKey( ORMKeys.maxResults ) ) {
-			hqlQuery.getQueryOptions().setMaxRows( this.options.getAsInteger( ORMKeys.maxResults ) );
+			hqlQuery.setMaxResults( this.options.getAsInteger( ORMKeys.maxResults ) );
 		}
 		if ( this.options.containsKey( ORMKeys.readOnly ) ) {
 			hqlQuery.setReadOnly( BooleanCaster.cast( this.options.get( ORMKeys.readOnly ) ) );
 		}
 
 		if ( this.parameters != null ) {
+			// Map each 1-based positional parameter to the entity name it targets, when it targets an association.
+			// bx-orm is the ORM abstraction: Hibernate 5 let callers pass a primary key or an entity for an association
+			// parameter, so we resolve those to the managed entity Hibernate 7 now requires. Non-association params are
+			// left untouched.
+			Map<Integer, String> entityParams = new HashMap<>();
+			if ( hqlQuery instanceof org.hibernate.query.spi.SqmQuery<?> sqmQuery ) {
+				// The parameter's expected type is only known after semantic analysis, on the SQM tree, not on the query's
+				// pre-binding parameter metadata. A parameter compared against an association path carries that association's
+				// entity domain type as its anticipated type.
+				for ( org.hibernate.query.sqm.tree.expression.SqmParameter<?> sqmParam : sqmQuery.getSqmStatement().getSqmParameters() ) {
+					if ( sqmParam.getPosition() != null && sqmParam.getAnticipatedType() instanceof EntityDomainType<?> entityType ) {
+						entityParams.put( sqmParam.getPosition(), entityType.getHibernateEntityName() );
+					}
+				}
+			}
+
 			int parameterIndex = 1;
 			for ( QueryParameter param : this.parameters ) {
 				if ( param.isListParam() ) {
-					Array list = ( Array ) param.getValue();
+					Array	list		= ( Array ) param.getValue();
+					// An association list (WHERE manufacturer IN (:ids)) records its entity target only at the list's
+					// first position; resolve every expanded element against that target, not just the first element.
+					int		listStart	= parameterIndex;
 					for ( Object value : list ) {
-						hqlQuery.setParameter( parameterIndex++, value );
+						hqlQuery.setParameter( parameterIndex, resolveBindValue( listStart, value, entityParams ) );
+						parameterIndex++;
 					}
 				} else {
-					hqlQuery.setParameter( parameterIndex++, param.getValue() );
+					hqlQuery.setParameter( parameterIndex, resolveBindValue( parameterIndex, param.getValue(), entityParams ) );
+					parameterIndex++;
 				}
 			}
 		}
@@ -381,6 +405,24 @@ public class HQLQuery {
 			return hqlQuery.list();
 		}
 
+	}
+
+	/**
+	 * Resolve a bind value for a positional parameter, converting association parameters from a primary key or entity
+	 * instance into the managed entity Hibernate 7 expects. Non-association parameters are returned unchanged.
+	 *
+	 * @param position     The 1-based positional index of the parameter.
+	 * @param value        The value about to be bound.
+	 * @param entityParams Map of positional index to targeted entity name, for association parameters only.
+	 *
+	 * @return The value to bind.
+	 */
+	private Object resolveBindValue( int position, Object value, Map<Integer, String> entityParams ) {
+		String entityName = entityParams.get( position );
+		if ( entityName == null ) {
+			return value;
+		}
+		return this.ormApp.resolveEntityReference( this.session, entityName, value );
 	}
 
 	/**
