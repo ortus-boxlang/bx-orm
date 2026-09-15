@@ -174,15 +174,10 @@ public class BoxPropertyGetter implements Getter {
 	}
 
 	/**
-	 * Returns the Java reflection {@link Member} backing this getter.
-	 * <p>
-	 * Not applicable for BoxLang entities; always returns {@code null}.
-	 *
-	 * @return {@code null}
-	 */
-	/**
 	 * BoxLang entities have no Java field or method backing a property. Hibernate's JPA metamodel builder still needs a
 	 * {@link Member} to classify attributes, so we hand back the same synthetic {@link MapMember} it uses for dynamic-map entities.
+	 *
+	 * @return a synthetic {@link MapMember} describing this property
 	 */
 	@Override
 	public Member getMember() {

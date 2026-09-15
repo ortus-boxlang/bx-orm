@@ -34,9 +34,12 @@ public class DateTimeConverterTest {
 	@Test
 	public void testLocalDateTimeToDateCoercion() {
 		DateTimeConverter	converter	= new DateTimeConverter();
-		LocalDateTime		now			= LocalDateTime.of( 2026, 5, 26, 12, 0, 0 );
+		LocalDateTime		now			= LocalDateTime.of( 2026, 5, 26, 12, 0, 0, 123_000_000 );
 		Timestamp			result		= converter.convertToDatabaseColumn( now );
 		assertThat( result ).isNotNull();
+		// The Hibernate 5 -> 7 fix maps to java.sql.Timestamp so sub-second precision survives; assert the
+		// fractional part is preserved rather than truncated to whole seconds.
+		assertThat( result.getNanos() ).isEqualTo( 123_000_000 );
 	}
 
 	@DisplayName( "It handles null values" )

@@ -85,6 +85,11 @@ public class EntitySave extends BaseORMBIF {
 			// Detached instance: merge returns the managed copy; copy its state back so the caller's object stays live.
 			Object managed = session.merge( entityName, entity );
 			if ( managed != entity && managed instanceof IClassRunnable managedEntity ) {
+				// BoxPropertySetter writes mapped properties to both the `this` and variables scopes, so sync both
+				// back onto the caller's detached instance. Otherwise generated identifiers or event-updated values
+				// held in the managed `this` scope stay stale on the returned object, breaking the compatibility
+				// contract described above.
+				entity.getThisScope().putAll( managedEntity.getThisScope() );
 				entity.getVariablesScope().putAll( managedEntity.getVariablesScope() );
 			}
 		}

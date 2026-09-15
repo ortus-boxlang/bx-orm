@@ -341,10 +341,9 @@ public class ORMApp {
 		Session				session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 		StringBuilder		hql				= new StringBuilder( "select e from " ).append( entityRecord.getEntityName() ).append( " e" );
 		Map<String, Object>	params			= new HashMap<>();
+		Array				properties		= entityRecord.getEntityMeta().getPropertyNamesArray();
 
 		if ( filter != null && !filter.isEmpty() ) {
-
-			Array properties = entityRecord.getEntityMeta().getPropertyNamesArray();
 
 			// Ensure that all filter keys are valid properties of the entity or its parent
 			filter.keySet()
@@ -379,16 +378,31 @@ public class ORMApp {
 		if ( options.containsKey( ORMKeys.orderBy ) ) {
 			List<String> orderClauses = new ArrayList<>();
 			options.getAsArray( ORMKeys.orderBy ).forEach( ( item ) -> {
-				IStruct order = ( IStruct ) item;
-				orderClauses.add( "e." + order.getAsString( ORMKeys.property ) + ( order.getAsBoolean( ORMKeys.ascending ) ? " asc" : " desc" ) );
+				IStruct	order			= ( IStruct ) item;
+				// The property name is interpolated into the HQL, so an unvalidated caller value would allow HQL
+				// injection. Validate + canonicalize it against the entity's persistent properties, same as filter keys.
+				int		orderPropIndex	= properties.indexOf( Key.of( order.getAsString( ORMKeys.property ) ) );
+				if ( orderPropIndex < 0 ) {
+					throw new BoxRuntimeException(
+					    "No persistent order-by property found with the name of '" + order.getAsString( ORMKeys.property )
+					        + "' in entity '" + entityName + "'" );
+				}
+				String orderProp = KeyCaster.cast( properties.get( orderPropIndex ) ).getName();
+				orderClauses.add( "e." + orderProp + ( order.getAsBoolean( ORMKeys.ascending ) ? " asc" : " desc" ) );
 			} );
 			if ( !orderClauses.isEmpty() ) {
 				hql.append( " order by " ).append( String.join( ", ", orderClauses ) );
 			}
 		}
 
-		Query<?> query = session.createQuery( hql.toString(), Object.class );
-		params.forEach( query::setParameter );
+		Query<?>			query			= session.createQuery( hql.toString(), Object.class );
+		// A to-one association filter may be supplied as a primary key (for example { manufacturer : 1 }).
+		// Hibernate 7 rejects a raw scalar for an entity-typed parameter, so resolve those to a managed
+		// reference first - the same conversion HQLQuery applies to ORM queries - keeping the Hibernate 5 behavior.
+		Map<String, String>	entityParams	= entityParameterTargets( query );
+		params.forEach( ( name, value ) -> query.setParameter(
+		    name,
+		    entityParams.containsKey( name ) ? resolveEntityReference( session, entityParams.get( name ), value ) : value ) );
 
 		return Array.of(
 		    executeFilterQuery( query, options )
@@ -481,6 +495,28 @@ public class ORMApp {
 		}
 		// A raw primary key value.
 		return session.getReference( entityName, value );
+	}
+
+	/**
+	 * Inspect a built query's SQM tree and map each named parameter that targets an entity association to the
+	 * Hibernate entity name it references. Used to resolve association filter values (a primary key or entity
+	 * instance) to a managed reference before binding, as Hibernate 7 rejects a raw scalar for an entity-typed parameter.
+	 *
+	 * @param query The query to inspect.
+	 *
+	 * @return A map of parameter name to the Hibernate entity name it targets (empty when there are none).
+	 */
+	private Map<String, String> entityParameterTargets( Query<?> query ) {
+		Map<String, String> targets = new HashMap<>();
+		if ( query instanceof org.hibernate.query.spi.SqmQuery<?> sqmQuery ) {
+			for ( org.hibernate.query.sqm.tree.expression.SqmParameter<?> sqmParam : sqmQuery.getSqmStatement().getSqmParameters() ) {
+				if ( sqmParam.getName() != null
+				    && sqmParam.getAnticipatedType() instanceof org.hibernate.metamodel.model.domain.EntityDomainType<?> entityType ) {
+					targets.put( sqmParam.getName(), entityType.getHibernateEntityName() );
+				}
+			}
+		}
+		return targets;
 	}
 
 	/**
