@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.query.Query;
 
@@ -444,6 +445,42 @@ public class ORMApp {
 	public EntityPersister getEntityPersister( Session session, String entityName ) {
 		EntityRecord entityRecord = this.lookupEntity( entityName, true );
 		return ( ( SessionFactoryImplementor ) session.getSessionFactory() ).getMappingMetamodel().getEntityDescriptor( entityRecord.getEntityName() );
+	}
+
+	/**
+	 * Resolve a caller-supplied value into the managed entity Hibernate expects for an association.
+	 * <p>
+	 * Hibernate 5 accepted either a raw primary key or an entity instance wherever an association was expected, silently
+	 * resolving a key to its entity. Hibernate 7's stricter type layer rejects both unless the value is already the managed
+	 * entity. bx-orm is the ORM abstraction, so we preserve the Hibernate 5 behavior by resolving here:
+	 * <ul>
+	 * <li>a primary key (any non-entity scalar) becomes a {@code getReference()} handle to that row;</li>
+	 * <li>an entity instance already tracked by the session is returned as-is;</li>
+	 * <li>a detached entity instance is resolved to a managed reference by its identifier;</li>
+	 * <li>a transient instance with no identifier, or a {@code null}, is passed through unchanged.</li>
+	 * </ul>
+	 *
+	 * @param session    A Hibernate session bound to the entity's datasource.
+	 * @param entityName The Hibernate entity name the association targets.
+	 * @param value      The caller-supplied value: a primary key or an entity instance.
+	 *
+	 * @return The managed entity/reference to bind, or the original value when it cannot be resolved to one.
+	 */
+	public Object resolveEntityReference( Session session, String entityName, Object value ) {
+		if ( value == null ) {
+			return null;
+		}
+		// Already an entity instance (live or detached); BoxProxy implements IClassRunnable too.
+		if ( value instanceof IClassRunnable ) {
+			if ( session.contains( entityName, value ) ) {
+				return value;
+			}
+			Object id = getEntityPersister( session, entityName ).getIdentifier( value, ( SharedSessionContractImplementor ) session );
+			// Transient (no id yet): let Hibernate handle it rather than fabricate a reference.
+			return id == null ? value : session.getReference( entityName, id );
+		}
+		// A raw primary key value.
+		return session.getReference( entityName, value );
 	}
 
 	/**

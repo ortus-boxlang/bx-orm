@@ -72,11 +72,21 @@ public class EntitySave extends BaseORMBIF {
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		Boolean			forceInsert		= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
 
-		if ( forceInsert || !session.contains( entityName, entity ) && isTransient( session, entityName, entity ) ) {
+		// bx-orm is the ORM abstraction, so entitySave() must behave as it did on Hibernate 5's saveOrUpdate(): the object the
+		// caller passed in stays live afterward and carries any generated identifier and event changes. Hibernate 7 removed
+		// saveOrUpdate(), leaving persist() for new entities and merge() for detached ones. persist() attaches the passed
+		// instance directly (so it is already live), but merge() copies state into a separate managed instance and leaves the
+		// caller's object detached. To keep the old contract we copy the managed state back into the caller's instance.
+		if ( session.contains( entityName, entity ) ) {
+			// Already managed: nothing to do; the flush will persist any changes.
+		} else if ( forceInsert || isTransient( session, entityName, entity ) ) {
 			session.persist( entityName, entity );
-		} else if ( !session.contains( entityName, entity ) ) {
-			// Detached instance: Hibernate 7 removed update()/saveOrUpdate(), so a detached entity can only be re-attached via merge().
-			session.merge( entityName, entity );
+		} else {
+			// Detached instance: merge returns the managed copy; copy its state back so the caller's object stays live.
+			Object managed = session.merge( entityName, entity );
+			if ( managed != entity && managed instanceof IClassRunnable managedEntity ) {
+				entity.getVariablesScope().putAll( managedEntity.getVariablesScope() );
+			}
 		}
 
 		return null;

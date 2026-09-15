@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.sql.Timestamp;
 import java.util.Date;
 
 import org.junit.jupiter.api.DisplayName;
@@ -29,12 +30,12 @@ import org.junit.jupiter.api.Test;
 
 public class DateTimeConverterTest {
 
-	@DisplayName( "It coerces a LocalDateTime to java.util.Date" )
+	@DisplayName( "It coerces a LocalDateTime to java.sql.Timestamp" )
 	@Test
 	public void testLocalDateTimeToDateCoercion() {
 		DateTimeConverter	converter	= new DateTimeConverter();
 		LocalDateTime		now			= LocalDateTime.of( 2026, 5, 26, 12, 0, 0 );
-		Date				result		= converter.convertToDatabaseColumn( now );
+		Timestamp			result		= converter.convertToDatabaseColumn( now );
 		assertThat( result ).isNotNull();
 	}
 
@@ -50,7 +51,7 @@ public class DateTimeConverterTest {
 	@Test
 	public void testDateFromDatabaseColumn() {
 		DateTimeConverter	converter	= new DateTimeConverter();
-		Date				now			= new Date();
+		Timestamp			now			= new Timestamp( System.currentTimeMillis() );
 		Object				result		= converter.convertToEntityAttribute( now );
 		assertThat( result ).isNotNull();
 	}

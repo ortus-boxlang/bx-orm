@@ -17,23 +17,34 @@
  */
 package ortus.boxlang.modules.orm.hibernate.converters;
 
-import java.util.Date;
+import java.sql.Timestamp;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
 import ortus.boxlang.runtime.dynamic.casters.DateTimeCaster;
 
+/**
+ * Converts a BoxLang date/time value to a JDBC {@link Timestamp} and back.
+ * <p>
+ * The database column type is {@link Timestamp} rather than {@link java.util.Date}: bx-orm is the ORM abstraction and must
+ * preserve the behavior applications relied on under Hibernate 5, which stored sub-second (millisecond) precision for
+ * date/time properties. Hibernate 7 binds a bare {@link java.util.Date} as a whole-second {@code TIMESTAMP}, truncating the
+ * fractional seconds even when the column is declared with precision (e.g. MySQL {@code datetime(6)}). Mapping to
+ * {@link Timestamp} makes Hibernate bind the fractional seconds, restoring the Hibernate 5 behavior.
+ *
+ * @since 1.0.0
+ */
 @Converter( autoApply = true )
-public class DateTimeConverter implements AttributeConverter<Object, Date> {
+public class DateTimeConverter implements AttributeConverter<Object, Timestamp> {
 
 	@Override
-	public Date convertToDatabaseColumn( Object attribute ) {
-		return attribute != null ? DateTimeCaster.cast( attribute ).toDate() : null;
+	public Timestamp convertToDatabaseColumn( Object attribute ) {
+		return attribute != null ? Timestamp.from( DateTimeCaster.cast( attribute ).toInstant() ) : null;
 	}
 
 	@Override
-	public Object convertToEntityAttribute( Date dbData ) {
+	public Object convertToEntityAttribute( Timestamp dbData ) {
 		return dbData != null ? DateTimeCaster.cast( dbData ) : dbData;
 	}
 
