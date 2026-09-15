@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🚀 Added
 
-- JMH performance benchmark suite (`src/jmh`) measuring entity CRUD and HQL throughput against embedded Derby. `./gradlew jmh` benchmarks the current build; `./gradlew jmhCompare` benchmarks Hibernate 7 (current) against the last Hibernate 5 release (`1.7.0`) in isolated JVMs and prints a side-by-side comparison. See `src/jmh/README.md`.
+- JMH performance benchmark suite (`src/jmh`) measuring entity CRUD, bulk hydration, and cold ORM boot against embedded Derby. `./gradlew jmh` benchmarks the current build; `./gradlew jmhCompare` benchmarks Hibernate 7 (current) against the last Hibernate 5 release (`1.7.0`) in isolated JVMs and prints a side-by-side comparison. See `src/jmh/README.md`.
 - Standalone ORM boot + CRUD smoke tests for Apache Derby, PostgreSQL, and MariaDB. Derby runs everywhere (embedded, in-memory); the PostgreSQL and MariaDB tests are gated on the `ORM_TEST_POSTGRES` and `ORM_TEST_MARIADB` environment variables so they skip locally and run in CI against service containers. This broadens dialect coverage beyond the existing MySQL and SQLite tests.
 
 ### 🐛 Fixed

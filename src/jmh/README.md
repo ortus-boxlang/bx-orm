@@ -9,12 +9,30 @@ benchmark's own outer classpath carries only the BoxLang runtime and JMH, exactl
 like production, so Hibernate is resolved solely inside the module's isolated
 classloader. This keeps a Hibernate 5 vs Hibernate 7 comparison honest.
 
+## Benchmarks
+
+- `ORMCrudBenchmark` — single-row save+load and a small HQL query (I/O-bound; dominated by JDBC/transaction wait).
+- `ORMReadBenchmark` — bulk hydration of `rowCount` rows (default 2000) into BoxLang entities. Exercises per-entity/per-property work at volume.
+- `ORMBootBenchmark` — cold ORM application boot: entity discovery + mapping generation + Hibernate `SessionFactory` build. `SingleShotTime`; **run one boot per fork** (`-i 1 -wi 0 -f N`), since repeated boots in one JVM accumulate isolated-classloader/metaspace pressure and skew the numbers.
+
 ## Running
 
 Benchmark the current build (Hibernate 7):
 
 ```bash
 ./gradlew jmh -PjmhArgs="-f 1 -wi 3 -i 5"
+```
+
+Cold boot (one boot per fork):
+
+```bash
+./gradlew jmh -PjmhArgs="ORMBootBenchmark -i 1 -wi 0 -f 10"
+```
+
+Find hotspots with the sampling profiler (note: BoxRuntime pool threads sit parked, so read the RUNNABLE breakdown, not the WAITING totals):
+
+```bash
+./gradlew jmh -PjmhArgs="ORMReadBenchmark.hydrateAll -p rowCount=2000 -prof stack:lines=4;top=25 -f 1 -wi 2 -i 3"
 ```
 
 Compare the current build (Hibernate 7) against the last Hibernate 5 release
