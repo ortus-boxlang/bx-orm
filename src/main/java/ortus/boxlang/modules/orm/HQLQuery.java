@@ -385,9 +385,12 @@ public class HQLQuery {
 			int parameterIndex = 1;
 			for ( QueryParameter param : this.parameters ) {
 				if ( param.isListParam() ) {
-					Array list = ( Array ) param.getValue();
+					Array	list		= ( Array ) param.getValue();
+					// An association list (WHERE manufacturer IN (:ids)) records its entity target only at the list's
+					// first position; resolve every expanded element against that target, not just the first element.
+					int		listStart	= parameterIndex;
 					for ( Object value : list ) {
-						hqlQuery.setParameter( parameterIndex, resolveBindValue( parameterIndex, value, entityParams ) );
+						hqlQuery.setParameter( parameterIndex, resolveBindValue( listStart, value, entityParams ) );
 						parameterIndex++;
 					}
 				} else {

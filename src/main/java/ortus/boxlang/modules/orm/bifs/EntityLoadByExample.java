@@ -58,6 +58,28 @@ public class EntityLoadByExample extends BaseORMBIF {
 	 * 
 	 * @argument.unique Whether to return a single unique result (true) or an array of results (false).
 	 */
+	/**
+	 * Whether a property should be excluded from a query-by-example predicate. Ids, the version, and associations are
+	 * excluded: example queries match on regular property values, and Hibernate 7 rejects an entity/PK value bound as a
+	 * simple equality predicate for an association.
+	 *
+	 * @param entityMeta The entity's metadata.
+	 * @param property   The property to test.
+	 *
+	 * @return {@code true} when the property is an id, the version, or an association.
+	 */
+	private static boolean isExcludedFromExample( ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta entityMeta,
+	    ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta property ) {
+		if ( property.isAssociationType() ) {
+			return true;
+		}
+		ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta version = entityMeta.getVersionProperty();
+		if ( version != null && version.getName().equals( property.getName() ) ) {
+			return true;
+		}
+		return entityMeta.getIdProperties().stream().anyMatch( id -> id.getName().equals( property.getName() ) );
+	}
+
 	@SuppressWarnings( { "deprecation", "unchecked" } )
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
@@ -80,9 +102,14 @@ public class EntityLoadByExample extends BaseORMBIF {
 		StringBuilder		hql				= new StringBuilder( "select e from " ).append( entityRecord.getEntityName() ).append( " e" );
 		Map<String, Object>	params			= new java.util.HashMap<>();
 		int					index			= 0;
-		for ( Object propertyMeta : entityRecord.getEntityMeta().getProperties() ) {
-			String	propertyName	= ( ( ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta ) propertyMeta ).getName();
-			Object	value			= workingEntity.getVariablesScope().get( Key.of( propertyName ) );
+		for ( Object propertyMeta : entityRecord.getEntityMeta().getAllPersistentProperties() ) {
+			String propertyName = ( ( ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta ) propertyMeta ).getName();
+			// Skip ids, the version, and associations: example queries match on regular property values, and an
+			// association value is an entity/PK that Hibernate 7 rejects as a simple equality predicate.
+			if ( isExcludedFromExample( entityRecord.getEntityMeta(), ( ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta ) propertyMeta ) ) {
+				continue;
+			}
+			Object value = workingEntity.getVariablesScope().get( Key.of( propertyName ) );
 			if ( value == null ) {
 				continue;
 			}
