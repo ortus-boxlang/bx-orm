@@ -92,7 +92,7 @@ public final class EntityFacadeFactory {
 	private static final Map<String, Class<?>> CACHE = new ConcurrentHashMap<>();
 
 	/**
-	 * Generate (or return a cached) facade class.
+	 * Generate (or return a cached) facade class for a single-id, non-inheriting entity.
 	 *
 	 * @param className  Fully-qualified name for the generated facade class.
 	 * @param id         The id property spec (its {@code javaType} should be concrete, e.g. String/Integer/UUID).
@@ -102,24 +102,57 @@ public final class EntityFacadeFactory {
 	 * @return The generated facade {@link Class}, implementing {@link BoxEntityFacade}.
 	 */
 	public static Class<?> generate( String className, PropertySpec id, List<PropertySpec> properties, ClassLoader loader ) {
-		return CACHE.computeIfAbsent( className, name -> build( name, id, properties, loader ) );
+		return generate( className, List.of( id ), properties, Object.class, loader );
 	}
 
-	private static Class<?> build( String className, PropertySpec id, List<PropertySpec> properties, ClassLoader loader ) {
-		DynamicType.Builder<?> builder = new ByteBuddy()
-		    .subclass( Object.class )
-		    .name( className )
-		    .implement( BoxEntityFacade.class )
-		    .defineField( "boxState", BoxEntityState.class, Visibility.PUBLIC )
-		    // Expose the backing state (BoxEntityFacade.boxState()) straight from the field.
-		    .method( named( "boxState" ) ).intercept( FieldAccessor.ofField( "boxState" ) )
-		    // Constructor that wires the backing state: super(); this.boxState = arg0;
-		    .defineConstructor( Visibility.PUBLIC ).withParameters( BoxEntityState.class )
-		    .intercept( MethodCall.invoke( OBJECT_CTOR ).andThen( FieldAccessor.ofField( "boxState" ).setsArgumentAt( 0 ) ) );
+	/**
+	 * Generate (or return a cached) facade class, supporting composite ids and inheritance.
+	 * <p>
+	 * For an entity hierarchy the root facade holds the backing-state field, the {@link BoxEntityFacade#boxState()}
+	 * accessor and the id accessors; a subclass facade instead {@code extends} its parent facade (so it inherits the
+	 * field, state accessor and id accessors) and declares only its own local property accessors. Facades must therefore
+	 * be generated parents-first.
+	 *
+	 * @param className  Fully-qualified name for the generated facade class.
+	 * @param ids        The id property specs (one for a simple key, several for a composite key). Each {@code javaType}
+	 *                   should be concrete so Hibernate's id resolution sees a real typed member. Pass an empty list for a
+	 *                   subclass facade, whose id is inherited from the root facade.
+	 * @param properties The (local) mapped property specs to declare on this facade.
+	 * @param superClass The Java superclass to extend: {@link Object} for a hierarchy root, or the parent entity's
+	 *                   already-generated facade class for a subclass.
+	 * @param loader     The classloader to inject the generated class into (must be the one Hibernate resolves against).
+	 *
+	 * @return The generated facade {@link Class}, implementing {@link BoxEntityFacade}.
+	 */
+	public static Class<?> generate( String className, List<PropertySpec> ids, List<PropertySpec> properties, Class<?> superClass, ClassLoader loader ) {
+		return CACHE.computeIfAbsent( className, name -> build( name, ids, properties, superClass, loader ) );
+	}
 
-		// The id gets a concretely-typed accessor pair so Hibernate's id-generator resolution sees a real member.
-		builder = defineAccessor( builder, id );
-		// Remaining mapped properties.
+	private static Class<?> build( String className, List<PropertySpec> ids, List<PropertySpec> properties, Class<?> superClass, ClassLoader loader ) {
+		boolean					root	= superClass == null || superClass == Object.class;
+		DynamicType.Builder<?>	builder	= new ByteBuddy().subclass( root ? Object.class : superClass ).name( className );
+
+		if ( root ) {
+			// The hierarchy root owns the backing-state field, the BoxEntityFacade contract, and the concretely-typed id
+			// accessors (so Hibernate's id-generator resolution sees a real member). Subclasses inherit all of this.
+			builder = builder
+			    .implement( BoxEntityFacade.class )
+			    .defineField( "boxState", BoxEntityState.class, Visibility.PUBLIC )
+			    // Expose the backing state (BoxEntityFacade.boxState()) straight from the field.
+			    .method( named( "boxState" ) ).intercept( FieldAccessor.ofField( "boxState" ) )
+			    // Constructor that wires the backing state: super(); this.boxState = arg0;
+			    .defineConstructor( Visibility.PUBLIC ).withParameters( BoxEntityState.class )
+			    .intercept( MethodCall.invoke( OBJECT_CTOR ).andThen( FieldAccessor.ofField( "boxState" ).setsArgumentAt( 0 ) ) );
+			// Each key property gets a concretely-typed accessor pair (composite ids emit one per key property).
+			for ( PropertySpec id : ids ) {
+				builder = defineAccessor( builder, id );
+			}
+		}
+		// A subclass facade reuses the parent's field, state accessor and id accessors, and ByteBuddy's default
+		// (IMITATE_SUPER_CLASS) constructor strategy already generates a public constructor forwarding BoxEntityState to the
+		// parent facade's constructor - so no constructor is defined here for the subclass.
+
+		// Local mapped properties (for a subclass, only its own declared properties).
 		for ( PropertySpec prop : properties ) {
 			builder = defineAccessor( builder, prop );
 		}

@@ -305,38 +305,63 @@ public class SessionFactoryBuilder {
 	 * @param entities The discovered entity records for this session factory.
 	 */
 	private void generateEntityFacades( Collection<EntityRecord> entities ) {
-		ClassLoader loader = runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader;
-		for ( EntityRecord entity : entities ) {
+		ClassLoader						loader		= runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader;
+
+		// Facades must be generated parents-first: a subclass facade extends its parent facade, so the parent class must
+		// already exist. Order by inheritance depth (roots first), reusing the same depth calculation the mapping-file
+		// ordering uses.
+		Map<String, EntityRecord>		entityMap	= entities
+		    .stream()
+		    .filter( entity -> entity.getEntityName() != null )
+		    .collect( java.util.stream.Collectors.toMap( entity -> entity.getEntityName().toLowerCase().trim(), entity -> entity, ( a, b ) -> a ) );
+		java.util.List<EntityRecord>	ordered		= entities
+		    .stream()
+		    .sorted( java.util.Comparator.comparingInt( e -> inheritanceDepth( e, entityMap, new java.util.HashSet<>() ) ) )
+		    .toList();
+
+		for ( EntityRecord entity : ordered ) {
 			IEntityMeta meta = entity.getEntityMeta();
 			if ( meta == null ) {
 				continue;
 			}
 
-			java.util.Set<IPropertyMeta> idProps = meta.getIdProperties();
-			if ( idProps.size() != 1 ) {
-				// Composite ids (and id-less subclasses) are not yet wired for facades. Fail fast unless errors are ignored.
-				String message = "Entity facades require exactly one id property; entity [" + entity.getEntityName() + "] has " + idProps.size()
-				    + ". Composite ids are not yet supported in facade mode.";
-				if ( ormConfig.ignoreParseErrors ) {
-					logger.error( message );
-					continue;
+			// A subclass facade extends its (already-generated) parent facade and declares only its own local properties;
+			// its id is inherited from the hierarchy root. A root facade extends Object and owns the id accessor(s) - one
+			// for a simple key, one per key property for a composite key.
+			Class<?>											superClass	= Object.class;
+			java.util.List<EntityFacadeFactory.PropertySpec>	idSpecs		= new java.util.ArrayList<>();
+			if ( meta.isSubclass() ) {
+				String parentName = parentEntityName( meta );
+				superClass = parentName == null ? null : FacadeSupport.facadeClassFor( parentName );
+				if ( superClass == null ) {
+					String message = "Entity facade for subclass [" + entity.getEntityName() + "] cannot resolve its parent facade"
+					    + ( parentName == null ? "." : " for parent entity [" + parentName + "]." );
+					if ( ormConfig.ignoreParseErrors ) {
+						logger.error( message );
+						continue;
+					}
+					throw new ortus.boxlang.runtime.types.exceptions.BoxRuntimeException( message );
 				}
-				throw new ortus.boxlang.runtime.types.exceptions.BoxRuntimeException( message );
+			} else {
+				for ( IPropertyMeta idProp : meta.getIdProperties() ) {
+					idSpecs.add( new EntityFacadeFactory.PropertySpec( idProp.getName(), EntityFacadeNaming.idJavaType( idProp.getORMType() ) ) );
+				}
 			}
 
-			IPropertyMeta										idProp		= idProps.iterator().next();
-			EntityFacadeFactory.PropertySpec					idSpec		= new EntityFacadeFactory.PropertySpec(
-			    idProp.getName(),
-			    EntityFacadeNaming.idJavaType( idProp.getORMType() )
-			);
+			java.util.Set<String>								idNames		= meta.getIdProperties().stream()
+			    .map( p -> p.getName().toLowerCase() )
+			    .collect( java.util.stream.Collectors.toSet() );
 
 			// Every other persistent property (normal columns, version/timestamp, associations) gets an Object accessor;
 			// bx-orm's JPA AttributeConverters are declared AttributeConverter<Object, ?>, matching an Object attribute type.
 			// Associations additionally carry an AssocKind so the facade's accessor translates at the Hibernate/BoxLang
-			// boundary (facade<->IClassRunnable for to-one, managed collection<->view for to-many).
+			// boundary (facade<->IClassRunnable for to-one, managed collection<->view for to-many). For a subclass, only its
+			// LOCAL properties are declared (the parent facade already carries the inherited ones).
+			java.util.Set<IPropertyMeta>						sourceProps	= meta.isSubclass() ? meta.getLocalPersistentProperties()
+			    : meta.getAllPersistentProperties();
 			java.util.List<EntityFacadeFactory.PropertySpec>	propSpecs	= new java.util.ArrayList<>();
-			for ( IPropertyMeta prop : meta.getAllPersistentProperties() ) {
-				if ( prop.getName().equalsIgnoreCase( idProp.getName() ) ) {
+			for ( IPropertyMeta prop : sourceProps ) {
+				if ( idNames.contains( prop.getName().toLowerCase() ) ) {
 					continue;
 				}
 				propSpecs.add( new EntityFacadeFactory.PropertySpec( prop.getName(), Object.class, facadeAssocKind( prop ) ) );
@@ -344,11 +369,32 @@ public class SessionFactoryBuilder {
 
 			// Use the IEntityMeta entity name so the FQN matches, byte-for-byte, the <class name=...> the mapping writer emits.
 			String		facadeFQN	= EntityFacadeNaming.facadeClassName( meta.getEntityName() );
-			Class<?>	facadeClass	= EntityFacadeFactory.generate( facadeFQN, idSpec, propSpecs, loader );
+			Class<?>	facadeClass	= EntityFacadeFactory.generate( facadeFQN, idSpecs, propSpecs, superClass, loader );
 			FacadeSupport.register( meta.getEntityName(), facadeClass );
 			FacadeSupport.register( entity.getEntityName(), facadeClass );
 			logger.trace( "Generated entity facade [{}] for entity [{}]", facadeFQN, meta.getEntityName() );
 		}
+	}
+
+	/**
+	 * Resolve a subclass entity's parent entity name the same way the mapping XML writer does: prefer the parent's
+	 * {@code entityName} annotation, falling back to its simple class name.
+	 *
+	 * @param meta The subclass entity metadata.
+	 *
+	 * @return The parent entity name, or {@code null} if it cannot be resolved.
+	 */
+	private static String parentEntityName( IEntityMeta meta ) {
+		var parentMeta = meta.getParentMeta();
+		if ( parentMeta == null || parentMeta.isEmpty() ) {
+			return null;
+		}
+		var		parentAnnotations	= parentMeta.getAsStruct( ortus.boxlang.runtime.scopes.Key.annotations );
+		String	parentName			= parentAnnotations != null ? parentAnnotations.getAsString( ortus.boxlang.modules.orm.config.ORMKeys.entityName ) : null;
+		if ( parentName == null || parentName.isBlank() ) {
+			parentName = parentMeta.getAsString( ortus.boxlang.runtime.scopes.Key.simpleName );
+		}
+		return parentName == null || parentName.isBlank() ? null : parentName;
 	}
 
 	/**

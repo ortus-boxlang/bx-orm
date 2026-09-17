@@ -303,7 +303,32 @@ public class ORMApp {
 		Class<?>		keyClass		= getKeyJavaType( session, entityName );
 		Object			id;
 
-		if ( java.util.Map.class.isAssignableFrom( keyClass ) ) {
+		boolean			isCompositeKey	= entityRecord.getEntityMeta() != null && entityRecord.getEntityMeta().getIdProperties().size() > 1;
+
+		if ( isCompositeKey && !java.util.Map.class.isAssignableFrom( keyClass ) ) {
+			// Facade (POJO) mode composite key: the entity uses an embedded (non-aggregated) composite id, so its id
+			// representation is the entity's own facade class rather than a Map. Build a facade instance carrying the key
+			// property values and let Hibernate read the key off it.
+			if ( ! ( keyValue instanceof IStruct compositeStruct ) ) {
+				throw new BoxRuntimeException(
+				    String.format(
+				        "Entity '%s' has a composite primary key. Pass a struct of { propertyName: value } pairs to entityLoadByPK().",
+				        entityName
+				    ) );
+			}
+			Object			idFacade	= ( ( SessionFactoryImplementor ) session.getSessionFactory() )
+			    .getMappingMetamodel()
+			    .getEntityDescriptor( entityRecord.getEntityName() )
+			    .getRepresentationStrategy()
+			    .getInstantiator()
+			    .instantiate();
+			IClassRunnable	idInstance	= ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( idFacade );
+			for ( Key k : compositeStruct.keySet() ) {
+				idInstance.getVariablesScope().put( k, compositeStruct.get( k ) );
+				idInstance.getThisScope().put( k, compositeStruct.get( k ) );
+			}
+			id = idFacade;
+		} else if ( java.util.Map.class.isAssignableFrom( keyClass ) ) {
 			// Composite key: Hibernate expects a HashMap<String, Object> with String keys (not Key objects)
 			if ( ! ( keyValue instanceof IStruct compositeStruct ) ) {
 				throw new BoxRuntimeException(

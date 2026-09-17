@@ -763,8 +763,10 @@ public class HibernateXMLWriter {
 		// lazy) so lazy to-one associations can hand back a BoxProxy; see BoxEntityRepresentationStrategy's facade branch.
 		// Everything else about the mapping (id, properties, generators, associations) is identical to MAP mode. Association
 		// targets are referenced by entity-name, which Hibernate resolves to the target's facade representation, so the
-		// association elements themselves need no facade-specific rewriting.
-		if ( this.ormConfig.entityFacades && !entity.isSubclass() ) {
+		// association elements themselves need no facade-specific rewriting. A subclass is named with its own facade FQN
+		// too; its generated facade extends its parent's facade, and the parent is still referenced by entity-name via the
+		// (unchanged) `extends` attribute below - which Hibernate resolves to the parent's mapped facade class.
+		if ( this.ormConfig.entityFacades ) {
 			classElement.setAttribute( "name",
 			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.facadeClassName( entity.getEntityName() ) );
 		}

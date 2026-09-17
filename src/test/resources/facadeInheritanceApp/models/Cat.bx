@@ -1,0 +1,13 @@
+/**
+ * Single-table inheritance subclass (discriminator value "Cat"), stored in the same table as its root.
+ */
+class
+	accessors         ="true"
+	persistent        ="true"
+	entityname        ="Cat"
+	table             ="fac_animals"
+	extends           ="Animal"
+	discriminatorValue="Cat"
+{
+	property name="livesLeft" ormType="integer";
+}
