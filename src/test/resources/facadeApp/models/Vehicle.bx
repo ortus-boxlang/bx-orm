@@ -1,0 +1,22 @@
+class accessors="true" persistent="true" table="fac_vehicles" {
+
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+
+	property name="model" ormType="string";
+
+	// M2O -> Manufacturer, EAGER (loaded immediately, no proxy).
+	property
+		name     ="manufacturer"
+		fieldtype="many-to-one"
+		cfc      ="Manufacturer"
+		fkcolumn ="FK_manufacturer"
+		lazy     ="false";
+
+	// M2O -> Dealer, LAZY (loaded on first access via a proxy).
+	property
+		name     ="dealer"
+		fieldtype="many-to-one"
+		cfc      ="Dealer"
+		fkcolumn ="FK_dealer"
+		lazy     ="true";
+}

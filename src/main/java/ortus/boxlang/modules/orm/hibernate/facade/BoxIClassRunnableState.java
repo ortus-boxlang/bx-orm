@@ -57,7 +57,10 @@ public class BoxIClassRunnableState implements BoxEntityState {
 
 	@Override
 	public Object get( String property ) {
-		return this.runnable.get( Key.of( property ) );
+		// Read from the variables scope, mirroring MAP-mode's BoxPropertyGetter and the setter below (which writes both
+		// scopes). A BoxLang implicit property setter (e.g. a developer's entity.setManufacturer(x)) writes the variables
+		// scope, so reading the Map view (the `this` scope) here would miss developer-assigned association values.
+		return this.runnable.getVariablesScope().get( Key.of( property ) );
 	}
 
 	@Override

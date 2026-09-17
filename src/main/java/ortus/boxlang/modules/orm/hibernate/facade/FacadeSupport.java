@@ -104,6 +104,21 @@ public final class FacadeSupport {
 	 *
 	 * @return The facade wrapping the instance.
 	 */
+	/**
+	 * Return the facade for a BoxLang instance, resolving its entity name automatically.
+	 * <p>
+	 * Used at the association boundary where only the target BoxLang instance is in hand (e.g. a to-one value a
+	 * developer assigned, or a to-many element being added): the entity name is resolved from the instance itself and
+	 * the (memoized) facade is returned.
+	 *
+	 * @param instance The BoxLang entity instance.
+	 *
+	 * @return The facade wrapping the instance.
+	 */
+	public static Object wrapInstance( IClassRunnable instance ) {
+		return wrap( ortus.boxlang.modules.orm.ORMService.getEntityName( instance ), instance );
+	}
+
 	public static Object wrap( String entityName, IClassRunnable instance ) {
 		Object existing = instance.getVariablesScope().get( FACADE_KEY );
 		if ( existing instanceof BoxEntityFacade ) {

@@ -332,12 +332,14 @@ public class SessionFactoryBuilder {
 
 			// Every other persistent property (normal columns, version/timestamp, associations) gets an Object accessor;
 			// bx-orm's JPA AttributeConverters are declared AttributeConverter<Object, ?>, matching an Object attribute type.
+			// Associations additionally carry an AssocKind so the facade's accessor translates at the Hibernate/BoxLang
+			// boundary (facade<->IClassRunnable for to-one, managed collection<->view for to-many).
 			java.util.List<EntityFacadeFactory.PropertySpec>	propSpecs	= new java.util.ArrayList<>();
 			for ( IPropertyMeta prop : meta.getAllPersistentProperties() ) {
 				if ( prop.getName().equalsIgnoreCase( idProp.getName() ) ) {
 					continue;
 				}
-				propSpecs.add( new EntityFacadeFactory.PropertySpec( prop.getName(), Object.class ) );
+				propSpecs.add( new EntityFacadeFactory.PropertySpec( prop.getName(), Object.class, facadeAssocKind( prop ) ) );
 			}
 
 			// Use the IEntityMeta entity name so the FQN matches, byte-for-byte, the <class name=...> the mapping writer emits.
@@ -347,6 +349,23 @@ public class SessionFactoryBuilder {
 			FacadeSupport.register( entity.getEntityName(), facadeClass );
 			logger.trace( "Generated entity facade [{}] for entity [{}]", facadeFQN, meta.getEntityName() );
 		}
+	}
+
+	/**
+	 * Map a property's field type to the facade accessor's association-translation kind. Associations need the facade's
+	 * getter/setter to translate between Hibernate's representation (facades / managed collections) and the BoxLang
+	 * instance's ({@code IClassRunnable} / a developer-facing collection view); everything else passes straight through.
+	 *
+	 * @param prop The property metadata.
+	 *
+	 * @return The {@link EntityFacadeFactory.AssocKind} for the generated accessor.
+	 */
+	private static EntityFacadeFactory.AssocKind facadeAssocKind( IPropertyMeta prop ) {
+		return switch ( prop.getFieldType() ) {
+			case ONE_TO_ONE, MANY_TO_ONE -> EntityFacadeFactory.AssocKind.TO_ONE;
+			case ONE_TO_MANY, MANY_TO_MANY -> EntityFacadeFactory.AssocKind.TO_MANY;
+			default -> EntityFacadeFactory.AssocKind.NONE;
+		};
 	}
 
 	private static int mappingRank( EntityRecord entity, Map<String, EntityRecord> entityMap ) {

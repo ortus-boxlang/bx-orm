@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.description.modifier.Visibility;
+import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.FieldAccessor;
@@ -31,6 +32,8 @@ import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.This;
+
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
@@ -48,13 +51,41 @@ public final class EntityFacadeFactory {
 	}
 
 	/**
+	 * How a mapped property's facade accessors translate between Hibernate and the BoxLang instance.
+	 * <ul>
+	 * <li>{@link #NONE} - a plain column/version/id: read/write the scope value straight through.</li>
+	 * <li>{@link #TO_ONE} - a one-to-one/many-to-one: the getter wraps the scope's {@link ortus.boxlang.runtime.runnables.IClassRunnable}
+	 * to the target's facade for Hibernate; the setter unwraps Hibernate's facade back to the {@code IClassRunnable} the
+	 * scope (and the BoxLang developer) holds. Hibernate proxies pass through unchanged so lazy loading is preserved.</li>
+	 * <li>{@link #TO_MANY} - a one-to-many/many-to-many: the getter hands Hibernate its managed collection of facades; the
+	 * setter stores a {@link FacadeCollectionView} in the scope so the developer only ever sees {@code IClassRunnable}s.</li>
+	 * </ul>
+	 */
+	public enum AssocKind {
+		NONE,
+		TO_ONE,
+		TO_MANY
+	}
+
+	/**
 	 * A mapped property to expose on the facade.
 	 *
 	 * @param name     The BoxLang property name (also the getter/setter suffix, e.g. {@code name} -> {@code getName}).
 	 * @param javaType The Java type of the accessor. Use a concrete type for the id (e.g. {@code String} for uuid) so
 	 *                 Hibernate's generator resolution has a real typed member; property accessors may use {@code Object}.
+	 * @param assoc    How the accessor translates at the Hibernate/BoxLang boundary (see {@link AssocKind}).
 	 */
-	public record PropertySpec( String name, Class<?> javaType ) {
+	public record PropertySpec( String name, Class<?> javaType, AssocKind assoc ) {
+
+		/**
+		 * Convenience for a non-association (plain column/id) property.
+		 *
+		 * @param name     The property name.
+		 * @param javaType The accessor Java type.
+		 */
+		public PropertySpec( String name, Class<?> javaType ) {
+			this( name, javaType, AssocKind.NONE );
+		}
 	}
 
 	/** Generated facade classes, cached by fully-qualified class name. */
@@ -98,13 +129,32 @@ public final class EntityFacadeFactory {
 		    .getLoaded();
 	}
 
+	/**
+	 * A generic {@code List<Object>} declared as the accessor type for to-many associations.
+	 * <p>
+	 * Hibernate 7's POJO mapping model validates a collection attribute's <em>element type</em> from the real member's
+	 * generic signature (see {@code PluralAttributeMappingImpl.checkElementType}). A raw {@code Object} accessor has no
+	 * resolvable element type (NPE), whereas an {@code Object} element type short-circuits the check as valid - so the
+	 * generated collection accessors are declared {@code List<Object>}, which erases to a plain list at runtime while
+	 * giving Hibernate the element type it needs.
+	 */
+	private static final TypeDescription.Generic LIST_OF_OBJECT = TypeDescription.Generic.Builder
+	    .parameterizedType( List.class, Object.class ).build();
+
 	private static DynamicType.Builder<?> defineAccessor( DynamicType.Builder<?> builder, PropertySpec prop ) {
 		String cap = Character.toUpperCase( prop.name().charAt( 0 ) ) + prop.name().substring( 1 );
+		if ( prop.assoc() == AssocKind.TO_MANY ) {
+			return builder
+			    .defineMethod( "get" + cap, LIST_OF_OBJECT, Visibility.PUBLIC )
+			    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), true, prop.assoc() ) ) )
+			    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( LIST_OF_OBJECT )
+			    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), false, prop.assoc() ) ) );
+		}
 		return builder
 		    .defineMethod( "get" + cap, prop.javaType(), Visibility.PUBLIC )
-		    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), true ) ) )
+		    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), true, prop.assoc() ) ) )
 		    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( prop.javaType() )
-		    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), false ) ) );
+		    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), false, prop.assoc() ) ) );
 	}
 
 	private static final java.lang.reflect.Constructor<Object> OBJECT_CTOR;
@@ -124,22 +174,97 @@ public final class EntityFacadeFactory {
 
 		private final String	property;
 		private final boolean	getter;
+		private final AssocKind	assoc;
 
-		public PropertyInterceptor( String property, boolean getter ) {
+		public PropertyInterceptor( String property, boolean getter, AssocKind assoc ) {
 			this.property	= property;
 			this.getter		= getter;
+			this.assoc		= assoc;
 		}
 
 		@RuntimeType
 		public Object intercept( @This Object self, @AllArguments Object[] args ) {
 			BoxEntityState state = ( ( BoxEntityFacade ) self ).boxState();
 			if ( getter ) {
-				return state == null ? null : state.get( property );
+				return state == null ? null : readForHibernate( state.get( property ) );
 			}
 			if ( state != null ) {
-				state.set( property, args.length > 0 ? args[ 0 ] : null );
+				state.set( property, writeToScope( args.length > 0 ? args[ 0 ] : null ) );
 			}
 			return null;
+		}
+
+		/**
+		 * Translate the value stored in the BoxLang scope into the representation Hibernate expects when it reads this
+		 * property. Plain properties pass straight through; associations translate at the boundary.
+		 *
+		 * @param scopeValue The current value held in the BoxLang instance's scope.
+		 *
+		 * @return The value to hand back to Hibernate.
+		 */
+		private Object readForHibernate( Object scopeValue ) {
+			switch ( assoc ) {
+				case TO_ONE :
+					// The developer holds an IClassRunnable in the scope; Hibernate needs the target's (managed) facade so it
+					// can resolve the FK. A Hibernate proxy (lazy) is already what Hibernate wants, so pass it through untouched.
+					if ( scopeValue instanceof org.hibernate.proxy.HibernateProxy ) {
+						return scopeValue;
+					}
+					if ( scopeValue instanceof IClassRunnable runnable ) {
+						return FacadeSupport.wrapInstance( runnable );
+					}
+					return scopeValue;
+				case TO_MANY :
+					// Hand Hibernate the single collection instance it manages (facade elements). If the scope holds our view,
+					// return its backing collection; if it holds a developer-supplied list (transient, pre-flush), wrap each
+					// element to its facade.
+					if ( scopeValue instanceof FacadeCollectionView view ) {
+						return view.backing();
+					}
+					if ( scopeValue instanceof java.util.List<?> list ) {
+						java.util.List<Object> facades = new java.util.ArrayList<>( list.size() );
+						for ( Object element : list ) {
+							facades.add( element instanceof IClassRunnable runnable ? FacadeSupport.wrapInstance( runnable ) : element );
+						}
+						return facades;
+					}
+					return scopeValue;
+				default :
+					return scopeValue;
+			}
+		}
+
+		/**
+		 * Translate the value Hibernate is writing onto this property into the representation the BoxLang scope (and the
+		 * developer) hold. Plain properties pass straight through; associations translate at the boundary.
+		 *
+		 * @param hibernateValue The value Hibernate is setting.
+		 *
+		 * @return The value to store in the BoxLang instance's scope.
+		 */
+		private Object writeToScope( Object hibernateValue ) {
+			switch ( assoc ) {
+				case TO_ONE :
+					// Hibernate sets the target's facade (eager) or a Hibernate proxy (lazy). A proxy that is itself an
+					// IClassRunnable (a BoxProxy) is stored as-is so the developer gets a lazy BoxLang instance; a facade is
+					// unwrapped to the BoxLang instance the developer expects.
+					if ( hibernateValue instanceof IClassRunnable ) {
+						return hibernateValue;
+					}
+					return FacadeSupport.unwrapIfFacade( hibernateValue );
+				case TO_MANY :
+					// Store a live view so the developer only ever sees IClassRunnable elements while Hibernate keeps managing
+					// its own collection instance underneath.
+					if ( hibernateValue instanceof FacadeCollectionView ) {
+						return hibernateValue;
+					}
+					if ( hibernateValue instanceof java.util.List<?> list ) {
+						return new FacadeCollectionView( list );
+					}
+					return hibernateValue;
+				default :
+					return hibernateValue;
+			}
 		}
 	}
 }

@@ -759,12 +759,14 @@ public class HibernateXMLWriter {
 		}
 
 		// Facade (POJO) mode: back the entity with the generated real class named here, while keeping entity-name so the
-		// entity stays registered (and looked up by bx-orm) under its BoxLang name. Lazy proxying for facades is not yet
-		// wired, so declare the class non-lazy. Everything else about the mapping (id, properties, generators) is identical.
+		// entity stays registered (and looked up by bx-orm) under its BoxLang name. The class stays proxyable (default
+		// lazy) so lazy to-one associations can hand back a BoxProxy; see BoxEntityRepresentationStrategy's facade branch.
+		// Everything else about the mapping (id, properties, generators, associations) is identical to MAP mode. Association
+		// targets are referenced by entity-name, which Hibernate resolves to the target's facade representation, so the
+		// association elements themselves need no facade-specific rewriting.
 		if ( this.ormConfig.entityFacades && !entity.isSubclass() ) {
 			classElement.setAttribute( "name",
 			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.facadeClassName( entity.getEntityName() ) );
-			classElement.setAttribute( "lazy", "false" );
 		}
 		if ( entity.isSubclass() ) {
 			boolean isDiscriminated = entity.getDiscriminator().get( Key.value ) != null;

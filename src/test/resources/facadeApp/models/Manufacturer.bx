@@ -1,0 +1,22 @@
+class accessors="true" persistent="true" table="fac_manufacturers" {
+
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+
+	property name="name" ormType="string";
+
+	// O2M -> Vehicles (FK lives on the vehicle side; bidirectional/inverse). Cascade so saving the manufacturer saves its vehicles.
+	property
+		name        ="vehicles"
+		singularName="vehicle"
+		type        ="array"
+		fieldtype   ="one-to-many"
+		cfc         ="Vehicle"
+		fkcolumn    ="FK_manufacturer"
+		inverse     ="true"
+		cascade     ="all-delete-orphan";
+
+	function init() {
+		variables.vehicles = [];
+		return this;
+	}
+}
