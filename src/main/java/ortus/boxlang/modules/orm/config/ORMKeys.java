@@ -69,6 +69,7 @@ public class ORMKeys {
 	public static final Key	sampleEntity				= Key.of( "sampleEntity" );
 	public static final Key	saveMapping					= Key.of( "saveMapping" );
 	public static final Key	ormXmlMapping				= Key.of( "ormXmlMapping" );
+	public static final Key	entityFacades				= Key.of( "entityFacades" );
 	public static final Key	schema						= Key.of( "schema" );
 	public static final Key	catalog						= Key.of( "catalog" );
 	public static final Key	secondaryCacheEnabled		= Key.of( "secondaryCacheEnabled" );

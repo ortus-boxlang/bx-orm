@@ -334,6 +334,17 @@ public class ORMConfig {
 	public boolean								ormXmlMapping			= false;
 
 	/**
+	 * Whether to map BoxLang entities to Hibernate as real per-entity POJO "facade" classes (see the
+	 * {@code ortus.boxlang.modules.orm.hibernate.facade} package) instead of class-less dynamic MAP entities.
+	 * <p>
+	 * A facade is a generated real Java class whose accessors delegate their state to the BoxLang instance, so Hibernate
+	 * sees a real class and a real id member (which unlocks {@code uuid} and other id generation strategies unavailable
+	 * to MAP entities), while BoxLang developers still only ever handle the BoxLang class. Defaults to {@code false}: with
+	 * the flag off the representation is byte-for-byte the original MAP behavior.
+	 */
+	public boolean								entityFacades			= false;
+
+	/**
 	 * The instantiated naming strategy object.
 	 */
 	private PhysicalNamingStrategy				instantiatedNamingStrategy;
@@ -559,6 +570,10 @@ public class ORMConfig {
 
 		if ( properties.containsKey( ORMKeys.ormXmlMapping ) && properties.get( ORMKeys.ormXmlMapping ) != null ) {
 			ormXmlMapping = BooleanCaster.cast( properties.get( ORMKeys.ormXmlMapping ) );
+		}
+
+		if ( properties.containsKey( ORMKeys.entityFacades ) && properties.get( ORMKeys.entityFacades ) != null ) {
+			entityFacades = BooleanCaster.cast( properties.get( ORMKeys.entityFacades ) );
 		}
 
 		if ( this.namingStrategy != null ) {

@@ -31,7 +31,12 @@ import org.hibernate.cfg.Configuration;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMConnectionProvider;
 import ortus.boxlang.modules.orm.hibernate.BoxPersisterFactory;
+import ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory;
+import ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming;
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
+import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -185,9 +190,15 @@ public class SessionFactoryBuilder {
 		    .stream()
 		    .collect( java.util.stream.Collectors.toMap( entity -> entity.getEntityName().toLowerCase().trim(), entity -> entity ) );
 
+		// In facade mode, generate one real POJO facade class per entity (into the module classloader Hibernate resolves
+		// against) BEFORE the session factory parses the mapping XML, which references those facade FQNs via <class name>.
+		if ( ormConfig.entityFacades ) {
+			generateEntityFacades( entityMap.values() );
+		}
+
 		// Route every entity persister through the BoxLang representation strategy (Hibernate 6+/7+ replacement for the
 		// Hibernate 5 tuplizer). See BoxPersisterFactory for why this goes through the persister factory service.
-		properties.put( "hibernate.persister.factory", new BoxPersisterFactory( entityMap ) );
+		properties.put( "hibernate.persister.factory", new BoxPersisterFactory( entityMap, ormConfig.entityFacades ) );
 
 		// Collect XML mapping files and add them to the Hibernate configuration.
 		// The modern mapping.xml format resolves a dynamic entity's <extends> superclass eagerly (Hibernate registers each dynamic class as its file is
@@ -280,6 +291,61 @@ public class SessionFactoryBuilder {
 			return out.toString();
 		} catch ( Exception e ) {
 			throw new ortus.boxlang.runtime.types.exceptions.BoxRuntimeException( "Failed to build combined ORM mapping.xml document", e );
+		}
+	}
+
+	/**
+	 * Generate a real POJO facade class for each entity and register it, so Hibernate can map the entity to a real class
+	 * with a real id member (enabling {@code uuid} and other id generation). Only invoked in facade mode.
+	 * <p>
+	 * The facade's fully-qualified name and id Java type are computed by {@link EntityFacadeNaming}, so they match the
+	 * {@code <class name=...>} and id {@code type} the mapping XML writer emits. The facade is injected into the ORM
+	 * module classloader (the one Hibernate resolves mapped classes against).
+	 *
+	 * @param entities The discovered entity records for this session factory.
+	 */
+	private void generateEntityFacades( Collection<EntityRecord> entities ) {
+		ClassLoader loader = runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader;
+		for ( EntityRecord entity : entities ) {
+			IEntityMeta meta = entity.getEntityMeta();
+			if ( meta == null ) {
+				continue;
+			}
+
+			java.util.Set<IPropertyMeta> idProps = meta.getIdProperties();
+			if ( idProps.size() != 1 ) {
+				// Composite ids (and id-less subclasses) are not yet wired for facades. Fail fast unless errors are ignored.
+				String message = "Entity facades require exactly one id property; entity [" + entity.getEntityName() + "] has " + idProps.size()
+				    + ". Composite ids are not yet supported in facade mode.";
+				if ( ormConfig.ignoreParseErrors ) {
+					logger.error( message );
+					continue;
+				}
+				throw new ortus.boxlang.runtime.types.exceptions.BoxRuntimeException( message );
+			}
+
+			IPropertyMeta										idProp		= idProps.iterator().next();
+			EntityFacadeFactory.PropertySpec					idSpec		= new EntityFacadeFactory.PropertySpec(
+			    idProp.getName(),
+			    EntityFacadeNaming.idJavaType( idProp.getORMType() )
+			);
+
+			// Every other persistent property (normal columns, version/timestamp, associations) gets an Object accessor;
+			// bx-orm's JPA AttributeConverters are declared AttributeConverter<Object, ?>, matching an Object attribute type.
+			java.util.List<EntityFacadeFactory.PropertySpec>	propSpecs	= new java.util.ArrayList<>();
+			for ( IPropertyMeta prop : meta.getAllPersistentProperties() ) {
+				if ( prop.getName().equalsIgnoreCase( idProp.getName() ) ) {
+					continue;
+				}
+				propSpecs.add( new EntityFacadeFactory.PropertySpec( prop.getName(), Object.class ) );
+			}
+
+			// Use the IEntityMeta entity name so the FQN matches, byte-for-byte, the <class name=...> the mapping writer emits.
+			String		facadeFQN	= EntityFacadeNaming.facadeClassName( meta.getEntityName() );
+			Class<?>	facadeClass	= EntityFacadeFactory.generate( facadeFQN, idSpec, propSpecs, loader );
+			FacadeSupport.register( meta.getEntityName(), facadeClass );
+			FacadeSupport.register( entity.getEntityName(), facadeClass );
+			logger.trace( "Generated entity facade [{}] for entity [{}]", facadeFQN, meta.getEntityName() );
 		}
 	}
 

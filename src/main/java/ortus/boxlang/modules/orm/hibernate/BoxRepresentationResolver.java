@@ -41,13 +41,21 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  */
 public class BoxRepresentationResolver implements ManagedTypeRepresentationResolver {
 
-	private final Map<String, EntityRecord> entityRecords;
+	private final Map<String, EntityRecord>	entityRecords;
+
+	/**
+	 * When true, entities are represented as generated POJO facades; when false, the original class-less dynamic MAP
+	 * representation is used.
+	 */
+	private final boolean					entityFacades;
 
 	/**
 	 * @param entityRecords The discovered BoxLang entities for this session factory, keyed by lower-cased entity name.
+	 * @param entityFacades Whether to use the POJO-facade representation (true) or the MAP representation (false).
 	 */
-	public BoxRepresentationResolver( Map<String, EntityRecord> entityRecords ) {
-		this.entityRecords = entityRecords;
+	public BoxRepresentationResolver( Map<String, EntityRecord> entityRecords, boolean entityFacades ) {
+		this.entityRecords	= entityRecords;
+		this.entityFacades	= entityFacades;
 	}
 
 	@Override
@@ -57,7 +65,7 @@ public class BoxRepresentationResolver implements ManagedTypeRepresentationResol
 		if ( entityRecord == null ) {
 			throw new BoxRuntimeException( "No BoxLang entity record found for Hibernate entity [" + bootDescriptor.getEntityName() + "]" );
 		}
-		return new BoxEntityRepresentationStrategy( bootDescriptor, runtimeDescriptor, creationContext, entityRecord );
+		return new BoxEntityRepresentationStrategy( bootDescriptor, runtimeDescriptor, creationContext, entityRecord, entityFacades );
 	}
 
 	/**

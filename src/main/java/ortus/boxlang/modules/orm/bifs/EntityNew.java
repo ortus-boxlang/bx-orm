@@ -81,11 +81,15 @@ public class EntityNew extends BaseORMBIF {
 		    entityRecord.getDatasource(),
 		    context
 		);
-		IClassRunnable				entity				= ( IClassRunnable ) sessionFactoryImpl.getMappingMetamodel()
-		    .getEntityDescriptor( entityRecord.getEntityName() )
-		    .getRepresentationStrategy()
-		    .getInstantiator()
-		    .instantiate();
+		// In facade mode the instantiator returns a POJO facade; unwrap it to the BoxLang instance the developer expects.
+		// In MAP mode this is already the IClassRunnable, so unwrapIfFacade is a no-op.
+		IClassRunnable				entity				= ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade(
+		    sessionFactoryImpl.getMappingMetamodel()
+		        .getEntityDescriptor( entityRecord.getEntityName() )
+		        .getRepresentationStrategy()
+		        .getInstantiator()
+		        .instantiate()
+		);
 
 		// @TODO: Find a more correct location for the entity population logic. Surely we repeat this somewhere else?
 		if ( properties != null && !properties.isEmpty() ) {

@@ -402,7 +402,12 @@ public class HQLQuery {
 		if ( isUpdate ) {
 			return hqlQuery.executeUpdate();
 		} else {
-			return hqlQuery.list();
+			// In facade mode Hibernate returns POJO facades for entity results; unwrap each to its BoxLang instance so
+			// callers only ever see IClassRunnables. Scalars/projections pass through untouched. No-op in MAP mode.
+			return hqlQuery.list()
+			    .stream()
+			    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
+			    .collect( java.util.stream.Collectors.toList() );
 		}
 
 	}

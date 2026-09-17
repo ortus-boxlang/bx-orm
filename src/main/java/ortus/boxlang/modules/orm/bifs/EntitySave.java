@@ -72,6 +72,27 @@ public class EntitySave extends BaseORMBIF {
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		Boolean			forceInsert		= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
 
+		// Facade (POJO) mode: Hibernate manages the generated facade, not the IClassRunnable. Persist the facade (which
+		// delegates its state to - and writes generated ids straight back onto - the caller's BoxLang instance). The same
+		// instance always maps to the same facade via FacadeSupport's per-instance memoization.
+		if ( ormContext.getConfig().entityFacades ) {
+			Object facade = ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( entityName, entity );
+			if ( session.contains( entityName, facade ) ) {
+				// Already managed: nothing to do; the flush will persist any changes.
+			} else if ( forceInsert || isTransient( session, entityName, facade ) ) {
+				session.persist( entityName, facade );
+			} else {
+				Object											managed			= session.merge( entityName, facade );
+				ortus.boxlang.runtime.runnables.IClassRunnable	managedRunnable	= ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport
+				    .unwrap( managed );
+				if ( managedRunnable != null && managedRunnable != entity ) {
+					entity.getThisScope().putAll( managedRunnable.getThisScope() );
+					entity.getVariablesScope().putAll( managedRunnable.getVariablesScope() );
+				}
+			}
+			return null;
+		}
+
 		// bx-orm is the ORM abstraction, so entitySave() must behave as it did on Hibernate 5's saveOrUpdate(): the object the
 		// caller passed in stays live afterward and carries any generated identifier and event changes. Hibernate 7 removed
 		// saveOrUpdate(), leaving persist() for new entities and merge() for detached ones. persist() attaches the passed
@@ -101,7 +122,7 @@ public class EntitySave extends BaseORMBIF {
 	 * Determine whether an entity has never been persisted, using the same unsaved-value/version/snapshot rules Hibernate's
 	 * former <code>saveOrUpdate()</code> used to decide between an insert and a re-attach.
 	 */
-	private boolean isTransient( Session session, String entityName, IClassRunnable entity ) {
+	private boolean isTransient( Session session, String entityName, Object entity ) {
 		return org.hibernate.engine.internal.ForeignKeys.isTransient(
 		    entityName,
 		    entity,

@@ -324,7 +324,9 @@ public class ORMApp {
 		if ( entity instanceof BoxProxy castProxy ) {
 			return castProxy.getRunnable();
 		} else {
-			return ( IClassRunnable ) entity;
+			// In facade mode Hibernate returns a POJO facade; unwrap it to the BoxLang instance. In MAP mode this is a
+			// no-op and the value is already the IClassRunnable.
+			return ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity );
 		}
 	}
 
@@ -407,7 +409,8 @@ public class ORMApp {
 		return Array.of(
 		    executeFilterQuery( query, options )
 		        .stream()
-		        .map( entity -> ( IClassRunnable ) entity )
+		        // In facade mode Hibernate returns POJO facades; unwrap each to its BoxLang instance (no-op in MAP mode).
+		        .map( entity -> ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity ) )
 		        .toArray()
 		);
 	}

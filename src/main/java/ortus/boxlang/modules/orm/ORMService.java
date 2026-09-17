@@ -289,6 +289,9 @@ public class ORMService extends BaseService {
 	public static String getEntityName( Object entity ) {
 		if ( entity instanceof BoxProxy proxyEntity ) {
 			return proxyEntity.getHibernateLazyInitializer().getEntityName();
+		} else if ( entity instanceof ortus.boxlang.modules.orm.hibernate.facade.BoxEntityFacade ) {
+			// Facade (POJO) mode: resolve the entity name via the backing BoxLang instance.
+			return getEntityName( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrap( entity ) );
 		} else if ( entity instanceof IClassRunnable boxClass ) {
 			return getEntityName( boxClass );
 		} else {

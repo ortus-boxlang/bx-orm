@@ -60,6 +60,7 @@ import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.service.spi.SessionFactoryServiceRegistry;
 
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.interop.DynamicObject;
@@ -189,30 +190,30 @@ public class EventListener
 	public void onPostLoad( PostLoadEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.postLoad, event, args );
-		announceEntityEvent( ORMKeys.postLoad, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.postLoad, FacadeSupport.unwrap( event.getEntity() ), args );
 	}
 
 	@Override
 	public void onPreLoad( PreLoadEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.preLoad, event, args );
-		announceEntityEvent( ORMKeys.preLoad, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.preLoad, FacadeSupport.unwrap( event.getEntity() ), args );
 	}
 
 	@Override
 	public void onPostUpdate( PostUpdateEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.postUpdate, event, args );
-		announceEntityEvent( ORMKeys.postUpdate, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.postUpdate, FacadeSupport.unwrap( event.getEntity() ), args );
 	}
 
 	@Override
@@ -227,14 +228,14 @@ public class EventListener
 		}
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity(),
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() ),
 		    ORMKeys.oldData, oldData
 		);
 		announceGlobalEvent( ORMKeys.preUpdate, event, args );
-		announceEntityEvent( ORMKeys.preUpdate, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.preUpdate, FacadeSupport.unwrap( event.getEntity() ), args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		// Update state so that changes made in the event are persisted
-		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), ( IClassRunnable ) event.getEntity() );
+		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), FacadeSupport.unwrap( event.getEntity() ) );
 		return false;
 	}
 
@@ -258,20 +259,20 @@ public class EventListener
 	public void onPostDelete( PostDeleteEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.postDelete, event, args );
-		announceEntityEvent( ORMKeys.postDelete, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.postDelete, FacadeSupport.unwrap( event.getEntity() ), args );
 	}
 
 	@Override
 	public boolean onPreDelete( PreDeleteEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.preDelete, event, args );
-		announceEntityEvent( ORMKeys.preDelete, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.preDelete, FacadeSupport.unwrap( event.getEntity() ), args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		return false;
 	}
@@ -280,15 +281,15 @@ public class EventListener
 	public void onPostInsert( PostInsertEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.postInsert, event, args );
-		announceEntityEvent( ORMKeys.postInsert, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.postInsert, FacadeSupport.unwrap( event.getEntity() ), args );
 	}
 
 	@Override
 	public boolean onPreInsert( PreInsertEvent event ) {
-		IClassRunnable	entity	= ( IClassRunnable ) event.getEntity();
+		IClassRunnable	entity	= FacadeSupport.unwrap( event.getEntity() );
 		IStruct			args	= Struct.of(
 		    ORMKeys.event, event,
 		    ORMKeys.entity, entity
