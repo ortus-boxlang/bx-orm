@@ -50,6 +50,9 @@ dependencies {
 	implementation 'org.hibernate.orm:hibernate-core:' + hibernateVersion
 	// https://mvnrepository.com/artifact/org.hibernate/hibernate-jcache
 	implementation 'org.hibernate.orm:hibernate-jcache:' + hibernateVersion
+	// ByteBuddy: used to generate real Java "facade" classes per ORM entity at runtime (pinned to Hibernate's version).
+	// Hibernate already bundles it transitively; declared explicitly since the module now uses it directly.
+	implementation 'net.bytebuddy:byte-buddy:1.18.8'
 	// Community dialects (SQLite, legacy versioned dialects, etc.)
 	implementation 'org.hibernate.orm:hibernate-community-dialects:' + hibernateVersion
 	// hibernate-models is only a runtime dependency of hibernate-core, but BootstrapContext exposes its ModelsContext type,
