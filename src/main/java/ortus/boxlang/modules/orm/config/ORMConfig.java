@@ -325,6 +325,15 @@ public class ORMConfig {
 	public boolean								proxyLazyLoading		= false;
 
 	/**
+	 * Whether to emit Hibernate 7's modern {@code mapping.xml} format (root {@code <entity-mappings>}, namespace
+	 * {@code http://www.hibernate.org/xsd/orm/mapping}, version {@code 7.0}) instead of the legacy {@code hbm.xml} DTD format.
+	 * <p>
+	 * This is Hibernate-8 readiness: {@code hbm.xml} is deprecated-for-removal. Defaults to {@code false} so production stays on the HBM writer until a
+	 * later release flips the default. The BoxLang-facing behavior of the ORM is identical either way.
+	 */
+	public boolean								ormXmlMapping			= false;
+
+	/**
 	 * The instantiated naming strategy object.
 	 */
 	private PhysicalNamingStrategy				instantiatedNamingStrategy;
@@ -546,6 +555,10 @@ public class ORMConfig {
 
 		if ( properties.containsKey( ORMKeys.proxyLazyLoading ) && properties.get( ORMKeys.proxyLazyLoading ) != null ) {
 			proxyLazyLoading = BooleanCaster.cast( properties.get( ORMKeys.proxyLazyLoading ) );
+		}
+
+		if ( properties.containsKey( ORMKeys.ormXmlMapping ) && properties.get( ORMKeys.ormXmlMapping ) != null ) {
+			ormXmlMapping = BooleanCaster.cast( properties.get( ORMKeys.ormXmlMapping ) );
 		}
 
 		if ( this.namingStrategy != null ) {

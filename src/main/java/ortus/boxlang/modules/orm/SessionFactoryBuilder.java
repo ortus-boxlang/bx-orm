@@ -189,15 +189,154 @@ public class SessionFactoryBuilder {
 		// Hibernate 5 tuplizer). See BoxPersisterFactory for why this goes through the persister factory service.
 		properties.put( "hibernate.persister.factory", new BoxPersisterFactory( entityMap ) );
 
-		// collect XML mapping files and add them to the Hibernate configuration
-		entityMap.values()
+		// Collect XML mapping files and add them to the Hibernate configuration.
+		// The modern mapping.xml format resolves a dynamic entity's <extends> superclass eagerly (Hibernate registers each dynamic class as its file is
+		// processed and does NOT defer the lookup), so a subclass file must be added AFTER its parent's file. We therefore order the files by inheritance
+		// depth (roots first). The legacy HBM format is order-independent, so this ordering is harmless for it too.
+		List<EntityRecord> ordered = entityMap.values()
 		    .stream()
-		    .map( EntityRecord::getXmlFilePath )
-		    .map( Path::toString )
-		    .forEach( configuration::addFile );
+		    .sorted( java.util.Comparator.comparingInt( e -> mappingRank( e, entityMap ) ) )
+		    .toList();
+
+		if ( ormConfig.ormXmlMapping ) {
+			// The modern mapping.xml format needs every dynamic (class-less) entity definition processed as one coherent unit: when entities live in
+			// separate files, Hibernate can stub an as-yet-undefined entity referenced by an association (or a subclass), leaving it without its
+			// superclass or id member and breaking inheritance/id-generation. Merge all per-entity <entity> elements (parent-first) into a single
+			// <entity-mappings> document and hand Hibernate that one file.
+			configuration.addFile( buildCombinedMappingFile( ordered ) );
+		} else {
+			ordered.stream()
+			    .map( EntityRecord::getXmlFilePath )
+			    .map( Path::toString )
+			    .forEach( configuration::addFile );
+		}
 
 		configuration.addProperties( properties );
 
 		return configuration;
+	}
+
+	/**
+	 * Compute the inheritance depth of an entity (0 for a root/non-subclass, 1 for a direct subclass, etc.) by walking its {@code extends} chain through
+	 * the entity map. Used to order mapping files parent-first for the modern {@code mapping.xml} format.
+	 *
+	 * @param entity    The entity record.
+	 * @param entityMap Map of lower-cased entity name to EntityRecord.
+	 * @param visited   Guard against cyclic {@code extends} chains.
+	 *
+	 * @return The inheritance depth.
+	 */
+	/**
+	 * Compute a processing rank so mapping files are added parent-first AND every entity that participates in inheritance is processed before the
+	 * standalone entities that merely reference it.
+	 * <p>
+	 * This matters for the modern {@code mapping.xml} format: when Hibernate processes an entity that has a to-one/collection pointing at a subclass, it
+	 * eagerly resolves (and stubs) the target's {@code ClassDetails}. If the subclass has not been defined yet, the stub is created <em>without</em> its
+	 * superclass link, so the subclass silently loses its inherited id/table (its {@code hasParents} becomes false). Ordering all inheritance-involved
+	 * entities (hierarchy roots first, then subclasses by depth) ahead of the standalone entities avoids this.
+	 *
+	 * @return 0 for a hierarchy root (an entity that has subclasses), the inheritance depth (&ge;1) for a subclass, or {@link Integer#MAX_VALUE} for a
+	 *         standalone entity.
+	 */
+	/**
+	 * Merge the given (parent-first ordered) entities' modern {@code mapping.xml} files into a single {@code <entity-mappings>} document and write it to
+	 * a
+	 * temp file, returning that file's path. Feeding Hibernate one combined document lets it process all dynamic (class-less) entity definitions in a
+	 * single coherent unit, avoiding cross-file stubbing of not-yet-defined entities.
+	 *
+	 * @param ordered The entities, ordered so parents/hierarchy-roots precede subclasses and standalone entities.
+	 *
+	 * @return Absolute path of the combined mapping file.
+	 */
+	private String buildCombinedMappingFile( List<EntityRecord> ordered ) {
+		try {
+			var factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+			factory.setNamespaceAware( true );
+			var						builder		= factory.newDocumentBuilder();
+			org.w3c.dom.Document	combined	= builder.getDOMImplementation().createDocument(
+			    ortus.boxlang.modules.orm.mapping.MappingXMLWriter.ORM_NAMESPACE, "entity-mappings", null );
+			combined.getDocumentElement().setAttribute( "version", ortus.boxlang.modules.orm.mapping.MappingXMLWriter.ORM_VERSION );
+
+			for ( EntityRecord entity : ordered ) {
+				Path xmlPath = entity.getXmlFilePath();
+				if ( xmlPath == null ) {
+					continue;
+				}
+				org.w3c.dom.Document	doc			= builder.parse( xmlPath.toFile() );
+				org.w3c.dom.NodeList	entities	= doc.getElementsByTagNameNS( ortus.boxlang.modules.orm.mapping.MappingXMLWriter.ORM_NAMESPACE,
+				    "entity" );
+				for ( int i = 0; i < entities.getLength(); i++ ) {
+					combined.getDocumentElement().appendChild( combined.importNode( entities.item( i ), true ) );
+				}
+			}
+
+			Path	out			= java.nio.file.Files.createTempFile( "bxorm-combined-" + this.datasourceName.getName() + "-", ".orm.xml" );
+			var		transformer	= javax.xml.transform.TransformerFactory.newInstance().newTransformer();
+			transformer.setOutputProperty( javax.xml.transform.OutputKeys.INDENT, "yes" );
+			try ( var os = java.nio.file.Files.newOutputStream( out ) ) {
+				transformer.transform( new javax.xml.transform.dom.DOMSource( combined ), new javax.xml.transform.stream.StreamResult( os ) );
+			}
+			out.toFile().deleteOnExit();
+			return out.toString();
+		} catch ( Exception e ) {
+			throw new ortus.boxlang.runtime.types.exceptions.BoxRuntimeException( "Failed to build combined ORM mapping.xml document", e );
+		}
+	}
+
+	private static int mappingRank( EntityRecord entity, Map<String, EntityRecord> entityMap ) {
+		var meta = entity.getEntityMeta();
+		if ( meta != null && meta.isSubclass() ) {
+			return inheritanceDepth( entity, entityMap, new java.util.HashSet<>() );
+		}
+		// A root entity that is extended by at least one subclass must be processed before the rest.
+		String name = entity.getEntityName();
+		if ( name != null ) {
+			boolean hasChildren = entityMap.values().stream().anyMatch( candidate -> {
+				var cm = candidate.getEntityMeta();
+				if ( cm == null || !cm.isSubclass() ) {
+					return false;
+				}
+				var pm = cm.getParentMeta();
+				if ( pm == null || pm.isEmpty() ) {
+					return false;
+				}
+				var		pa			= pm.getAsStruct( ortus.boxlang.runtime.scopes.Key.annotations );
+				String	parentName	= pa != null ? pa.getAsString( ortus.boxlang.modules.orm.config.ORMKeys.entityName ) : null;
+				if ( parentName == null || parentName.isBlank() ) {
+					parentName = pm.getAsString( ortus.boxlang.runtime.scopes.Key.simpleName );
+				}
+				return parentName != null && parentName.equalsIgnoreCase( name );
+			} );
+			if ( hasChildren ) {
+				return 0;
+			}
+		}
+		return Integer.MAX_VALUE;
+	}
+
+	private static int inheritanceDepth( EntityRecord entity, Map<String, EntityRecord> entityMap, java.util.Set<String> visited ) {
+		var meta = entity.getEntityMeta();
+		if ( meta == null || !meta.isSubclass() ) {
+			return 0;
+		}
+		var parentMeta = meta.getParentMeta();
+		if ( parentMeta == null || parentMeta.isEmpty() ) {
+			return 0;
+		}
+		var		parentAnnotations	= parentMeta.getAsStruct( ortus.boxlang.runtime.scopes.Key.annotations );
+		String	parentName			= parentAnnotations != null
+		    ? parentAnnotations.getAsString( ortus.boxlang.modules.orm.config.ORMKeys.entityName )
+		    : null;
+		if ( parentName == null || parentName.isBlank() ) {
+			parentName = parentMeta.getAsString( ortus.boxlang.runtime.scopes.Key.simpleName );
+		}
+		if ( parentName == null || parentName.isBlank() || !visited.add( parentName.toLowerCase().trim() ) ) {
+			return 0;
+		}
+		EntityRecord parent = entityMap.get( parentName.toLowerCase().trim() );
+		if ( parent == null ) {
+			return 1;
+		}
+		return 1 + inheritanceDepth( parent, entityMap, visited );
 	}
 }

@@ -1,0 +1,25 @@
+class {
+	this.name = "BXORMDerbyOrmXmlTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"DerbyOrmXmlDB": {
+			"connectionString": "jdbc:derby:memory:ormDerbyOrmXmlTest;create=true"
+		}
+	};
+	this.datasource = "DerbyOrmXmlDB";
+
+	this.ormSettings = {
+		"datasource"       : "DerbyOrmXmlDB",
+		"dialect"          : "Derby",
+		"entityPaths"      : [ "/root/models" ],
+		"saveMapping"      : "true",
+		// Exercise the modern Hibernate 7 mapping.xml writer (root <entity-mappings>) in CI.
+		"ormXmlMapping"    : "true",
+		"dbcreate"         : "dropcreate",
+		"cacheprovider"    : "ConcurrentHashMap",
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}
