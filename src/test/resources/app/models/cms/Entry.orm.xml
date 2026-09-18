@@ -8,7 +8,7 @@
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
     <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbEntryFacade" name="cbEntry">
         <extends>cbContent</extends>
-        <secondary-table name="cb_entry">
+        <secondary-table name="cb_entry" owned="true">
             <primary-key-join-column name="contentID"/>
         </secondary-table>
         <batch-size>25</batch-size>

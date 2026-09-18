@@ -8,7 +8,7 @@
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
     <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.EmployeeFacade" name="Employee">
         <extends>User</extends>
-        <secondary-table name="employee">
+        <secondary-table name="employee" owned="true">
             <primary-key-join-column name="userId"/>
         </secondary-table>
         <batch-size>25</batch-size>

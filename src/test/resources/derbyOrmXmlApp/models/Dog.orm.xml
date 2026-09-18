@@ -8,7 +8,7 @@
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
     <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.DogFacade" name="Dog">
         <extends>Animal</extends>
-        <secondary-table name="dogs">
+        <secondary-table name="dogs" owned="true">
             <primary-key-join-column name="id"/>
         </secondary-table>
         <batch-size>25</batch-size>
