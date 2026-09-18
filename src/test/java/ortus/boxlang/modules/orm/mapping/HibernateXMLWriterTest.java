@@ -95,6 +95,10 @@ public class HibernateXMLWriterTest {
 		variables = context.getScopeNearby( VariablesScope.name );
 		IStruct properties = new Struct();
 		properties.put( "ignoreParseErrors", "true" );
+		// This suite asserts the legacy HBM structural output (columns, ids, associations, inheritance), which is the same
+		// regardless of representation, so pin it to the class-less MAP representation. Facade-mode `<class name=...>`
+		// emission is covered separately by the facade boot tests.
+		properties.put( "entityFacades", "false" );
 		// We don't need an actual datasource for this test so we'll add one to prevent the error
 		ormConfig = new ORMConfig( properties, context.getRequestContext() );
 	}

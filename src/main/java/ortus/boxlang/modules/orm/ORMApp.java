@@ -518,17 +518,38 @@ public class ORMApp {
 		if ( value == null ) {
 			return null;
 		}
+		boolean facades = this.config.entityFacades;
 		// Already an entity instance (live or detached); BoxProxy implements IClassRunnable too.
-		if ( value instanceof IClassRunnable ) {
-			if ( session.contains( entityName, value ) ) {
-				return value;
+		if ( value instanceof IClassRunnable runnable ) {
+			// Hibernate tracks the facade in facade mode, so operate on that representation. No-op passthrough in MAP mode.
+			Object managed = facades
+			    ? ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( this.config.facadeNamespace, entityName, runnable )
+			    : value;
+			if ( session.contains( entityName, managed ) ) {
+				return managed;
 			}
-			Object id = getEntityPersister( session, entityName ).getIdentifier( value, ( SharedSessionContractImplementor ) session );
+			Object id = getEntityPersister( session, entityName ).getIdentifier( managed, ( SharedSessionContractImplementor ) session );
 			// Transient (no id yet): let Hibernate handle it rather than fabricate a reference.
-			return id == null ? value : session.getReference( entityName, id );
+			return id == null ? managed : referenceFor( session, entityName, id, facades );
 		}
 		// A raw primary key value.
-		return session.getReference( entityName, value );
+		return referenceFor( session, entityName, value, facades );
+	}
+
+	/**
+	 * Resolve a managed reference for an entity by id. In facade mode a lazy {@code BoxProxy} is not assignable to the
+	 * entity's generated facade class (which Hibernate's query-parameter type check requires), so fetch the managed
+	 * facade itself; in MAP mode a lazy proxy reference is sufficient.
+	 *
+	 * @param session    The Hibernate session.
+	 * @param entityName The entity name.
+	 * @param id         The identifier.
+	 * @param facades    Whether facade mode is enabled.
+	 *
+	 * @return A managed reference assignable to the entity's mapped representation.
+	 */
+	private Object referenceFor( Session session, String entityName, Object id, boolean facades ) {
+		return facades ? session.get( entityName, id ) : session.getReference( entityName, id );
 	}
 
 	/**

@@ -323,10 +323,11 @@ public class BoxClassInstantiator implements EntityInstantiator {
 						    return bagCollection.size() > 0;
 					    }
 				    }
+				    // The scope collection is an Array (MAP mode) or a FacadeCollectionView (facade mode); both are List<Object>.
 				    if ( itemToCheck != null ) {
-					    return ( ( Array ) collection ).stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
+					    return ( ( List<Object> ) collection ).stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
 				    } else {
-					    return ( ( Array ) collection ).size() > 0;
+					    return ( ( List<Object> ) collection ).size() > 0;
 				    }
 			    } else {
 				    if ( itemToCheck != null ) {
@@ -362,6 +363,7 @@ public class BoxClassInstantiator implements EntityInstantiator {
 	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
+	@SuppressWarnings( "unchecked" )
 	public DynamicFunction getAddMethod( String collectionType, IStruct associationMeta ) {
 		// uses the singular name, if it exists
 		Key	methodName		= getMethodName( "add", associationMeta );
@@ -389,7 +391,9 @@ public class BoxClassInstantiator implements EntityInstantiator {
 				    if ( bag instanceof PersistentBag bagCollection ) {
 					    bagCollection.add( itemToAdd );
 				    } else {
-					    ( ( Array ) bag ).append( itemToAdd );
+					    // Array (MAP mode) or FacadeCollectionView (facade mode); both are List<Object>. The view wraps the
+					    // added IClassRunnable into a facade and pushes it onto the managed Hibernate collection.
+					    ( ( List<Object> ) bag ).add( itemToAdd );
 				    }
 			    } else {
 				    // @TODO: implement/test this
@@ -420,6 +424,7 @@ public class BoxClassInstantiator implements EntityInstantiator {
 	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
+	@SuppressWarnings( "unchecked" )
 	public DynamicFunction getRemoveMethod( String collectionType, IStruct associationMeta ) {
 		// uses the singular name, if it exists
 		Key	methodName		= getMethodName( "remove", associationMeta );
@@ -446,7 +451,8 @@ public class BoxClassInstantiator implements EntityInstantiator {
 				    if ( collection instanceof PersistentBag bagCollection ) {
 					    bagCollection.remove( itemToRemove );
 				    } else {
-					    Array arrayCollection = ( Array ) collection;
+					    // Array (MAP mode) or FacadeCollectionView (facade mode); both are List<Object>.
+					    List<Object> arrayCollection = ( List<Object> ) collection;
 					    arrayCollection.stream()
 					        .map( item -> ( IClassRunnable ) item )
 					        .filter( item -> {

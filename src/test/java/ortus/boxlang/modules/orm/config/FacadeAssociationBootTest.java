@@ -189,6 +189,112 @@ public class FacadeAssociationBootTest {
 		assertThat( isUninitialized( dealerRef ) ).isFalse();
 	}
 
+	@DisplayName( "It reloads and checks attachment of a facade-mode entity through entityReload/entityIsAttached" )
+	@Test
+	public void testReloadAndIsAttached() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				rm            = entityNew( "Manufacturer", { name : "Reloadable" } );
+				isNewAttached = entityIsAttached( rm );
+				entitySave( rm );
+				ormFlush();
+				isSavedAttached = entityIsAttached( rm );
+				entityReload( rm );
+				reloadedName = rm.getName();
+			}
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( Key.of( "isNewAttached" ) ) ).isEqualTo( false );
+		assertThat( variables.get( Key.of( "isSavedAttached" ) ) ).isEqualTo( true );
+		assertThat( variables.get( Key.of( "reloadedName" ) ) ).isEqualTo( "Reloadable" );
+	}
+
+	@DisplayName( "It add/has a to-many association element in facade mode (FacadeCollectionView helpers)" )
+	@Test
+	public void testToManyAddHas() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				am = entityNew( "Manufacturer", { name : "Collector" } );
+				entitySave( am );
+
+				av = entityNew( "Vehicle", { model : "Added" } );
+				av.setManufacturer( am );
+				entitySave( av );
+
+				am.addVehicle( av );
+				hasIt    = am.hasVehicle( av );
+				vehCount = am.getVehicles().len();
+			}
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( Key.of( "hasIt" ) ) ).isEqualTo( true );
+		assertThat( ( ( Number ) variables.get( Key.of( "vehCount" ) ) ).intValue() ).isAtLeast( 1 );
+	}
+
+	@DisplayName( "It returns BoxLang instances (never facades) from entityLoadByExample in facade mode" )
+	@Test
+	public void testLoadByExample() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				em = entityNew( "Manufacturer", { name : "Exemplar" } );
+				entitySave( em );
+			}
+			ormFlush();
+			ormClearSession();
+
+			example     = entityNew( "Manufacturer", { name : "Exemplar" } );
+			foundUnique = entityLoadByExample( example, true );
+			foundArray  = entityLoadByExample( example );
+			firstFound  = foundArray[ 1 ];
+		""", context );
+		// @formatter:on
+
+		Object foundUnique = variables.get( Key.of( "foundUnique" ) );
+		assertThat( foundUnique ).isInstanceOf( IClassRunnable.class );
+		assertThat( foundUnique ).isNotInstanceOf( BoxEntityFacade.class );
+
+		Object firstFound = variables.get( Key.of( "firstFound" ) );
+		assertThat( firstFound ).isInstanceOf( IClassRunnable.class );
+		assertThat( firstFound ).isNotInstanceOf( BoxEntityFacade.class );
+	}
+
+	@DisplayName( "It binds a primary key as an association query parameter in facade mode (ormExecuteQuery)" )
+	@Test
+	public void testPrimaryKeyAsQueryParameter() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				pm = entityNew( "Manufacturer", { name : "Pointed" } );
+				entitySave( pm );
+
+				pv = entityNew( "Vehicle", { model : "PointerCar" } );
+				pv.setManufacturer( pm );
+				entitySave( pv );
+
+				pmId = pm.getId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			// Bind a raw primary key where the query expects the associated entity (Hibernate 7 requires a managed
+			// reference; in facade mode that must be the facade, not a BoxProxy).
+			results  = ormExecuteQuery( "from Vehicle where manufacturer = :m", { m : pmId } );
+			resCount = results.len();
+			firstRes = results[ 1 ];
+		""", context );
+		// @formatter:on
+
+		assertThat( ( ( Number ) variables.get( Key.of( "resCount" ) ) ).intValue() ).isEqualTo( 1 );
+		Object firstRes = variables.get( Key.of( "firstRes" ) );
+		assertThat( firstRes ).isInstanceOf( IClassRunnable.class );
+		assertThat( firstRes ).isNotInstanceOf( BoxEntityFacade.class );
+	}
+
 	/**
 	 * Read a BoxProxy's Hibernate lazy-initializer {@code isUninitialized()} via reflection, so the assertion survives the
 	 * ORM module's isolated classloader (a direct {@code instanceof HibernateProxy} would compare against the test

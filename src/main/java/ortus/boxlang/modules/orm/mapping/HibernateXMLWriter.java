@@ -766,7 +766,7 @@ public class HibernateXMLWriter {
 		// association elements themselves need no facade-specific rewriting. A subclass is named with its own facade FQN
 		// too; its generated facade extends its parent's facade, and the parent is still referenced by entity-name via the
 		// (unchanged) `extends` attribute below - which Hibernate resolves to the parent's mapped facade class.
-		if ( this.ormConfig.entityFacades ) {
+		if ( this.ormConfig.entityFacades && entity.getEntityName() != null ) {
 			classElement.setAttribute( "name",
 			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.facadeClassName( this.ormConfig.facadeNamespace, entity.getEntityName() ) );
 		}
