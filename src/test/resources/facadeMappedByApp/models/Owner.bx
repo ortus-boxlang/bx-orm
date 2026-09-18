@@ -1,0 +1,15 @@
+class accessors="true" persistent="true" entityname="Owner" table="fmb_owners" {
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+	property name="name" ormType="string";
+
+	// Inverse one-to-many whose owning side (Item.Owner) is a Capitalized property name, so mapped-by must match the
+	// XML-declared attribute name, not the bean-introspected (decapitalized) one.
+	property
+		name        ="items"
+		singularName="item"
+		fieldtype   ="one-to-many"
+		cfc         ="Item"
+		fkcolumn    ="FK_ownerId"
+		inverse     ="true"
+		cascade     ="all-delete-orphan";
+}

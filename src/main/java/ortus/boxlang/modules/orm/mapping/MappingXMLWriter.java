@@ -17,6 +17,7 @@
  */
 package ortus.boxlang.modules.orm.mapping;
 
+import java.beans.Introspector;
 import java.util.Set;
 import java.util.function.BiFunction;
 
@@ -754,7 +755,7 @@ public class MappingXMLWriter {
 
 		// mappedBy (one-to-one inverse side)
 		if ( association.containsKey( ORMKeys.mappedBy ) && association.getAsString( ORMKeys.mappedBy ) != null ) {
-			theNode.setAttribute( "mapped-by", association.getAsString( ORMKeys.mappedBy ) );
+			theNode.setAttribute( "mapped-by", facadeAttributeName( association.getAsString( ORMKeys.mappedBy ) ) );
 		}
 
 		// optional (inverse of not-null); one-to-one supports optional too.
@@ -867,7 +868,7 @@ public class MappingXMLWriter {
 		}
 
 		if ( mappedBy != null ) {
-			theNode.setAttribute( "mapped-by", mappedBy );
+			theNode.setAttribute( "mapped-by", facadeAttributeName( mappedBy ) );
 		} else if ( isManyToMany ) {
 			// Owning many-to-many: <join-table> with join-column (key) + inverse-join-column.
 			Element joinTable = createEl( "join-table" );
@@ -915,6 +916,27 @@ public class MappingXMLWriter {
 	 *
 	 * @return The owning property name, or null if it cannot be resolved.
 	 */
+	/**
+	 * Translate a BoxLang property name to the persistent-attribute name Hibernate registers for the entity, for a
+	 * name-based cross-reference such as a collection's {@code mapped-by}.
+	 * <p>
+	 * In facade (POJO) mode the entity is a real class and Hibernate discovers its attributes by JavaBean introspection of
+	 * the generated {@code getFoo()}/{@code setFoo()} accessors, which decapitalizes the leading character (so a BoxLang
+	 * property {@code Owner} becomes the attribute {@code owner}). A {@code mapped-by} must name that attribute, not the
+	 * original BoxLang property name, or Hibernate cannot resolve the inverse side. In MAP mode the entity is class-less and
+	 * the attribute name is taken from the XML verbatim, so the name is returned unchanged.
+	 *
+	 * @param boxLangPropertyName The BoxLang property name.
+	 *
+	 * @return The Hibernate attribute name to reference.
+	 */
+	private String facadeAttributeName( String boxLangPropertyName ) {
+		if ( !this.ormConfig.entityFacades || boxLangPropertyName == null || boxLangPropertyName.isEmpty() ) {
+			return boxLangPropertyName;
+		}
+		return Introspector.decapitalize( boxLangPropertyName );
+	}
+
 	private String resolveMappedBy( IPropertyMeta prop, boolean isManyToMany ) {
 		IStruct	association	= prop.getAssociation();
 		String	targetClass	= association.getAsString( Key._CLASS );

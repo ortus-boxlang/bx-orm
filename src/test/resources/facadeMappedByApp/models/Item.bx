@@ -1,0 +1,12 @@
+class accessors="true" persistent="true" entityname="Item" table="fmb_items" {
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+	property name="label" ormType="string";
+
+	// Capitalized many-to-one property name: bean getter is getOwner() -> bean attribute "owner", but the XML declares "Owner".
+	property
+		name     ="Owner"
+		fieldtype="many-to-one"
+		cfc      ="Owner"
+		fkcolumn ="FK_ownerId"
+		lazy     ="false";
+}
