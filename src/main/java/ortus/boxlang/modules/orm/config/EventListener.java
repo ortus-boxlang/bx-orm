@@ -235,7 +235,8 @@ public class EventListener
 		announceEntityEvent( ORMKeys.preUpdate, FacadeSupport.unwrap( event.getEntity() ), args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		// Update state so that changes made in the event are persisted
-		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), FacadeSupport.unwrap( event.getEntity() ) );
+		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), event.getPersister().getPropertyTypes(),
+		    FacadeSupport.unwrap( event.getEntity() ) );
 		return false;
 	}
 
@@ -298,7 +299,7 @@ public class EventListener
 		announceEntityEvent( ORMKeys.preInsert, ( IClassRunnable ) entity, args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		// update our entity state to ensure changes persist
-		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), ( IClassRunnable ) entity );
+		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), event.getPersister().getPropertyTypes(), ( IClassRunnable ) entity );
 		return false;
 	}
 
@@ -348,11 +349,21 @@ public class EventListener
 	 * @param persistProperties Array of properties to update
 	 * @param entity            The entity to test for altered values.
 	 */
-	private void updateEntityEventState( Object[] state, String[] persistProperties, IClassRunnable entity ) {
+	private void updateEntityEventState( Object[] state, String[] persistProperties, org.hibernate.type.Type[] propertyTypes, IClassRunnable entity ) {
 		if ( logger.isTraceEnabled() ) {
 			logger.trace( String.format( "Updating state changes on state properties %s", Arrays.toString( persistProperties ) ) );
 		}
 		for ( int i = 0; i < persistProperties.length; i++ ) {
+			// Never write association or collection state from the BoxLang scope back into Hibernate's event state array.
+			// In facade mode the scope holds a facade / FacadeCollectionView that differs from Hibernate's own state entry
+			// for that slot, so overwriting it corrupts Hibernate's association/collection tracking and provokes a spurious
+			// second UPDATE - which double-fires preUpdate/postUpdate. Event handlers change basic property values, not
+			// associations, so this only ever needs to sync basic slots. (MAP mode never overwrote these either: the scope
+			// held Hibernate's own collection instance, so the equality check below already skipped them.)
+			if ( propertyTypes != null && i < propertyTypes.length && propertyTypes[ i ] != null
+			    && ( propertyTypes[ i ].isAssociationType() || propertyTypes[ i ].isCollectionType() ) ) {
+				continue;
+			}
 			Key		propertyName	= Key.of( persistProperties[ i ] );
 			Object	propertyValue	= entity.getVariablesScope().get( propertyName );
 			Object	oldValue		= state[ i ];

@@ -44,6 +44,7 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeCollectionView;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.DynamicFunction;
 import ortus.boxlang.runtime.types.IStruct;
@@ -156,6 +157,15 @@ public class BoxClassInstantiator implements EntityInstantiator {
 					        prop.getName(), entityRecord.getEntityName() );
 					    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
 					    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
+				    }
+
+				    // getX() override: return a stable snapshot in facade mode so structural modification during iteration
+				    // (getX().each( e => removeX(e) )) is safe; a no-op passthrough in MAP mode. Force-installed over the
+				    // generated accessor.
+				    if ( association.getAsString( Key.type ).endsWith( "to-many" ) ) {
+					    DynamicFunction getUDF = getToManyGetMethod( association );
+					    theEntity.getThisScope().put( getUDF.getName(), getUDF );
+					    theEntity.getVariablesScope().put( getUDF.getName(), getUDF );
 				    }
 			    }
 		    } );
@@ -351,6 +361,41 @@ public class BoxClassInstantiator implements EntityInstantiator {
 		// "class",
 		// String.format( "Append the provided entity to the {} collection, creating it if it does not exist.", collectionKey.getName() ),
 		// Struct.EMPTY
+	}
+
+	/**
+	 * Create a `get*` accessor for a to-many association (e.g. {@code getVehicles()}) that, in facade (POJO) mode, returns
+	 * a stable snapshot of the collection rather than the live {@link FacadeCollectionView}.
+	 * <p>
+	 * The facade view is a live window over Hibernate's managed collection, so structurally modifying the association
+	 * while iterating what {@code getX()} returned (the common {@code getChildren().each( c => parent.removeChild( c ) )}
+	 * pattern) would shift indices under BoxLang's index-based iteration and drop or null elements. Returning a snapshot
+	 * (a copy of the current {@link IClassRunnable} elements) makes iteration stable while {@code addX}/{@code removeX}
+	 * keep mutating the live view underneath - matching MAP-mode BoxLang {@code Array} semantics. In MAP mode the scope
+	 * already holds a plain {@code Array}, which is returned as-is (live), preserving existing behavior.
+	 *
+	 * @param associationMeta The metadata for the association.
+	 *
+	 * @return A DynamicFunction that overrides the generated accessor for this association.
+	 */
+	public DynamicFunction getToManyGetMethod( IStruct associationMeta ) {
+		String	propertyName	= associationMeta.getAsString( Key._NAME );
+		Key		collectionKey	= Key.of( propertyName );
+		Key		methodName		= Key.of( "get" + Character.toUpperCase( propertyName.charAt( 0 ) ) + propertyName.substring( 1 ) );
+		return new DynamicFunction(
+		    methodName,
+		    ( context, function ) -> {
+			    Object collection = context.getThisClass().getVariablesScope().get( collectionKey );
+			    if ( collection instanceof FacadeCollectionView view ) {
+				    return Array.copyFromList( new ArrayList<>( view ) );
+			    }
+			    return collection;
+		    },
+		    new Argument[] {},
+		    "any",
+		    "Returns the [" + collectionKey.getName() + "] association collection.",
+		    Struct.EMPTY
+		);
 	}
 
 	/**

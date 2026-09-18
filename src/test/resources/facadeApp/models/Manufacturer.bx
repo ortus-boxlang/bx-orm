@@ -4,6 +4,9 @@ class accessors="true" persistent="true" table="fac_manufacturers" {
 
 	property name="name" ormType="string";
 
+	// Non-persistent lifecycle event log, used to assert each event fires exactly once.
+	property name="eventLog" type="array" persistent="false";
+
 	// O2M -> Vehicles (FK lives on the vehicle side; bidirectional/inverse). Cascade so saving the manufacturer saves its vehicles.
 	property
 		name        ="vehicles"
@@ -17,6 +20,23 @@ class accessors="true" persistent="true" table="fac_manufacturers" {
 
 	function init() {
 		variables.vehicles = [];
+		variables.eventLog = [];
 		return this;
+	}
+
+	function preLoad() {
+		getEventLog().append( "preLoad" );
+	}
+
+	function postLoad() {
+		getEventLog().append( "postLoad" );
+	}
+
+	function preUpdate() {
+		getEventLog().append( "preUpdate" );
+	}
+
+	function postUpdate() {
+		getEventLog().append( "postUpdate" );
 	}
 }

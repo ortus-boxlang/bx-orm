@@ -235,6 +235,99 @@ public class FacadeAssociationBootTest {
 		assertThat( ( ( Number ) variables.get( Key.of( "vehCount" ) ) ).intValue() ).isAtLeast( 1 );
 	}
 
+	@DisplayName( "It fires update lifecycle events exactly once (not doubled) in facade mode" )
+	@Test
+	public void testUpdateEventsFireOnce() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				seed  = entityNew( "Manufacturer", { name : "EventSeed" } );
+				entitySave( seed );
+				seedId = seed.getId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			transaction {
+				updateEntity = entityLoadByPK( "Manufacturer", seedId );
+				updateEntity.setName( "EventChanged" );
+				entitySave( updateEntity );
+			}
+			eventLog = updateEntity.getEventLog();
+		""", context );
+		// @formatter:on
+
+		@SuppressWarnings( "unchecked" )
+		java.util.List<Object> log = ( java.util.List<Object> ) variables.get( Key.of( "eventLog" ) );
+		assertThat( log ).containsExactly( "preLoad", "postLoad", "preUpdate", "postUpdate" ).inOrder();
+	}
+
+	@DisplayName( "It removes to-many elements while iterating in facade mode (removeX during each)" )
+	@Test
+	public void testToManyRemoveDuringEach() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				rm = entityNew( "Manufacturer", { name : "RemoveCo" } );
+				entitySave( rm );
+
+				rv1 = entityNew( "Vehicle", { model : "R1" } );
+				rv1.setManufacturer( rm );
+				entitySave( rv1 );
+				rm.addVehicle( rv1 );
+
+				rv2 = entityNew( "Vehicle", { model : "R2" } );
+				rv2.setManufacturer( rm );
+				entitySave( rv2 );
+				rm.addVehicle( rv2 );
+
+				rmId = rm.getId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			loaded        = entityLoadByPK( "Manufacturer", rmId );
+			hasPreRemove  = loaded.hasVehicle();
+			loaded.getVehicles().each( ( v ) => {
+				loaded.removeVehicle( v );
+			} );
+			hasPostRemove = loaded.hasVehicle();
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( Key.of( "hasPreRemove" ) ) ).isEqualTo( true );
+		assertThat( variables.get( Key.of( "hasPostRemove" ) ) ).isEqualTo( false );
+	}
+
+	@DisplayName( "It removes a single to-many element via removeX in facade mode (removal sticks)" )
+	@Test
+	public void testToManyRemoveSingle() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				sm = entityNew( "Manufacturer", { name : "SingleRemoveCo" } );
+				entitySave( sm );
+				sv = entityNew( "Vehicle", { model : "OnlyOne" } );
+				sv.setManufacturer( sm );
+				entitySave( sv );
+				sm.addVehicle( sv );
+				smId = sm.getId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			loaded1       = entityLoadByPK( "Manufacturer", smId );
+			hasPreRemove1 = loaded1.hasVehicle();
+			theVehicle    = loaded1.getVehicles()[ 1 ];
+			loaded1.removeVehicle( theVehicle );
+			hasPostRemove1 = loaded1.hasVehicle();
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( Key.of( "hasPreRemove1" ) ) ).isEqualTo( true );
+		assertThat( variables.get( Key.of( "hasPostRemove1" ) ) ).isEqualTo( false );
+	}
+
 	@DisplayName( "It returns BoxLang instances (never facades) from entityLoadByExample in facade mode" )
 	@Test
 	public void testLoadByExample() {
