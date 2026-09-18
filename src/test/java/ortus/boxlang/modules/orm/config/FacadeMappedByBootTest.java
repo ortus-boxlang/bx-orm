@@ -94,6 +94,7 @@ public class FacadeMappedByBootTest {
 
 				item = entityNew( "Item", { label : "Widget" } );
 				item.setOwner( owner );
+				item.setPhoto( charsetDecode( "hi-bytes", "utf-8" ) );
 				entitySave( item );
 
 				ownerId = owner.getId();
@@ -104,9 +105,12 @@ public class FacadeMappedByBootTest {
 			loadedItem  = entityLoadByPK( "Item", ormExecuteQuery( "SELECT i.id FROM Item i" )[ 1 ] );
 			itemOwner   = loadedItem.getOwner();
 			ownerName   = itemOwner.getName();
+			// The byte[] (binary) column round-tripped through the facade's concrete byte[] accessor.
+			photoText   = charsetEncode( loadedItem.getPhoto(), "utf-8" );
 		""", context );
 		// @formatter:on
 
 		assertThat( variables.get( Key.of( "ownerName" ) ) ).isEqualTo( "Acme" );
+		assertThat( variables.get( Key.of( "photoText" ) ) ).isEqualTo( "hi-bytes" );
 	}
 }

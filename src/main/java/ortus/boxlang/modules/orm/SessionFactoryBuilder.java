@@ -357,7 +357,14 @@ public class SessionFactoryBuilder {
 				if ( idNames.contains( prop.getName().toLowerCase() ) ) {
 					continue;
 				}
-				propSpecs.add( new EntityFacadeFactory.PropertySpec( prop.getName(), Object.class, facadeAssocKind( prop ) ) );
+				// A binary/byte[] property gets a concrete byte[] accessor (not Object): the modern mapping format has no
+				// AttributeConverter for byte[], so Hibernate must infer the column's SQL type (VARBINARY/BLOB) from the
+				// accessor's Java type. An Object accessor would resolve to JAVA_OBJECT, which has no SQL type and breaks
+				// schema export. Every other property keeps an Object accessor (bx-orm's converters are AttributeConverter<Object, ?>).
+				Class<?> accessorType = "binary".equals( ortus.boxlang.modules.orm.mapping.MappingXMLWriter.toHibernateType( prop.getORMType() ) )
+				    ? byte[].class
+				    : Object.class;
+				propSpecs.add( new EntityFacadeFactory.PropertySpec( prop.getName(), accessorType, facadeAssocKind( prop ) ) );
 			}
 
 			// Use the IEntityMeta entity name so the FQN matches, byte-for-byte, the <class name=...> the mapping writer emits.

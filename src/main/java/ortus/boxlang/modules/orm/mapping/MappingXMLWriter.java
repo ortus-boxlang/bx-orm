@@ -253,7 +253,7 @@ public class MappingXMLWriter {
 		// Entity identity depends on the representation mode. In facade (POJO) mode the entity is mapped to a real,
 		// per-application generated facade class, so emit its `class` (plus `name` as the JPA/entity name); the real class
 		// also lets Hibernate's id-generator resolver dereference a class name, unblocking uuid etc. In MAP mode the entity
-		// is class-less: name + metadata-complete, NO class attribute.
+		// is class-less: name only, NO class attribute.
 		String	entityName		= entity.getEntityName();
 		if ( entityName != null && !entityName.isEmpty() ) {
 			entityElement.setAttribute( "name", entityName );
@@ -585,18 +585,32 @@ public class MappingXMLWriter {
 	 * Generate a {@code <basic>} element for the given (normal) property.
 	 */
 	public Element generateBasicElement( IPropertyMeta prop ) {
-		// byte[] ("binary") cannot be expressed as a dynamic (MAP) model attribute in the modern format: it has no SimpleTypeInterpretation <target>, and a
-		// <java-type> descriptor resolves to byte[] whose ClassDetails ("[B") is not registered. Skip it (no models exercise a binary field functionally).
-		// TODO: Revisit if Hibernate registers primitive-array ClassDetails or adds a byte[] target interpretation for dynamic models.
-		if ( prop.getFormula() == null && "binary".equals( toHibernateType( prop.getORMType() ) ) ) {
-			logger.warn(
-			    "ORM mapping.xml writer: binary (byte[]) property [{}] on entity [{}] cannot be mapped for a dynamic entity in the modern format and was skipped.",
-			    prop.getName(), entity.getEntityName() );
-			return null;
+		boolean	isBinary	= prop.getFormula() == null && "binary".equals( toHibernateType( prop.getORMType() ) );
+
+		IStruct	columnInfo	= prop.getColumn();
+
+		if ( isBinary ) {
+			// byte[] ("binary") has no AttributeConverter and no <target> simple-type interpretation. In facade (POJO) mode the
+			// entity is a real class with a concrete byte[] accessor (see SessionFactoryBuilder), so emit a plain <basic> whose
+			// SQL type Hibernate infers (VARBINARY/BLOB) from that accessor - no <convert> and no <java-type> override, both of
+			// which would force it back to Object/JAVA_OBJECT. In MAP mode the entity is class-less, byte[] cannot be expressed
+			// (the "[B" ClassDetails is not registered), so it is skipped with a warning.
+			if ( !this.ormConfig.entityFacades ) {
+				logger.warn(
+				    "ORM mapping.xml writer: binary (byte[]) property [{}] on entity [{}] cannot be mapped for a class-less (MAP) entity in the modern format and was skipped.",
+				    prop.getName(), entity.getEntityName() );
+				return null;
+			}
+			Element binaryNode = createEl( "basic" );
+			binaryNode.setAttribute( "name", prop.getName() );
+			if ( !prop.isOptimisticLock() ) {
+				binaryNode.setAttribute( "optimistic-lock", "false" );
+			}
+			appendColumns( binaryNode, columnInfo );
+			return binaryNode;
 		}
 
-		Element	theNode		= createEl( "basic" );
-		IStruct	columnInfo	= prop.getColumn();
+		Element theNode = createEl( "basic" );
 
 		theNode.setAttribute( "name", prop.getName() );
 		if ( !prop.isOptimisticLock() ) {

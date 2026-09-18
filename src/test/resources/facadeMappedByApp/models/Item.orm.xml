@@ -21,6 +21,9 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
+            <basic name="photo">
+                <column name="photo" nullable="true"/>
+            </basic>
             <many-to-one fetch="EAGER" name="Owner" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormfacademappedbytest.OwnerFacade">
                 <join-column name="FK_ownerId"/>
             </many-to-one>
