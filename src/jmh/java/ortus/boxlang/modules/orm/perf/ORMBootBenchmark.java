@@ -42,7 +42,7 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 
 /**
  * Measures cold ORM application boot: entity discovery + mapping generation ({@code MappingGenerator},
- * {@code HibernateXMLWriter}) plus the Hibernate {@code SessionFactory} build for the {@code derbyApp} entities.
+ * {@code MappingXMLWriter}) plus the Hibernate {@code SessionFactory} build for the {@code derbyApp} entities.
  * <p>
  * The BoxLang runtime and ORM module are registered once per trial; each invocation boots (and then tears down) a
  * fresh ORM application so it is a clean cold boot. A sampling profiler run against this benchmark shows the split

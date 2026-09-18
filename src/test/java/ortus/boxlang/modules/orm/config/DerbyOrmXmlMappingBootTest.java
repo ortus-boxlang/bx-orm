@@ -36,16 +36,13 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 
 /**
- * Boots a full ORM application/SessionFactory against an embedded, in-memory Apache Derby datasource using the modern Hibernate 7 {@code mapping.xml}
- * writer (root {@code <entity-mappings>}), enabled via {@code ormSettings.ormXmlMapping = true}.
+ * Boots a full ORM application/SessionFactory against an embedded, in-memory Apache Derby datasource, exercising the modern Hibernate 7
+ * {@code mapping.xml} writer (root {@code <entity-mappings>}) in the default facade (POJO) representation.
  * <p>
- * This is the CI counterpart to {@link DerbyDialectBootTest} (which uses the legacy HBM writer). It exercises the modern writer end-to-end across the
- * mapping constructs it supports for dynamic (MAP) entities: {@code increment} id generation, JPA {@code AttributeConverter}s, single-table
- * inheritance
- * with a discriminator and a secondary join table, joined inheritance, {@code many-to-one}/{@code one-to-many} associations, and a composite id.
- * <p>
- * Note: {@code uuid} id generation is intentionally NOT exercised here — see {@code MappingXMLWriter.appendGenerator} — because Hibernate 7.4.8's
- * {@code GeneratorBinder} instantiates {@code @UuidGenerator} via a reflective {@code Member} that is {@code null} for a class-less dynamic entity.
+ * It exercises the writer end-to-end across a range of mapping constructs: {@code increment} id generation, JPA {@code AttributeConverter}s,
+ * single-table inheritance with a discriminator and a secondary join table, joined inheritance, {@code many-to-one}/{@code one-to-many} associations,
+ * and a composite id. Because facade mode maps a real generated class, {@code uuid} (and other class-dependent) id generation also works here, unlike
+ * class-less MAP mode where Hibernate 7.4.8's {@code GeneratorBinder} cannot instantiate {@code @UuidGenerator}.
  */
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 public class DerbyOrmXmlMappingBootTest {

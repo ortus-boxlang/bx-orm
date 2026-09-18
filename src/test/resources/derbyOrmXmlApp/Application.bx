@@ -15,8 +15,6 @@ class {
 		"dialect"          : "Derby",
 		"entityPaths"      : [ "/root/models" ],
 		"saveMapping"      : "true",
-		// Exercise the modern Hibernate 7 mapping.xml writer (root <entity-mappings>) in CI, in facade (POJO) mode.
-		"ormXmlMapping"    : "true",
 		"dbcreate"         : "dropcreate",
 		"cacheprovider"    : "ConcurrentHashMap",
 		"ignoreParseErrors": true

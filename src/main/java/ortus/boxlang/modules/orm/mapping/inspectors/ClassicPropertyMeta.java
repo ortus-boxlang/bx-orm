@@ -35,7 +35,7 @@ import ortus.boxlang.runtime.types.util.ListUtil;
  * A "Classic", aka traditional, implementation of the property metadata configuration.
  *
  * i.e. handles translating CFML property annotations like `sqltype="varchar"` into the IPropertyMeta interface for consistent reference by the
- * HibernateXMLWriter.
+ * MappingXMLWriter.
  *
  * @since 1.0.0
  */

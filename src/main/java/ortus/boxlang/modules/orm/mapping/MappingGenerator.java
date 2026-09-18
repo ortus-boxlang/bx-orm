@@ -85,12 +85,7 @@ public class MappingGenerator {
 	private static final String[]		ENTITY_EXTENSIONS			= { ".bx", ".cfc" };
 
 	/**
-	 * File extension for XML mapping files.
-	 */
-	private static final String			HBM_XML_EXT					= ".hbm.xml";
-
-	/**
-	 * File extension for the modern Hibernate 7 {@code mapping.xml} format (used when {@link ORMConfig#ormXmlMapping} is enabled).
+	 * File extension for the modern Hibernate 7 {@code mapping.xml} format, the only mapping format the module emits.
 	 */
 	private static final String			ORM_XML_EXT					= ".orm.xml";
 
@@ -576,7 +571,7 @@ public class MappingGenerator {
 	/**
 	 * Generate the XML mapping for the given entity metadata.
 	 * <p>
-	 * Calls the HibernateXMLWriter to generate the XML mapping, then wraps it with a bit of pre and post XML to close out the file.
+	 * Calls the MappingXMLWriter to generate the modern Hibernate 7 {@code mapping.xml}, then serializes the document to a string.
 	 *
 	 * @param entity The EntityRecord instance.
 	 *
@@ -585,9 +580,8 @@ public class MappingGenerator {
 	 */
 	private String generateXML( EntityRecord entity ) {
 		try {
-			Document			doc			= this.config.ormXmlMapping
-			    ? new MappingXMLWriter( entity.getEntityMeta(), this::entityLookup, this.config, rootInheritanceStrategy( entity ) ).generateXML()
-			    : new HibernateXMLWriter( entity.getEntityMeta(), this::entityLookup, this.config ).generateXML();
+			Document			doc			= new MappingXMLWriter( entity.getEntityMeta(), this::entityLookup, this.config, rootInheritanceStrategy( entity ) )
+			    .generateXML();
 
 			TransformerFactory	tf			= TransformerFactory.newInstance();
 			Transformer			transformer	= tf.newTransformer();
@@ -675,11 +669,10 @@ public class MappingGenerator {
 		} catch ( IOException e ) {
 			throw new BoxRuntimeException( "Failed to resolve real path for entity: " + name + ". Meta path: " + path, e );
 		}
-		String	fileExt		= path.substring( path.lastIndexOf( '.' ) );
-		String	mappingExt	= this.config.ormXmlMapping ? MappingGenerator.ORM_XML_EXT : MappingGenerator.HBM_XML_EXT;
+		String fileExt = path.substring( path.lastIndexOf( '.' ) );
 		return this.saveAlongsideEntity
-		    ? Path.of( path.replace( fileExt, mappingExt ) )
-		    : Path.of( this.saveDirectory, name + mappingExt );
+		    ? Path.of( path.replace( fileExt, MappingGenerator.ORM_XML_EXT ) )
+		    : Path.of( this.saveDirectory, name + MappingGenerator.ORM_XML_EXT );
 	}
 
 	/**

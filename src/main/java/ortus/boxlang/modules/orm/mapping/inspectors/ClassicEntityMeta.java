@@ -31,7 +31,7 @@ import ortus.boxlang.runtime.types.Struct;
  * A "Class", aka traditional, implementation of the entity metadata configuration.
  *
  * i.e. handles translating traditional CFML component annotations like `persistent="true"` into the IPropertyMeta interface for consistent reference
- * by the HibernateXMLWriter.
+ * by the MappingXMLWriter.
  *
  * @since 1.0.0
  */

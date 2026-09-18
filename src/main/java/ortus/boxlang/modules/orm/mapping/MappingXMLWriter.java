@@ -44,14 +44,14 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  * Generate a Hibernate 7 <em>modern</em> mapping document (root {@code <entity-mappings>} in namespace
  * {@code http://www.hibernate.org/xsd/orm/mapping}, version {@code 7.0}) for a given {@link IEntityMeta} instance.
  * <p>
- * This is the Hibernate-8-ready alternative to {@link HibernateXMLWriter}, which emits the legacy {@code hbm.xml} DTD format
- * (deprecated-for-removal in Hibernate). This writer traverses the exact same normalized {@link IEntityMeta}/{@link IPropertyMeta}
- * metadata; only the emitted XML shape differs. The BoxLang-facing behavior of the ORM is identical.
+ * This is the only mapping writer the module emits (the legacy {@code hbm.xml} DTD writer was removed; {@code hbm.xml} is
+ * deprecated-for-removal in Hibernate). It traverses the normalized {@link IEntityMeta}/{@link IPropertyMeta} metadata and
+ * emits the modern format.
  * <p>
- * Because BoxLang entities are dynamic (MAP) models with no backing Java class, each entity is emitted as
- * {@code <entity name="Foo" metadata-complete="true">} with NO {@code class} attribute. Attribute Java types are given via a
- * {@code <type value="..."/>} basic-type element (mirroring the legacy {@code type="..."} attribute) and JPA
- * {@code AttributeConverter}s via {@code <convert converter="FQCN"/>}.
+ * In the default facade (POJO) representation each entity is emitted as {@code <entity name="Foo" class="...FooFacade">},
+ * mapping the generated real facade class. In MAP mode the entity is class-less: {@code <entity name="Foo"
+ * metadata-complete="true">} with NO {@code class} attribute. Attribute Java types are given via a {@code <type value="..."/>}
+ * basic-type element and JPA {@code AttributeConverter}s via {@code <convert converter="FQCN"/>}.
  *
  * @since 1.5.0
  */
@@ -66,6 +66,71 @@ public class MappingXMLWriter {
 	 * The mapping format version emitted (required, fixed at 7.0 by the XSD).
 	 */
 	public static final String				ORM_VERSION		= "7.0";
+
+	/**
+	 * Set of SQL reserved words (any SQL dialect) that need to be escaped when used in identifiers.
+	 */
+	private static final Set<String>		RESERVED_WORDS	= Set.of( "absolute", "access", "accessible", "action", "add", "after", "alias",
+	    "all", "allocate", "allow", "alter", "analyze", "and", "any", "application", "are", "array", "as", "asc",
+	    "asensitive", "assertion", "associate", "asutime", "asymmetric", "at", "atomic", "audit", "authorization", "aux",
+	    "auxiliary", "avg", "backup", "before", "begin", "between", "bigint", "binary", "bit", "bit_length", "blob",
+	    "boolean", "both", "breadth", "break", "browse", "bufferpool", "bulk", "by", "cache", "call", "called", "capture",
+	    "cardinality", "cascade", "cascaded", "case", "cast", "catalog", "ccsid", "change", "char", "char_length",
+	    "character", "character_length", "check", "checkpoint", "clob", "close", "cluster", "clustered", "coalesce",
+	    "collate", "collation", "collection", "collid", "column", "comment", "commit", "compress", "compute", "concat",
+	    "condition", "connect", "connection", "constraint", "constraints", "constructor", "contains", "containstable",
+	    "continue", "convert", "corresponding", "count", "count_big", "create", "cross", "cube", "current", "current_date",
+	    "current_default_transform_group", "current_lc_ctype", "current_path", "current_role", "current_server",
+	    "current_time", "current_timestamp", "current_timezone", "current_transform_group_for_type", "current_user", "cursor",
+	    "cycle", "data", "database", "databases", "date", "day", "day_hour", "day_microsecond", "day_minute", "day_second",
+	    "days", "db2general", "db2genrl", "db2sql", "dbcc", "dbinfo", "deallocate", "dec", "decimal", "declare", "default",
+	    "defaults", "deferrable", "deferred", "delayed", "delete", "deny", "depth", "deref", "desc", "describe", "descriptor",
+	    "deterministic", "diagnostics", "disallow", "disconnect", "disk", "distinct", "distinctrow", "distributed", "div",
+	    "do", "domain", "double", "drop", "dsnhattr", "dssize", "dual", "dummy", "dump", "dynamic", "each", "editproc",
+	    "else", "elseif", "enclosed", "encoding", "end", "end-exec", "end-exec1", "endexec", "equals", "erase", "errlvl",
+	    "escape", "escaped", "except", "exception", "excluding", "exclusive", "exec", "execute", "exists", "exit", "explain",
+	    "external", "extract", "false", "fenced", "fetch", "fieldproc", "file", "fillfactor", "filter", "final", "first",
+	    "float", "float4", "float8", "for", "force", "foreign", "found", "free", "freetext", "freetexttable", "from", "full",
+	    "fulltext", "function", "general", "generated", "get", "get_current_connection", "global", "go", "goto", "grant",
+	    "graphic", "group", "grouping", "handler", "having", "high_priority", "hold", "holdlock", "hour", "hour_microsecond",
+	    "hour_minute", "hour_second", "hours", "identified", "identity", "identity_insert", "identitycol", "if", "ignore",
+	    "immediate", "in", "including", "increment", "index", "indicator", "infile", "inherit", "initial", "initially",
+	    "inner", "inout", "input", "insensitive", "insert", "int", "int1", "int2", "int3", "int4", "int8", "integer",
+	    "integrity", "intersect", "interval", "into", "is", "isobid", "isolation", "iterate", "jar", "java", "join", "key",
+	    "keys", "kill", "language", "large", "last", "lateral", "leading", "leave", "left", "level", "like", "limit",
+	    "linear", "lineno", "lines", "linktype", "load", "local", "locale", "localtime", "localtimestamp", "locator",
+	    "locators", "lock", "lockmax", "locksize", "long", "longblob", "longint", "longtext", "loop", "low_priority", "lower",
+	    "ltrim", "map", "master_ssl_verify_server_cert", "match", "max", "maxextents", "maxvalue", "mediumblob", "mediumint",
+	    "mediumtext", "method", "microsecond", "microseconds", "middleint", "min", "minus", "minute", "minute_microsecond",
+	    "minute_second", "minutes", "minvalue", "mlslabel", "mod", "mode", "modifies", "modify", "module", "month", "months",
+	    "names", "national", "natural", "nchar", "nclob", "new", "new_table", "next", "no", "no_write_to_binlog", "noaudit",
+	    "nocache", "nocheck", "nocompress", "nocycle", "nodename", "nodenumber", "nomaxvalue", "nominvalue", "nonclustered",
+	    "none", "noorder", "not", "nowait", "null", "nullif", "nulls", "number", "numeric", "numparts", "nvarchar", "obid",
+	    "object", "octet_length", "of", "off", "offline", "offsets", "old", "old_table", "on", "online", "only", "open",
+	    "opendatasource", "openquery", "openrowset", "openxml", "optimization", "optimize", "option", "optionally", "or",
+	    "order", "ordinality", "out", "outer", "outfile", "output", "over", "overlaps", "overriding", "package", "pad",
+	    "parameter", "part", "partial", "partition", "path", "pctfree", "percent", "piecesize", "plan", "position",
+	    "precision", "prepare", "preserve", "primary", "print", "prior", "priqty", "privileges", "proc", "procedure",
+	    "program", "psid", "public", "purge", "queryno", "raiserror", "range", "raw", "read", "read_write", "reads",
+	    "readtext", "real", "reconfigure", "recovery", "recursive", "ref", "references", "referencing", "regexp", "relative",
+	    "release", "rename", "repeat", "replace", "replication", "require", "resignal", "resource", "restart", "restore",
+	    "restrict", "result", "result_set_locator", "return", "returns", "revoke", "right", "rlike", "role", "rollback",
+	    "rollup", "routine", "row", "rowcount", "rowguidcol", "rowid", "rownum", "rows", "rrn", "rtrim", "rule", "run",
+	    "runtimestatistics", "save", "savepoint", "schema", "schemas", "scope", "scratchpad", "scroll", "search", "second",
+	    "second_microsecond", "seconds", "secqty", "section", "security", "select", "sensitive", "separator", "session",
+	    "session_user", "set", "sets", "setuser", "share", "show", "shutdown", "signal", "similar", "simple", "size",
+	    "smallint", "some", "source", "space", "spatial", "specific", "specifictype", "sql", "sql_big_result",
+	    "sql_calc_found_rows", "sql_small_result", "sqlcode", "sqlerror", "sqlexception", "sqlid", "sqlstate", "sqlwarning",
+	    "ssl", "standard", "start", "starting", "state", "static", "statistics", "stay", "stogroup", "stores",
+	    "straight_join", "style", "subpages", "substr", "substring", "successful", "sum", "symmetric", "synonym", "sysdate",
+	    "sysfun", "sysibm", "sysproc", "system", "system_user", "table", "tablespace", "temporary", "terminated", "textsize",
+	    "then", "time", "timestamp", "timezone_hour", "timezone_minute", "tinyblob", "tinyint", "tinytext", "to", "top",
+	    "trailing", "tran", "transaction", "translate", "translation", "treat", "trigger", "trim", "true", "truncate",
+	    "tsequal", "type", "uid", "under", "undo", "union", "unique", "unknown", "unlock", "unnest", "unsigned", "until",
+	    "update", "updatetext", "upper", "usage", "use", "user", "using", "utc_date", "utc_time", "utc_timestamp", "validate",
+	    "validproc", "value", "values", "varbinary", "varchar", "varchar2", "varcharacter", "variable", "variant", "varying",
+	    "vcat", "view", "volumes", "waitfor", "when", "whenever", "where", "while", "window", "with", "within", "without",
+	    "wlm", "work", "write", "writetext", "xor", "year", "year_month", "zerofill", "zone", "rank" );
 
 	private static final BoxRuntime			runtime			= BoxRuntime.getInstance();
 
@@ -228,17 +293,17 @@ public class MappingXMLWriter {
 			appendTableElement( entityElement );
 			if ( joinColumn != null ) {
 				Element pkjc = createEl( "primary-key-join-column" );
-				pkjc.setAttribute( "name", HibernateXMLWriter.escapeReservedWords( joinColumn ) );
+				pkjc.setAttribute( "name", escapeReservedWords( joinColumn ) );
 				entityElement.appendChild( pkjc );
 			}
 		} else if ( hasSeparateTable ) {
 			// Discriminated single-table subclass whose extra columns live in a separate join table -> JPA @SecondaryTable.
 			this.secondaryTableName = entity.getTableName();
 			Element secondary = createEl( "secondary-table" );
-			secondary.setAttribute( "name", HibernateXMLWriter.escapeReservedWords( this.secondaryTableName ) );
+			secondary.setAttribute( "name", escapeReservedWords( this.secondaryTableName ) );
 			if ( joinColumn != null ) {
 				Element pkjc = createEl( "primary-key-join-column" );
-				pkjc.setAttribute( "name", HibernateXMLWriter.escapeReservedWords( joinColumn ) );
+				pkjc.setAttribute( "name", escapeReservedWords( joinColumn ) );
 				secondary.appendChild( pkjc );
 			}
 			entityElement.appendChild( secondary );
@@ -272,7 +337,7 @@ public class MappingXMLWriter {
 			appendTextElement( entityElement, "batch-size", StringCaster.cast( entity.getBatchSize() ) );
 		}
 
-		// 7. lazy - mirror HibernateXMLWriter: subclasses are always lazy=true; root/simple entities only declare lazy when they are lazy (otherwise
+		// 7. lazy - subclasses are always lazy=true; root/simple entities only declare lazy when they are lazy (otherwise
 		// Hibernate's own default applies, exactly as the HBM writer relies on).
 		if ( isSubclass || entity.isLazy() ) {
 			appendTextElement( entityElement, "lazy", "true" );
@@ -361,7 +426,7 @@ public class MappingXMLWriter {
 			return;
 		}
 		Element tableEl = createEl( "table" );
-		tableEl.setAttribute( "name", HibernateXMLWriter.escapeReservedWords( tableName ) );
+		tableEl.setAttribute( "name", escapeReservedWords( tableName ) );
 		if ( entity.getSchema() != null ) {
 			tableEl.setAttribute( "schema", entity.getSchema() );
 		}
@@ -427,8 +492,26 @@ public class MappingXMLWriter {
 				// Application-assigned identifier: no @GeneratedValue in JPA (the id is set by the application).
 			}
 			case "uuid", "uuid2", "guid" -> {
-				// A standalone @UuidGenerator (does not rely on @GeneratedValue), which is NPE-safe for dynamic entities.
-				idNode.appendChild( createEl( "uuid-generator" ) );
+				if ( this.ormConfig.entityFacades ) {
+					// Facade (POJO) mode: the entity is a real class with a concrete String id, so use the legacy string UUID
+					// generator (Hibernate's `uuid` = UUIDHexGenerator, a 32-char hex String). Emitting @UuidGenerator here
+					// (`<uuid-generator/>`) instead forces a java.util.UUID identifier JdbcType, which round-trips through HQL but
+					// makes a primary-key load (session.get / byId) bind the id as a UUID and miss the VARCHAR id column. The
+					// real facade class lets Hibernate's id-generator resolver dereference the generic-generator strategy.
+					String	generatorName	= entity.getEntityName() + "_" + prop.getName() + "_generator";
+					Element	generatedValue	= createEl( "generated-value" );
+					generatedValue.setAttribute( "generator", generatorName );
+					idNode.appendChild( generatedValue );
+
+					Element genericGenerator = createEl( "generic-generator" );
+					genericGenerator.setAttribute( "name", generatorName );
+					genericGenerator.setAttribute( "class", "uuid" );
+					idNode.appendChild( genericGenerator );
+				} else {
+					// MAP (class-less) mode: a standalone @UuidGenerator (does not rely on @GeneratedValue), which is NPE-safe
+					// for a dynamic entity that has no reflective id member.
+					idNode.appendChild( createEl( "uuid-generator" ) );
+				}
 			}
 			case "increment" -> {
 				// The one legacy strategy with an NPE-safe fast path in IdGeneratorResolverSecondPass (matched by the literal generator name).
@@ -504,7 +587,7 @@ public class MappingXMLWriter {
 		// byte[] ("binary") cannot be expressed as a dynamic (MAP) model attribute in the modern format: it has no SimpleTypeInterpretation <target>, and a
 		// <java-type> descriptor resolves to byte[] whose ClassDetails ("[B") is not registered. Skip it (no models exercise a binary field functionally).
 		// TODO: Revisit if Hibernate registers primitive-array ClassDetails or adds a byte[] target interpretation for dynamic models.
-		if ( prop.getFormula() == null && "binary".equals( HibernateXMLWriter.toHibernateType( prop.getORMType() ) ) ) {
+		if ( prop.getFormula() == null && "binary".equals( toHibernateType( prop.getORMType() ) ) ) {
 			logger.warn(
 			    "ORM mapping.xml writer: binary (byte[]) property [{}] on entity [{}] cannot be mapped for a dynamic entity in the modern format and was skipped.",
 			    prop.getName(), entity.getEntityName() );
@@ -543,7 +626,7 @@ public class MappingXMLWriter {
 	 * @param allowConvert Whether a {@code <convert>} is permitted (true for basic; ids in our models are never converted).
 	 */
 	private void appendBasicType( Element theNode, IPropertyMeta prop, boolean allowConvert ) {
-		String	normalizedType	= HibernateXMLWriter.toHibernateType( prop.getORMType() );
+		String	normalizedType	= toHibernateType( prop.getORMType() );
 		String	converterFQCN	= allowConvert ? converterFor( normalizedType ) : null;
 		if ( converterFQCN != null ) {
 			Element convertEl = createEl( "convert" );
@@ -636,7 +719,7 @@ public class MappingXMLWriter {
 		}
 		if ( data.containsKey( Key._name ) ) {
 			Element theNode = createEl( "discriminator-column" );
-			theNode.setAttribute( "name", HibernateXMLWriter.escapeReservedWords( data.getAsString( Key._name ) ) );
+			theNode.setAttribute( "name", escapeReservedWords( data.getAsString( Key._name ) ) );
 			if ( data.containsKey( Key.type ) && data.get( Key.type ) != null ) {
 				theNode.setAttribute( "discriminator-type", data.getAsString( Key.type ).trim().toUpperCase() );
 			}
@@ -712,7 +795,7 @@ public class MappingXMLWriter {
 	 */
 	private Element buildJoinColumn( String columnName, IStruct association ) {
 		Element joinColumn = createEl( "join-column" );
-		joinColumn.setAttribute( "name", HibernateXMLWriter.escapeReservedWords( columnName ) );
+		joinColumn.setAttribute( "name", escapeReservedWords( columnName ) );
 		if ( association.containsKey( ORMKeys.nullable ) ) {
 			joinColumn.setAttribute( "nullable", trueFalse( association.getAsBoolean( ORMKeys.nullable ) ) );
 		}
@@ -723,7 +806,7 @@ public class MappingXMLWriter {
 			joinColumn.setAttribute( "updatable", trueFalse( association.getAsBoolean( ORMKeys.updateable ) ) );
 		}
 		if ( this.secondaryTableName != null ) {
-			joinColumn.setAttribute( "table", HibernateXMLWriter.escapeReservedWords( this.secondaryTableName ) );
+			joinColumn.setAttribute( "table", escapeReservedWords( this.secondaryTableName ) );
 		}
 		return joinColumn;
 	}
@@ -789,19 +872,19 @@ public class MappingXMLWriter {
 			// Owning many-to-many: <join-table> with join-column (key) + inverse-join-column.
 			Element joinTable = createEl( "join-table" );
 			if ( association.containsKey( ORMKeys.table ) && association.getAsString( ORMKeys.table ) != null ) {
-				joinTable.setAttribute( "name", HibernateXMLWriter.escapeReservedWords( association.getAsString( ORMKeys.table ) ) );
+				joinTable.setAttribute( "name", escapeReservedWords( association.getAsString( ORMKeys.table ) ) );
 			}
 			if ( association.containsKey( Key.column ) && association.getAsString( Key.column ) != null ) {
 				for ( String col : association.getAsString( Key.column ).split( "," ) ) {
 					Element jc = createEl( "join-column" );
-					jc.setAttribute( "name", HibernateXMLWriter.escapeReservedWords( col.trim() ) );
+					jc.setAttribute( "name", escapeReservedWords( col.trim() ) );
 					joinTable.appendChild( jc );
 				}
 			}
 			if ( association.containsKey( ORMKeys.inverseJoinColumn ) && association.getAsString( ORMKeys.inverseJoinColumn ) != null ) {
 				for ( String col : association.getAsString( ORMKeys.inverseJoinColumn ).split( "," ) ) {
 					Element ijc = createEl( "inverse-join-column" );
-					ijc.setAttribute( "name", HibernateXMLWriter.escapeReservedWords( col.trim() ) );
+					ijc.setAttribute( "name", escapeReservedWords( col.trim() ) );
 					joinTable.appendChild( ijc );
 				}
 			}
@@ -810,7 +893,7 @@ public class MappingXMLWriter {
 			// Owning one-to-many: FK join-column(s).
 			for ( String col : association.getAsString( Key.column ).split( "," ) ) {
 				Element jc = createEl( "join-column" );
-				jc.setAttribute( "name", HibernateXMLWriter.escapeReservedWords( col.trim() ) );
+				jc.setAttribute( "name", escapeReservedWords( col.trim() ) );
 				theNode.appendChild( jc );
 			}
 		}
@@ -963,7 +1046,7 @@ public class MappingXMLWriter {
 
 		String	name	= columnName != null ? columnName : columnInfo.getAsString( Key._name );
 		if ( name != null && !name.isBlank() ) {
-			theNode.setAttribute( "name", HibernateXMLWriter.escapeReservedWords( name ) );
+			theNode.setAttribute( "name", escapeReservedWords( name ) );
 		}
 		if ( columnInfo.containsKey( ORMKeys.nullable ) ) {
 			theNode.setAttribute( "nullable", trueFalse( columnInfo.getAsBoolean( ORMKeys.nullable ) ) );
@@ -991,7 +1074,7 @@ public class MappingXMLWriter {
 		}
 		// Secondary-table tagging for join-table columns.
 		if ( this.secondaryTableName != null ) {
-			theNode.setAttribute( "table", HibernateXMLWriter.escapeReservedWords( this.secondaryTableName ) );
+			theNode.setAttribute( "table", escapeReservedWords( this.secondaryTableName ) );
 		}
 		// <default> is a child element in the modern format.
 		if ( columnInfo.containsKey( Key._DEFAULT ) && columnInfo.get( Key._DEFAULT ) != null ) {
@@ -1022,7 +1105,7 @@ public class MappingXMLWriter {
 	}
 
 	/**
-	 * Look up an entity by class name and return its resolved entity name (mirrors HibernateXMLWriter.setEntityName).
+	 * Look up an entity by class name and return its resolved entity name.
 	 */
 	private String resolveEntityName( String relationClassName, IPropertyMeta prop ) {
 		if ( relationClassName == null || relationClassName.isBlank() ) {
@@ -1066,7 +1149,7 @@ public class MappingXMLWriter {
 	/**
 	 * Return the FQCN of the JPA AttributeConverter for the given normalized Hibernate type, or null if the type is not converted.
 	 * <p>
-	 * Mirrors {@link HibernateXMLWriter#toConverterType(String)} but returns just the converter class name (no {@code converted::} prefix).
+	 * Returns the JPA {@code AttributeConverter} class name for a normalized type (no {@code converted::} prefix), or {@code null} when none applies.
 	 */
 	protected String converterFor( String normalizedType ) {
 		return switch ( normalizedType ) {
@@ -1082,6 +1165,56 @@ public class MappingXMLWriter {
 			case "bigdecimal" -> "ortus.boxlang.modules.orm.hibernate.converters.BigDecimalConverter";
 			case "string" -> "ortus.boxlang.modules.orm.hibernate.converters.StringConverter";
 			default -> null;
+		};
+	}
+
+	/**
+	 * Escape SQL reserved words in a table or column name.
+	 *
+	 * @param value The table or column name to escape.
+	 *
+	 * @return The value quoted in backticks if it is a reserved word, otherwise unchanged.
+	 */
+	public static String escapeReservedWords( String value ) {
+		if ( value == null || value.isBlank() ) {
+			return value;
+		}
+		if ( RESERVED_WORDS.contains( value.toLowerCase() ) ) {
+			return "`" + value + "`";
+		}
+		return value;
+	}
+
+	/**
+	 * Caster to convert a property {@code ormType} field value to a Hibernate type.
+	 *
+	 * @param propertyType Property type, like {@code datetime} or {@code string}.
+	 *
+	 * @return The Hibernate-safe type, like {@code timestamp} or {@code string}.
+	 */
+	public static String toHibernateType( String propertyType ) {
+		// basic normalization
+		propertyType	= propertyType.trim().toLowerCase();
+		// grab "varchar" from "varchar(50)"
+		propertyType	= propertyType.replaceAll( "\\(.+\\)", "" );
+		// grab "biginteger" from "java.math.biginteger", etc.
+		propertyType	= propertyType.substring( propertyType.lastIndexOf( "." ) + 1 );
+
+		return switch ( propertyType ) {
+			case "blob", "byte[]" -> "binary";
+			case "bit", "bool" -> "boolean";
+			case "tinyint", "tinyinteger" -> "short";
+			case "yes-no", "yesno", "yes_no" -> "yes_no";
+			case "true-false", "truefalse", "true_false" -> "true_false";
+			case "big-decimal", "big_decimal" -> "bigdecimal";
+			case "big-integer", "bigint", "big_integer" -> "biginteger";
+			case "int" -> "integer";
+			case "numeric", "number", "decimal" -> "double";
+			case "eurodate", "usdate", "date", "datetime" -> "timestamp";
+			case "char", "nchar" -> "character";
+			case "varchar", "nvarchar" -> "string";
+			case "clob" -> "text";
+			default -> propertyType;
 		};
 	}
 }

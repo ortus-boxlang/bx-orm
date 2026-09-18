@@ -78,11 +78,25 @@ public class BoxFacadeInstantiator implements EntityInstantiator {
 
 	@Override
 	public boolean isInstance( Object object ) {
+		// A facade of this entity - or, via Java inheritance, a subclass facade - is directly an instance. This is what
+		// Hibernate checks when it finds a managed facade in the persistence context (e.g. during session.get after a save):
+		// the delegate compares the unwrapped BoxLang instance's entity name ("Thing") against this instantiator's Hibernate
+		// entity-name, which in the modern mapping.xml format is the facade FQN, so that name comparison alone would (wrongly)
+		// reject the managed facade. The real class check is exact and cheap.
+		if ( facadeClass.isInstance( object ) ) {
+			return true;
+		}
+		// A raw BoxLang instance (never a facade): let the MAP delegate compare by BoxLang entity name.
 		return delegate.isInstance( FacadeSupport.unwrapIfFacade( object ) );
 	}
 
 	@Override
 	public boolean isSameClass( Object object ) {
+		// The facade's exact class identifies the entity in facade mode (subclass facades are distinct classes), so a same-class
+		// check is a direct class-equality test; fall back to the delegate for a raw BoxLang instance.
+		if ( object != null && object.getClass() == facadeClass ) {
+			return true;
+		}
 		return delegate.isSameClass( FacadeSupport.unwrapIfFacade( object ) );
 	}
 }

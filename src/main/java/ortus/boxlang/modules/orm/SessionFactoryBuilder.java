@@ -203,24 +203,17 @@ public class SessionFactoryBuilder {
 		// Collect XML mapping files and add them to the Hibernate configuration.
 		// The modern mapping.xml format resolves a dynamic entity's <extends> superclass eagerly (Hibernate registers each dynamic class as its file is
 		// processed and does NOT defer the lookup), so a subclass file must be added AFTER its parent's file. We therefore order the files by inheritance
-		// depth (roots first). The legacy HBM format is order-independent, so this ordering is harmless for it too.
+		// depth (roots first).
 		List<EntityRecord> ordered = entityMap.values()
 		    .stream()
 		    .sorted( java.util.Comparator.comparingInt( e -> mappingRank( e, entityMap ) ) )
 		    .toList();
 
-		if ( ormConfig.ormXmlMapping ) {
-			// The modern mapping.xml format needs every dynamic (class-less) entity definition processed as one coherent unit: when entities live in
-			// separate files, Hibernate can stub an as-yet-undefined entity referenced by an association (or a subclass), leaving it without its
-			// superclass or id member and breaking inheritance/id-generation. Merge all per-entity <entity> elements (parent-first) into a single
-			// <entity-mappings> document and hand Hibernate that one file.
-			configuration.addFile( buildCombinedMappingFile( ordered ) );
-		} else {
-			ordered.stream()
-			    .map( EntityRecord::getXmlFilePath )
-			    .map( Path::toString )
-			    .forEach( configuration::addFile );
-		}
+		// The modern mapping.xml format needs every dynamic (class-less) entity definition processed as one coherent unit: when entities live in
+		// separate files, Hibernate can stub an as-yet-undefined entity referenced by an association (or a subclass), leaving it without its
+		// superclass or id member and breaking inheritance/id-generation. Merge all per-entity <entity> elements (parent-first) into a single
+		// <entity-mappings> document and hand Hibernate that one file.
+		configuration.addFile( buildCombinedMappingFile( ordered ) );
 
 		configuration.addProperties( properties );
 

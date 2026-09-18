@@ -21,7 +21,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 
-import ortus.boxlang.modules.orm.mapping.HibernateXMLWriter;
+import ortus.boxlang.modules.orm.mapping.MappingXMLWriter;
 
 /**
  * Deterministic naming and id-type resolution for generated entity facades.
@@ -123,7 +123,7 @@ public final class EntityFacadeNaming {
 		if ( ormType == null || ormType.isBlank() ) {
 			return String.class;
 		}
-		return switch ( HibernateXMLWriter.toHibernateType( ormType ) ) {
+		return switch ( MappingXMLWriter.toHibernateType( ormType ) ) {
 			case "string", "text" -> String.class;
 			case "character" -> Character.class;
 			case "boolean", "yes_no", "true_false" -> Boolean.class;
