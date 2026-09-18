@@ -71,7 +71,7 @@ public class MappingGeneratorTest {
 	@Test
 	public void testGenerateMapping() {
 		// check XML modification time BEFORE generating mappings
-		File				entityXMLFilePath				= Path.of( "src/test/resources/app/models/Manufacturer.hbm.xml" ).toFile();
+		File				entityXMLFilePath				= Path.of( "src/test/resources/app/models/Manufacturer.orm.xml" ).toFile();
 		long				preGenerateXMLModificationTime	= entityXMLFilePath.lastModified();
 
 		// Generate mappings
@@ -120,7 +120,7 @@ public class MappingGeneratorTest {
 		    ),
 		    context.getRequestContext()
 		);
-		File				entityXMLFilePath				= Path.of( "src/test/resources/app/models/Manufacturer.hbm.xml" ).toFile();
+		File				entityXMLFilePath				= Path.of( "src/test/resources/app/models/Manufacturer.orm.xml" ).toFile();
 		long				preGenerateXMLModificationTime	= entityXMLFilePath.lastModified();
 
 		MappingGenerator	generator						= new MappingGenerator( context.getRequestContext(), testORMConfig );
@@ -148,7 +148,7 @@ public class MappingGeneratorTest {
 		    ),
 		    context.getRequestContext()
 		);
-		File				entityXMLFilePath				= Path.of( "src/test/resources/app/models/Manufacturer.hbm.xml" ).toFile();
+		File				entityXMLFilePath				= Path.of( "src/test/resources/app/models/Manufacturer.orm.xml" ).toFile();
 		long				preGenerateXMLModificationTime	= entityXMLFilePath.lastModified();
 
 		MappingGenerator	generator						= new MappingGenerator( context.getRequestContext(), testORMConfig );

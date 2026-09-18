@@ -302,6 +302,12 @@ public class MappingXMLWriter {
 			this.secondaryTableName = entity.getTableName();
 			Element secondary = createEl( "secondary-table" );
 			secondary.setAttribute( "name", escapeReservedWords( this.secondaryTableName ) );
+			// owned="true" is REQUIRED for the discriminated subclass to manage (insert/update/delete) its own secondary
+			// table. Unlike the @SecondaryRow annotation (whose owned defaults to true), Hibernate's orm.xml binding leaves a
+			// <secondary-table> read-only when owned is omitted: the row is SELECTed (outer join) but never written, silently
+			// dropping the subclass's own columns/FKs on insert and skipping the secondary-row delete (FK violations on
+			// cascade). This is the modern-format equivalent of the classic hbm <join>, which Hibernate manages by default.
+			secondary.setAttribute( "owned", "true" );
 			if ( joinColumn != null ) {
 				Element pkjc = createEl( "primary-key-join-column" );
 				pkjc.setAttribute( "name", escapeReservedWords( joinColumn ) );
