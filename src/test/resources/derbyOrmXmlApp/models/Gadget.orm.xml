@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity metadata-complete="true" name="Gadget">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormderbyormxmltest.GadgetFacade" name="Gadget">
         <table name="gadgets"/>
         <batch-size>25</batch-size>
         <attributes>

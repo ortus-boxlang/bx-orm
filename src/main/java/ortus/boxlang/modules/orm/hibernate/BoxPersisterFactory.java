@@ -55,8 +55,8 @@ public class BoxPersisterFactory implements PersisterFactory, ServiceRegistryAwa
 	 * @param entityRecords The discovered BoxLang entities for this session factory, keyed by lower-cased entity name.
 	 * @param entityFacades Whether to use the POJO-facade representation (true) or the MAP representation (false).
 	 */
-	public BoxPersisterFactory( Map<String, EntityRecord> entityRecords, boolean entityFacades ) {
-		this.resolver = new BoxRepresentationResolver( entityRecords, entityFacades );
+	public BoxPersisterFactory( Map<String, EntityRecord> entityRecords, boolean entityFacades, String facadeNamespace ) {
+		this.resolver = new BoxRepresentationResolver( entityRecords, entityFacades, facadeNamespace );
 	}
 
 	@Override

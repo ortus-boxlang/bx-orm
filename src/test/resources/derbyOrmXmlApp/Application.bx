@@ -15,11 +15,8 @@ class {
 		"dialect"          : "Derby",
 		"entityPaths"      : [ "/root/models" ],
 		"saveMapping"      : "true",
-		// Exercise the modern Hibernate 7 mapping.xml writer (root <entity-mappings>) in CI.
+		// Exercise the modern Hibernate 7 mapping.xml writer (root <entity-mappings>) in CI, in facade (POJO) mode.
 		"ormXmlMapping"    : "true",
-		// The modern mapping.xml writer does not yet support POJO facades (Stage 5); keep this app on the class-less MAP
-		// representation so it keeps validating the mapping.xml writer while facades are the global default.
-		"entityFacades"    : "false",
 		"dbcreate"         : "dropcreate",
 		"cacheprovider"    : "ConcurrentHashMap",
 		"ignoreParseErrors": true

@@ -85,7 +85,7 @@ public class EntityNew extends BaseORMBIF {
 		// In MAP mode this is already the IClassRunnable, so unwrapIfFacade is a no-op.
 		IClassRunnable				entity				= ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade(
 		    sessionFactoryImpl.getMappingMetamodel()
-		        .getEntityDescriptor( entityRecord.getEntityName() )
+		        .getEntityDescriptor( ORMApp.hibernateEntityName( sessionFactoryImpl, entityRecord.getEntityName() ) )
 		        .getRepresentationStrategy()
 		        .getInstantiator()
 		        .instantiate()

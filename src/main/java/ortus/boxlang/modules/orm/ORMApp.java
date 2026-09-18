@@ -324,7 +324,7 @@ public class ORMApp {
 			}
 			Object			idFacade	= ( ( SessionFactoryImplementor ) session.getSessionFactory() )
 			    .getMappingMetamodel()
-			    .getEntityDescriptor( entityRecord.getEntityName() )
+			    .getEntityDescriptor( hibernateEntityName( session, entityRecord.getEntityName() ) )
 			    .getRepresentationStrategy()
 			    .getInstantiator()
 			    .instantiate();
@@ -351,7 +351,7 @@ public class ORMApp {
 		} else {
 			id = GenericCaster.cast( context, keyValue, keyClass.getSimpleName() );
 		}
-		var entity = session.get( entityRecord.getEntityName(), id );
+		var entity = session.get( hibernateEntityName( session, entityRecord.getEntityName() ), id );
 		if ( entity instanceof BoxProxy castProxy ) {
 			return castProxy.getRunnable();
 		} else {
@@ -492,7 +492,38 @@ public class ORMApp {
 	 */
 	public EntityPersister getEntityPersister( Session session, String entityName ) {
 		EntityRecord entityRecord = this.lookupEntity( entityName, true );
-		return ( ( SessionFactoryImplementor ) session.getSessionFactory() ).getMappingMetamodel().getEntityDescriptor( entityRecord.getEntityName() );
+		return ( ( SessionFactoryImplementor ) session.getSessionFactory() ).getMappingMetamodel()
+		    .getEntityDescriptor( hibernateEntityName( session, entityRecord.getEntityName() ) );
+	}
+
+	/**
+	 * Resolve the Hibernate entity-name for a BoxLang entity name, for calls into the Hibernate Session/metamodel APIs by
+	 * name. With the modern {@code mapping.xml} format a facade entity's Hibernate entity-name is its generated facade
+	 * class and the BoxLang name is only the JPA/HQL import; the legacy {@code hbm.xml} format and MAP mode keep the
+	 * BoxLang name. {@code getImportedName()} returns the correct entity-name for either writer (the input unchanged when
+	 * it is already the entity-name), so it is a no-op except in mapping.xml facade mode.
+	 *
+	 * @param sf         The session factory.
+	 * @param entityName The BoxLang entity name.
+	 *
+	 * @return The Hibernate entity-name.
+	 */
+	public static String hibernateEntityName( SessionFactoryImplementor sf, String entityName ) {
+		if ( entityName == null ) {
+			return null;
+		}
+		String imported = sf.getMappingMetamodel().getImportedName( entityName );
+		return imported != null ? imported : entityName;
+	}
+
+	/**
+	 * @param session    A Hibernate session.
+	 * @param entityName The BoxLang entity name.
+	 *
+	 * @return The Hibernate entity-name (see {@link #hibernateEntityName(SessionFactoryImplementor, String)}).
+	 */
+	public static String hibernateEntityName( Session session, String entityName ) {
+		return hibernateEntityName( ( SessionFactoryImplementor ) session.getSessionFactory(), entityName );
 	}
 
 	/**
@@ -525,7 +556,7 @@ public class ORMApp {
 			Object managed = facades
 			    ? ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( this.config.facadeNamespace, entityName, runnable )
 			    : value;
-			if ( session.contains( entityName, managed ) ) {
+			if ( session.contains( hibernateEntityName( session, entityName ), managed ) ) {
 				return managed;
 			}
 			Object id = getEntityPersister( session, entityName ).getIdentifier( managed, ( SharedSessionContractImplementor ) session );
@@ -549,7 +580,8 @@ public class ORMApp {
 	 * @return A managed reference assignable to the entity's mapped representation.
 	 */
 	private Object referenceFor( Session session, String entityName, Object id, boolean facades ) {
-		return facades ? session.get( entityName, id ) : session.getReference( entityName, id );
+		String hibernateName = hibernateEntityName( session, entityName );
+		return facades ? session.get( hibernateName, id ) : session.getReference( hibernateName, id );
 	}
 
 	/**

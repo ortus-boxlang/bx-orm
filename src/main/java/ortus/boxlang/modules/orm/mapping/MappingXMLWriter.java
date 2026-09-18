@@ -184,12 +184,20 @@ public class MappingXMLWriter {
 	public Element generateEntityElement() {
 		Element	entityElement	= createEl( "entity" );
 
-		// A BoxLang dynamic (MAP) entity: name + metadata-complete, NO class attribute.
+		// Entity identity depends on the representation mode. In facade (POJO) mode the entity is mapped to a real,
+		// per-application generated facade class, so emit its `class` (plus `name` as the JPA/entity name); the real class
+		// also lets Hibernate's id-generator resolver dereference a class name, unblocking uuid etc. In MAP mode the entity
+		// is class-less: name + metadata-complete, NO class attribute.
 		String	entityName		= entity.getEntityName();
 		if ( entityName != null && !entityName.isEmpty() ) {
 			entityElement.setAttribute( "name", entityName );
 		}
-		entityElement.setAttribute( "metadata-complete", "true" );
+		if ( this.ormConfig.entityFacades && entityName != null && !entityName.isEmpty() ) {
+			entityElement.setAttribute( "class",
+			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.facadeClassName( this.ormConfig.facadeNamespace, entityName ) );
+		} else {
+			entityElement.setAttribute( "metadata-complete", "true" );
+		}
 
 		boolean	isSubclass			= entity.isSubclass();
 		boolean	isDiscriminated		= isSubclass && entity.getDiscriminator().get( Key.value ) != null;
@@ -650,7 +658,7 @@ public class MappingXMLWriter {
 		theNode.setAttribute( "name", prop.getName() );
 
 		// target-entity holds the (dynamic) entity name.
-		String targetEntity = resolveEntityName( association.getAsString( Key._CLASS ), prop );
+		String targetEntity = associationTargetEntity( resolveEntityName( association.getAsString( Key._CLASS ), prop ) );
 		if ( targetEntity != null ) {
 			theNode.setAttribute( "target-entity", targetEntity );
 		}
@@ -730,7 +738,7 @@ public class MappingXMLWriter {
 
 		theNode.setAttribute( "name", prop.getName() );
 
-		String targetEntity = resolveEntityName( association.getAsString( Key._CLASS ), prop );
+		String targetEntity = associationTargetEntity( resolveEntityName( association.getAsString( Key._CLASS ), prop ) );
 		if ( targetEntity != null ) {
 			theNode.setAttribute( "target-entity", targetEntity );
 		}
@@ -995,6 +1003,22 @@ public class MappingXMLWriter {
 			}
 		}
 		return theNode;
+	}
+
+	/**
+	 * Resolve the value emitted as an association's {@code target-entity}. In facade mode the association targets the
+	 * target entity's per-application generated facade class (the real {@code @Entity}); in MAP mode it targets the
+	 * (dynamic) entity name.
+	 *
+	 * @param resolvedEntityName The target entity's resolved entity name, or {@code null}.
+	 *
+	 * @return The value to emit for {@code target-entity}, or {@code null} if the input was {@code null}.
+	 */
+	private String associationTargetEntity( String resolvedEntityName ) {
+		if ( resolvedEntityName == null || !this.ormConfig.entityFacades ) {
+			return resolvedEntityName;
+		}
+		return ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.facadeClassName( this.ormConfig.facadeNamespace, resolvedEntityName );
 	}
 
 	/**

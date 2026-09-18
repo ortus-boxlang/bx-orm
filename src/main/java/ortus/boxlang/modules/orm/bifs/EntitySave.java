@@ -71,18 +71,21 @@ public class EntitySave extends BaseORMBIF {
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		Boolean			forceInsert		= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
+		// The Hibernate entity-name a by-name Session call needs: the BoxLang name for hbm/MAP, the facade class for the
+		// modern mapping.xml facade representation. See ORMApp.hibernateEntityName.
+		String			hbName			= ORMApp.hibernateEntityName( session, entityName );
 
 		// Facade (POJO) mode: Hibernate manages the generated facade, not the IClassRunnable. Persist the facade (which
 		// delegates its state to - and writes generated ids straight back onto - the caller's BoxLang instance). The same
 		// instance always maps to the same facade via FacadeSupport's per-instance memoization.
 		if ( ormContext.getConfig().entityFacades ) {
 			Object facade = ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName, entity );
-			if ( session.contains( entityName, facade ) ) {
+			if ( session.contains( hbName, facade ) ) {
 				// Already managed: nothing to do; the flush will persist any changes.
-			} else if ( forceInsert || isTransient( session, entityName, facade ) ) {
-				session.persist( entityName, facade );
+			} else if ( forceInsert || isTransient( session, hbName, facade ) ) {
+				session.persist( hbName, facade );
 			} else {
-				Object											managed			= session.merge( entityName, facade );
+				Object											managed			= session.merge( hbName, facade );
 				ortus.boxlang.runtime.runnables.IClassRunnable	managedRunnable	= ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport
 				    .unwrap( managed );
 				if ( managedRunnable != null && managedRunnable != entity ) {
@@ -98,13 +101,13 @@ public class EntitySave extends BaseORMBIF {
 		// saveOrUpdate(), leaving persist() for new entities and merge() for detached ones. persist() attaches the passed
 		// instance directly (so it is already live), but merge() copies state into a separate managed instance and leaves the
 		// caller's object detached. To keep the old contract we copy the managed state back into the caller's instance.
-		if ( session.contains( entityName, entity ) ) {
+		if ( session.contains( hbName, entity ) ) {
 			// Already managed: nothing to do; the flush will persist any changes.
-		} else if ( forceInsert || isTransient( session, entityName, entity ) ) {
-			session.persist( entityName, entity );
+		} else if ( forceInsert || isTransient( session, hbName, entity ) ) {
+			session.persist( hbName, entity );
 		} else {
 			// Detached instance: merge returns the managed copy; copy its state back so the caller's object stays live.
-			Object managed = session.merge( entityName, entity );
+			Object managed = session.merge( hbName, entity );
 			if ( managed != entity && managed instanceof IClassRunnable managedEntity ) {
 				// BoxPropertySetter writes mapped properties to both the `this` and variables scopes, so sync both
 				// back onto the caller's detached instance. Otherwise generated identifiers or event-updated values
