@@ -299,6 +299,36 @@ public class FacadeAssociationBootTest {
 		assertThat( variables.get( Key.of( "hasPostRemove" ) ) ).isEqualTo( false );
 	}
 
+	@DisplayName( "It removes a to-many element whose id property name differs from the owner's (removeX by element identity)" )
+	@Test
+	public void testToManyRemoveDifferentIdName() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				fl = entityNew( "Fleet", { name : "FleetCo" } );
+				entitySave( fl );
+				tk = entityNew( "Truck", { model : "T1" } );
+				entitySave( tk );
+				fl.addTruck( tk );
+				entitySave( fl );
+				flId = fl.getFleetId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			loadedFleet   = entityLoadByPK( "Fleet", flId );
+			hasPreRemove2 = loadedFleet.hasTruck();
+			loadedFleet.getTrucks().each( ( t ) => {
+				loadedFleet.removeTruck( t );
+			} );
+			hasPostRemove2 = loadedFleet.hasTruck();
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( Key.of( "hasPreRemove2" ) ) ).isEqualTo( true );
+		assertThat( variables.get( Key.of( "hasPostRemove2" ) ) ).isEqualTo( false );
+	}
+
 	@DisplayName( "It removes a single to-many element via removeX in facade mode (removal sticks)" )
 	@Test
 	public void testToManyRemoveSingle() {

@@ -479,7 +479,6 @@ public class BoxClassInstantiator implements EntityInstantiator {
 		    methodName,
 		    ( context, function ) -> {
 			    boolean		isArrayCollection	= collectionType == "bag";
-			    List<Key>	keys				= this.identifierKeys;
 			    IClassRunnable itemToRemove		= ( IClassRunnable ) context.getArgumentsScope().get( collectionKey );
 			    VariablesScope variablesScope	= context.getThisClass().getVariablesScope();
 
@@ -496,25 +495,18 @@ public class BoxClassInstantiator implements EntityInstantiator {
 				    if ( collection instanceof PersistentBag bagCollection ) {
 					    bagCollection.remove( itemToRemove );
 				    } else {
-					    // Array (MAP mode) or FacadeCollectionView (facade mode); both are List<Object>.
+					    // Array (MAP mode) or FacadeCollectionView (facade mode); both are List<Object>. Remove the element the
+					    // developer passed by identity/equality. It comes from iterating this same association, so this matches it
+					    // regardless of the element's id property name (which is not necessarily the owning entity's - e.g. owner
+					    // id "id", element id "vin"). The FacadeCollectionView unwraps facades on compare, so an IClassRunnable
+					    // argument still matches its managed facade in the backing collection.
 					    List<Object> arrayCollection = ( List<Object> ) collection;
-					    arrayCollection.stream()
-					        .map( item -> ( IClassRunnable ) item )
-					        .filter( item -> {
-						        VariablesScope itemVariablesScope	= item.getVariablesScope();
-						        VariablesScope itemToRemoveVariablesScope = itemToRemove.getVariablesScope();
-						        for ( Key key : keys ) {
-							        if ( !itemVariablesScope.containsKey( key ) || !itemToRemoveVariablesScope.containsKey( key ) ) {
-								        return false;
-							        }
-							        if ( !itemVariablesScope.get( key ).equals( itemToRemoveVariablesScope.get( key ) ) ) {
-								        return false;
-							        }
-						        }
-						        return true;
-					        } )
-					        .findFirst()
-					        .ifPresent( arrayCollection::remove );
+					    if ( !arrayCollection.remove( itemToRemove ) ) {
+						    arrayCollection.stream()
+						        .filter( item -> item == itemToRemove || java.util.Objects.equals( item, itemToRemove ) )
+						        .findFirst()
+						        .ifPresent( arrayCollection::remove );
+					    }
 				    }
 			    } else {
 				    // @TODO: test this!
