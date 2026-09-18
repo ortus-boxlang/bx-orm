@@ -52,13 +52,18 @@ public class ORMGetSessionFactory extends BaseORMBIF {
 	 * @argument.datasource The name of the datasource to retrieve the SessionFactory for. If not specified, the Application's default datasource is used.
 	 */
 	public SessionFactory _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		String datasourceName = StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
-		if ( !datasourceName.isBlank() ) {
-			return this.ormService
-			    .getORMAppByContext( context )
-			    .getSessionFactoryOrThrow( Key.of( datasourceName ), context );
+		String								datasourceName	= StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
+		ortus.boxlang.modules.orm.ORMApp	ormApp			= this.ormService.getORMAppByContext( context );
+		SessionFactory						factory			= datasourceName.isBlank()
+		    ? ormApp.getDefaultSessionFactoryOrThrow()
+		    : ormApp.getSessionFactoryOrThrow( Key.of( datasourceName ), context );
+
+		// In facade (POJO) mode, hand the developer a facade-aware SessionFactory so BoxLang entity names work against its raw
+		// API and its getCache()/getMetamodel()/getMappingMetamodel(). In MAP mode the entity-name IS the BoxLang name.
+		if ( ormApp.getConfig().entityFacades ) {
+			return ortus.boxlang.modules.orm.hibernate.facade.FacadeAwareHibernate.wrap( factory );
 		}
-		return this.ormService.getORMAppByContext( context ).getDefaultSessionFactoryOrThrow();
+		return factory;
 	}
 
 }
