@@ -342,7 +342,14 @@ public class ORMConfig {
 	 * to MAP entities), while BoxLang developers still only ever handle the BoxLang class. Defaults to {@code false}: with
 	 * the flag off the representation is byte-for-byte the original MAP behavior.
 	 */
-	public boolean								entityFacades			= false;
+	public boolean								entityFacades			= true;
+
+	/**
+	 * Facade namespace for this ORM application: a sanitized, application-unique package segment under which this
+	 * application's generated entity facades live. Set once at startup so that two applications in the same JVM, each
+	 * mapping a same-named entity, generate distinct facade classes instead of colliding on one global name.
+	 */
+	public String								facadeNamespace			= "default";
 
 	/**
 	 * The instantiated naming strategy object.

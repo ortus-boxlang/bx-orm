@@ -46,14 +46,34 @@ public final class FacadeSupport {
 	 * Hidden variables-scope key under which an instance's facade is memoized. Not a mapped property, so Hibernate never
 	 * sees it.
 	 */
-	private static final Key					FACADE_KEY	= Key.of( "$bxORMFacade" );
+	private static final Key					FACADE_KEY		= Key.of( "$bxORMFacade" );
 
 	/**
-	 * Generated facade classes, keyed by lower-cased entity name. Populated at boot by the session factory builder.
+	 * Hidden variables-scope key under which an instance's facade namespace (its owning ORM application) is stamped, so
+	 * the wrap/unwrap layer can find the right application's facade class for a not-yet-wrapped instance. Not a mapped
+	 * property.
 	 */
-	private static final Map<String, Class<?>>	REGISTRY	= new ConcurrentHashMap<>();
+	private static final Key					NAMESPACE_KEY	= Key.of( "$bxORMNamespace" );
+
+	/**
+	 * Generated facade classes, keyed by {@code namespace|lower-cased-entity-name}. Populated at boot by the session
+	 * factory builder. The namespace segregates same-named entities across ORM applications sharing this JVM.
+	 */
+	private static final Map<String, Class<?>>	REGISTRY		= new ConcurrentHashMap<>();
 
 	private FacadeSupport() {
+	}
+
+	/**
+	 * Build the composite registry key for a facade: {@code namespace|lower-cased-entity-name}.
+	 *
+	 * @param namespace  The owning application's facade namespace.
+	 * @param entityName The BoxLang entity name.
+	 *
+	 * @return The composite registry key.
+	 */
+	private static String key( String namespace, String entityName ) {
+		return ( namespace == null ? "default" : namespace ) + "|" + entityName.toLowerCase().trim();
 	}
 
 	/**
@@ -68,31 +88,34 @@ public final class FacadeSupport {
 	}
 
 	/**
-	 * Register a generated facade class for an entity.
+	 * Register a generated facade class for an entity within an application's namespace.
 	 *
+	 * @param namespace   The owning application's facade namespace.
 	 * @param entityName  The BoxLang entity name.
 	 * @param facadeClass The generated facade class.
 	 */
-	public static void register( String entityName, Class<?> facadeClass ) {
-		REGISTRY.put( entityName.toLowerCase().trim(), facadeClass );
+	public static void register( String namespace, String entityName, Class<?> facadeClass ) {
+		REGISTRY.put( key( namespace, entityName ), facadeClass );
 	}
 
 	/**
+	 * @param namespace  The owning application's facade namespace.
 	 * @param entityName The BoxLang entity name.
 	 *
-	 * @return True if a facade class has been registered for the given entity name.
+	 * @return True if a facade class has been registered for the given namespace and entity name.
 	 */
-	public static boolean hasFacade( String entityName ) {
-		return REGISTRY.containsKey( entityName.toLowerCase().trim() );
+	public static boolean hasFacade( String namespace, String entityName ) {
+		return REGISTRY.containsKey( key( namespace, entityName ) );
 	}
 
 	/**
+	 * @param namespace  The owning application's facade namespace.
 	 * @param entityName The BoxLang entity name.
 	 *
 	 * @return The registered facade class, or null if none.
 	 */
-	public static Class<?> facadeClassFor( String entityName ) {
-		return REGISTRY.get( entityName.toLowerCase().trim() );
+	public static Class<?> facadeClassFor( String namespace, String entityName ) {
+		return REGISTRY.get( key( namespace, entityName ) );
 	}
 
 	/**
@@ -116,22 +139,49 @@ public final class FacadeSupport {
 	 * @return The facade wrapping the instance.
 	 */
 	public static Object wrapInstance( IClassRunnable instance ) {
-		return wrap( ortus.boxlang.modules.orm.ORMService.getEntityName( instance ), instance );
-	}
-
-	public static Object wrap( String entityName, IClassRunnable instance ) {
+		// A managed/created instance already carries its memoized facade, so it round-trips without a registry lookup. Only
+		// a not-yet-wrapped instance reaches the registry, and it must be resolved within its own application's namespace
+		// (stamped on the instance at creation), never by bare entity name - which could collide across applications.
 		Object existing = instance.getVariablesScope().get( FACADE_KEY );
 		if ( existing instanceof BoxEntityFacade ) {
 			return existing;
 		}
-		Class<?> facadeClass = facadeClassFor( entityName );
+		Object stamped = instance.getVariablesScope().get( NAMESPACE_KEY );
+		if ( ! ( stamped instanceof String namespace ) ) {
+			throw new BoxRuntimeException(
+			    "Cannot resolve the ORM application namespace for a facade of entity ["
+			        + ortus.boxlang.modules.orm.ORMService.getEntityName( instance ) + "]; the instance was not created through the ORM." );
+		}
+		return wrap( namespace, ortus.boxlang.modules.orm.ORMService.getEntityName( instance ), instance );
+	}
+
+	/**
+	 * Stamp an instance with its owning application's facade namespace so a later {@link #wrapInstance(IClassRunnable)}
+	 * can resolve the correct facade class. Called when the ORM creates the instance.
+	 *
+	 * @param instance  The BoxLang entity instance.
+	 * @param namespace The owning application's facade namespace.
+	 */
+	public static void stampNamespace( IClassRunnable instance, String namespace ) {
+		if ( namespace != null ) {
+			instance.getVariablesScope().put( NAMESPACE_KEY, namespace );
+		}
+	}
+
+	public static Object wrap( String namespace, String entityName, IClassRunnable instance ) {
+		Object existing = instance.getVariablesScope().get( FACADE_KEY );
+		if ( existing instanceof BoxEntityFacade ) {
+			return existing;
+		}
+		Class<?> facadeClass = facadeClassFor( namespace, entityName );
 		if ( facadeClass == null ) {
-			throw new BoxRuntimeException( "No entity facade registered for entity [" + entityName + "]" );
+			throw new BoxRuntimeException( "No entity facade registered for entity [" + entityName + "] in namespace [" + namespace + "]" );
 		}
 		try {
 			Object facade = facadeClass.getConstructor( BoxEntityState.class )
 			    .newInstance( new BoxIClassRunnableState( instance ) );
 			instance.getVariablesScope().put( FACADE_KEY, facade );
+			instance.getVariablesScope().put( NAMESPACE_KEY, namespace );
 			return facade;
 		} catch ( ReflectiveOperationException e ) {
 			throw new BoxRuntimeException( "Unable to instantiate entity facade for entity [" + entityName + "]", e );

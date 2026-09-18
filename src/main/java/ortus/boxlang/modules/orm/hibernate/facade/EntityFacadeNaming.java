@@ -44,14 +44,18 @@ public final class EntityFacadeNaming {
 	/**
 	 * Compute the deterministic fully-qualified class name of the facade for a given BoxLang entity name.
 	 * <p>
-	 * The entity name is sanitized into a legal Java identifier (non-identifier characters become {@code _}) and suffixed
-	 * with {@code Facade}, for example {@code Thing} -> {@code ortus.boxlang.modules.orm.hibernate.facade.generated.ThingFacade}.
+	 * The name is namespaced per ORM application (a sanitized application-unique segment) so that two applications running
+	 * in the same JVM - each mapping a same-named entity (for example {@code User}) to a different shape - generate
+	 * distinct facade classes instead of colliding on one global name. The entity name is sanitized into a legal Java
+	 * identifier (non-identifier characters become {@code _}) and suffixed with {@code Facade}, for example
+	 * {@code (shopApp, Thing)} -> {@code ortus.boxlang.modules.orm.hibernate.facade.generated.shopApp.ThingFacade}.
 	 *
+	 * @param namespace  The facade namespace for the owning ORM application (see {@link #sanitizeNamespace(String)}).
 	 * @param entityName The BoxLang entity name (the Hibernate entity-name).
 	 *
 	 * @return The facade class's fully-qualified name.
 	 */
-	public static String facadeClassName( String entityName ) {
+	public static String facadeClassName( String namespace, String entityName ) {
 		StringBuilder	sb		= new StringBuilder();
 		boolean			first	= true;
 		for ( int i = 0; i < entityName.length(); i++ ) {
@@ -60,7 +64,48 @@ public final class EntityFacadeNaming {
 			sb.append( legal ? c : '_' );
 			first = false;
 		}
-		return PACKAGE + "." + sb + "Facade";
+		return PACKAGE + "." + sanitizeNamespace( namespace ) + "." + sb + "Facade";
+	}
+
+	/**
+	 * Sanitize an application-unique string into a single legal, lower-cased Java package segment used to namespace that
+	 * application's generated facades. Non-identifier characters become {@code _}; a leading non-identifier-start
+	 * character is prefixed with {@code a}; blank input yields {@code default}.
+	 *
+	 * @param namespace The raw application-unique string (for example the ORM application name).
+	 *
+	 * @return A legal, lower-cased Java package segment.
+	 */
+	public static String sanitizeNamespace( String namespace ) {
+		if ( namespace == null || namespace.isBlank() ) {
+			return "default";
+		}
+		StringBuilder sb = new StringBuilder();
+		for ( int i = 0; i < namespace.length(); i++ ) {
+			char c = namespace.charAt( i );
+			sb.append( Character.isJavaIdentifierPart( c ) ? Character.toLowerCase( c ) : '_' );
+		}
+		if ( !Character.isJavaIdentifierStart( sb.charAt( 0 ) ) ) {
+			sb.insert( 0, 'a' );
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * Recover the namespace segment from a facade's fully-qualified class name, i.e. the inverse of the namespace portion
+	 * of {@link #facadeClassName(String, String)}.
+	 *
+	 * @param facadeClassName A facade FQN produced by {@link #facadeClassName(String, String)}.
+	 *
+	 * @return The namespace segment, or {@code null} if the name is not in the expected form.
+	 */
+	public static String namespaceOf( String facadeClassName ) {
+		if ( facadeClassName == null || !facadeClassName.startsWith( PACKAGE + "." ) ) {
+			return null;
+		}
+		String	remainder	= facadeClassName.substring( PACKAGE.length() + 1 );
+		int		dot			= remainder.indexOf( '.' );
+		return dot < 0 ? null : remainder.substring( 0, dot );
 	}
 
 	/**

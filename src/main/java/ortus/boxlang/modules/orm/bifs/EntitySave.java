@@ -76,7 +76,7 @@ public class EntitySave extends BaseORMBIF {
 		// delegates its state to - and writes generated ids straight back onto - the caller's BoxLang instance). The same
 		// instance always maps to the same facade via FacadeSupport's per-instance memoization.
 		if ( ormContext.getConfig().entityFacades ) {
-			Object facade = ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( entityName, entity );
+			Object facade = ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName, entity );
 			if ( session.contains( entityName, facade ) ) {
 				// Already managed: nothing to do; the flush will persist any changes.
 			} else if ( forceInsert || isTransient( session, entityName, facade ) ) {

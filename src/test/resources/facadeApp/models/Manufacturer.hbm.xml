@@ -7,7 +7,7 @@
 ~ https://docs.jboss.org/hibernate/orm/5.0/manual/en-US/html/ch05.html
 --><!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
 <hibernate-mapping>
-    <class batch-size="25" entity-name="Manufacturer" table="fac_manufacturers">
+    <class batch-size="25" entity-name="Manufacturer" name="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormfacadetest.ManufacturerFacade" table="fac_manufacturers">
         <id name="id" type="string">
             <column name="id"/>
             <generator class="uuid"/>

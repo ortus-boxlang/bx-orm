@@ -150,6 +150,12 @@ public class ORMApp {
 			throw new BoxRuntimeException( "No JDBC-capable context found for ORMApp startup" );
 		}
 
+		// Derive this application's facade namespace from its (unique) application name, so its generated entity facades
+		// are segregated from any other application's same-named entities sharing this JVM. Set before mapping generation
+		// and facade generation, both of which read it.
+		this.config.facadeNamespace = ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming
+		    .sanitizeNamespace( ORMService.getAppNameFromContext( context ).getName() );
+
 		// Discover entities for this application and group them by datasource.
 		// We use the Request Context for discovery, so all mappings are discovered
 		long discoverStart = System.currentTimeMillis();

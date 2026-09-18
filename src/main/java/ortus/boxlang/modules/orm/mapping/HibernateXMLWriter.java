@@ -768,7 +768,7 @@ public class HibernateXMLWriter {
 		// (unchanged) `extends` attribute below - which Hibernate resolves to the parent's mapped facade class.
 		if ( this.ormConfig.entityFacades ) {
 			classElement.setAttribute( "name",
-			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.facadeClassName( entity.getEntityName() ) );
+			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.facadeClassName( this.ormConfig.facadeNamespace, entity.getEntityName() ) );
 		}
 		if ( entity.isSubclass() ) {
 			boolean isDiscriminated = entity.getDiscriminator().get( Key.value ) != null;

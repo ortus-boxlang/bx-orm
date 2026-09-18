@@ -332,7 +332,7 @@ public class SessionFactoryBuilder {
 			java.util.List<EntityFacadeFactory.PropertySpec>	idSpecs		= new java.util.ArrayList<>();
 			if ( meta.isSubclass() ) {
 				String parentName = parentEntityName( meta );
-				superClass = parentName == null ? null : FacadeSupport.facadeClassFor( parentName );
+				superClass = parentName == null ? null : FacadeSupport.facadeClassFor( ormConfig.facadeNamespace, parentName );
 				if ( superClass == null ) {
 					String message = "Entity facade for subclass [" + entity.getEntityName() + "] cannot resolve its parent facade"
 					    + ( parentName == null ? "." : " for parent entity [" + parentName + "]." );
@@ -368,10 +368,10 @@ public class SessionFactoryBuilder {
 			}
 
 			// Use the IEntityMeta entity name so the FQN matches, byte-for-byte, the <class name=...> the mapping writer emits.
-			String		facadeFQN	= EntityFacadeNaming.facadeClassName( meta.getEntityName() );
+			String		facadeFQN	= EntityFacadeNaming.facadeClassName( ormConfig.facadeNamespace, meta.getEntityName() );
 			Class<?>	facadeClass	= EntityFacadeFactory.generate( facadeFQN, idSpecs, propSpecs, superClass, loader );
-			FacadeSupport.register( meta.getEntityName(), facadeClass );
-			FacadeSupport.register( entity.getEntityName(), facadeClass );
+			FacadeSupport.register( ormConfig.facadeNamespace, meta.getEntityName(), facadeClass );
+			FacadeSupport.register( ormConfig.facadeNamespace, entity.getEntityName(), facadeClass );
 			logger.trace( "Generated entity facade [{}] for entity [{}]", facadeFQN, meta.getEntityName() );
 		}
 	}

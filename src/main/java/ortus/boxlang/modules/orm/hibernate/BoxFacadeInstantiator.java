@@ -44,6 +44,7 @@ public class BoxFacadeInstantiator implements EntityInstantiator {
 	private final BoxClassInstantiator	delegate;
 	private final Class<?>				facadeClass;
 	private final Constructor<?>		facadeConstructor;
+	private final String				namespace;
 
 	/**
 	 * @param delegate    The standard BoxLang instantiator that builds the underlying {@link IClassRunnable}.
@@ -52,6 +53,7 @@ public class BoxFacadeInstantiator implements EntityInstantiator {
 	public BoxFacadeInstantiator( BoxClassInstantiator delegate, Class<?> facadeClass ) {
 		this.delegate		= delegate;
 		this.facadeClass	= facadeClass;
+		this.namespace		= ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.namespaceOf( facadeClass.getName() );
 		try {
 			this.facadeConstructor = facadeClass.getConstructor( BoxEntityState.class );
 		} catch ( NoSuchMethodException e ) {
@@ -64,8 +66,10 @@ public class BoxFacadeInstantiator implements EntityInstantiator {
 		IClassRunnable instance = ( IClassRunnable ) delegate.instantiate();
 		try {
 			Object facade = facadeConstructor.newInstance( new BoxIClassRunnableState( instance ) );
-			// Memoize the facade on the instance so bx-orm's wrap/unwrap layer reuses this exact pairing.
+			// Memoize the facade on the instance so bx-orm's wrap/unwrap layer reuses this exact pairing, and stamp the
+			// owning application's namespace so a later wrapInstance() resolves the right facade class.
 			FacadeSupport.memoize( instance, facade );
+			FacadeSupport.stampNamespace( instance, namespace );
 			return facade;
 		} catch ( ReflectiveOperationException e ) {
 			throw new BoxRuntimeException( "Unable to instantiate facade [" + facadeClass.getName() + "]", e );
