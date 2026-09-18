@@ -3,13 +3,14 @@ class accessors="true" persistent="true" entityname="Owner" table="fmb_owners" {
 	property name="name" ormType="string";
 
 	// Inverse one-to-many whose owning side (Item.Owner) is a Capitalized property name, so mapped-by must match the
-	// XML-declared attribute name, not the bean-introspected (decapitalized) one.
+	// bean-introspected (decapitalized) attribute name. It also declares NO fkcolumn (the FK is defined only on the inverse
+	// Item.Owner), so mapped-by must be resolved from the target's back-reference by entity type - otherwise Hibernate would
+	// synthesize an unwanted join table for the collection.
 	property
 		name        ="items"
 		singularName="item"
 		fieldtype   ="one-to-many"
 		cfc         ="Item"
-		fkcolumn    ="FK_ownerId"
 		inverse     ="true"
 		cascade     ="all-delete-orphan";
 }

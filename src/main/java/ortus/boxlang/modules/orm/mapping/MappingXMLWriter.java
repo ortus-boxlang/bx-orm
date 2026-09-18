@@ -987,17 +987,31 @@ public class MappingXMLWriter {
 			    .orElse( null );
 		}
 
-		// one-to-many inverse: find the to-one on the target whose FK column matches this collection's key column.
-		String keyColumn = association.getAsString( Key.column );
-		if ( keyColumn == null ) {
-			return null;
-		}
+		// one-to-many inverse: find the owning to-one on the target entity. Prefer a match on this collection's key column
+		// (the FK), and when the collection declares no explicit fkcolumn (the FK is defined only on the inverse side), fall
+		// back to the to-one whose class points back to THIS entity. Emitting a mapped-by (rather than nothing) keeps the
+		// collection non-owning, so Hibernate does NOT synthesize a default join table for it.
+		String	keyColumn		= association.getAsString( Key.column );
+		String	thisEntityName	= this.entity.getEntityName();
 		return associatedEntityMeta.getAssociations()
 		    .stream()
 		    .filter( remote -> remote.getFieldType() == IPropertyMeta.FIELDTYPE.MANY_TO_ONE || remote.getFieldType() == IPropertyMeta.FIELDTYPE.ONE_TO_ONE )
 		    .filter( remote -> {
-			    String remoteColumn = remote.getAssociation().getAsString( Key.column );
-			    return remoteColumn != null && keyColumn.equalsIgnoreCase( remoteColumn );
+			    IStruct remoteAssoc	= remote.getAssociation();
+			    String remoteColumn	= remoteAssoc.getAsString( Key.column );
+			    if ( keyColumn != null && remoteColumn != null && keyColumn.equalsIgnoreCase( remoteColumn ) ) {
+				    return true;
+			    }
+			    // No explicit fkcolumn on the inverse collection: match the target's to-one that points back to this entity.
+			    if ( keyColumn == null ) {
+				    String remoteClass = remoteAssoc.getAsString( Key._CLASS );
+				    if ( remoteClass == null ) {
+					    return false;
+				    }
+				    EntityRecord backReference = entityLookup.apply( remoteClass, datasourceName );
+				    return backReference != null && thisEntityName.equalsIgnoreCase( backReference.getEntityName() );
+			    }
+			    return false;
 		    } )
 		    .map( IPropertyMeta::getName )
 		    .findFirst()
