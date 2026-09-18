@@ -67,6 +67,16 @@ public class EntityMerge extends BaseORMBIF {
 
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
+
+		// Facade (POJO) mode: Hibernate manages the generated facade, not the IClassRunnable. Merge the facade by its
+		// Hibernate entity-name and return the caller's BoxLang instance (unwrapped from the managed facade).
+		if ( ormContext.getConfig().entityFacades ) {
+			String	hbName	= ORMApp.hibernateEntityName( session, entityName );
+			Object	facade	= ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName, entity );
+			Object	managed	= session.merge( hbName, facade );
+			return ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( managed );
+		}
+
 		return session.merge( entity );
 	}
 

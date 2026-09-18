@@ -69,6 +69,15 @@ public class EntityDelete extends BaseORMBIF {
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 
+		// Facade (POJO) mode: Hibernate manages the generated facade, not the IClassRunnable. Remove the facade (a detached
+		// one must be re-associated via merge first, since Hibernate 6+ rejects removing an unmanaged instance).
+		if ( ormContext.getConfig().entityFacades ) {
+			String	hbName	= ORMApp.hibernateEntityName( session, entityName );
+			Object	facade	= ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName, entity );
+			session.remove( session.contains( hbName, facade ) ? facade : session.merge( hbName, facade ) );
+			return null;
+		}
+
 		session.remove( entity );
 
 		return null;
