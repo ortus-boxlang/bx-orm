@@ -6,23 +6,19 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.BookingFacade" name="Booking">
-        <table name="fac_bookings"/>
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.PlayingFieldFacade" name="PlayingField">
+        <table name="compositePlayingFields" schema="dbo"/>
+        <caching access="NONSTRICT_READ_WRITE" region="Games"/>
         <batch-size>25</batch-size>
         <attributes>
-            <id name="flightID">
-                <column name="flightID"/>
+            <id name="fieldID">
+                <column name="fieldID"/>
                 <target>Integer</target>
             </id>
-            <id name="seatID">
-                <column name="seatID"/>
+            <id name="userID">
+                <column name="userID"/>
                 <target>String</target>
             </id>
-            <basic name="passenger">
-                <column name="passenger"/>
-                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
-                <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
-            </basic>
         </attributes>
     </entity>
 </entity-mappings>

@@ -6,32 +6,34 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.GadgetFacade" name="Gadget">
-        <table name="gadgets"/>
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.CategoryFacade" name="Category">
+        <table name="abstract_categories"/>
+        <caching access="READ_WRITE" region="abstract_categories"/>
         <batch-size>25</batch-size>
         <attributes>
-            <id name="id">
-                <column name="id"/>
-                <generated-value generator="increment"/>
-                <target>Integer</target>
+            <id name="catid">
+                <column name="category_id"/>
+                <generated-value generator="Category_catid_generator"/>
+                <generic-generator class="uuid" name="Category_catid_generator"/>
+                <target>String</target>
             </id>
-            <basic name="name">
-                <column name="name"/>
+            <basic name="testValue">
+                <column name="testValue" nullable="true"/>
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <basic name="price">
-                <column name="price"/>
-                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.BigDecimalConverter"/>
+            <basic name="category">
+                <column name="category" nullable="false"/>
+                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <basic name="active">
-                <column name="active"/>
-                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.BooleanConverter"/>
+            <basic name="description">
+                <column name="description" nullable="false"/>
+                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <basic name="createdDate">
-                <column name="createdDate"/>
+            <basic name="modifydate">
+                <column insertable="false" name="modifydate" updatable="false"/>
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>

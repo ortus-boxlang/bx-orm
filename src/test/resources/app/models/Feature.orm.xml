@@ -6,20 +6,22 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.BookingFacade" name="Booking">
-        <table name="fac_bookings"/>
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.FeatureFacade" name="Feature">
+        <table name="features"/>
         <batch-size>25</batch-size>
         <attributes>
-            <id name="flightID">
-                <column name="flightID"/>
+            <id name="id">
+                <column name="id"/>
+                <generated-value generator="increment"/>
                 <target>Integer</target>
             </id>
-            <id name="seatID">
-                <column name="seatID"/>
-                <target>String</target>
-            </id>
-            <basic name="passenger">
-                <column name="passenger"/>
+            <basic name="name">
+                <column name="name"/>
+                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
+                <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
+            </basic>
+            <basic name="description">
+                <column name="description"/>
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>

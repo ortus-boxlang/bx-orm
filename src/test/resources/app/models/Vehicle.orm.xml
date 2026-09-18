@@ -7,25 +7,34 @@
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
     <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.VehicleFacade" name="Vehicle">
-        <table name="fac_vehicles"/>
+        <table name="vehicles"/>
         <batch-size>25</batch-size>
         <attributes>
-            <id name="id">
-                <column name="id"/>
-                <generated-value generator="Vehicle_id_generator"/>
-                <generic-generator class="uuid" name="Vehicle_id_generator"/>
+            <id name="vin">
+                <column name="vin"/>
                 <target>String</target>
             </id>
+            <basic name="make">
+                <column name="make"/>
+                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
+                <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
+            </basic>
             <basic name="model">
                 <column name="model"/>
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <many-to-one fetch="EAGER" name="manufacturer" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ManufacturerFacade">
+            <many-to-many classification="BAG" fetch="EAGER" name="features" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.FeatureFacade">
+                <join-table name="vehicle_features">
+                    <join-column name="FK_vehicle"/>
+                    <inverse-join-column name="FK_feature"/>
+                </join-table>
+                <cascade>
+                    <cascade-all/>
+                </cascade>
+            </many-to-many>
+            <many-to-one fetch="LAZY" name="manufacturer" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ManufacturerFacade">
                 <join-column name="FK_manufacturer"/>
-            </many-to-one>
-            <many-to-one fetch="LAZY" name="dealer" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.DealerFacade">
-                <join-column name="FK_dealer"/>
             </many-to-one>
         </attributes>
     </entity>

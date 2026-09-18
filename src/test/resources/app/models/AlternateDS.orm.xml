@@ -6,16 +6,17 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.SquareFacade" name="Square">
-        <extends>Shape</extends>
-        <table name="fac_squares"/>
-        <primary-key-join-column name="shapeID"/>
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.AlternateDSFacade" name="AlternateDS">
+        <table name="alternate_ds"/>
         <batch-size>25</batch-size>
-        <lazy>true</lazy>
         <attributes>
-            <basic name="side">
-                <column name="side"/>
-                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.IntegerConverter"/>
+            <id name="id">
+                <column length="40" name="id"/>
+                <target>String</target>
+            </id>
+            <basic name="name">
+                <column name="name"/>
+                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
         </attributes>

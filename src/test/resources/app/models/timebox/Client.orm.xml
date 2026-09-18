@@ -6,14 +6,14 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.OwnerFacade" name="Owner">
-        <table name="users"/>
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ClientFacade" name="Client">
+        <table name="client"/>
         <batch-size>25</batch-size>
         <attributes>
-            <id name="id">
-                <column name="id"/>
-                <generated-value generator="Owner_id_generator"/>
-                <generic-generator class="uuid" name="Owner_id_generator"/>
+            <id name="clientId">
+                <column name="clientId"/>
+                <generated-value generator="Client_clientId_generator"/>
+                <generic-generator class="uuid" name="Client_clientId_generator"/>
                 <target>String</target>
             </id>
             <basic name="createdDate">
@@ -34,21 +34,16 @@
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
             <basic name="name">
-                <column name="name"/>
+                <column length="255" name="name" nullable="false" unique="true"/>
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <basic name="bio">
-                <column name="bio" nullable="true"/>
-                <lob/>
-                <target>String</target>
-                <jdbc-type-code>-1</jdbc-type-code>
+            <basic name="description">
+                <column length="500" name="description" nullable="true"/>
+                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
+                <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <one-to-many classification="BAG" mapped-by="owner" name="items" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ItemFacade">
-                <cascade>
-                    <cascade-all/>
-                </cascade>
-            </one-to-many>
+            <one-to-many classification="BAG" fetch="LAZY" mapped-by="client" name="contacts" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ClientContactFacade"/>
         </attributes>
     </entity>
 </entity-mappings>

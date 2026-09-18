@@ -89,7 +89,7 @@ public class FacadeMappedByBootTest {
 		// @formatter:off
 		instance.executeSource( """
 			transaction {
-				owner = entityNew( "Owner", { name : "Acme" } );
+				owner = entityNew( "Owner", { name : "Acme", createdDate : now(), updatedDate : now(), isActive : true } );
 				entitySave( owner );
 
 				item = entityNew( "Item", { label : "Widget" } );

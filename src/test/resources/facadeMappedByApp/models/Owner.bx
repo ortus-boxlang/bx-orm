@@ -1,6 +1,7 @@
-class accessors="true" persistent="true" entityname="Owner" table="fmb_owners" {
+class accessors="true" persistent="true" entityname="Owner" table="users" extends="BaseThing" {
 	property name="id" fieldtype="id" generator="uuid" ormType="string";
 	property name="name" ormType="string";
+	property name="bio" ormType="text" notnull="false" length="8000" default="";
 
 	// Inverse one-to-many whose owning side (Item.Owner) is a Capitalized property name, so mapped-by must match the
 	// bean-introspected (decapitalized) attribute name. It also declares NO fkcolumn (the FK is defined only on the inverse

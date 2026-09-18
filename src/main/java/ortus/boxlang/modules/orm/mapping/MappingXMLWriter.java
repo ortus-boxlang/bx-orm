@@ -626,6 +626,20 @@ public class MappingXMLWriter {
 			appendColumns( theNode, columnInfo );
 		}
 
+		// A `text`/`clob` property maps to a large-object (CLOB) column - i.e. a `TEXT`/`LONGTEXT`, stored off-row - not an
+		// in-row `varchar(length)`. Emitting `<lob/>` (JPA @Lob) is both semantically correct and avoids blowing a database's
+		// maximum row size: e.g. two `text length="8000"` columns emitted as `varchar(8000)` push a table past MySQL's 65535
+		// byte row limit and CREATE TABLE fails (MariaDB tolerates it, so this only surfaced on MySQL). We also drop the
+		// column `length`, because an explicit length makes Hibernate emit `varchar(length)` even for a LOB; without it the
+		// LOB type resolves to `TEXT`/`LONGTEXT`. `<lob/>` precedes the basic-type group in the schema.
+		if ( prop.getFormula() == null && "text".equals( toHibernateType( prop.getORMType() ) ) ) {
+			org.w3c.dom.NodeList columns = theNode.getElementsByTagName( "column" );
+			for ( int i = 0; i < columns.getLength(); i++ ) {
+				( ( Element ) columns.item( i ) ).removeAttribute( "length" );
+			}
+			theNode.appendChild( createEl( "lob" ) );
+		}
+
 		// converter OR type (basic-type-group)
 		appendBasicType( theNode, prop, true );
 
