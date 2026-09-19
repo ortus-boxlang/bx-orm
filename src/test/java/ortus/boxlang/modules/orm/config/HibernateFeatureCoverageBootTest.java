@@ -408,4 +408,28 @@ public class HibernateFeatureCoverageBootTest {
 		// Read-only entity: the update was ignored, the original value persists.
 		assertThat( variables.get( Key.of( "finalLabel" ) ) ).isEqualTo( "original" );
 	}
+
+	@DisplayName( "It supports the uuid2 id generator with a string-mapped key" )
+	@Test
+	public void testUuid2Generator() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				u = entityNew( "Uuid2Gen", { label : "u1" } );
+				entitySave( u );
+				uid = u.getId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			loaded    = entityLoadByPK( "Uuid2Gen", uid );
+			loadedId  = isNull( loaded ) ? "" : loaded.getId();
+			sameId    = loadedId == uid;
+		""", context );
+		// @formatter:on
+
+		// The generated key is a non-empty string that round-trips through a primary-key load.
+		assertThat( variables.get( Key.of( "uid" ) ).toString() ).isNotEmpty();
+		assertThat( variables.getAsBoolean( Key.of( "sameId" ) ) ).isTrue();
+	}
 }
