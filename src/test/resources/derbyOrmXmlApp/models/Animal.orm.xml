@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.AnimalFacade" name="Animal">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormderbyormxmltest.AnimalFacade" name="Animal">
         <table name="animals"/>
         <batch-size>25</batch-size>
         <inheritance strategy="SINGLE_TABLE"/>
@@ -22,7 +22,7 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <one-to-many classification="BAG" mapped-by="animal" name="toys" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ToyFacade">
+            <one-to-many classification="BAG" mapped-by="animal" name="toys" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormderbyormxmltest.ToyFacade">
                 <cascade>
                     <cascade-all/>
                 </cascade>

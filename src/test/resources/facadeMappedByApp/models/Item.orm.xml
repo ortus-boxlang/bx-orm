@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ItemFacade" name="Item">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormfacademappedbytest.ItemFacade" name="Item">
         <table name="fmb_items"/>
         <batch-size>25</batch-size>
         <attributes>
@@ -24,7 +24,7 @@
             <basic name="photo">
                 <column name="photo" nullable="true"/>
             </basic>
-            <many-to-one fetch="EAGER" name="Owner" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.OwnerFacade">
+            <many-to-one fetch="EAGER" name="Owner" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormfacademappedbytest.OwnerFacade">
                 <join-column name="FK_ownerId"/>
             </many-to-one>
         </attributes>

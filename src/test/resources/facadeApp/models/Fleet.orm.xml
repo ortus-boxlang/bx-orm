@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.FleetFacade" name="Fleet">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormfacadetest.FleetFacade" name="Fleet">
         <table name="fac_fleets"/>
         <batch-size>25</batch-size>
         <attributes>
@@ -21,7 +21,7 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <one-to-many classification="BAG" name="trucks" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.TruckFacade">
+            <one-to-many classification="BAG" name="trucks" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormfacadetest.TruckFacade">
                 <join-column name="FK_fleet"/>
             </one-to-many>
         </attributes>
