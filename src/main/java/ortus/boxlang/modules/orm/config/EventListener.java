@@ -236,6 +236,7 @@ public class EventListener
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		// Update state so that changes made in the event are persisted
 		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), event.getPersister().getPropertyTypes(),
+		    event.getPersister().isVersioned() ? event.getPersister().getVersionPropertyIndex() : -1,
 		    FacadeSupport.unwrap( event.getEntity() ) );
 		return false;
 	}
@@ -299,7 +300,8 @@ public class EventListener
 		announceEntityEvent( ORMKeys.preInsert, ( IClassRunnable ) entity, args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		// update our entity state to ensure changes persist
-		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), event.getPersister().getPropertyTypes(), ( IClassRunnable ) entity );
+		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), event.getPersister().getPropertyTypes(),
+		    event.getPersister().isVersioned() ? event.getPersister().getVersionPropertyIndex() : -1, ( IClassRunnable ) entity );
 		return false;
 	}
 
@@ -349,7 +351,8 @@ public class EventListener
 	 * @param persistProperties Array of properties to update
 	 * @param entity            The entity to test for altered values.
 	 */
-	private void updateEntityEventState( Object[] state, String[] persistProperties, org.hibernate.type.Type[] propertyTypes, IClassRunnable entity ) {
+	private void updateEntityEventState( Object[] state, String[] persistProperties, org.hibernate.type.Type[] propertyTypes, int versionPropertyIndex,
+	    IClassRunnable entity ) {
 		if ( logger.isTraceEnabled() ) {
 			logger.trace( String.format( "Updating state changes on state properties %s", Arrays.toString( persistProperties ) ) );
 		}
@@ -362,6 +365,12 @@ public class EventListener
 			// held Hibernate's own collection instance, so the equality check below already skipped them.)
 			if ( propertyTypes != null && i < propertyTypes.length && propertyTypes[ i ] != null
 			    && ( propertyTypes[ i ].isAssociationType() || propertyTypes[ i ].isCollectionType() ) ) {
+				continue;
+			}
+			// Never write the optimistic-lock <version> slot back either. Hibernate seeds it on insert and increments it on
+			// update inside its own state array; the BoxLang scope still holds the pre-increment value, so overwriting the
+			// slot reverts Hibernate's version and breaks the version check (OptimisticLockException / "Unexpected row count").
+			if ( i == versionPropertyIndex ) {
 				continue;
 			}
 			Key		propertyName	= Key.of( persistProperties[ i ] );

@@ -357,13 +357,22 @@ public class SessionFactoryBuilder {
 				if ( idNames.contains( prop.getName().toLowerCase() ) ) {
 					continue;
 				}
-				// A binary/byte[] property gets a concrete byte[] accessor (not Object): the modern mapping format has no
-				// AttributeConverter for byte[], so Hibernate must infer the column's SQL type (VARBINARY/BLOB) from the
-				// accessor's Java type. An Object accessor would resolve to JAVA_OBJECT, which has no SQL type and breaks
-				// schema export. Every other property keeps an Object accessor (bx-orm's converters are AttributeConverter<Object, ?>).
-				Class<?> accessorType = "binary".equals( ortus.boxlang.modules.orm.mapping.MappingXMLWriter.toHibernateType( prop.getORMType() ) )
-				    ? byte[].class
-				    : Object.class;
+				// Accessor Java type by property kind:
+				// - binary/byte[]: a concrete byte[] accessor (not Object). The modern mapping format has no AttributeConverter
+				// for byte[], so Hibernate must infer the column's SQL type (VARBINARY/BLOB) from the accessor's Java type. An
+				// Object accessor would resolve to JAVA_OBJECT, which has no SQL type and breaks schema export.
+				// - version (optimistic-lock): a concrete numeric/temporal accessor. A <version> attribute carries no converter,
+				// so Hibernate resolves the version's Java type from the accessor; an Object accessor is not a legal version
+				// type and fails SessionFactory build. Match the version's ormType (Integer/Long/Short/Instant).
+				// - everything else: an Object accessor (bx-orm's converters are declared AttributeConverter<Object, ?>).
+				Class<?> accessorType;
+				if ( prop.getFieldType() == IPropertyMeta.FIELDTYPE.VERSION ) {
+					accessorType = versionJavaType( prop.getORMType() );
+				} else if ( "binary".equals( ortus.boxlang.modules.orm.mapping.MappingXMLWriter.toHibernateType( prop.getORMType() ) ) ) {
+					accessorType = byte[].class;
+				} else {
+					accessorType = Object.class;
+				}
 				propSpecs.add( new EntityFacadeFactory.PropertySpec( prop.getName(), accessorType, facadeAssocKind( prop ) ) );
 			}
 
@@ -411,6 +420,26 @@ public class SessionFactoryBuilder {
 			case ONE_TO_ONE, MANY_TO_ONE -> EntityFacadeFactory.AssocKind.TO_ONE;
 			case ONE_TO_MANY, MANY_TO_MANY -> EntityFacadeFactory.AssocKind.TO_MANY;
 			default -> EntityFacadeFactory.AssocKind.NONE;
+		};
+	}
+
+	/**
+	 * Resolve the concrete Java type for an optimistic-lock {@code <version>} property's facade accessor. A version
+	 * attribute carries no {@code AttributeConverter}, so Hibernate infers the version's Java type from the accessor; it
+	 * must be a legal version type (a numeric or a temporal), never {@code Object}. Numeric ormTypes map to Integer/Long/
+	 * Short and temporal ormTypes to {@link java.time.Instant}; anything else defaults to Integer (the common CFML case).
+	 *
+	 * @param ormType The version property's ORM type.
+	 *
+	 * @return The concrete accessor Java type for the version.
+	 */
+	private static Class<?> versionJavaType( String ormType ) {
+		String type = ormType == null ? "" : ormType.trim().toLowerCase();
+		return switch ( type ) {
+			case "long", "biginteger", "big_integer", "bigint" -> Long.class;
+			case "short", "tinyint", "tinyinteger" -> Short.class;
+			case "timestamp", "datetime", "date", "eurodate", "usdate", "time" -> java.time.Instant.class;
+			default -> Integer.class;
 		};
 	}
 

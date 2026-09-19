@@ -62,9 +62,13 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 					this.ormType = dataType.trim().toLowerCase();
 				}
 			}
-			// Validate
-			if ( !List.of( "int", "long", "short" ).contains( this.ormType ) ) {
-				logger.error( "ORM type '{}' is not a valid type for version property '{}' on entity '{}'.", this.ormType, this.name, this.entityName );
+			// Validate: Hibernate supports a numeric (int/long/short) or a temporal (timestamp) version. Accept the common
+			// ormType spellings (raw and normalized) so a documented `integer` version is not falsely rejected.
+			if ( !List.of( "int", "integer", "long", "biginteger", "big_integer", "bigint", "short", "tinyint", "tinyinteger",
+			    "timestamp", "datetime", "date" ).contains( this.ormType ) ) {
+				logger.error(
+				    "ORM type '{}' is not a valid type for version property '{}' on entity '{}'. Use a numeric (integer/long/short) or timestamp type.",
+				    this.ormType, this.name, this.entityName );
 			}
 		}
 

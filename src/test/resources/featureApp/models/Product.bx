@@ -1,0 +1,17 @@
+/**
+ * Exercises optimistic locking via a <version> column, plus a formula (computed, read-only) property.
+ */
+class accessors="true" persistent="true" entityname="Product" table="feat_product" optimisticlock="version" {
+
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+
+	property name="name" ormType="string" notnull="true" length="200";
+
+	property name="price" ormType="integer" notnull="true" default="0";
+
+	// Optimistic-locking version column: Hibernate increments it on every update.
+	property name="revision" fieldtype="version" ormType="integer";
+
+	// Computed, read-only formula property (raw SQL evaluated by the DB on load).
+	property name="priceWithTax" formula="price + (price / 10)" ormType="integer";
+}
