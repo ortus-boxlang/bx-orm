@@ -20,6 +20,7 @@ class {
 		"dbcreate"         : "dropcreate",
 		"cacheprovider"    : "ConcurrentHashMap",
 		"eventHandling"    : true,
+		"eventHandler"     : "root.models.FeatureEventHandler",
 		"ignoreParseErrors": true
 	};
 	this.ormEnabled = "true";

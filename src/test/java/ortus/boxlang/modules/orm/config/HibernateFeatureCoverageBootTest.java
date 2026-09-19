@@ -328,4 +328,28 @@ public class HibernateFeatureCoverageBootTest {
 		assertThat( ( ( Number ) variables.get( Key.of( "attrCount" ) ) ).intValue() ).isEqualTo( 2 );
 		assertThat( variables.get( Key.of( "colorVal" ) ) ).isEqualTo( "blue" );
 	}
+
+	@DisplayName( "It dispatches global-only ORM events (onFlush, onClear) to the global event handler" )
+	@Test
+	public void testGlobalOnlyEvents() {
+		// @formatter:off
+		instance.executeSource( """
+			application.ormEvents = [];
+			transaction {
+				e = entityNew( "Article", { title : "event-probe" } );
+				entitySave( e );
+			}
+			ormFlush();
+			ormClearSession();
+
+			firedInsert = application.ormEvents.findNoCase( "preInsert" ) > 0;
+			firedFlush  = application.ormEvents.findNoCase( "onFlush" ) > 0;
+			firedClear  = application.ormEvents.findNoCase( "onClear" ) > 0;
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.getAsBoolean( Key.of( "firedInsert" ) ) ).isTrue();
+		assertThat( variables.getAsBoolean( Key.of( "firedFlush" ) ) ).isTrue();
+		assertThat( variables.getAsBoolean( Key.of( "firedClear" ) ) ).isTrue();
+	}
 }
