@@ -131,8 +131,8 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
 		final String finalAssociationType = associationType;
 
-		if ( finalAssociationType.endsWith( "-to-many" ) ) {
-			// IS A COLLECTION
+		if ( finalAssociationType.endsWith( "-to-many" ) || finalAssociationType.equalsIgnoreCase( "collection" ) ) {
+			// IS A COLLECTION (an entity to-many, or a value/element collection when fieldtype="collection")
 			association.compute( ORMKeys.collectionType, ( key, object ) -> {
 				String propertyType = annotations.getAsString( Key.type );
 				if ( propertyType == null || propertyType.isBlank() || propertyType.trim().equalsIgnoreCase( "any" )

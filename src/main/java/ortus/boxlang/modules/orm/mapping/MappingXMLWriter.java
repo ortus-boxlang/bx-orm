@@ -409,6 +409,8 @@ public class MappingXMLWriter {
 				    case ONE_TO_MANY :
 				    case MANY_TO_MANY :
 					    return generateToManyAssociation( propertyMeta );
+				    case COLLECTION :
+					    return generateElementCollection( propertyMeta );
 				    default :
 					    logger.warn( "Unhandled association/field type: {} on property {}", propertyMeta.getFieldType(), propertyMeta.getName() );
 					    return null;
@@ -585,6 +587,99 @@ public class MappingXMLWriter {
 		appendColumns( theNode, columnInfo );
 		// NOTE: the modern <version> element only accepts <column> + <temporal>; a non-temporal/non-int version type cannot be expressed here.
 		return theNode;
+	}
+
+	/**
+	 * Generate a JPA {@code <element-collection>} for a value/element collection ({@code fieldtype="collection"}): a
+	 * collection of scalar values held in a separate collection table and joined back to the owning entity. An array maps
+	 * to a {@code BAG}; a struct maps to a {@code MAP} with a key column. The element value is declared as a plain
+	 * {@code <column>} plus an explicit {@code <java-type>} (never a converter - the modern element-collection schema makes
+	 * {@code <column>} and {@code <convert>} mutually exclusive), which pairs with the facade's {@code List<Object>}
+	 * accessor whose element-type check short-circuits on {@code Object}.
+	 *
+	 * @param prop The value-collection property.
+	 *
+	 * @return The {@code <element-collection>} element.
+	 */
+	private Element generateElementCollection( IPropertyMeta prop ) {
+		IStruct	assoc	= prop.getAssociation();
+		Element	node	= createEl( "element-collection" );
+		node.setAttribute( "name", prop.getName() );
+
+		String	collectionType	= assoc.getAsString( ORMKeys.collectionType );
+		boolean	isMap			= "map".equalsIgnoreCase( collectionType );
+		node.setAttribute( "classification", isMap ? "MAP" : "BAG" );
+
+		// 1. collection-structure-group (must precede the value): map key column, or an order-by for a list/bag.
+		if ( isMap ) {
+			String keyColumn = assoc.getAsString( ORMKeys.structKeyColumn );
+			if ( keyColumn != null ) {
+				Element mapKeyColumn = createEl( "map-key-column" );
+				mapKeyColumn.setAttribute( "name", escapeReservedWords( keyColumn ) );
+				node.appendChild( mapKeyColumn );
+			}
+			Element	mapKeyType		= createEl( "map-key-type" );
+			Element	mapKeyTypeValue	= createEl( "value" );
+			mapKeyTypeValue.setTextContent( elementJavaType( assoc.getAsString( ORMKeys.structKeyType ) ) );
+			mapKeyType.appendChild( mapKeyTypeValue );
+			node.appendChild( mapKeyType );
+		} else if ( assoc.containsKey( ORMKeys.orderBy ) && assoc.getAsString( ORMKeys.orderBy ) != null ) {
+			Element orderBy = createEl( "order-by" );
+			orderBy.setTextContent( assoc.getAsString( ORMKeys.orderBy ) );
+			node.appendChild( orderBy );
+		}
+
+		// 2. element value: <column> + explicit <java-type> (basic-type-group).
+		String	elementColumn	= assoc.containsKey( ORMKeys.elementColumn ) && assoc.getAsString( ORMKeys.elementColumn ) != null
+		    ? assoc.getAsString( ORMKeys.elementColumn )
+		    : prop.getName();
+		Element	column			= createEl( "column" );
+		column.setAttribute( "name", escapeReservedWords( elementColumn ) );
+		node.appendChild( column );
+		Element javaType = createEl( "java-type" );
+		javaType.setTextContent( elementJavaType( assoc.getAsString( ORMKeys.elementType ) ) );
+		node.appendChild( javaType );
+
+		// 3. collection-table + join-column back to the owner.
+		Element	collectionTable	= createEl( "collection-table" );
+		String	tableName		= assoc.getAsString( Key.table );
+		if ( tableName != null ) {
+			collectionTable.setAttribute( "name", escapeReservedWords( tableName ) );
+		}
+		String joinColumn = assoc.getAsString( Key.column );
+		if ( joinColumn != null ) {
+			Element joinColumnEl = createEl( "join-column" );
+			joinColumnEl.setAttribute( "name", escapeReservedWords( joinColumn ) );
+			collectionTable.appendChild( joinColumnEl );
+		}
+		node.appendChild( collectionTable );
+		return node;
+	}
+
+	/**
+	 * Map a scalar ORM type to the Hibernate {@code JavaType} descriptor class used to declare an element-collection
+	 * element (or map key) type via {@code <java-type>}. Hibernate's {@code <java-type>} expects a {@code BasicJavaType}
+	 * descriptor FQN (e.g. {@code StringJavaType}), NOT a plain Java class (e.g. {@code java.lang.String}) - passing the
+	 * latter throws {@code ClassCastException} during metadata resolution.
+	 *
+	 * @param ormType The scalar ORM type (may be {@code null}, treated as string).
+	 *
+	 * @return The fully-qualified Hibernate {@code JavaType} descriptor class name for that scalar.
+	 */
+	private static String elementJavaType( String ormType ) {
+		String	type	= ormType == null ? "string" : ormType.trim().toLowerCase();
+		String	simple	= switch ( type ) {
+							case "int", "integer" -> "IntegerJavaType";
+							case "long", "biginteger", "big_integer", "bigint" -> "LongJavaType";
+							case "short", "tinyint", "tinyinteger" -> "ShortJavaType";
+							case "float" -> "FloatJavaType";
+							case "double", "numeric", "number", "decimal" -> "DoubleJavaType";
+							case "bigdecimal", "big_decimal" -> "BigDecimalJavaType";
+							case "boolean", "bit", "bool", "yesno", "truefalse" -> "BooleanJavaType";
+							case "timestamp", "datetime", "date", "eurodate", "usdate" -> "InstantJavaType";
+							default -> "StringJavaType";
+						};
+		return "org.hibernate.type.descriptor.java." + simple;
 	}
 
 	/**

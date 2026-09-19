@@ -1,0 +1,18 @@
+/**
+ * Exercises a value/element collection: an array of scalar strings held in a separate collection table.
+ */
+class accessors="true" persistent="true" entityname="Article" table="feat_article" {
+
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+	property name="title" ormType="string" notnull="true";
+
+	// Value collection (array of strings) -> JPA <element-collection> BAG.
+	property
+		name        ="tags"
+		fieldtype   ="collection"
+		type        ="array"
+		table       ="feat_article_tags"
+		fkcolumn    ="FK_articleId"
+		elementColumn="tag"
+		elementType ="string";
+}

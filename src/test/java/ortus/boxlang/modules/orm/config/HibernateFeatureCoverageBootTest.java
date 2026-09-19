@@ -278,4 +278,29 @@ public class HibernateFeatureCoverageBootTest {
 		assertThat( ( ( Number ) variables.get( Key.of( "dec" ) ) ).doubleValue() ).isEqualTo( 3.5 );
 		assertThat( variables.get( Key.of( "txt" ) ) ).isEqualTo( "unicode-ish" );
 	}
+
+	@DisplayName( "It round-trips a value/element collection (array of scalars)" )
+	@Test
+	public void testElementCollectionArray() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				a = entityNew( "Article", { title : "Hello" } );
+				a.setTags( [ "intro", "welcome", "news" ] );
+				entitySave( a );
+				aid = a.getId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			loaded    = entityLoadByPK( "Article", aid );
+			tagList   = loaded.getTags();
+			tagCount  = tagList.len();
+			hasIntro  = tagList.findNoCase( "intro" ) > 0;
+		""", context );
+		// @formatter:on
+
+		assertThat( ( ( Number ) variables.get( Key.of( "tagCount" ) ) ).intValue() ).isEqualTo( 3 );
+		assertThat( variables.getAsBoolean( Key.of( "hasIntro" ) ) ).isTrue();
+	}
 }

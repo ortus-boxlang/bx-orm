@@ -418,7 +418,10 @@ public class SessionFactoryBuilder {
 	private static EntityFacadeFactory.AssocKind facadeAssocKind( IPropertyMeta prop ) {
 		return switch ( prop.getFieldType() ) {
 			case ONE_TO_ONE, MANY_TO_ONE -> EntityFacadeFactory.AssocKind.TO_ONE;
-			case ONE_TO_MANY, MANY_TO_MANY -> EntityFacadeFactory.AssocKind.TO_MANY;
+			// A value/element collection (fieldtype="collection") is exposed like a to-many: a List accessor Hibernate
+			// manages, with a developer-facing collection view. Its elements are scalars, so the view passes them through
+			// unchanged (facade wrapping only ever applies to IClassRunnable entity elements).
+			case ONE_TO_MANY, MANY_TO_MANY, COLLECTION -> EntityFacadeFactory.AssocKind.TO_MANY;
 			default -> EntityFacadeFactory.AssocKind.NONE;
 		};
 	}

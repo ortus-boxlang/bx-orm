@@ -114,7 +114,10 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		    IPropertyMeta prop ) -> prop.getFieldType() == IPropertyMeta.FIELDTYPE.VERSION || prop.getFieldType() == IPropertyMeta.FIELDTYPE.TIMESTAMP )
 		    .findFirst().orElse( null );
 
+		// Associations include entity associations (to-one/to-many) AND value/element collections (fieldtype="collection"),
+		// which the mapping writer emits as JPA <element-collection>. Without this a value collection was silently dropped.
 		this.associations		= this.localPersistentProperties.stream().filter( (
-		    IPropertyMeta prop ) -> prop.isAssociationType() ).collect( Collectors.toCollection( LinkedHashSet::new ) );
+		    IPropertyMeta prop ) -> prop.isAssociationType() || prop.getFieldType() == IPropertyMeta.FIELDTYPE.COLLECTION )
+		    .collect( Collectors.toCollection( LinkedHashSet::new ) );
 	}
 }
