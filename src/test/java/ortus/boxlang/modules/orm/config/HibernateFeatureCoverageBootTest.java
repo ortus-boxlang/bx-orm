@@ -352,4 +352,60 @@ public class HibernateFeatureCoverageBootTest {
 		assertThat( variables.getAsBoolean( Key.of( "firedFlush" ) ) ).isTrue();
 		assertThat( variables.getAsBoolean( Key.of( "firedClear" ) ) ).isTrue();
 	}
+
+	@DisplayName( "It supports the native and guid id generators" )
+	@Test
+	public void testNativeAndGuidGenerators() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				n = entityNew( "NativeGen", { label : "n1" } );
+				entitySave( n );
+				g = entityNew( "GuidGen", { label : "g1" } );
+				entitySave( g );
+			}
+			ormFlush();
+			ormClearSession();
+
+			nativeRow = ormExecuteQuery( "FROM NativeGen WHERE label = :l", { l : "n1" }, true );
+			nativeId  = nativeRow.getId();
+			guidRow   = ormExecuteQuery( "FROM GuidGen WHERE label = :l", { l : "g1" }, true );
+			guidId    = guidRow.getId();
+		""", context );
+		// @formatter:on
+
+		assertThat( ( ( Number ) variables.get( Key.of( "nativeId" ) ) ).intValue() ).isGreaterThan( 0 );
+		// guid generator produces a non-empty string key.
+		assertThat( variables.get( Key.of( "guidId" ) ).toString() ).isNotEmpty();
+	}
+
+	@DisplayName( "It treats a read-only entity as immutable (updates are ignored)" )
+	@Test
+	public void testReadOnlyEntity() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				s = entityNew( "Snapshot", { label : "original" } );
+				entitySave( s );
+				sid = s.getId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			transaction {
+				loaded = entityLoadByPK( "Snapshot", sid );
+				loaded.setLabel( "changed" );
+				entitySave( loaded );
+			}
+			ormFlush();
+			ormClearSession();
+
+			reloaded  = entityLoadByPK( "Snapshot", sid );
+			finalLabel = reloaded.getLabel();
+		""", context );
+		// @formatter:on
+
+		// Read-only entity: the update was ignored, the original value persists.
+		assertThat( variables.get( Key.of( "finalLabel" ) ) ).isEqualTo( "original" );
+	}
 }
