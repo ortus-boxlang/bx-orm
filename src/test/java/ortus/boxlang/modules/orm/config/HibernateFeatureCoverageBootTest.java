@@ -212,4 +212,70 @@ public class HibernateFeatureCoverageBootTest {
 		assertThat( variables.get( Key.of( "passportNumber" ) ) ).isEqualTo( "P-12345" );
 		assertThat( variables.get( Key.of( "sharedId" ) ) ).isEqualTo( variables.get( Key.of( "pid" ) ) );
 	}
+
+	@DisplayName( "It supports the sequence id generator" )
+	@Test
+	public void testSequenceGenerator() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				a = entityNew( "Sequenced", { label : "alpha" } );
+				b = entityNew( "Sequenced", { label : "beta" } );
+				entitySave( a );
+				entitySave( b );
+			}
+			ormFlush();
+			ormClearSession();
+
+			rows      = ormExecuteQuery( "FROM Sequenced ORDER BY id" );
+			rowCount  = rows.len();
+			firstId   = rows[ 1 ].getId();
+			secondId  = rows[ 2 ].getId();
+		""", context );
+		// @formatter:on
+
+		assertThat( ( ( Number ) variables.get( Key.of( "rowCount" ) ) ).intValue() ).isEqualTo( 2 );
+		assertThat( variables.get( Key.of( "firstId" ) ) ).isNotNull();
+		// Sequence assigns increasing, distinct keys.
+		assertThat( ( ( Number ) variables.get( Key.of( "secondId" ) ) ).intValue() )
+		    .isGreaterThan( ( ( Number ) variables.get( Key.of( "firstId" ) ) ).intValue() );
+	}
+
+	@DisplayName( "It normalizes documented ormType aliases and round-trips their values" )
+	@Test
+	public void testOrmTypeAliases() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				z = entityNew( "TypeZoo", {
+					flagYesNo     : true,
+					flagTrueFalse : false,
+					bigNum        : 9000000000,
+					smallNum      : 7,
+					decimalNum    : 3.5,
+					altText       : "unicode-ish"
+				} );
+				entitySave( z );
+				zid = z.getId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			loaded    = entityLoadByPK( "TypeZoo", zid );
+			yn        = loaded.getFlagYesNo();
+			tf        = loaded.getFlagTrueFalse();
+			big       = loaded.getBigNum();
+			small     = loaded.getSmallNum();
+			dec       = loaded.getDecimalNum();
+			txt       = loaded.getAltText();
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.getAsBoolean( Key.of( "yn" ) ) ).isTrue();
+		assertThat( variables.getAsBoolean( Key.of( "tf" ) ) ).isFalse();
+		assertThat( ( ( Number ) variables.get( Key.of( "big" ) ) ).longValue() ).isEqualTo( 9000000000L );
+		assertThat( ( ( Number ) variables.get( Key.of( "small" ) ) ).intValue() ).isEqualTo( 7 );
+		assertThat( ( ( Number ) variables.get( Key.of( "dec" ) ) ).doubleValue() ).isEqualTo( 3.5 );
+		assertThat( variables.get( Key.of( "txt" ) ) ).isEqualTo( "unicode-ish" );
+	}
 }
