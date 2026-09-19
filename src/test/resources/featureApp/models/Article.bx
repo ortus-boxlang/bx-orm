@@ -15,4 +15,16 @@ class accessors="true" persistent="true" entityname="Article" table="feat_articl
 		fkcolumn    ="FK_articleId"
 		elementColumn="tag"
 		elementType ="string";
+
+	// Value map collection (struct of string->string) -> JPA <element-collection> MAP with a key column.
+	property
+		name          ="attributes"
+		fieldtype     ="collection"
+		type          ="struct"
+		table         ="feat_article_attrs"
+		fkcolumn      ="FK_articleId"
+		structKeyColumn="attr_key"
+		structKeyType ="string"
+		elementColumn ="attr_value"
+		elementType   ="string";
 }

@@ -28,6 +28,15 @@
                     <join-column name="FK_articleId"/>
                 </collection-table>
             </element-collection>
+            <element-collection classification="MAP" name="attributes">
+                <map-key-class class="java.lang.String"/>
+                <map-key-column name="attr_key"/>
+                <column name="attr_value"/>
+                <java-type>org.hibernate.type.descriptor.java.StringJavaType</java-type>
+                <collection-table name="feat_article_attrs">
+                    <join-column name="FK_articleId"/>
+                </collection-table>
+            </element-collection>
         </attributes>
     </entity>
 </entity-mappings>

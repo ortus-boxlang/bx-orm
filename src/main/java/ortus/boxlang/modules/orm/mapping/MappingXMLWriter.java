@@ -610,19 +610,19 @@ public class MappingXMLWriter {
 		boolean	isMap			= "map".equalsIgnoreCase( collectionType );
 		node.setAttribute( "classification", isMap ? "MAP" : "BAG" );
 
-		// 1. collection-structure-group (must precede the value): map key column, or an order-by for a list/bag.
+		// 1. collection-structure-group (must precede the value): map key class + column, or an order-by for a list/bag.
+		// The map key uses <map-key-class> (a plain Java class) + <map-key-column>; the value uses <java-type> (a Hibernate
+		// JavaType descriptor) below - the two deliberately take different forms per the modern schema.
 		if ( isMap ) {
+			Element mapKeyClass = createEl( "map-key-class" );
+			mapKeyClass.setAttribute( "class", elementJavaClass( assoc.getAsString( ORMKeys.structKeyType ) ) );
+			node.appendChild( mapKeyClass );
 			String keyColumn = assoc.getAsString( ORMKeys.structKeyColumn );
 			if ( keyColumn != null ) {
 				Element mapKeyColumn = createEl( "map-key-column" );
 				mapKeyColumn.setAttribute( "name", escapeReservedWords( keyColumn ) );
 				node.appendChild( mapKeyColumn );
 			}
-			Element	mapKeyType		= createEl( "map-key-type" );
-			Element	mapKeyTypeValue	= createEl( "value" );
-			mapKeyTypeValue.setTextContent( elementJavaType( assoc.getAsString( ORMKeys.structKeyType ) ) );
-			mapKeyType.appendChild( mapKeyTypeValue );
-			node.appendChild( mapKeyType );
 		} else if ( assoc.containsKey( ORMKeys.orderBy ) && assoc.getAsString( ORMKeys.orderBy ) != null ) {
 			Element orderBy = createEl( "order-by" );
 			orderBy.setTextContent( assoc.getAsString( ORMKeys.orderBy ) );
@@ -680,6 +680,29 @@ public class MappingXMLWriter {
 							default -> "StringJavaType";
 						};
 		return "org.hibernate.type.descriptor.java." + simple;
+	}
+
+	/**
+	 * Map a scalar ORM type to its plain fully-qualified Java class, used for a map key via {@code <map-key-class>} (which,
+	 * unlike the value's {@code <java-type>}, takes a real Java class rather than a Hibernate {@code JavaType} descriptor).
+	 *
+	 * @param ormType The scalar ORM type (may be {@code null}, treated as string).
+	 *
+	 * @return The fully-qualified Java class name for that scalar.
+	 */
+	private static String elementJavaClass( String ormType ) {
+		String type = ormType == null ? "string" : ormType.trim().toLowerCase();
+		return switch ( type ) {
+			case "int", "integer" -> "java.lang.Integer";
+			case "long", "biginteger", "big_integer", "bigint" -> "java.lang.Long";
+			case "short", "tinyint", "tinyinteger" -> "java.lang.Short";
+			case "float" -> "java.lang.Float";
+			case "double", "numeric", "number", "decimal" -> "java.lang.Double";
+			case "bigdecimal", "big_decimal" -> "java.math.BigDecimal";
+			case "boolean", "bit", "bool", "yesno", "truefalse" -> "java.lang.Boolean";
+			case "timestamp", "datetime", "date", "eurodate", "usdate" -> "java.time.Instant";
+			default -> "java.lang.String";
+		};
 	}
 
 	/**

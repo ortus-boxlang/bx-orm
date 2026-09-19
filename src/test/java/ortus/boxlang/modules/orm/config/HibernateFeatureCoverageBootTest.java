@@ -303,4 +303,29 @@ public class HibernateFeatureCoverageBootTest {
 		assertThat( ( ( Number ) variables.get( Key.of( "tagCount" ) ) ).intValue() ).isEqualTo( 3 );
 		assertThat( variables.getAsBoolean( Key.of( "hasIntro" ) ) ).isTrue();
 	}
+
+	@DisplayName( "It round-trips a value/element map collection (struct of scalars)" )
+	@Test
+	public void testElementCollectionMap() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				a = entityNew( "Article", { title : "Mapped" } );
+				a.setAttributes( { "color" : "blue", "size" : "large" } );
+				entitySave( a );
+				aid = a.getId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			loaded    = entityLoadByPK( "Article", aid );
+			attrs     = loaded.getAttributes();
+			attrCount = structCount( attrs );
+			colorVal  = attrs[ "color" ];
+		""", context );
+		// @formatter:on
+
+		assertThat( ( ( Number ) variables.get( Key.of( "attrCount" ) ) ).intValue() ).isEqualTo( 2 );
+		assertThat( variables.get( Key.of( "colorVal" ) ) ).isEqualTo( "blue" );
+	}
 }

@@ -64,7 +64,12 @@ public final class EntityFacadeFactory {
 	public enum AssocKind {
 		NONE,
 		TO_ONE,
-		TO_MANY
+		TO_MANY,
+		/**
+		 * A map-classified collection (an entity map or a value/element map collection). The accessor is a {@code Map}
+		 * rather than a {@code List}; scalar keys/values pass through unwrapped.
+		 */
+		TO_MANY_MAP
 	}
 
 	/**
@@ -171,8 +176,15 @@ public final class EntityFacadeFactory {
 	 * generated collection accessors are declared {@code List<Object>}, which erases to a plain list at runtime while
 	 * giving Hibernate the element type it needs.
 	 */
-	private static final TypeDescription.Generic LIST_OF_OBJECT = TypeDescription.Generic.Builder
+	private static final TypeDescription.Generic	LIST_OF_OBJECT	= TypeDescription.Generic.Builder
 	    .parameterizedType( List.class, Object.class ).build();
+
+	/**
+	 * A generic {@code Map<Object, Object>} declared as the accessor type for map-classified collections, for the same
+	 * element-type-resolution reason as {@link #LIST_OF_OBJECT}.
+	 */
+	private static final TypeDescription.Generic	MAP_OF_OBJECT	= TypeDescription.Generic.Builder
+	    .parameterizedType( Map.class, Object.class, Object.class ).build();
 
 	private static DynamicType.Builder<?> defineAccessor( DynamicType.Builder<?> builder, PropertySpec prop ) {
 		String cap = Character.toUpperCase( prop.name().charAt( 0 ) ) + prop.name().substring( 1 );
@@ -181,6 +193,13 @@ public final class EntityFacadeFactory {
 			    .defineMethod( "get" + cap, LIST_OF_OBJECT, Visibility.PUBLIC )
 			    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), true, prop.assoc() ) ) )
 			    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( LIST_OF_OBJECT )
+			    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), false, prop.assoc() ) ) );
+		}
+		if ( prop.assoc() == AssocKind.TO_MANY_MAP ) {
+			return builder
+			    .defineMethod( "get" + cap, MAP_OF_OBJECT, Visibility.PUBLIC )
+			    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), true, prop.assoc() ) ) )
+			    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( MAP_OF_OBJECT )
 			    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), false, prop.assoc() ) ) );
 		}
 		return builder
@@ -260,6 +279,24 @@ public final class EntityFacadeFactory {
 							facades.add( element instanceof IClassRunnable runnable ? FacadeSupport.wrapInstance( runnable ) : element );
 						}
 						return facades;
+					}
+					return scopeValue;
+				case TO_MANY_MAP :
+					// A value/element map collection. The developer sets a BoxLang Struct whose keys are Key instances, but the
+					// map key type is a scalar (e.g. String), so convert Key keys to their scalar name before handing the map to
+					// Hibernate. If the map already has plain scalar keys (Hibernate's own managed map), return it unchanged so
+					// its identity - and Hibernate's dirty tracking - is preserved.
+					if ( scopeValue instanceof java.util.Map<?, ?> map ) {
+						boolean hasKeyKeys = map.keySet().stream().anyMatch( key -> key instanceof ortus.boxlang.runtime.scopes.Key );
+						if ( !hasKeyKeys ) {
+							return scopeValue;
+						}
+						java.util.LinkedHashMap<Object, Object> converted = new java.util.LinkedHashMap<>();
+						for ( java.util.Map.Entry<?, ?> entry : map.entrySet() ) {
+							Object key = entry.getKey() instanceof ortus.boxlang.runtime.scopes.Key k ? k.getName() : entry.getKey();
+							converted.put( key, entry.getValue() );
+						}
+						return converted;
 					}
 					return scopeValue;
 				default :

@@ -416,14 +416,21 @@ public class SessionFactoryBuilder {
 	 * @return The {@link EntityFacadeFactory.AssocKind} for the generated accessor.
 	 */
 	private static EntityFacadeFactory.AssocKind facadeAssocKind( IPropertyMeta prop ) {
-		return switch ( prop.getFieldType() ) {
-			case ONE_TO_ONE, MANY_TO_ONE -> EntityFacadeFactory.AssocKind.TO_ONE;
-			// A value/element collection (fieldtype="collection") is exposed like a to-many: a List accessor Hibernate
-			// manages, with a developer-facing collection view. Its elements are scalars, so the view passes them through
-			// unchanged (facade wrapping only ever applies to IClassRunnable entity elements).
-			case ONE_TO_MANY, MANY_TO_MANY, COLLECTION -> EntityFacadeFactory.AssocKind.TO_MANY;
-			default -> EntityFacadeFactory.AssocKind.NONE;
-		};
+		switch ( prop.getFieldType() ) {
+			case ONE_TO_ONE, MANY_TO_ONE :
+				return EntityFacadeFactory.AssocKind.TO_ONE;
+			case COLLECTION :
+				// A value/element collection (fieldtype="collection"). An array maps to a List accessor; a struct maps to a
+				// Map accessor. Its keys/values are scalars, so the accessor's contents pass through unwrapped (facade
+				// wrapping only ever applies to IClassRunnable entity elements).
+				return "map".equalsIgnoreCase( prop.getAssociation().getAsString( ortus.boxlang.modules.orm.config.ORMKeys.collectionType ) )
+				    ? EntityFacadeFactory.AssocKind.TO_MANY_MAP
+				    : EntityFacadeFactory.AssocKind.TO_MANY;
+			case ONE_TO_MANY, MANY_TO_MANY :
+				return EntityFacadeFactory.AssocKind.TO_MANY;
+			default :
+				return EntityFacadeFactory.AssocKind.NONE;
+		}
 	}
 
 	/**
