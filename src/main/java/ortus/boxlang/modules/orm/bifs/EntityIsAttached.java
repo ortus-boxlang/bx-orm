@@ -68,6 +68,10 @@ public class EntityIsAttached extends BaseORMBIF {
 
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
-		return session.contains( theEntity );
+		// In facade mode Hibernate tracks the facade, not the IClassRunnable, so check containment of the facade. No-op
+		// passthrough in MAP mode.
+		Object			managed			= ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.managed(
+		    ormContext.getConfig().entityFacades, ormContext.getConfig().facadeNamespace, entityName, theEntity );
+		return session.contains( managed );
 	}
 }

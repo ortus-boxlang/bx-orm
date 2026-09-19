@@ -1,0 +1,21 @@
+class accessors="true" persistent="true" table="fac_fleets" {
+
+	property name="fleetId" fieldtype="id" generator="uuid" ormType="string";
+
+	property name="name" ormType="string";
+
+	// O2M -> Trucks. Non-inverse (FK owned here), matching the app's Manufacturer->vehicles shape. Element id ("plate")
+	// differs from this owner's id ("fleetId"), exercising remove-by-element-identity.
+	property
+		name        ="trucks"
+		singularName="truck"
+		type        ="array"
+		fieldtype   ="one-to-many"
+		cfc         ="Truck"
+		fkcolumn    ="FK_fleet";
+
+	function init() {
+		variables.trucks = [];
+		return this;
+	}
+}

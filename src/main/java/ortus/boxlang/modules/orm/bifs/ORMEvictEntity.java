@@ -74,15 +74,17 @@ public class ORMEvictEntity extends BaseORMBIF {
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		SessionFactory	factory			= session.getSessionFactory();
-		// Fix casing.
-		entityName = entityRecord.getEntityName();
+		// The L2 cache is keyed by the Hibernate entity-name: the BoxLang name for hbm/MAP, the facade class for the modern
+		// mapping.xml facade representation. Key resolution still uses the BoxLang name (getKeyJavaType re-looks it up).
+		String			boxName			= entityRecord.getEntityName();
+		String			hbName			= ORMApp.hibernateEntityName( session, boxName );
 
 		if ( primaryKey == null ) {
-			factory.getCache().evictEntityData( entityName );
+			factory.getCache().evictEntityData( hbName );
 		} else {
-			String			keyType	= ormApp.getKeyJavaType( session, entityName ).getSimpleName();
+			String			keyType	= ormApp.getKeyJavaType( session, boxName ).getSimpleName();
 			Serializable	id		= ( Serializable ) GenericCaster.cast( context, primaryKey, keyType );
-			factory.getCache().evictEntityData( entityName, id );
+			factory.getCache().evictEntityData( hbName, id );
 		}
 
 		return null;

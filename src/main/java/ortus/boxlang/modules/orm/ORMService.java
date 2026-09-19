@@ -23,7 +23,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.hibernate.Session;
-import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -289,6 +289,9 @@ public class ORMService extends BaseService {
 	public static String getEntityName( Object entity ) {
 		if ( entity instanceof BoxProxy proxyEntity ) {
 			return proxyEntity.getHibernateLazyInitializer().getEntityName();
+		} else if ( entity instanceof ortus.boxlang.modules.orm.hibernate.facade.BoxEntityFacade ) {
+			// Facade (POJO) mode: resolve the entity name via the backing BoxLang instance.
+			return getEntityName( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrap( entity ) );
 		} else if ( entity instanceof IClassRunnable boxClass ) {
 			return getEntityName( boxClass );
 		} else {
@@ -362,8 +365,7 @@ public class ORMService extends BaseService {
 		String			entityName		= getEntityName( entity );
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
-		ClassMetadata	metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
-		return metadata.getIdentifier( entity );
+		return ormApp.getEntityPersister( session, entityName ).getIdentifier( entity, ( SharedSessionContractImplementor ) session );
 	}
 
 	/**

@@ -1,0 +1,41 @@
+/**
+ * Global ORM event handler that records every fired event name into application scope so a test can assert which
+ * global-only lifecycle events (onFlush/onClear/onEvict/onDirtyCheck/onAutoFlush, plus the entity events) actually fire.
+ */
+class {
+
+	private void function record( required string event ) {
+		if ( !structKeyExists( application, "ormEvents" ) ) {
+			application.ormEvents = [];
+		}
+		application.ormEvents.append( arguments.event );
+	}
+
+	public void function onFlush( any entity ) {
+		record( "onFlush" );
+	}
+
+	public void function onAutoFlush( any entity ) {
+		record( "onAutoFlush" );
+	}
+
+	public void function onClear( any entity ) {
+		record( "onClear" );
+	}
+
+	public void function onEvict( any entity ) {
+		record( "onEvict" );
+	}
+
+	public void function onDirtyCheck( any entity ) {
+		record( "onDirtyCheck" );
+	}
+
+	public void function preInsert( any entity ) {
+		record( "preInsert" );
+	}
+
+	public void function postInsert( any entity ) {
+		record( "postInsert" );
+	}
+}

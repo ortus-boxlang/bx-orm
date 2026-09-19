@@ -162,6 +162,9 @@ public class ORMExecuteQuery extends BaseORMBIF {
 			return param;
 		} else if ( param instanceof BoxProxy proxyClass ) {
 			return ORMService.getEntityIdentifier( proxyClass.getRunnable() );
+		} else if ( param instanceof ortus.boxlang.modules.orm.hibernate.facade.BoxEntityFacade ) {
+			// A facade passed as a query parameter (facade mode): resolve its identifier via the backing BoxLang instance.
+			return ORMService.getEntityIdentifier( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrap( param ) );
 		} else if ( param instanceof IClassRunnable runnable ) {
 			return ORMService.getEntityIdentifier( runnable );
 		} else {

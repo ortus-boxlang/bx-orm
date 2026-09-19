@@ -22,7 +22,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -59,19 +63,29 @@ public class ORMConfig {
 	/**
 	 * Class locator for loading boxlang classes.
 	 */
-	private static final ClassLocator	CLASS_LOCATOR			= BoxRuntime.getInstance().getClassLocator();
+	private static final ClassLocator			CLASS_LOCATOR			= BoxRuntime.getInstance().getClassLocator();
 
-	public static final String			DEFAULT_CACHEPROVIDER	= "BoxCacheProvider";
+	public static final String					DEFAULT_CACHEPROVIDER	= "BoxCacheProvider";
 
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime		runtime					= BoxRuntime.getInstance();
+	private static final BoxRuntime				runtime					= BoxRuntime.getInstance();
 
 	/**
 	 * The logger for the ORM application.
 	 */
-	private BoxLangLogger				logger;
+	private BoxLangLogger						logger;
+
+	/**
+	 * Immutable map of normalized legacy Hibernate 5 dialect aliases to their Hibernate 7 dialect class names.
+	 */
+	private static final Map<String, String>	DIALECT_ALIASES			= buildDialectAliases();
+
+	/**
+	 * Tracks legacy dialect aliases already warned about, so the deprecation warning is logged only once per alias.
+	 */
+	private static final Set<String>			WARNED_DIALECTS			= ConcurrentHashMap.newKeySet();
 
 	/**
 	 * Holds the BootstrapServiceRegistry built by {@link #toHibernateConfig()} so that
@@ -83,7 +97,7 @@ public class ORMConfig {
 	 * Closing it early destroys the registry chain and causes {@code UnknownServiceException}
 	 * on the next {@code openSession()} call.
 	 */
-	private BootstrapServiceRegistry	bootstrapRegistry;
+	private BootstrapServiceRegistry			bootstrapRegistry;
 
 	/**
 	 * Specifies whether ColdFusion should automatically generate entity mappings
@@ -91,7 +105,7 @@ public class ORMConfig {
 	 * provided in the form of <code>hbm.xml</code> files stored ALONGSIDE the persistent CFCs. If true, the ORM will generate the mapping XML files on
 	 * the fly based on the structure of the persistent CFCs and their properties.
 	 */
-	public boolean						generateMappings		= true;
+	public boolean								generateMappings		= true;
 
 	/**
 	 * Backwards-compatible alias for `generateMappings`. {@link #generateMappings}
@@ -99,7 +113,7 @@ public class ORMConfig {
 	 * @deprecated Use `generateMappings` instead of this property. This property will be removed in a future release.
 	 */
 	@Deprecated( since = "1.4.1", forRemoval = true )
-	public boolean						autoGenMap				= true;
+	public boolean								autoGenMap				= true;
 
 	/**
 	 * Allows the engine to manage the Hibernate session. It is recommended not to
@@ -108,18 +122,18 @@ public class ORMConfig {
 	 * Use transaction blocks in order to demarcate your regions that should start,
 	 * flush and end a transaction.
 	 */
-	public boolean						autoManageSession		= false;
+	public boolean								autoManageSession		= false;
 
 	/**
 	 * Specify a string path to the secondary cache configuration file. This configuration file must be formatted to the specification of the jCache
 	 * provider specified in the `cacheProvider` setting.
 	 */
-	public String						cacheConfigFile;
+	public String								cacheConfigFile;
 
 	/**
 	 * A structure of properties to configure the secondary cache provider
 	 */
-	public IStruct						cacheConfigProperties	= CacheConfig.DEFAULTS;
+	public IStruct								cacheConfigProperties	= CacheConfig.DEFAULTS;
 
 	/**
 	 * Specify the alias name OR full class path of a jCache provider to use for the second-level cache. Must be one of the following:
@@ -128,7 +142,7 @@ public class ORMConfig {
 	 * <li><code>com.foo.MyJCacheProvider</code> - String path to a custom jCache provider loaded into your BoxLang application.</li>
 	 * </ul>
 	 */
-	public String						cacheProvider			= DEFAULT_CACHEPROVIDER;
+	public String								cacheProvider			= DEFAULT_CACHEPROVIDER;
 
 	/**
 	 * Specifies the directory (or array of directories) that should be used to
@@ -142,13 +156,13 @@ public class ORMConfig {
 	 * <p>
 	 * Aliased as `cfclocation` for Adobe and Lucee CFML compatibility.
 	 */
-	public String[]						entityPaths;
+	public String[]								entityPaths;
 
 	/**
 	 * Define the data source to be utilized by the ORM. If not used,
 	 * defaults to the this.datasource in the Application.cfc.
 	 */
-	public Key							datasource;
+	public Key									datasource;
 
 	/**
 	 * <ul>
@@ -168,7 +182,7 @@ public class ORMConfig {
 	 * BoxLang.</strong></li>
 	 * </ul>
 	 */
-	public String						dbcreate;
+	public String								dbcreate;
 
 	/**
 	 * The dialect to use for your database. By default Hibernate will introspect
@@ -176,30 +190,30 @@ public class ORMConfig {
 	 *
 	 * You can also use the fully Java qualified name of the class.
 	 */
-	public String						dialect;
+	public String								dialect;
 
 	/**
 	 * If true, then it enables the ORM event callbacks in entities and globally via
 	 * the `eventHandler` property.
 	 */
-	public boolean						eventHandling;
+	public boolean								eventHandling;
 
 	/**
 	 * The CFC path of the CFC that will manage the global ORM events.
 	 */
-	public String						eventHandler;
+	public String								eventHandler;
 
 	/**
 	 * Specifies if an orm flush should be called automatically at the end of a
 	 * request. In our opinion this SHOULD never be true. Database persistence
 	 * should be done via transaction tags and good transaction demarcation.
 	 */
-	public boolean						flushAtRequestEnd		= false;
+	public boolean								flushAtRequestEnd		= false;
 
 	/**
 	 * Specifies if the SQL queries should be logged to the console.
 	 */
-	public boolean						logSQL					= false;
+	public boolean								logSQL					= false;
 
 	/**
 	 * Defines the naming convention to use on table and column names.
@@ -209,7 +223,7 @@ public class ORMConfig {
 	 * uppercase.
 	 * - CFC PATH : Use your own CFC to determine naming. Must implement `orm.models.INamingStrategy`
 	 */
-	public String						namingStrategy;
+	public String								namingStrategy;
 
 	/**
 	 * The path to a custom Hibernate <code>hibernate.properties</code> file. Every key/value pair in the file is applied to the Hibernate
@@ -225,7 +239,7 @@ public class ORMConfig {
 	 * identifier quoting, and entity mode) are re-applied by {@code SessionFactoryBuilder} <em>after</em> {@link #toHibernateConfig()} runs, so they
 	 * cannot be overridden via this file.
 	 */
-	public String						ormConfig;
+	public String								ormConfig;
 
 	/**
 	 * A flat struct of raw Hibernate property name/value pairs (e.g. <code>{ "hibernate.connection.release_mode" : "on_close" }</code>), applied to
@@ -239,7 +253,7 @@ public class ORMConfig {
 	 * identifier quoting, and entity mode) are re-applied by {@code SessionFactoryBuilder} <em>after</em> {@link #toHibernateConfig()} runs, so they
 	 * cannot be overridden via this struct.
 	 */
-	public IStruct						hibernateProperties;
+	public IStruct								hibernateProperties;
 
 	/**
 	 * If enabled, the ORM will create the Hibernate mapping XML (*.hbmxml) files
@@ -247,24 +261,24 @@ public class ORMConfig {
 	 * relationships.
 	 *
 	 */
-	public boolean						saveMapping				= false;
+	public boolean								saveMapping				= false;
 
 	/**
 	 * The default database schema to use for database connections. This can be
 	 * overriden at the datasource level, as well as on each entity.
 	 */
-	public String						schema;
+	public String								schema;
 
 	/**
 	 * Specifies the default Database Catalog that ORM should use. This can be
 	 * overriden at the datasource level, as well as on each entity.
 	 */
-	public String						catalog;
+	public String								catalog;
 
 	/**
 	 * Enable or disable the secondary cache.
 	 */
-	public boolean						secondaryCacheEnabled	= false;
+	public boolean								secondaryCacheEnabled	= false;
 
 	/**
 	 * If true, then the ORM startup will ignore CFCs that have compile time errors
@@ -273,13 +287,13 @@ public class ORMConfig {
 	 * <p>
 	 * Aliased as `skipCFCWithError` for Adobe and Lucee CFML compatibility.
 	 */
-	public boolean						ignoreParseErrors		= false;
+	public boolean								ignoreParseErrors		= false;
 
 	/**
 	 * Path to a SQL script file that will be executed after the ORM is initialized.
 	 * Only used if dbcreate is set to <code>dropcreate</code>.
 	 */
-	public String						sqlScript;
+	public String								sqlScript;
 
 	/**
 	 * Specifies whether the database has to be inspected to identify the missing
@@ -288,32 +302,50 @@ public class ORMConfig {
 	 * The database is inspected to get the column data type, primary key and
 	 * foreign key information.
 	 */
-	public boolean						useDBForMapping			= false;
+	public boolean								useDBForMapping			= false;
 
 	/**
 	 * Whether to quote identifiers. If turned off column and table names with reserved words will fail to be created/updated
 	 */
-	public boolean						quoteIdentifiers		= false;
+	public boolean								quoteIdentifiers		= false;
 
 	/**
 	 * Enable or disable the use of threading for mapping multiple ORM entities concurrently.
 	 */
-	public boolean						enableThreadedMapping	= true;
+	public boolean								enableThreadedMapping	= true;
 
 	/**
 	 * Default batch size for hibernate fetching
 	 */
-	public static int					defaultBatchSize		= 16;
+	public static int							defaultBatchSize		= 16;
 
 	/**
 	 * Whether to use proxy-based lazy loading for entities.
 	 */
-	public boolean						proxyLazyLoading		= false;
+	public boolean								proxyLazyLoading		= false;
+
+	/**
+	 * Whether to map BoxLang entities to Hibernate as real per-entity POJO "facade" classes (see the
+	 * {@code ortus.boxlang.modules.orm.hibernate.facade} package) instead of class-less dynamic MAP entities.
+	 * <p>
+	 * A facade is a generated real Java class whose accessors delegate their state to the BoxLang instance, so Hibernate
+	 * sees a real class and a real id member (which unlocks {@code uuid} and other id generation strategies unavailable
+	 * to MAP entities), while BoxLang developers still only ever handle the BoxLang class. Defaults to {@code false}: with
+	 * the flag off the representation is byte-for-byte the original MAP behavior.
+	 */
+	public boolean								entityFacades			= true;
+
+	/**
+	 * Facade namespace for this ORM application: a sanitized, application-unique package segment under which this
+	 * application's generated entity facades live. Set once at startup so that two applications in the same JVM, each
+	 * mapping a same-named entity, generate distinct facade classes instead of colliding on one global name.
+	 */
+	public String								facadeNamespace			= "default";
 
 	/**
 	 * The instantiated naming strategy object.
 	 */
-	private PhysicalNamingStrategy		instantiatedNamingStrategy;
+	private PhysicalNamingStrategy				instantiatedNamingStrategy;
 
 	/**
 	 * Constructor
@@ -534,6 +566,10 @@ public class ORMConfig {
 			proxyLazyLoading = BooleanCaster.cast( properties.get( ORMKeys.proxyLazyLoading ) );
 		}
 
+		if ( properties.containsKey( ORMKeys.entityFacades ) && properties.get( ORMKeys.entityFacades ) != null ) {
+			entityFacades = BooleanCaster.cast( properties.get( ORMKeys.entityFacades ) );
+		}
+
 		if ( this.namingStrategy != null ) {
 			this.instantiatedNamingStrategy = getNamingStrategyForName( this.namingStrategy );
 		}
@@ -621,7 +657,7 @@ public class ORMConfig {
 		boolean hasExplicitDialect = this.dialect != null && !this.dialect.isBlank();
 
 		// If no dialect is configured, Hibernate must inspect JDBC metadata to resolve it.
-		configuration.setProperty( "hibernate.temp.use_jdbc_metadata_defaults", hasExplicitDialect ? "false" : "true" );
+		configuration.setProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT, hasExplicitDialect ? "disallow" : "allow" );
 		if ( !hasExplicitDialect ) {
 			configuration.setProperty( AvailableSettings.DIALECT_RESOLVERS, SQLiteDialectResolver.class.getName() );
 		}
@@ -838,179 +874,145 @@ public class ORMConfig {
 	}
 
 	/**
-	 * Translate a short dialect name like 'MYSQL' to the full Hibernate dialect class name like 'org.hibernate.dialect.MySQLDialect'.
+	 * Translate a short dialect name like {@code MYSQL} to a Hibernate 7 dialect class name like
+	 * {@code org.hibernate.dialect.MySQLDialect}.
 	 * <p>
-	 * Note that this method should be removed once we migrate to Hibernate 6+.
+	 * bx-orm is the ORM abstraction: applications configured against Hibernate 5 used short aliases and version-specific dialect
+	 * names (for example {@code MySQL57}, {@code Oracle10g}, {@code DerbyTenSeven}). Hibernate 7 removed the version-specific
+	 * dialects in favor of a single, version-detecting dialect per database, and moved several databases to the
+	 * {@code hibernate-community-dialects} artifact. To keep existing settings booting, every recognized legacy alias is mapped
+	 * to its Hibernate 7 equivalent and a one-time deprecation warning is logged for version-specific aliases. Fully-qualified
+	 * class names are passed through untouched, and unrecognized short names are returned as-is for Hibernate to resolve.
 	 *
-	 * @param dialectName Hibernate dialect name, either full like 'org.hibernate.dialect.MySQLDialect' or short like 'MYSQL'.
+	 * @param dialectName Hibernate dialect name, a short alias like {@code MYSQL} or a full class name.
 	 *
-	 * @return If the dialect passed is recognized as a dialect alias, the full Hibernate dialect class name is returned. Otherwise, the original dialect
-	 *         name is returned unmodified.
+	 * @return The resolved Hibernate 7 dialect class name, or the original value when it is a class name or unrecognized alias.
 	 */
 	private String toFullHibernateDialectName( String dialectName ) {
-		switch ( dialectName.trim().toUpperCase().replace( "DIALECT", "" ) ) {
-			case "CACHE71" :
-				return "org.hibernate.dialect.Cache71Dialect";
-			case "COCKROACHDB192" :
-				return "org.hibernate.dialect.CockroachDB192Dialect";
-			case "COCKROACHDB201" :
-				return "org.hibernate.dialect.CockroachDB201Dialect";
-			case "CUBRID" :
-				return "org.hibernate.dialect.CUBRIDDialect";
-			case "DATADIRECTORACLE9" :
-				return "org.hibernate.dialect.DataDirectOracle9Dialect";
-			case "DB2390" :
-				return "org.hibernate.dialect.DB2390Dialect";
-			case "DB2390V8" :
-				return "org.hibernate.dialect.DB2390V8Dialect";
-			case "DB2400" :
-				return "org.hibernate.dialect.DB2400Dialect";
-			case "DB2400V7R3" :
-				return "org.hibernate.dialect.DB2400V7R3Dialect";
-			case "DB297" :
-				return "org.hibernate.dialect.DB297Dialect";
-			case "DB2" :
-				return "org.hibernate.dialect.DB2Dialect";
-			case "DERBY" :
-				return "org.hibernate.dialect.DerbyDialect";
-			case "DERBYTENFIVE" :
-				return "org.hibernate.dialect.DerbyTenFiveDialect";
-			case "DERBYTENSEVEN" :
-				return "org.hibernate.dialect.DerbyTenSevenDialect";
-			case "DERBYTENSIX" :
-				return "org.hibernate.dialect.DerbyTenSixDialect";
-			case "FIREBIRD" :
-				return "org.hibernate.dialect.FirebirdDialect";
-			case "FRONTBASE" :
-				return "org.hibernate.dialect.FrontBaseDialect";
-			case "H2" :
-				return "org.hibernate.dialect.H2Dialect";
-			case "HANACLOUDCOLUMNSTORE" :
-				return "org.hibernate.dialect.HANACloudColumnStoreDialect";
-			case "HANACOLUMNSTORE" :
-				return "org.hibernate.dialect.HANAColumnStoreDialect";
-			case "HANAROWSTORE" :
-				return "org.hibernate.dialect.HANARowStoreDialect";
-			case "HSQL" :
-				return "org.hibernate.dialect.HSQLDialect";
-			case "INFORMIX10" :
-				return "org.hibernate.dialect.Informix10Dialect";
-			case "INFORMIX" :
-				return "org.hibernate.dialect.InformixDialect";
-			case "INGRES10" :
-				return "org.hibernate.dialect.Ingres10Dialect";
-			case "INGRES9" :
-				return "org.hibernate.dialect.Ingres9Dialect";
-			case "INGRES" :
-				return "org.hibernate.dialect.IngresDialect";
-			case "INTERBASE" :
-				return "org.hibernate.dialect.InterbaseDialect";
-			case "JDATASTORE" :
-				return "org.hibernate.dialect.JDataStoreDialect";
-			case "MARIADB102" :
-				return "org.hibernate.dialect.MariaDB102Dialect";
-			case "MARIADB103" :
-				return "org.hibernate.dialect.MariaDB103Dialect";
-			case "MARIADB10" :
-				return "org.hibernate.dialect.MariaDB10Dialect";
-			case "MARIADB53" :
-				return "org.hibernate.dialect.MariaDB53Dialect";
-			case "MARIADB" :
-				return "org.hibernate.dialect.MariaDBDialect";
-			case "MCKOI" :
-				return "org.hibernate.dialect.MckoiDialect";
-			case "MICROSOFTSQLSERVER" :
-				return "org.hibernate.dialect.SQLServerDialect";
-			case "MIMERSQL" :
-				return "org.hibernate.dialect.MimerSQLDialect";
-			case "MYSQL55" :
-				return "org.hibernate.dialect.MySQL55Dialect";
-			case "MYSQL57" :
-				return "org.hibernate.dialect.MySQL57Dialect";
-			case "MYSQL57INNODB" :
-				return "org.hibernate.dialect.MySQL57InnoDBDialect";
-			case "MYSQL5" :
-				return "org.hibernate.dialect.MySQL5Dialect";
-			case "MYSQL5INNODB" :
-				return "org.hibernate.dialect.MySQL5InnoDBDialect";
-			case "MYSQL8" :
-			case "MYSQL" :
-				return "org.hibernate.dialect.MySQL8Dialect";
-			case "MYSQLINNODB" :
-				return "org.hibernate.dialect.MySQLInnoDBDialect";
-			case "MYSQLMYISAM" :
-				return "org.hibernate.dialect.MySQLMyISAMDialect";
-			case "ORACLE10G" :
-				return "org.hibernate.dialect.Oracle10gDialect";
-			case "ORACLE12C" :
-				return "org.hibernate.dialect.Oracle12cDialect";
-			case "ORACLE8I" :
-				return "org.hibernate.dialect.Oracle8iDialect";
-			case "ORACLE9" :
-				return "org.hibernate.dialect.Oracle9Dialect";
-			case "ORACLE9I" :
-				return "org.hibernate.dialect.Oracle9iDialect";
-			case "ORACLE" :
-				return "org.hibernate.dialect.OracleDialect";
-			case "POINTBASE" :
-				return "org.hibernate.dialect.PointbaseDialect";
-			case "POSTGRESPLUS" :
-				return "org.hibernate.dialect.PostgresPlusDialect";
-			case "POSTGRESQL10" :
-				return "org.hibernate.dialect.PostgreSQL10Dialect";
-			case "POSTGRESQL81" :
-				return "org.hibernate.dialect.PostgreSQL81Dialect";
-			case "POSTGRESQL82" :
-				return "org.hibernate.dialect.PostgreSQL82Dialect";
-			case "POSTGRESQL91" :
-				return "org.hibernate.dialect.PostgreSQL91Dialect";
-			case "POSTGRESQL92" :
-				return "org.hibernate.dialect.PostgreSQL92Dialect";
-			case "POSTGRESQL93" :
-				return "org.hibernate.dialect.PostgreSQL93Dialect";
-			case "POSTGRESQL94" :
-				return "org.hibernate.dialect.PostgreSQL94Dialect";
-			case "POSTGRESQL95" :
-				return "org.hibernate.dialect.PostgreSQL95Dialect";
-			case "POSTGRESQL9" :
-				return "org.hibernate.dialect.PostgreSQL9Dialect";
-			case "POSTGRESQL" :
-				return "org.hibernate.dialect.PostgreSQLDialect";
-			case "PROGRESS" :
-				return "org.hibernate.dialect.ProgressDialect";
-			case "RDMSOS2200" :
-				return "org.hibernate.dialect.RDMSOS2200Dialect";
-			case "SAPDB" :
-				return "org.hibernate.dialect.SAPDBDialect";
-			case "SQLITE" :
-				return "org.sqlite.hibernate.dialect.SQLiteDialect";
-			case "SQLSERVER2005" :
-				return "org.hibernate.dialect.SQLServer2005Dialect";
-			case "SQLSERVER2008" :
-				return "org.hibernate.dialect.SQLServer2008Dialect";
-			case "SQLSERVER2012" :
-				return "org.hibernate.dialect.SQLServer2012Dialect";
-			case "SQLSERVER" :
-				return "org.hibernate.dialect.SQLServerDialect";
-			case "SYBASE11" :
-				return "org.hibernate.dialect.Sybase11Dialect";
-			case "SYBASEASE157" :
-				return "org.hibernate.dialect.SybaseASE157Dialect";
-			case "SYBASEASE15" :
-				return "org.hibernate.dialect.SybaseASE15Dialect";
-			case "SYBASEANYWHERE" :
-				return "org.hibernate.dialect.SybaseAnywhereDialect";
-			case "SYBASE" :
-				return "org.hibernate.dialect.SybaseDialect";
-			case "TERADATA14" :
-				return "org.hibernate.dialect.Teradata14Dialect";
-			case "TERADATA" :
-				return "org.hibernate.dialect.TeradataDialect";
-			case "TIMESTEN" :
-				return "org.hibernate.dialect.TimesTenDialect";
-			default :
-				return dialectName;
+		String raw = dialectName.trim();
+		// A fully-qualified class name (contains a dot) is passed through untouched.
+		if ( raw.contains( "." ) ) {
+			return raw;
 		}
+		String	key			= raw.toUpperCase().replace( "DIALECT", "" );
+		String	resolved	= DIALECT_ALIASES.get( key );
+		if ( resolved == null ) {
+			// Unrecognized short name: let Hibernate try to resolve it (and produce its own error if it cannot).
+			return raw;
+		}
+		// Warn once for legacy/version-specific aliases that no longer map one-to-one in Hibernate 7.
+		String simpleName = resolved.substring( resolved.lastIndexOf( '.' ) + 1 );
+		if ( !simpleName.equalsIgnoreCase( raw ) && !simpleName.equalsIgnoreCase( raw + "Dialect" ) && WARNED_DIALECTS.add( key ) ) {
+			logger.warn(
+			    "ORM dialect [{}] is a legacy Hibernate 5 alias and was resolved to [{}] for Hibernate 7. Configure a current dialect name to silence this warning.",
+			    raw, resolved );
+		}
+		return resolved;
+	}
+
+	/**
+	 * Build the immutable map of normalized (uppercased, {@code DIALECT}-suffix-stripped) legacy dialect aliases to their
+	 * Hibernate 7 dialect class names. Core dialects live under {@code org.hibernate.dialect}; the rest live under
+	 * {@code org.hibernate.community.dialect} (the {@code hibernate-community-dialects} artifact).
+	 *
+	 * @return An unmodifiable alias map.
+	 */
+	private static Map<String, String> buildDialectAliases() {
+		final String		CORE		= "org.hibernate.dialect.";
+		final String		COMMUNITY	= "org.hibernate.community.dialect.";
+		Map<String, String>	m			= new HashMap<>();
+
+		// DB2 family
+		m.put( "DB2", CORE + "DB2Dialect" );
+		m.put( "DB297", CORE + "DB2Dialect" );
+		m.put( "DB2390", CORE + "DB2zDialect" );
+		m.put( "DB2390V8", CORE + "DB2zDialect" );
+		m.put( "DB2400", CORE + "DB2iDialect" );
+		m.put( "DB2400V7R3", CORE + "DB2iDialect" );
+
+		// H2 / HSQL
+		m.put( "H2", CORE + "H2Dialect" );
+		m.put( "HSQL", CORE + "HSQLDialect" );
+
+		// HANA
+		m.put( "HANA", CORE + "HANADialect" );
+		m.put( "HANACLOUDCOLUMNSTORE", CORE + "HANADialect" );
+		m.put( "HANACOLUMNSTORE", CORE + "HANADialect" );
+		m.put( "HANAROWSTORE", CORE + "HANADialect" );
+
+		// MariaDB
+		m.put( "MARIADB", CORE + "MariaDBDialect" );
+		m.put( "MARIADB53", CORE + "MariaDBDialect" );
+		m.put( "MARIADB10", CORE + "MariaDBDialect" );
+		m.put( "MARIADB102", CORE + "MariaDBDialect" );
+		m.put( "MARIADB103", CORE + "MariaDBDialect" );
+
+		// MySQL
+		m.put( "MYSQL", CORE + "MySQLDialect" );
+		m.put( "MYSQL5", CORE + "MySQLDialect" );
+		m.put( "MYSQL55", CORE + "MySQLDialect" );
+		m.put( "MYSQL57", CORE + "MySQLDialect" );
+		m.put( "MYSQL8", CORE + "MySQLDialect" );
+		m.put( "MYSQL5INNODB", CORE + "MySQLDialect" );
+		m.put( "MYSQL57INNODB", CORE + "MySQLDialect" );
+		m.put( "MYSQLINNODB", CORE + "MySQLDialect" );
+		m.put( "MYSQLMYISAM", CORE + "MySQLDialect" );
+
+		// Oracle
+		m.put( "ORACLE", CORE + "OracleDialect" );
+		m.put( "ORACLE8I", CORE + "OracleDialect" );
+		m.put( "ORACLE9", CORE + "OracleDialect" );
+		m.put( "ORACLE9I", CORE + "OracleDialect" );
+		m.put( "ORACLE10G", CORE + "OracleDialect" );
+		m.put( "ORACLE12C", CORE + "OracleDialect" );
+
+		// PostgreSQL
+		m.put( "POSTGRESQL", CORE + "PostgreSQLDialect" );
+		for ( String v : new String[] { "81", "82", "9", "91", "92", "93", "94", "95", "10" } ) {
+			m.put( "POSTGRESQL" + v, CORE + "PostgreSQLDialect" );
+		}
+		m.put( "POSTGRESPLUS", CORE + "PostgresPlusDialect" );
+
+		// SQL Server
+		m.put( "SQLSERVER", CORE + "SQLServerDialect" );
+		m.put( "SQLSERVER2005", CORE + "SQLServerDialect" );
+		m.put( "SQLSERVER2008", CORE + "SQLServerDialect" );
+		m.put( "SQLSERVER2012", CORE + "SQLServerDialect" );
+		m.put( "MICROSOFTSQLSERVER", CORE + "SQLServerDialect" );
+
+		// Sybase
+		m.put( "SYBASE", CORE + "SybaseDialect" );
+		m.put( "SYBASE11", CORE + "SybaseASEDialect" );
+		m.put( "SYBASEASE15", CORE + "SybaseASEDialect" );
+		m.put( "SYBASEASE157", CORE + "SybaseASEDialect" );
+		m.put( "SYBASEANYWHERE", COMMUNITY + "SybaseAnywhereDialect" );
+
+		// CockroachDB
+		m.put( "COCKROACHDB192", CORE + "CockroachDialect" );
+		m.put( "COCKROACHDB201", CORE + "CockroachDialect" );
+
+		// Community dialects
+		m.put( "DERBY", COMMUNITY + "DerbyDialect" );
+		m.put( "DERBYTENFIVE", COMMUNITY + "DerbyDialect" );
+		m.put( "DERBYTENSIX", COMMUNITY + "DerbyDialect" );
+		m.put( "DERBYTENSEVEN", COMMUNITY + "DerbyDialect" );
+		m.put( "FIREBIRD", COMMUNITY + "FirebirdDialect" );
+		m.put( "INFORMIX", COMMUNITY + "InformixDialect" );
+		m.put( "INFORMIX10", COMMUNITY + "InformixDialect" );
+		m.put( "INGRES", COMMUNITY + "IngresDialect" );
+		m.put( "INGRES9", COMMUNITY + "IngresDialect" );
+		m.put( "INGRES10", COMMUNITY + "IngresDialect" );
+		m.put( "MIMERSQL", COMMUNITY + "MimerSQLDialect" );
+		m.put( "CUBRID", COMMUNITY + "CUBRIDDialect" );
+		m.put( "CACHE71", COMMUNITY + "CacheDialect" );
+		m.put( "TERADATA", COMMUNITY + "TeradataDialect" );
+		m.put( "TERADATA14", COMMUNITY + "TeradataDialect" );
+		m.put( "TIMESTEN", COMMUNITY + "TimesTenDialect" );
+		m.put( "RDMSOS2200", COMMUNITY + "RDMSOS2200Dialect" );
+		m.put( "SAPDB", COMMUNITY + "MaxDBDialect" );
+		m.put( "SQLITE", COMMUNITY + "SQLiteDialect" );
+
+		return java.util.Collections.unmodifiableMap( m );
 	}
 
 	public PhysicalNamingStrategy getNamingStrategyInstance() {

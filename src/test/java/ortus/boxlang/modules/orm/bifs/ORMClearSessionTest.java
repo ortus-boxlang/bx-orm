@@ -35,9 +35,9 @@ public class ORMClearSessionTest extends BaseORMTest {
 		    theEntity = entityNew( "Manufacturer", { name : "Bugatti Automobiles", address : "101 Bugatti Way" } );
 		    entitySave( theEntity );
 
-		    beforeClear = ormGetSession().contains( theEntity );
+		    beforeClear = entityIsAttached( theEntity );
 		    ormClearSession();
-		    afterClear = ormGetSession().contains( theEntity );
+		    afterClear = entityIsAttached( theEntity );
 		    """,
 		    context
 		);
@@ -55,9 +55,9 @@ public class ORMClearSessionTest extends BaseORMTest {
 		    theEntity = entityNew( "AlternateDS", { id: createUUID(), name : "Testy McTesterson" } );
 		    entitySave( theEntity );
 
-		    beforeClear = ormGetSession( "dsn2" ).contains( theEntity );
+		    beforeClear = entityIsAttached( theEntity );
 		    ormClearSession( "dsn2" );
-		    afterClear = ormGetSession( "dsn2" ).contains( theEntity );
+		    afterClear = entityIsAttached( theEntity );
 		    """,
 		    context
 		);

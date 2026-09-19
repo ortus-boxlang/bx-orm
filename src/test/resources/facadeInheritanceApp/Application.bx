@@ -1,0 +1,25 @@
+class {
+	this.name = "BXORMFacadeInheritanceTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"FacadeInheritanceDB": {
+			"connectionString": "jdbc:derby:memory:ormFacadeInheritanceTest;create=true"
+		}
+	};
+	this.datasource = "FacadeInheritanceDB";
+
+	this.ormSettings = {
+		"datasource"       : "FacadeInheritanceDB",
+		"dialect"          : "Derby",
+		"entityPaths"      : [ "/root/models" ],
+		"entityFacades"    : true,
+		"saveMapping"      : "true",
+		"logSQL"           : "false",
+		"dbcreate"         : "dropcreate",
+		"cacheprovider"    : "ConcurrentHashMap",
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}

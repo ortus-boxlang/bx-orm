@@ -1,0 +1,27 @@
+class {
+	this.name = "BXORMFeatureCoverageTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"FeatureDB": {
+			"connectionString": "jdbc:derby:memory:ormFeatureCoverageTest;create=true"
+		}
+	};
+	this.datasource = "FeatureDB";
+
+	this.ormSettings = {
+		"datasource"       : "FeatureDB",
+		"dialect"          : "Derby",
+		"entityPaths"      : [ "/root/models" ],
+		"entityFacades"    : true,
+		"saveMapping"      : "true",
+		"logSQL"           : "false",
+		"dbcreate"         : "dropcreate",
+		"cacheprovider"    : "ConcurrentHashMap",
+		"eventHandling"    : true,
+		"eventHandler"     : "root.models.FeatureEventHandler",
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}

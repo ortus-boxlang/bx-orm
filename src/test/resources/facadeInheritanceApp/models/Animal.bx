@@ -1,0 +1,13 @@
+/**
+ * Single-table inheritance root: a discriminator column decides which subclass each row hydrates to.
+ */
+class
+	accessors          ="true"
+	persistent         ="true"
+	entityname         ="Animal"
+	table              ="fac_animals"
+	discriminatorColumn="animalType"
+{
+	property name="id"   fieldtype="id" generator="uuid" ormType="string";
+	property name="name" ormType="string";
+}

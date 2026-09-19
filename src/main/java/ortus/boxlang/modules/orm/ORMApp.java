@@ -17,7 +17,6 @@
  */
 package ortus.boxlang.modules.orm;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,11 +24,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Order;
-import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
+import org.hibernate.persister.entity.EntityPersister;
+import org.hibernate.query.Query;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -149,6 +149,12 @@ public class ORMApp {
 		if ( jdbcContext == null ) {
 			throw new BoxRuntimeException( "No JDBC-capable context found for ORMApp startup" );
 		}
+
+		// Derive this application's facade namespace from its (unique) application name, so its generated entity facades
+		// are segregated from any other application's same-named entities sharing this JVM. Set before mapping generation
+		// and facade generation, both of which read it.
+		this.config.facadeNamespace = ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming
+		    .sanitizeNamespace( ORMService.getAppNameFromContext( context ).getName() );
 
 		// Discover entities for this application and group them by datasource.
 		// We use the Request Context for discovery, so all mappings are discovered
@@ -301,9 +307,34 @@ public class ORMApp {
 		Session			session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 
 		Class<?>		keyClass		= getKeyJavaType( session, entityName );
-		Serializable	id;
+		Object			id;
 
-		if ( java.util.Map.class.isAssignableFrom( keyClass ) ) {
+		boolean			isCompositeKey	= entityRecord.getEntityMeta() != null && entityRecord.getEntityMeta().getIdProperties().size() > 1;
+
+		if ( isCompositeKey && !java.util.Map.class.isAssignableFrom( keyClass ) ) {
+			// Facade (POJO) mode composite key: the entity uses an embedded (non-aggregated) composite id, so its id
+			// representation is the entity's own facade class rather than a Map. Build a facade instance carrying the key
+			// property values and let Hibernate read the key off it.
+			if ( ! ( keyValue instanceof IStruct compositeStruct ) ) {
+				throw new BoxRuntimeException(
+				    String.format(
+				        "Entity '%s' has a composite primary key. Pass a struct of { propertyName: value } pairs to entityLoadByPK().",
+				        entityName
+				    ) );
+			}
+			Object			idFacade	= ( ( SessionFactoryImplementor ) session.getSessionFactory() )
+			    .getMappingMetamodel()
+			    .getEntityDescriptor( hibernateEntityName( session, entityRecord.getEntityName() ) )
+			    .getRepresentationStrategy()
+			    .getInstantiator()
+			    .instantiate();
+			IClassRunnable	idInstance	= ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( idFacade );
+			for ( Key k : compositeStruct.keySet() ) {
+				idInstance.getVariablesScope().put( k, compositeStruct.get( k ) );
+				idInstance.getThisScope().put( k, compositeStruct.get( k ) );
+			}
+			id = idFacade;
+		} else if ( java.util.Map.class.isAssignableFrom( keyClass ) ) {
 			// Composite key: Hibernate expects a HashMap<String, Object> with String keys (not Key objects)
 			if ( ! ( keyValue instanceof IStruct compositeStruct ) ) {
 				throw new BoxRuntimeException(
@@ -318,13 +349,15 @@ public class ORMApp {
 			}
 			id = compositeId;
 		} else {
-			id = ( Serializable ) GenericCaster.cast( context, keyValue, keyClass.getSimpleName() );
+			id = GenericCaster.cast( context, keyValue, keyClass.getSimpleName() );
 		}
-		var entity = session.get( entityRecord.getEntityName(), id );
+		var entity = session.get( hibernateEntityName( session, entityRecord.getEntityName() ), id );
 		if ( entity instanceof BoxProxy castProxy ) {
 			return castProxy.getRunnable();
 		} else {
-			return ( IClassRunnable ) entity;
+			// In facade mode Hibernate returns a POJO facade; unwrap it to the BoxLang instance. In MAP mode this is a
+			// no-op and the value is already the IClassRunnable.
+			return ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity );
 		}
 	}
 
@@ -337,13 +370,13 @@ public class ORMApp {
 	 * @param options    Struct of options, including maxResults, offset, order, etc.
 	 */
 	public Array loadEntitiesByFilter( IBoxContext context, String entityName, IStruct filter, IStruct options ) {
-		EntityRecord			entityRecord	= this.lookupEntity( entityName, true );
-		Session					session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
-		org.hibernate.Criteria	criteria		= session.createCriteria( entityRecord.getEntityName() );
+		EntityRecord		entityRecord	= this.lookupEntity( entityName, true );
+		Session				session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+		StringBuilder		hql				= new StringBuilder( "select e from " ).append( entityRecord.getEntityName() ).append( " e" );
+		Map<String, Object>	params			= new HashMap<>();
+		Array				properties		= entityRecord.getEntityMeta().getPropertyNamesArray();
 
-		if ( filter != null ) {
-
-			Array properties = entityRecord.getEntityMeta().getPropertyNamesArray();
+		if ( filter != null && !filter.isEmpty() ) {
 
 			// Ensure that all filter keys are valid properties of the entity or its parent
 			filter.keySet()
@@ -355,82 +388,222 @@ public class ORMApp {
 				        "No persistent filter property found with the name of '" + key.getName() + "' in entity '" + entityName + "'" );
 			    } );
 
+			hql.append( " where" );
+			int index = 0;
 			for ( Key entryKey : filter.keySet() ) {
 				int		propertyIndex	= properties.indexOf( KeyCaster.cast( entryKey ) );
+				String	propertyName	= KeyCaster.cast( properties.get( propertyIndex ) ).getName();
 				Object	propertyValue	= filter.get( entryKey );
-				criteria.add(
-				    propertyValue != null
-				        ? org.hibernate.criterion.Restrictions.eq(
-				            KeyCaster.cast( properties.get( propertyIndex ) ).getName(),
-				            propertyValue
-				        )
-				        : org.hibernate.criterion.Restrictions.isNull(
-				            KeyCaster.cast( properties.get( propertyIndex ) ).getName()
-				        )
-				);
+				if ( index > 0 ) {
+					hql.append( " and" );
+				}
+				if ( propertyValue != null ) {
+					String paramName = "p" + index;
+					hql.append( " e." ).append( propertyName ).append( " = :" ).append( paramName );
+					params.put( paramName, propertyValue );
+				} else {
+					hql.append( " e." ).append( propertyName ).append( " is null" );
+				}
+				index++;
 			}
 		}
 
+		if ( options.containsKey( ORMKeys.orderBy ) ) {
+			List<String> orderClauses = new ArrayList<>();
+			options.getAsArray( ORMKeys.orderBy ).forEach( ( item ) -> {
+				IStruct	order			= ( IStruct ) item;
+				// The property name is interpolated into the HQL, so an unvalidated caller value would allow HQL
+				// injection. Validate + canonicalize it against the entity's persistent properties, same as filter keys.
+				int		orderPropIndex	= properties.indexOf( Key.of( order.getAsString( ORMKeys.property ) ) );
+				if ( orderPropIndex < 0 ) {
+					throw new BoxRuntimeException(
+					    "No persistent order-by property found with the name of '" + order.getAsString( ORMKeys.property )
+					        + "' in entity '" + entityName + "'" );
+				}
+				String orderProp = KeyCaster.cast( properties.get( orderPropIndex ) ).getName();
+				orderClauses.add( "e." + orderProp + ( order.getAsBoolean( ORMKeys.ascending ) ? " asc" : " desc" ) );
+			} );
+			if ( !orderClauses.isEmpty() ) {
+				hql.append( " order by " ).append( String.join( ", ", orderClauses ) );
+			}
+		}
+
+		Query<?>			query			= session.createQuery( hql.toString(), Object.class );
+		// A to-one association filter may be supplied as a primary key (for example { manufacturer : 1 }).
+		// Hibernate 7 rejects a raw scalar for an entity-typed parameter, so resolve those to a managed
+		// reference first - the same conversion HQLQuery applies to ORM queries - keeping the Hibernate 5 behavior.
+		Map<String, String>	entityParams	= entityParameterTargets( query );
+		params.forEach( ( name, value ) -> query.setParameter(
+		    name,
+		    entityParams.containsKey( name ) ? resolveEntityReference( session, entityParams.get( name ), value ) : value ) );
+
 		return Array.of(
-		    executeCriteriaQuery( criteria, options )
+		    executeFilterQuery( query, options )
 		        .stream()
-		        .map( entity -> ( IClassRunnable ) entity )
+		        // In facade mode Hibernate returns POJO facades; unwrap each to its BoxLang instance (no-op in MAP mode).
+		        .map( entity -> ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity ) )
 		        .toArray()
 		);
 	}
 
 	/**
-	 * Execute a Criteria query with various options.
+	 * Apply common query options (cacheable, timeout, maxResults, offset) and execute the query.
 	 *
-	 * @param criteria The criteria to execute.
-	 * @param options  Struct of options, including maxResults, offset, order, etc.
+	 * @param query   The query to execute.
+	 * @param options Struct of options, including maxResults, offset, etc.
 	 */
-	public List executeCriteriaQuery( Criteria criteria, IStruct options ) {
+	public List<?> executeFilterQuery( Query<?> query, IStruct options ) {
 		if ( options.containsKey( ORMKeys.cacheable ) ) {
-			criteria.setCacheable( BooleanCaster.cast( options.get( ORMKeys.cacheable ) ) );
+			query.setCacheable( BooleanCaster.cast( options.get( ORMKeys.cacheable ) ) );
 		}
 		if ( options.containsKey( Key.timeout ) ) {
 			Integer timeout = options.getAsInteger( Key.timeout );
 			if ( timeout != null ) {
-				criteria.setTimeout( timeout );
+				query.setTimeout( timeout );
 			}
 		}
 		if ( options.containsKey( ORMKeys.maxResults ) ) {
 			Integer maxResults = options.getAsInteger( ORMKeys.maxResults );
 			if ( maxResults != null ) {
-				criteria.setMaxResults( maxResults );
+				query.setMaxResults( maxResults );
 			}
 		}
 		if ( options.containsKey( Key.offset ) ) {
 			Integer offset = options.getAsInteger( Key.offset );
 			if ( offset != null && offset > 0 ) {
-				criteria.setFirstResult( offset );
+				query.setFirstResult( offset );
 			}
 		}
-
-		if ( options.containsKey( ORMKeys.orderBy ) ) {
-			options.getAsArray( ORMKeys.orderBy ).forEach( ( item ) -> {
-				IStruct	order		= ( IStruct ) item;
-				String	orderColumn	= order.getAsString( ORMKeys.property );
-				if ( order.getAsBoolean( ORMKeys.ascending ) ) {
-					criteria.addOrder( Order.asc( orderColumn ) );
-				} else {
-					criteria.addOrder( Order.desc( orderColumn ) );
-				}
-			} );
-		}
-		return criteria.list();
+		return query.list();
 	}
 
 	/**
 	 * Get the java type for the primary key of an entity.
-	 *
-	 * TODO: We're using Hibernate's deprecated metamodel. Refactor to use JPA metamodel.
 	 */
 	public Class<?> getKeyJavaType( Session session, String entityName ) {
-		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
-		ClassMetadata	metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
-		return metadata.getIdentifierType().getReturnedClass();
+		return getEntityPersister( session, entityName ).getIdentifierType().getReturnedClass();
+	}
+
+	/**
+	 * Get the Hibernate runtime descriptor (persister) for an entity.
+	 *
+	 * @param session    A Hibernate session bound to the entity's datasource.
+	 * @param entityName The name of the entity.
+	 */
+	public EntityPersister getEntityPersister( Session session, String entityName ) {
+		EntityRecord entityRecord = this.lookupEntity( entityName, true );
+		return ( ( SessionFactoryImplementor ) session.getSessionFactory() ).getMappingMetamodel()
+		    .getEntityDescriptor( hibernateEntityName( session, entityRecord.getEntityName() ) );
+	}
+
+	/**
+	 * Resolve the Hibernate entity-name for a BoxLang entity name, for calls into the Hibernate Session/metamodel APIs by
+	 * name. With the modern {@code mapping.xml} format a facade entity's Hibernate entity-name is its generated facade
+	 * class and the BoxLang name is only the JPA/HQL import; the legacy {@code hbm.xml} format and MAP mode keep the
+	 * BoxLang name. {@code getImportedName()} returns the correct entity-name for either writer (the input unchanged when
+	 * it is already the entity-name), so it is a no-op except in mapping.xml facade mode.
+	 *
+	 * @param sf         The session factory.
+	 * @param entityName The BoxLang entity name.
+	 *
+	 * @return The Hibernate entity-name.
+	 */
+	public static String hibernateEntityName( SessionFactoryImplementor sf, String entityName ) {
+		if ( entityName == null ) {
+			return null;
+		}
+		String imported = sf.getMappingMetamodel().getImportedName( entityName );
+		return imported != null ? imported : entityName;
+	}
+
+	/**
+	 * @param session    A Hibernate session.
+	 * @param entityName The BoxLang entity name.
+	 *
+	 * @return The Hibernate entity-name (see {@link #hibernateEntityName(SessionFactoryImplementor, String)}).
+	 */
+	public static String hibernateEntityName( Session session, String entityName ) {
+		return hibernateEntityName( ( SessionFactoryImplementor ) session.getSessionFactory(), entityName );
+	}
+
+	/**
+	 * Resolve a caller-supplied value into the managed entity Hibernate expects for an association.
+	 * <p>
+	 * Hibernate 5 accepted either a raw primary key or an entity instance wherever an association was expected, silently
+	 * resolving a key to its entity. Hibernate 7's stricter type layer rejects both unless the value is already the managed
+	 * entity. bx-orm is the ORM abstraction, so we preserve the Hibernate 5 behavior by resolving here:
+	 * <ul>
+	 * <li>a primary key (any non-entity scalar) becomes a {@code getReference()} handle to that row;</li>
+	 * <li>an entity instance already tracked by the session is returned as-is;</li>
+	 * <li>a detached entity instance is resolved to a managed reference by its identifier;</li>
+	 * <li>a transient instance with no identifier, or a {@code null}, is passed through unchanged.</li>
+	 * </ul>
+	 *
+	 * @param session    A Hibernate session bound to the entity's datasource.
+	 * @param entityName The Hibernate entity name the association targets.
+	 * @param value      The caller-supplied value: a primary key or an entity instance.
+	 *
+	 * @return The managed entity/reference to bind, or the original value when it cannot be resolved to one.
+	 */
+	public Object resolveEntityReference( Session session, String entityName, Object value ) {
+		if ( value == null ) {
+			return null;
+		}
+		boolean facades = this.config.entityFacades;
+		// Already an entity instance (live or detached); BoxProxy implements IClassRunnable too.
+		if ( value instanceof IClassRunnable runnable ) {
+			// Hibernate tracks the facade in facade mode, so operate on that representation. No-op passthrough in MAP mode.
+			Object managed = facades
+			    ? ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( this.config.facadeNamespace, entityName, runnable )
+			    : value;
+			if ( session.contains( hibernateEntityName( session, entityName ), managed ) ) {
+				return managed;
+			}
+			Object id = getEntityPersister( session, entityName ).getIdentifier( managed, ( SharedSessionContractImplementor ) session );
+			// Transient (no id yet): let Hibernate handle it rather than fabricate a reference.
+			return id == null ? managed : referenceFor( session, entityName, id, facades );
+		}
+		// A raw primary key value.
+		return referenceFor( session, entityName, value, facades );
+	}
+
+	/**
+	 * Resolve a managed reference for an entity by id. In facade mode a lazy {@code BoxProxy} is not assignable to the
+	 * entity's generated facade class (which Hibernate's query-parameter type check requires), so fetch the managed
+	 * facade itself; in MAP mode a lazy proxy reference is sufficient.
+	 *
+	 * @param session    The Hibernate session.
+	 * @param entityName The entity name.
+	 * @param id         The identifier.
+	 * @param facades    Whether facade mode is enabled.
+	 *
+	 * @return A managed reference assignable to the entity's mapped representation.
+	 */
+	private Object referenceFor( Session session, String entityName, Object id, boolean facades ) {
+		String hibernateName = hibernateEntityName( session, entityName );
+		return facades ? session.get( hibernateName, id ) : session.getReference( hibernateName, id );
+	}
+
+	/**
+	 * Inspect a built query's SQM tree and map each named parameter that targets an entity association to the
+	 * Hibernate entity name it references. Used to resolve association filter values (a primary key or entity
+	 * instance) to a managed reference before binding, as Hibernate 7 rejects a raw scalar for an entity-typed parameter.
+	 *
+	 * @param query The query to inspect.
+	 *
+	 * @return A map of parameter name to the Hibernate entity name it targets (empty when there are none).
+	 */
+	private Map<String, String> entityParameterTargets( Query<?> query ) {
+		Map<String, String> targets = new HashMap<>();
+		if ( query instanceof org.hibernate.query.spi.SqmQuery<?> sqmQuery ) {
+			for ( org.hibernate.query.sqm.tree.expression.SqmParameter<?> sqmParam : sqmQuery.getSqmStatement().getSqmParameters() ) {
+				if ( sqmParam.getName() != null
+				    && sqmParam.getAnticipatedType() instanceof org.hibernate.metamodel.model.domain.EntityDomainType<?> entityType ) {
+					targets.put( sqmParam.getName(), entityType.getHibernateEntityName() );
+				}
+			}
+		}
+		return targets;
 	}
 
 	/**

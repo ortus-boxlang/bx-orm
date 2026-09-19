@@ -18,10 +18,10 @@
 package ortus.boxlang.modules.orm.bifs;
 
 import java.util.List;
+import java.util.Map;
 
-import org.hibernate.Criteria;
 import org.hibernate.Session;
-import org.hibernate.criterion.Example;
+import org.hibernate.query.Query;
 
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMContext;
@@ -32,6 +32,7 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
@@ -57,6 +58,28 @@ public class EntityLoadByExample extends BaseORMBIF {
 	 * 
 	 * @argument.unique Whether to return a single unique result (true) or an array of results (false).
 	 */
+	/**
+	 * Whether a property should be excluded from a query-by-example predicate. Ids, the version, and associations are
+	 * excluded: example queries match on regular property values, and Hibernate 7 rejects an entity/PK value bound as a
+	 * simple equality predicate for an association.
+	 *
+	 * @param entityMeta The entity's metadata.
+	 * @param property   The property to test.
+	 *
+	 * @return {@code true} when the property is an id, the version, or an association.
+	 */
+	private static boolean isExcludedFromExample( ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta entityMeta,
+	    ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta property ) {
+		if ( property.isAssociationType() ) {
+			return true;
+		}
+		ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta version = entityMeta.getVersionProperty();
+		if ( version != null && version.getName().equals( property.getName() ) ) {
+			return true;
+		}
+		return entityMeta.getIdProperties().stream().anyMatch( id -> id.getName().equals( property.getName() ) );
+	}
+
 	@SuppressWarnings( { "deprecation", "unchecked" } )
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
@@ -69,18 +92,43 @@ public class EntityLoadByExample extends BaseORMBIF {
 			throw new BoxRuntimeException( "Sample entity must be a valid entity" );
 		}
 
-		IClassRunnable	workingEntity	= ( IClassRunnable ) sampleEntity;
-		String			entityName		= getEntityName( workingEntity );
-		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
-		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
-		Criteria		criteria		= session.createCriteria( entityName );
-		Example			example			= Example.create( workingEntity );
-		criteria.add( example );
+		IClassRunnable		workingEntity	= ( IClassRunnable ) sampleEntity;
+		String				entityName		= getEntityName( workingEntity );
+		EntityRecord		entityRecord	= ormApp.lookupEntity( entityName, true );
+		Session				session			= ormContext.getSession( entityRecord.getDatasource() );
 
-		if ( unique ) {
-			criteria.setMaxResults( 1 );
+		// Hibernate 6+ removed the legacy Criteria/Example API, so build an equivalent "query by example" HQL statement:
+		// every non-null simple (non-association) property of the sample entity becomes an equality predicate.
+		StringBuilder		hql				= new StringBuilder( "select e from " ).append( entityRecord.getEntityName() ).append( " e" );
+		Map<String, Object>	params			= new java.util.HashMap<>();
+		int					index			= 0;
+		for ( Object propertyMeta : entityRecord.getEntityMeta().getAllPersistentProperties() ) {
+			String propertyName = ( ( ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta ) propertyMeta ).getName();
+			// Skip ids, the version, and associations: example queries match on regular property values, and an
+			// association value is an entity/PK that Hibernate 7 rejects as a simple equality predicate.
+			if ( isExcludedFromExample( entityRecord.getEntityMeta(), ( ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta ) propertyMeta ) ) {
+				continue;
+			}
+			Object value = workingEntity.getVariablesScope().get( Key.of( propertyName ) );
+			if ( value == null ) {
+				continue;
+			}
+			String paramName = "p" + index++;
+			hql.append( index == 1 ? " where" : " and" ).append( " e." ).append( propertyName ).append( " = :" ).append( paramName );
+			params.put( paramName, value );
 		}
-		List<? extends IClassRunnable> results = criteria.list();
+
+		Query<?> query = session.createQuery( hql.toString(), Object.class );
+		params.forEach( query::setParameter );
+		if ( unique ) {
+			query.setMaxResults( 1 );
+		}
+		// In facade mode Hibernate returns POJO facades; unwrap each to its BoxLang instance so callers only ever see
+		// IClassRunnables. No-op passthrough in MAP mode.
+		List<Object> results = query.list()
+		    .stream()
+		    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
+		    .collect( java.util.stream.Collectors.toList() );
 
 		if ( unique ) {
 			return results.isEmpty() ? null : results.get( 0 );

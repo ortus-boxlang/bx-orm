@@ -71,14 +71,67 @@ public class EntitySave extends BaseORMBIF {
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
 		Boolean			forceInsert		= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
+		// The Hibernate entity-name a by-name Session call needs: the BoxLang name for hbm/MAP, the facade class for the
+		// modern mapping.xml facade representation. See ORMApp.hibernateEntityName.
+		String			hbName			= ORMApp.hibernateEntityName( session, entityName );
 
-		if ( forceInsert ) {
-			session.save( entityName, entity );
+		// Facade (POJO) mode: Hibernate manages the generated facade, not the IClassRunnable. Persist the facade (which
+		// delegates its state to - and writes generated ids straight back onto - the caller's BoxLang instance). The same
+		// instance always maps to the same facade via FacadeSupport's per-instance memoization.
+		if ( ormContext.getConfig().entityFacades ) {
+			Object facade = ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName, entity );
+			if ( session.contains( hbName, facade ) ) {
+				// Already managed: nothing to do; the flush will persist any changes.
+			} else if ( forceInsert || isTransient( session, hbName, facade ) ) {
+				session.persist( hbName, facade );
+			} else {
+				Object											managed			= session.merge( hbName, facade );
+				ortus.boxlang.runtime.runnables.IClassRunnable	managedRunnable	= ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport
+				    .unwrap( managed );
+				if ( managedRunnable != null && managedRunnable != entity ) {
+					entity.getThisScope().putAll( managedRunnable.getThisScope() );
+					entity.getVariablesScope().putAll( managedRunnable.getVariablesScope() );
+				}
+			}
+			return null;
+		}
+
+		// bx-orm is the ORM abstraction, so entitySave() must behave as it did on Hibernate 5's saveOrUpdate(): the object the
+		// caller passed in stays live afterward and carries any generated identifier and event changes. Hibernate 7 removed
+		// saveOrUpdate(), leaving persist() for new entities and merge() for detached ones. persist() attaches the passed
+		// instance directly (so it is already live), but merge() copies state into a separate managed instance and leaves the
+		// caller's object detached. To keep the old contract we copy the managed state back into the caller's instance.
+		if ( session.contains( hbName, entity ) ) {
+			// Already managed: nothing to do; the flush will persist any changes.
+		} else if ( forceInsert || isTransient( session, hbName, entity ) ) {
+			session.persist( hbName, entity );
 		} else {
-			session.saveOrUpdate( entityName, entity );
+			// Detached instance: merge returns the managed copy; copy its state back so the caller's object stays live.
+			Object managed = session.merge( hbName, entity );
+			if ( managed != entity && managed instanceof IClassRunnable managedEntity ) {
+				// BoxPropertySetter writes mapped properties to both the `this` and variables scopes, so sync both
+				// back onto the caller's detached instance. Otherwise generated identifiers or event-updated values
+				// held in the managed `this` scope stay stale on the returned object, breaking the compatibility
+				// contract described above.
+				entity.getThisScope().putAll( managedEntity.getThisScope() );
+				entity.getVariablesScope().putAll( managedEntity.getVariablesScope() );
+			}
 		}
 
 		return null;
+	}
+
+	/**
+	 * Determine whether an entity has never been persisted, using the same unsaved-value/version/snapshot rules Hibernate's
+	 * former <code>saveOrUpdate()</code> used to decide between an insert and a re-attach.
+	 */
+	private boolean isTransient( Session session, String entityName, Object entity ) {
+		return org.hibernate.engine.internal.ForeignKeys.isTransient(
+		    entityName,
+		    entity,
+		    null,
+		    ( org.hibernate.engine.spi.SharedSessionContractImplementor ) session
+		);
 	}
 
 }

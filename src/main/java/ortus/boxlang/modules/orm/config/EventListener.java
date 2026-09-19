@@ -23,13 +23,14 @@ import java.util.Set;
 
 import org.hibernate.HibernateException;
 import org.hibernate.boot.Metadata;
+import org.hibernate.boot.spi.BootstrapContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.service.spi.EventListenerRegistry;
-import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.AutoFlushEvent;
 import org.hibernate.event.spi.AutoFlushEventListener;
 import org.hibernate.event.spi.ClearEvent;
 import org.hibernate.event.spi.ClearEventListener;
+import org.hibernate.event.spi.DeleteContext;
 import org.hibernate.event.spi.DeleteEvent;
 import org.hibernate.event.spi.DeleteEventListener;
 import org.hibernate.event.spi.DirtyCheckEvent;
@@ -58,8 +59,8 @@ import org.hibernate.event.spi.PreUpdateEventListener;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.service.spi.SessionFactoryServiceRegistry;
-import org.hibernate.tuple.entity.EntityMetamodel;
 
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.interop.DynamicObject;
@@ -110,8 +111,8 @@ public class EventListener
 	}
 
 	@Override
-	public void integrate( Metadata metadata, SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry ) {
-		EventListenerRegistry eventListenerRegistry = serviceRegistry.getService( EventListenerRegistry.class );
+	public void integrate( Metadata metadata, BootstrapContext bootstrapContext, SessionFactoryImplementor sessionFactory ) {
+		EventListenerRegistry eventListenerRegistry = sessionFactory.getServiceRegistry().getService( EventListenerRegistry.class );
 
 		eventListenerRegistry.prependListeners( EventType.PRE_INSERT, this );
 		eventListenerRegistry.prependListeners( EventType.POST_INSERT, this );
@@ -141,7 +142,7 @@ public class EventListener
 	}
 
 	@Override
-	public boolean requiresPostCommitHanding( EntityPersister persister ) {
+	public boolean requiresPostCommitHandling( EntityPersister persister ) {
 		return false;
 	}
 
@@ -189,52 +190,54 @@ public class EventListener
 	public void onPostLoad( PostLoadEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.postLoad, event, args );
-		announceEntityEvent( ORMKeys.postLoad, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.postLoad, FacadeSupport.unwrap( event.getEntity() ), args );
 	}
 
 	@Override
 	public void onPreLoad( PreLoadEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.preLoad, event, args );
-		announceEntityEvent( ORMKeys.preLoad, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.preLoad, FacadeSupport.unwrap( event.getEntity() ), args );
 	}
 
 	@Override
 	public void onPostUpdate( PostUpdateEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.postUpdate, event, args );
-		announceEntityEvent( ORMKeys.postUpdate, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.postUpdate, FacadeSupport.unwrap( event.getEntity() ), args );
 	}
 
 	@Override
 	public boolean onPreUpdate( PreUpdateEvent event ) {
-		IStruct			oldData			= new Struct();
-		EntityMetamodel	entityMetamodel	= event.getPersister().getEntityMetamodel();
-		Object[]		oldState		= event.getOldState();
+		IStruct		oldData			= new Struct();
+		String[]	propertyNames	= event.getPersister().getPropertyNames();
+		Object[]	oldState		= event.getOldState();
 		if ( oldState != null ) {
-			Arrays.stream( entityMetamodel.getPropertyNames() ).forEach( propertyName -> {
-				oldData.put( propertyName, oldState[ entityMetamodel.getPropertyIndex( propertyName ) ] );
-			} );
+			for ( int i = 0; i < propertyNames.length; i++ ) {
+				oldData.put( propertyNames[ i ], oldState[ i ] );
+			}
 		}
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity(),
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() ),
 		    ORMKeys.oldData, oldData
 		);
 		announceGlobalEvent( ORMKeys.preUpdate, event, args );
-		announceEntityEvent( ORMKeys.preUpdate, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.preUpdate, FacadeSupport.unwrap( event.getEntity() ), args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		// Update state so that changes made in the event are persisted
-		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), ( IClassRunnable ) event.getEntity() );
+		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), event.getPersister().getPropertyTypes(),
+		    event.getPersister().isVersioned() ? event.getPersister().getVersionPropertyIndex() : -1,
+		    FacadeSupport.unwrap( event.getEntity() ) );
 		return false;
 	}
 
@@ -246,9 +249,8 @@ public class EventListener
 		announceGlobalEvent( ORMKeys.onDelete, event, args );
 	}
 
-	@SuppressWarnings( "rawtypes" )
 	@Override
-	public void onDelete( DeleteEvent event, Set transientEntities ) throws HibernateException {
+	public void onDelete( DeleteEvent event, DeleteContext transientEntities ) throws HibernateException {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event
 		);
@@ -259,20 +261,20 @@ public class EventListener
 	public void onPostDelete( PostDeleteEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.postDelete, event, args );
-		announceEntityEvent( ORMKeys.postDelete, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.postDelete, FacadeSupport.unwrap( event.getEntity() ), args );
 	}
 
 	@Override
 	public boolean onPreDelete( PreDeleteEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.preDelete, event, args );
-		announceEntityEvent( ORMKeys.preDelete, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.preDelete, FacadeSupport.unwrap( event.getEntity() ), args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		return false;
 	}
@@ -281,15 +283,15 @@ public class EventListener
 	public void onPostInsert( PostInsertEvent event ) {
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
-		    ORMKeys.entity, event.getEntity()
+		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		announceGlobalEvent( ORMKeys.postInsert, event, args );
-		announceEntityEvent( ORMKeys.postInsert, ( IClassRunnable ) event.getEntity(), args );
+		announceEntityEvent( ORMKeys.postInsert, FacadeSupport.unwrap( event.getEntity() ), args );
 	}
 
 	@Override
 	public boolean onPreInsert( PreInsertEvent event ) {
-		IClassRunnable	entity	= ( IClassRunnable ) event.getEntity();
+		IClassRunnable	entity	= FacadeSupport.unwrap( event.getEntity() );
 		IStruct			args	= Struct.of(
 		    ORMKeys.event, event,
 		    ORMKeys.entity, entity
@@ -298,11 +300,12 @@ public class EventListener
 		announceEntityEvent( ORMKeys.preInsert, ( IClassRunnable ) entity, args );
 		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
 		// update our entity state to ensure changes persist
-		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), ( IClassRunnable ) entity );
+		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), event.getPersister().getPropertyTypes(),
+		    event.getPersister().isVersioned() ? event.getPersister().getVersionPropertyIndex() : -1, ( IClassRunnable ) entity );
 		return false;
 	}
 
-	private void announceGlobalEvent( Key eventType, AbstractEvent event, IStruct args ) {
+	private void announceGlobalEvent( Key eventType, Object event, IStruct args ) {
 		if ( globalListener == null ) {
 			return;
 		}
@@ -348,11 +351,28 @@ public class EventListener
 	 * @param persistProperties Array of properties to update
 	 * @param entity            The entity to test for altered values.
 	 */
-	private void updateEntityEventState( Object[] state, String[] persistProperties, IClassRunnable entity ) {
+	private void updateEntityEventState( Object[] state, String[] persistProperties, org.hibernate.type.Type[] propertyTypes, int versionPropertyIndex,
+	    IClassRunnable entity ) {
 		if ( logger.isTraceEnabled() ) {
 			logger.trace( String.format( "Updating state changes on state properties %s", Arrays.toString( persistProperties ) ) );
 		}
 		for ( int i = 0; i < persistProperties.length; i++ ) {
+			// Never write association or collection state from the BoxLang scope back into Hibernate's event state array.
+			// In facade mode the scope holds a facade / FacadeCollectionView that differs from Hibernate's own state entry
+			// for that slot, so overwriting it corrupts Hibernate's association/collection tracking and provokes a spurious
+			// second UPDATE - which double-fires preUpdate/postUpdate. Event handlers change basic property values, not
+			// associations, so this only ever needs to sync basic slots. (MAP mode never overwrote these either: the scope
+			// held Hibernate's own collection instance, so the equality check below already skipped them.)
+			if ( propertyTypes != null && i < propertyTypes.length && propertyTypes[ i ] != null
+			    && ( propertyTypes[ i ].isAssociationType() || propertyTypes[ i ].isCollectionType() ) ) {
+				continue;
+			}
+			// Never write the optimistic-lock <version> slot back either. Hibernate seeds it on insert and increments it on
+			// update inside its own state array; the BoxLang scope still holds the pre-increment value, so overwriting the
+			// slot reverts Hibernate's version and breaks the version check (OptimisticLockException / "Unexpected row count").
+			if ( i == versionPropertyIndex ) {
+				continue;
+			}
 			Key		propertyName	= Key.of( persistProperties[ i ] );
 			Object	propertyValue	= entity.getVariablesScope().get( propertyName );
 			Object	oldValue		= state[ i ];

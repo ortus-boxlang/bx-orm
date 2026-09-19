@@ -85,9 +85,9 @@ public class MappingGenerator {
 	private static final String[]		ENTITY_EXTENSIONS			= { ".bx", ".cfc" };
 
 	/**
-	 * File extension for XML mapping files.
+	 * File extension for the modern Hibernate 7 {@code mapping.xml} format, the only mapping format the module emits.
 	 */
-	private static final String			HBM_XML_EXT					= ".hbm.xml";
+	private static final String			ORM_XML_EXT					= ".orm.xml";
 
 	/**
 	 * The maximum number of entities to process synchronously.
@@ -249,7 +249,19 @@ public class MappingGenerator {
 			    metaParseTime, this.entities.size(), doParallel ? "parallel" : "sequential" );
 		}
 
-		// Phase 3: Generate XML mapping files for each entity
+		// Phase 3a: Build the normalized entity metadata for EVERY entity first, so that XML generation (which may inspect other entities, e.g. to
+		// determine an inheritance root's strategy or resolve an inverse collection's owning side) always sees a fully-populated entity set.
+		for ( EntityRecord entity : this.entities ) {
+			IStruct meta = entity.getMetadata();
+			// We need this for inheritance
+			meta.put( ORMKeys.classFQN, entity.getClassFQN() );
+			// ensure the 'datasource' key is populated with our default logic
+			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
+			// Build the entity metadata
+			entity.setEntityMeta( AbstractEntityMeta.autoDiscoverMetaType( meta ) );
+		}
+
+		// Phase 3b: Generate XML mapping files for each entity
 		// Change this to a stream if we will be doing parallel processing
 		long xmlGenStart = System.currentTimeMillis();
 		for ( EntityRecord entity : this.entities ) {
@@ -257,12 +269,6 @@ public class MappingGenerator {
 			String	name	= meta.getAsString( Key.simpleName );
 			String	path	= meta.getAsString( Key.path );
 			Path	xmlPath	= getXMLPathForEntity( name, path );
-			// We need this for inheritance
-			meta.put( ORMKeys.classFQN, entity.getClassFQN() );
-			// ensure the 'datasource' key is populated with our default logic
-			meta.computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
-			// Build the entity metadata
-			entity.setEntityMeta( AbstractEntityMeta.autoDiscoverMetaType( meta ) );
 			if ( config.generateMappings ) {
 				// we reset the XML path just in case there was a parse error and ignoreParseErrors is true.
 				// If this happens we allow the entity to have a null XML file path, and we just continue forward.
@@ -565,7 +571,7 @@ public class MappingGenerator {
 	/**
 	 * Generate the XML mapping for the given entity metadata.
 	 * <p>
-	 * Calls the HibernateXMLWriter to generate the XML mapping, then wraps it with a bit of pre and post XML to close out the file.
+	 * Calls the MappingXMLWriter to generate the modern Hibernate 7 {@code mapping.xml}, then serializes the document to a string.
 	 *
 	 * @param entity The EntityRecord instance.
 	 *
@@ -574,7 +580,8 @@ public class MappingGenerator {
 	 */
 	private String generateXML( EntityRecord entity ) {
 		try {
-			Document			doc			= new HibernateXMLWriter( entity.getEntityMeta(), this::entityLookup, this.config ).generateXML();
+			Document			doc			= new MappingXMLWriter( entity.getEntityMeta(), this::entityLookup, this.config, rootInheritanceStrategy( entity ) )
+			    .generateXML();
 
 			TransformerFactory	tf			= TransformerFactory.newInstance();
 			Transformer			transformer	= tf.newTransformer();
@@ -582,8 +589,11 @@ public class MappingGenerator {
 			transformer.setOutputProperty( OutputKeys.INDENT, "yes" );
 			transformer.setOutputProperty( OutputKeys.OMIT_XML_DECLARATION, "no" );
 			transformer.setOutputProperty( OutputKeys.METHOD, "xml" );
-			transformer.setOutputProperty( OutputKeys.DOCTYPE_PUBLIC, doc.getDoctype().getPublicId() );
-			transformer.setOutputProperty( OutputKeys.DOCTYPE_SYSTEM, doc.getDoctype().getSystemId() );
+			// The modern mapping.xml format has no DOCTYPE (root <entity-mappings> is namespace-detected); only the legacy HBM format carries a DTD.
+			if ( doc.getDoctype() != null ) {
+				transformer.setOutputProperty( OutputKeys.DOCTYPE_PUBLIC, doc.getDoctype().getPublicId() );
+				transformer.setOutputProperty( OutputKeys.DOCTYPE_SYSTEM, doc.getDoctype().getSystemId() );
+			}
 
 			StringWriter writer = new StringWriter();
 
@@ -599,6 +609,48 @@ public class MappingGenerator {
 		}
 
 		return "";
+	}
+
+	/**
+	 * Determine the JPA inheritance strategy to declare on an entity when it is the root of an inheritance hierarchy (in the modern {@code mapping.xml}
+	 * format), or {@code null} when it is not a hierarchy root.
+	 * <p>
+	 * A root that carries a discriminator is {@code SINGLE_TABLE} (its subclasses map by {@code discriminator-value}); a root without a discriminator but
+	 * with at least one subclass is {@code JOINED} (its subclasses declare their own tables). A root with no subclasses returns {@code null}.
+	 *
+	 * @param entity The (potential) root entity.
+	 *
+	 * @return {@code "SINGLE_TABLE"}, {@code "JOINED"}, or {@code null}.
+	 */
+	private String rootInheritanceStrategy( EntityRecord entity ) {
+		var meta = entity.getEntityMeta();
+		if ( meta == null || meta.isSubclass() ) {
+			return null;
+		}
+		String entityName = entity.getEntityName();
+		if ( entityName == null ) {
+			return null;
+		}
+		boolean hasChildren = this.entities.stream().anyMatch( candidate -> {
+			var cm = candidate.getEntityMeta();
+			if ( cm == null || !cm.isSubclass() ) {
+				return false;
+			}
+			var pm = cm.getParentMeta();
+			if ( pm == null || pm.isEmpty() ) {
+				return false;
+			}
+			var		pa			= pm.getAsStruct( Key.annotations );
+			String	parentName	= pa != null ? pa.getAsString( ORMKeys.entityName ) : null;
+			if ( parentName == null || parentName.isBlank() ) {
+				parentName = pm.getAsString( Key.simpleName );
+			}
+			return parentName != null && parentName.equalsIgnoreCase( entityName );
+		} );
+		if ( !hasChildren ) {
+			return null;
+		}
+		return meta.getDiscriminator().containsKey( Key._name ) ? "SINGLE_TABLE" : "JOINED";
 	}
 
 	/**
@@ -619,8 +671,8 @@ public class MappingGenerator {
 		}
 		String fileExt = path.substring( path.lastIndexOf( '.' ) );
 		return this.saveAlongsideEntity
-		    ? Path.of( path.replace( fileExt, MappingGenerator.HBM_XML_EXT ) )
-		    : Path.of( this.saveDirectory, name + MappingGenerator.HBM_XML_EXT );
+		    ? Path.of( path.replace( fileExt, MappingGenerator.ORM_XML_EXT ) )
+		    : Path.of( this.saveDirectory, name + MappingGenerator.ORM_XML_EXT );
 	}
 
 	/**
