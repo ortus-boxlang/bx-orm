@@ -117,4 +117,99 @@ public class HibernateFeatureCoverageBootTest {
 		// Formula: price + price/10 = 110.
 		assertThat( ( ( Number ) variables.get( Key.of( "taxed" ) ) ).intValue() ).isEqualTo( 110 );
 	}
+
+	@DisplayName( "It round-trips a many-to-many association through a link table" )
+	@Test
+	public void testManyToMany() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				s = entityNew( "Student", { name : "Ada" } );
+				entitySave( s );
+				c1 = entityNew( "Course", { title : "Math" } );
+				c2 = entityNew( "Course", { title : "Physics" } );
+				entitySave( c1 );
+				entitySave( c2 );
+				s.addCourse( c1 );
+				s.addCourse( c2 );
+				entitySave( s );
+				sid = s.getId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			loaded      = entityLoadByPK( "Student", sid );
+			courseCount = loaded.getCourses().len();
+			hasMath     = loaded.hasCourse();
+
+			transaction {
+				firstCourse = loaded.getCourses()[ 1 ];
+				loaded.removeCourse( firstCourse );
+				entitySave( loaded );
+			}
+			ormFlush();
+			ormClearSession();
+
+			reloaded      = entityLoadByPK( "Student", sid );
+			afterRemove   = reloaded.getCourses().len();
+		""", context );
+		// @formatter:on
+
+		assertThat( ( ( Number ) variables.get( Key.of( "courseCount" ) ) ).intValue() ).isEqualTo( 2 );
+		assertThat( variables.getAsBoolean( Key.of( "hasMath" ) ) ).isTrue();
+		assertThat( ( ( Number ) variables.get( Key.of( "afterRemove" ) ) ).intValue() ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "It supports the identity id generator with dynamic insert/update" )
+	@Test
+	public void testIdentityGenerator() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				c = entityNew( "Counter", { label : "hits", tally : 5 } );
+				entitySave( c );
+			}
+			ormFlush();
+			ormClearSession();
+
+			row       = ormExecuteQuery( "FROM Counter WHERE label = :l", { l : "hits" }, true );
+			genId     = row.getId();
+			tally     = row.getTally();
+		""", context );
+		// @formatter:on
+
+		// identity generator assigned a non-null, DB-generated integer key.
+		assertThat( variables.get( Key.of( "genId" ) ) ).isNotNull();
+		assertThat( ( ( Number ) variables.get( Key.of( "genId" ) ) ).intValue() ).isGreaterThan( 0 );
+		assertThat( ( ( Number ) variables.get( Key.of( "tally" ) ) ).intValue() ).isEqualTo( 5 );
+	}
+
+	@DisplayName( "It round-trips a shared-primary-key one-to-one (foreign generator + constrained)" )
+	@Test
+	public void testOneToOne() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				person = entityNew( "Person", { fullName : "Grace Hopper" } );
+				passport = entityNew( "Passport", { number : "P-12345" } );
+				passport.setOwner( person );
+				person.setPassport( passport );
+				entitySave( person );
+				pid = person.getId();
+			}
+			ormFlush();
+			ormClearSession();
+
+			loaded         = entityLoadByPK( "Person", pid );
+			hasPassport    = !isNull( loaded.getPassport() );
+			passportNumber = loaded.getPassport().getNumber();
+			// Shared PK: the passport's id equals the person's id.
+			sharedId       = loaded.getPassport().getId();
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.getAsBoolean( Key.of( "hasPassport" ) ) ).isTrue();
+		assertThat( variables.get( Key.of( "passportNumber" ) ) ).isEqualTo( "P-12345" );
+		assertThat( variables.get( Key.of( "sharedId" ) ) ).isEqualTo( variables.get( Key.of( "pid" ) ) );
+	}
 }
