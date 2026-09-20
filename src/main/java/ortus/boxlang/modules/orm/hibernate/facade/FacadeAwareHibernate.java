@@ -41,8 +41,7 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
  * translate at that boundary, but code that reaches <em>through</em> to the raw Session/SessionFactory (for example
  * {@code ormGetSession().detach(entity)}, {@code getCache().containsEntity("User")},
  * {@code getMappingMetamodel().getEntityDescriptor("User")}) would otherwise fail with {@code Unknown entity type} or
- * {@code Non-entity object instance passed to ...}. In MAP mode the entity-name IS the BoxLang name and the managed object IS
- * the {@code IClassRunnable}, so no translation is needed (this class is only used when {@code entityFacades} is enabled).
+ * {@code Non-entity object instance passed to ...}.
  * <p>
  * Each wrapper is a JDK dynamic proxy over the target's full interface set (so casts to Hibernate SPI types such as
  * {@code SessionFactoryImplementor} still work). Per call it (1) rewrites any {@code String} argument that is a registered

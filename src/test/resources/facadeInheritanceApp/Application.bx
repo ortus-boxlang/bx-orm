@@ -14,7 +14,6 @@ class {
 		"datasource"       : "FacadeInheritanceDB",
 		"dialect"          : "Derby",
 		"entityPaths"      : [ "/root/models" ],
-		"entityFacades"    : true,
 		"saveMapping"      : "true",
 		"logSQL"           : "false",
 		"dbcreate"         : "dropcreate",

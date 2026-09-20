@@ -49,10 +49,9 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
  * deprecated-for-removal in Hibernate). It traverses the normalized {@link IEntityMeta}/{@link IPropertyMeta} metadata and
  * emits the modern format.
  * <p>
- * In the default facade (POJO) representation each entity is emitted as {@code <entity name="Foo" class="...FooFacade">},
- * mapping the generated real facade class. In MAP mode the entity is class-less: {@code <entity name="Foo"
- * metadata-complete="true">} with NO {@code class} attribute. Attribute Java types are given via a {@code <type value="..."/>}
- * basic-type element and JPA {@code AttributeConverter}s via {@code <convert converter="FQCN"/>}.
+ * Each entity is emitted as {@code <entity name="Foo" class="...FooFacade">}, mapping the per-application generated real
+ * facade class. Attribute Java types are given via a {@code <type value="..."/>} basic-type element and JPA
+ * {@code AttributeConverter}s via {@code <convert converter="FQCN"/>}.
  *
  * @since 1.5.0
  */
@@ -250,19 +249,14 @@ public class MappingXMLWriter {
 	public Element generateEntityElement() {
 		Element	entityElement	= createEl( "entity" );
 
-		// Entity identity depends on the representation mode. In facade (POJO) mode the entity is mapped to a real,
-		// per-application generated facade class, so emit its `class` (plus `name` as the JPA/entity name); the real class
-		// also lets Hibernate's id-generator resolver dereference a class name, unblocking uuid etc. In MAP mode the entity
-		// is class-less: name only, NO class attribute.
+		// The entity is mapped to a real, per-application generated facade class, so emit its `class` (plus `name` as the
+		// JPA/entity name); the real class also lets Hibernate's id-generator resolver dereference a class name, unblocking
+		// uuid etc.
 		String	entityName		= entity.getEntityName();
 		if ( entityName != null && !entityName.isEmpty() ) {
 			entityElement.setAttribute( "name", entityName );
-		}
-		if ( this.ormConfig.entityFacades && entityName != null && !entityName.isEmpty() ) {
 			entityElement.setAttribute( "class",
 			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.facadeClassName( this.ormConfig.facadeNamespace, entityName ) );
-		} else {
-			entityElement.setAttribute( "metadata-complete", "true" );
 		}
 
 		boolean	isSubclass			= entity.isSubclass();
@@ -501,26 +495,20 @@ public class MappingXMLWriter {
 				// Application-assigned identifier: no @GeneratedValue in JPA (the id is set by the application).
 			}
 			case "uuid", "uuid2", "guid" -> {
-				if ( this.ormConfig.entityFacades ) {
-					// Facade (POJO) mode: the entity is a real class with a concrete String id, so use the legacy string UUID
-					// generator (Hibernate's `uuid` = UUIDHexGenerator, a 32-char hex String). Emitting @UuidGenerator here
-					// (`<uuid-generator/>`) instead forces a java.util.UUID identifier JdbcType, which round-trips through HQL but
-					// makes a primary-key load (session.get / byId) bind the id as a UUID and miss the VARCHAR id column. The
-					// real facade class lets Hibernate's id-generator resolver dereference the generic-generator strategy.
-					String	generatorName	= entity.getEntityName() + "_" + prop.getName() + "_generator";
-					Element	generatedValue	= createEl( "generated-value" );
-					generatedValue.setAttribute( "generator", generatorName );
-					idNode.appendChild( generatedValue );
+				// The entity is a real facade class with a concrete String id, so use the legacy string UUID generator
+				// (Hibernate's `uuid` = UUIDHexGenerator, a 32-char hex String). Emitting @UuidGenerator here
+				// (`<uuid-generator/>`) instead forces a java.util.UUID identifier JdbcType, which round-trips through HQL but
+				// makes a primary-key load (session.get / byId) bind the id as a UUID and miss the VARCHAR id column. The real
+				// facade class lets Hibernate's id-generator resolver dereference the generic-generator strategy.
+				String	generatorName	= entity.getEntityName() + "_" + prop.getName() + "_generator";
+				Element	generatedValue	= createEl( "generated-value" );
+				generatedValue.setAttribute( "generator", generatorName );
+				idNode.appendChild( generatedValue );
 
-					Element genericGenerator = createEl( "generic-generator" );
-					genericGenerator.setAttribute( "name", generatorName );
-					genericGenerator.setAttribute( "class", "uuid" );
-					idNode.appendChild( genericGenerator );
-				} else {
-					// MAP (class-less) mode: a standalone @UuidGenerator (does not rely on @GeneratedValue), which is NPE-safe
-					// for a dynamic entity that has no reflective id member.
-					idNode.appendChild( createEl( "uuid-generator" ) );
-				}
+				Element genericGenerator = createEl( "generic-generator" );
+				genericGenerator.setAttribute( "name", generatorName );
+				genericGenerator.setAttribute( "class", "uuid" );
+				idNode.appendChild( genericGenerator );
 			}
 			case "increment" -> {
 				// The one legacy strategy with an NPE-safe fast path in IdGeneratorResolverSecondPass (matched by the literal generator name).
@@ -714,17 +702,10 @@ public class MappingXMLWriter {
 		IStruct	columnInfo	= prop.getColumn();
 
 		if ( isBinary ) {
-			// byte[] ("binary") has no AttributeConverter and no <target> simple-type interpretation. In facade (POJO) mode the
-			// entity is a real class with a concrete byte[] accessor (see SessionFactoryBuilder), so emit a plain <basic> whose
-			// SQL type Hibernate infers (VARBINARY/BLOB) from that accessor - no <convert> and no <java-type> override, both of
-			// which would force it back to Object/JAVA_OBJECT. In MAP mode the entity is class-less, byte[] cannot be expressed
-			// (the "[B" ClassDetails is not registered), so it is skipped with a warning.
-			if ( !this.ormConfig.entityFacades ) {
-				logger.warn(
-				    "ORM mapping.xml writer: binary (byte[]) property [{}] on entity [{}] cannot be mapped for a class-less (MAP) entity in the modern format and was skipped.",
-				    prop.getName(), entity.getEntityName() );
-				return null;
-			}
+			// byte[] ("binary") has no AttributeConverter and no <target> simple-type interpretation. The entity is a real
+			// facade class with a concrete byte[] accessor (see SessionFactoryBuilder), so emit a plain <basic> whose SQL type
+			// Hibernate infers (VARBINARY/BLOB) from that accessor - no <convert> and no <java-type> override, both of which
+			// would force it back to Object/JAVA_OBJECT.
 			Element binaryNode = createEl( "basic" );
 			binaryNode.setAttribute( "name", prop.getName() );
 			if ( !prop.isOptimisticLock() ) {
@@ -1072,18 +1053,17 @@ public class MappingXMLWriter {
 	 * Translate a BoxLang property name to the persistent-attribute name Hibernate registers for the entity, for a
 	 * name-based cross-reference such as a collection's {@code mapped-by}.
 	 * <p>
-	 * In facade (POJO) mode the entity is a real class and Hibernate discovers its attributes by JavaBean introspection of
-	 * the generated {@code getFoo()}/{@code setFoo()} accessors, which decapitalizes the leading character (so a BoxLang
-	 * property {@code Owner} becomes the attribute {@code owner}). A {@code mapped-by} must name that attribute, not the
-	 * original BoxLang property name, or Hibernate cannot resolve the inverse side. In MAP mode the entity is class-less and
-	 * the attribute name is taken from the XML verbatim, so the name is returned unchanged.
+	 * The entity is a real facade class and Hibernate discovers its attributes by JavaBean introspection of the generated
+	 * {@code getFoo()}/{@code setFoo()} accessors, which decapitalizes the leading character (so a BoxLang property
+	 * {@code Owner} becomes the attribute {@code owner}). A {@code mapped-by} must name that attribute, not the original
+	 * BoxLang property name, or Hibernate cannot resolve the inverse side.
 	 *
 	 * @param boxLangPropertyName The BoxLang property name.
 	 *
 	 * @return The Hibernate attribute name to reference.
 	 */
 	private String facadeAttributeName( String boxLangPropertyName ) {
-		if ( !this.ormConfig.entityFacades || boxLangPropertyName == null || boxLangPropertyName.isEmpty() ) {
+		if ( boxLangPropertyName == null || boxLangPropertyName.isEmpty() ) {
 			return boxLangPropertyName;
 		}
 		return Introspector.decapitalize( boxLangPropertyName );
@@ -1277,16 +1257,15 @@ public class MappingXMLWriter {
 	}
 
 	/**
-	 * Resolve the value emitted as an association's {@code target-entity}. In facade mode the association targets the
-	 * target entity's per-application generated facade class (the real {@code @Entity}); in MAP mode it targets the
-	 * (dynamic) entity name.
+	 * Resolve the value emitted as an association's {@code target-entity}. The association targets the target entity's
+	 * per-application generated facade class (the real {@code @Entity}).
 	 *
 	 * @param resolvedEntityName The target entity's resolved entity name, or {@code null}.
 	 *
 	 * @return The value to emit for {@code target-entity}, or {@code null} if the input was {@code null}.
 	 */
 	private String associationTargetEntity( String resolvedEntityName ) {
-		if ( resolvedEntityName == null || !this.ormConfig.entityFacades ) {
+		if ( resolvedEntityName == null ) {
 			return resolvedEntityName;
 		}
 		return ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.facadeClassName( this.ormConfig.facadeNamespace, resolvedEntityName );

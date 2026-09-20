@@ -81,8 +81,7 @@ public class EntityNew extends BaseORMBIF {
 		    entityRecord.getDatasource(),
 		    context
 		);
-		// In facade mode the instantiator returns a POJO facade; unwrap it to the BoxLang instance the developer expects.
-		// In MAP mode this is already the IClassRunnable, so unwrapIfFacade is a no-op.
+		// The instantiator returns a POJO facade; unwrap it to the BoxLang instance the developer expects.
 		IClassRunnable				entity				= ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade(
 		    sessionFactoryImpl.getMappingMetamodel()
 		        .getEntityDescriptor( ORMApp.hibernateEntityName( sessionFactoryImpl, entityRecord.getEntityName() ) )

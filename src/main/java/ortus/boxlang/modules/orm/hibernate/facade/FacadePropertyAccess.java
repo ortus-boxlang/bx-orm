@@ -34,14 +34,14 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
  * Facade-mode {@link PropertyAccess} that wraps Hibernate's standard reflection-based access and coerces the target to a
  * generated facade before every read/write.
  * <p>
- * In facade (POJO) mode Hibernate manages the generated facade, whose reflective getters/setters delegate to the backing
- * BoxLang instance. Most of the time Hibernate holds the facade, but some internal paths - association FK extraction,
+ * Hibernate manages the generated facade, whose reflective getters/setters delegate to the backing BoxLang instance.
+ * Most of the time Hibernate holds the facade, but some internal paths - association FK extraction,
  * {@code isTransient}/{@code getIdentifier} on an association target resolved from the persistence context - can hand
  * the reflective accessor the raw {@link IClassRunnable} instead. A reflective getter/setter bound to the facade class
  * throws {@link IllegalArgumentException} on a raw {@code IClassRunnable} owner. This wrapper coerces any raw
  * {@code IClassRunnable} back to its (memoized) facade first, so id and property access succeeds regardless of which
  * representation Hibernate happens to be holding. A value that is already a facade (or anything else) passes through
- * unchanged, so MAP mode and the normal facade path are unaffected.
+ * unchanged, so the normal facade path is unaffected.
  *
  * @since 2.0.0
  */

@@ -62,12 +62,11 @@ public class EntityReload extends BaseORMBIF {
 			entity = entityLookup.value();
 		}
 		ORMContext	ormContext	= ORMContext.getForContext( jdbcBoxContext );
-		// In facade mode Hibernate manages the generated facade, not the IClassRunnable, so refresh the facade (its state
-		// delegates back to the same instance). In MAP mode this is a no-op passthrough. The caller still gets the
-		// BoxLang instance back.
+		// Hibernate manages the generated facade, not the IClassRunnable, so refresh the facade (its state delegates back to
+		// the same instance). The caller still gets the BoxLang instance back.
 		Object		managed		= entity instanceof ortus.boxlang.runtime.runnables.IClassRunnable runnable
 		    ? ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.managed(
-		        ormContext.getConfig().entityFacades, ormContext.getConfig().facadeNamespace, getEntityName( runnable ), runnable )
+		        ormContext.getConfig().facadeNamespace, getEntityName( runnable ), runnable )
 		    : entity;
 		ormContext
 		    .getSession()

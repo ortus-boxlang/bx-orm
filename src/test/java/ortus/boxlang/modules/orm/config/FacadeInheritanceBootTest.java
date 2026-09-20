@@ -39,8 +39,8 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.types.Array;
 
 /**
- * Boots a full facade-mode ({@code entityFacades=true}) ORM application against embedded Derby and proves single-table
- * INHERITANCE with a discriminator works end-to-end through the real BIFs.
+ * Boots a full ORM application against embedded Derby and proves single-table INHERITANCE with a discriminator works
+ * end-to-end through the real BIFs.
  * <p>
  * A root entity ({@code Animal}) has two subclasses ({@code Dog}, {@code Cat}) stored in the same table, distinguished
  * by a discriminator column. Each subclass facade extends its root facade. The test saves an instance of each subclass,

@@ -325,17 +325,6 @@ public class ORMConfig {
 	public boolean								proxyLazyLoading		= false;
 
 	/**
-	 * Whether to map BoxLang entities to Hibernate as real per-entity POJO "facade" classes (see the
-	 * {@code ortus.boxlang.modules.orm.hibernate.facade} package) instead of class-less dynamic MAP entities.
-	 * <p>
-	 * A facade is a generated real Java class whose accessors delegate their state to the BoxLang instance, so Hibernate
-	 * sees a real class and a real id member (which unlocks {@code uuid} and other id generation strategies unavailable
-	 * to MAP entities), while BoxLang developers still only ever handle the BoxLang class. Defaults to {@code false}: with
-	 * the flag off the representation is byte-for-byte the original MAP behavior.
-	 */
-	public boolean								entityFacades			= true;
-
-	/**
 	 * Facade namespace for this ORM application: a sanitized, application-unique package segment under which this
 	 * application's generated entity facades live. Set once at startup so that two applications in the same JVM, each
 	 * mapping a same-named entity, generate distinct facade classes instead of colliding on one global name.
@@ -564,10 +553,6 @@ public class ORMConfig {
 
 		if ( properties.containsKey( ORMKeys.proxyLazyLoading ) && properties.get( ORMKeys.proxyLazyLoading ) != null ) {
 			proxyLazyLoading = BooleanCaster.cast( properties.get( ORMKeys.proxyLazyLoading ) );
-		}
-
-		if ( properties.containsKey( ORMKeys.entityFacades ) && properties.get( ORMKeys.entityFacades ) != null ) {
-			entityFacades = BooleanCaster.cast( properties.get( ORMKeys.entityFacades ) );
 		}
 
 		if ( this.namingStrategy != null ) {

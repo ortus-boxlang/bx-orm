@@ -39,8 +39,8 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.types.Array;
 
 /**
- * Boots a full facade-mode ({@code entityFacades=true}) ORM application against embedded Derby and proves a COMPOSITE
- * (multi-column) primary key works end-to-end through the real BIFs.
+ * Boots a full ORM application against embedded Derby and proves a COMPOSITE (multi-column) primary key works
+ * end-to-end through the real BIFs.
  * <p>
  * In facade mode a composite key is mapped as an embedded (non-aggregated) {@code <composite-id>}: the key properties
  * are typed accessors on the entity's own generated facade (no separate id class). This test round-trips a

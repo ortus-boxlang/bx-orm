@@ -55,8 +55,8 @@ public class BoxLazyInitializer extends AbstractLazyInitializer implements Seria
 		if ( !isUninitialized() ) {
 			initializeWithoutLoadIfPossible();
 		}
-		// In facade (POJO) mode the loaded implementation is a generated facade; unwrap it to the backing BoxLang
-		// instance the proxy stands in for. In MAP mode this is already the IClassRunnable, so unwrap is a no-op.
+		// The loaded implementation is a generated facade; unwrap it to the backing BoxLang instance the proxy stands
+		// in for.
 		return ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( getImplementation() );
 	}
 

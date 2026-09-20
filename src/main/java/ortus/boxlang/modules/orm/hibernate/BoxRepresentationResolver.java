@@ -44,34 +44,24 @@ public class BoxRepresentationResolver implements ManagedTypeRepresentationResol
 	private final Map<String, EntityRecord>	entityRecords;
 
 	/**
-	 * Secondary index of the same records keyed by lower-cased facade FQN. Populated in facade mode so an entity whose
-	 * Hibernate entity-name is its facade class (as the modern mapping.xml format reports it) still resolves; empty in MAP
-	 * mode. The primary by-entity-name lookup always takes precedence.
+	 * Secondary index of the same records keyed by lower-cased facade FQN, so an entity whose Hibernate entity-name is its
+	 * facade class (as the modern mapping.xml format reports it) still resolves. The primary by-entity-name lookup always
+	 * takes precedence.
 	 */
 	private final Map<String, EntityRecord>	recordsByFacadeFQN;
 
 	/**
-	 * When true, entities are represented as generated POJO facades; when false, the original class-less dynamic MAP
-	 * representation is used.
-	 */
-	private final boolean					entityFacades;
-
-	/**
 	 * @param entityRecords   The discovered BoxLang entities for this session factory, keyed by lower-cased entity name.
-	 * @param entityFacades   Whether to use the POJO-facade representation (true) or the MAP representation (false).
 	 * @param facadeNamespace The owning application's facade namespace, used to build the facade-FQN fallback index.
 	 */
-	public BoxRepresentationResolver( Map<String, EntityRecord> entityRecords, boolean entityFacades, String facadeNamespace ) {
+	public BoxRepresentationResolver( Map<String, EntityRecord> entityRecords, String facadeNamespace ) {
 		this.entityRecords		= entityRecords;
-		this.entityFacades		= entityFacades;
 		this.recordsByFacadeFQN	= new java.util.HashMap<>();
-		if ( entityFacades ) {
-			for ( EntityRecord record : entityRecords.values() ) {
-				this.recordsByFacadeFQN.put(
-				    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.facadeClassName( facadeNamespace, record.getEntityName() ).toLowerCase()
-				        .trim(),
-				    record );
-			}
+		for ( EntityRecord record : entityRecords.values() ) {
+			this.recordsByFacadeFQN.put(
+			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.facadeClassName( facadeNamespace, record.getEntityName() ).toLowerCase()
+			        .trim(),
+			    record );
 		}
 	}
 
@@ -79,8 +69,8 @@ public class BoxRepresentationResolver implements ManagedTypeRepresentationResol
 	public EntityRepresentationStrategy resolveStrategy( PersistentClass bootDescriptor, EntityPersister runtimeDescriptor,
 	    RuntimeModelCreationContext creationContext ) {
 		String			hibernateName	= bootDescriptor.getEntityName().toLowerCase().trim();
-		// Primary: by entity-name (hbm keeps the entity-name; MAP mode always). Fallback: by facade FQN (mapping.xml reports
-		// the mapped facade class as the entity-name).
+		// Primary: by entity-name. Fallback: by facade FQN (the modern mapping.xml reports the mapped facade class as the
+		// Hibernate entity-name, so the by-name lookup misses and this resolves it).
 		EntityRecord	entityRecord	= entityRecords.get( hibernateName );
 		if ( entityRecord == null ) {
 			entityRecord = recordsByFacadeFQN.get( hibernateName );
@@ -88,7 +78,7 @@ public class BoxRepresentationResolver implements ManagedTypeRepresentationResol
 		if ( entityRecord == null ) {
 			throw new BoxRuntimeException( "No BoxLang entity record found for Hibernate entity [" + bootDescriptor.getEntityName() + "]" );
 		}
-		return new BoxEntityRepresentationStrategy( bootDescriptor, runtimeDescriptor, creationContext, entityRecord, entityFacades );
+		return new BoxEntityRepresentationStrategy( bootDescriptor, runtimeDescriptor, creationContext, entityRecord );
 	}
 
 	/**

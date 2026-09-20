@@ -170,18 +170,17 @@ public final class FacadeSupport {
 
 	/**
 	 * Return the object a Hibernate {@link org.hibernate.Session} operation (refresh, contains, evict, lock, ...) should
-	 * receive for this entity: in facade mode the entity's facade (wrapping the instance), in MAP mode the instance
-	 * unchanged. Non-{@link IClassRunnable} values pass through untouched.
+	 * receive for this entity: the entity's facade (wrapping the instance). Non-{@link IClassRunnable} values pass through
+	 * untouched.
 	 *
-	 * @param entityFacades Whether facade mode is enabled.
-	 * @param namespace     The owning application's facade namespace.
-	 * @param entityName    The BoxLang entity name.
-	 * @param entity        The entity instance (or any value).
+	 * @param namespace  The owning application's facade namespace.
+	 * @param entityName The BoxLang entity name.
+	 * @param entity     The entity instance (or any value).
 	 *
 	 * @return The Hibernate-managed representation of the entity.
 	 */
-	public static Object managed( boolean entityFacades, String namespace, String entityName, Object entity ) {
-		if ( entityFacades && entity instanceof IClassRunnable runnable ) {
+	public static Object managed( String namespace, String entityName, Object entity ) {
+		if ( entity instanceof IClassRunnable runnable ) {
 			return wrap( namespace, entityName, runnable );
 		}
 		return entity;

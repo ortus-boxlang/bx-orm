@@ -35,67 +35,48 @@ import org.hibernate.type.descriptor.java.JavaType;
 
 import ortus.boxlang.modules.orm.hibernate.facade.FacadePropertyAccess;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
-import ortus.boxlang.runtime.runnables.IClassRunnable;
 
 /**
  * Hibernate {@link EntityRepresentationStrategy} that bridges Hibernate's runtime model with BoxLang entity classes.
  * <p>
  * This is the Hibernate 6+/7+ replacement for the Hibernate 5 tuplizer. Hibernate asks the strategy for everything it
  * needs to instantiate, proxy, and read/write a mapped entity, and this implementation hands back BoxLang-aware
- * components: {@link BoxClassInstantiator}, {@link BoxProxyFactory}, {@link BoxPropertyAccess} and
- * {@link BoxEntityNameResolver}.
+ * components: {@link BoxClassInstantiator}, {@link BoxProxyFactory},
+ * {@link ortus.boxlang.modules.orm.hibernate.facade.FacadePropertyAccess} and {@link BoxEntityNameResolver}.
  *
  * @since 2.0.0
  */
 public class BoxEntityRepresentationStrategy implements EntityRepresentationStrategy {
 
-	private final PersistentClass		bootDescriptor;
 	private final JavaType<?>			mappedJavaType;
 	private final JavaType<?>			proxyJavaType;
 	private final EntityInstantiator	instantiator;
 	private final ProxyFactory			proxyFactory;
 
 	/**
-	 * When true, this entity is represented as a generated POJO facade (real class + real id member); when false, the
-	 * original class-less dynamic MAP representation is used. Everything facade-specific is gated on this flag.
-	 */
-	private final boolean				facadeMode;
-
-	/**
-	 * The facade class Hibernate maps as the entity in facade mode, or {@code null} in MAP mode.
+	 * The generated facade class Hibernate maps as the entity.
 	 */
 	private final Class<?>				facadeClass;
 
 	public BoxEntityRepresentationStrategy( PersistentClass bootDescriptor, EntityPersister runtimeDescriptor,
-	    RuntimeModelCreationContext creationContext, EntityRecord entityRecord, boolean entityFacades ) {
-		this.bootDescriptor	= bootDescriptor;
-		this.facadeMode		= entityFacades;
-
-		if ( entityFacades ) {
-			// Facade (POJO) mode: Hibernate manages the real generated class named in the mapping XML (<class name=...>),
-			// whose typed accessors delegate to the BoxLang instance. Property access is Hibernate's standard reflection
-			// access (the facade has real getters/setters), so BoxPropertyAccess is not used here.
-			this.facadeClass	= bootDescriptor.getMappedClass();
-			this.mappedJavaType	= creationContext.getTypeConfiguration().getJavaTypeRegistry().resolveEntityTypeDescriptor( this.facadeClass );
-			this.instantiator	= new BoxFacadeInstantiator( new BoxClassInstantiator( bootDescriptor, entityRecord ), this.facadeClass );
-			// Lazy proxying for facades reuses the MAP-mode machinery: the proxy is a BoxProxy (an IClassRunnable the
-			// developer can navigate), and its loaded implementation - a facade - is unwrapped back to the BoxLang
-			// instance by BoxLazyInitializer. Hibernate reads the id/entity-name straight off the proxy without forcing
-			// initialization, so a lazy to-one hands the developer a real (lazy) BoxLang instance, never a facade.
-			this.proxyJavaType	= creationContext.getTypeConfiguration().getJavaTypeRegistry().resolveDescriptor( BoxProxy.class );
-			this.proxyFactory	= runtimeDescriptor.isLazy() ? new BoxProxyFactory( bootDescriptor ) : null;
-		} else {
-			this.facadeClass	= null;
-			this.mappedJavaType	= creationContext.getTypeConfiguration().getJavaTypeRegistry().resolveEntityTypeDescriptor( IClassRunnable.class );
-			this.proxyJavaType	= creationContext.getTypeConfiguration().getJavaTypeRegistry().resolveDescriptor( BoxProxy.class );
-			this.instantiator	= new BoxClassInstantiator( bootDescriptor, entityRecord );
-			this.proxyFactory	= runtimeDescriptor.isLazy() ? new BoxProxyFactory( bootDescriptor ) : null;
-		}
+	    RuntimeModelCreationContext creationContext, EntityRecord entityRecord ) {
+		// Hibernate manages the real generated facade class named in the mapping XML (<entity class=...>), whose typed
+		// accessors delegate to the BoxLang instance. Property access is Hibernate's standard reflection access (the facade
+		// has real getters/setters), wrapped by FacadePropertyAccess.
+		this.facadeClass	= bootDescriptor.getMappedClass();
+		this.mappedJavaType	= creationContext.getTypeConfiguration().getJavaTypeRegistry().resolveEntityTypeDescriptor( this.facadeClass );
+		this.instantiator	= new BoxFacadeInstantiator( new BoxClassInstantiator( bootDescriptor, entityRecord ), this.facadeClass );
+		// Lazy proxying: the proxy is a BoxProxy (an IClassRunnable the developer can navigate), and its loaded
+		// implementation - a facade - is unwrapped back to the BoxLang instance by BoxLazyInitializer. Hibernate reads the
+		// id/entity-name straight off the proxy without forcing initialization, so a lazy to-one hands the developer a real
+		// (lazy) BoxLang instance, never a facade.
+		this.proxyJavaType	= creationContext.getTypeConfiguration().getJavaTypeRegistry().resolveDescriptor( BoxProxy.class );
+		this.proxyFactory	= runtimeDescriptor.isLazy() ? new BoxProxyFactory( bootDescriptor ) : null;
 	}
 
 	@Override
 	public RepresentationMode getMode() {
-		return facadeMode ? RepresentationMode.POJO : RepresentationMode.MAP;
+		return RepresentationMode.POJO;
 	}
 
 	@Override
@@ -115,15 +96,12 @@ public class BoxEntityRepresentationStrategy implements EntityRepresentationStra
 
 	@Override
 	public PropertyAccess resolvePropertyAccess( Property bootAttributeDescriptor ) {
-		if ( facadeMode ) {
-			// The facade exposes real getX/setX accessors, so use Hibernate's standard reflection-based property access,
-			// wrapped so it also tolerates a raw IClassRunnable owner. Hibernate can resolve an association value (or a
-			// persistence-context entity) to the backing BoxLang instance rather than its facade; coercing the owner back
-			// to its (memoized) facade before the reflective accessor runs keeps id/property access working in every path.
-			return new FacadePropertyAccess(
-			    PropertyAccessStrategyBasicImpl.INSTANCE.buildPropertyAccess( facadeClass, bootAttributeDescriptor.getName(), true ) );
-		}
-		return new BoxPropertyAccess( bootAttributeDescriptor, bootDescriptor );
+		// The facade exposes real getX/setX accessors, so use Hibernate's standard reflection-based property access,
+		// wrapped so it also tolerates a raw IClassRunnable owner. Hibernate can resolve an association value (or a
+		// persistence-context entity) to the backing BoxLang instance rather than its facade; coercing the owner back
+		// to its (memoized) facade before the reflective accessor runs keeps id/property access working in every path.
+		return new FacadePropertyAccess(
+		    PropertyAccessStrategyBasicImpl.INSTANCE.buildPropertyAccess( facadeClass, bootAttributeDescriptor.getName(), true ) );
 	}
 
 	@Override

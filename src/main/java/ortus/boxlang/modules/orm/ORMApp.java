@@ -355,8 +355,7 @@ public class ORMApp {
 		if ( entity instanceof BoxProxy castProxy ) {
 			return castProxy.getRunnable();
 		} else {
-			// In facade mode Hibernate returns a POJO facade; unwrap it to the BoxLang instance. In MAP mode this is a
-			// no-op and the value is already the IClassRunnable.
+			// Hibernate returns a POJO facade; unwrap it to the BoxLang instance.
 			return ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity );
 		}
 	}
@@ -440,7 +439,7 @@ public class ORMApp {
 		return Array.of(
 		    executeFilterQuery( query, options )
 		        .stream()
-		        // In facade mode Hibernate returns POJO facades; unwrap each to its BoxLang instance (no-op in MAP mode).
+		        // Hibernate returns POJO facades; unwrap each to its BoxLang instance.
 		        .map( entity -> ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity ) )
 		        .toArray()
 		);
@@ -499,9 +498,8 @@ public class ORMApp {
 	/**
 	 * Resolve the Hibernate entity-name for a BoxLang entity name, for calls into the Hibernate Session/metamodel APIs by
 	 * name. With the modern {@code mapping.xml} format a facade entity's Hibernate entity-name is its generated facade
-	 * class and the BoxLang name is only the JPA/HQL import; the legacy {@code hbm.xml} format and MAP mode keep the
-	 * BoxLang name. {@code getImportedName()} returns the correct entity-name for either writer (the input unchanged when
-	 * it is already the entity-name), so it is a no-op except in mapping.xml facade mode.
+	 * class and the BoxLang name is only the JPA/HQL import. {@code getImportedName()} maps the BoxLang import name to
+	 * that entity-name (returning the input unchanged when it is already the entity-name).
 	 *
 	 * @param sf         The session factory.
 	 * @param entityName The BoxLang entity name.
@@ -549,39 +547,33 @@ public class ORMApp {
 		if ( value == null ) {
 			return null;
 		}
-		boolean facades = this.config.entityFacades;
 		// Already an entity instance (live or detached); BoxProxy implements IClassRunnable too.
 		if ( value instanceof IClassRunnable runnable ) {
-			// Hibernate tracks the facade in facade mode, so operate on that representation. No-op passthrough in MAP mode.
-			Object managed = facades
-			    ? ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( this.config.facadeNamespace, entityName, runnable )
-			    : value;
+			// Hibernate tracks the facade, so operate on that representation.
+			Object managed = ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( this.config.facadeNamespace, entityName, runnable );
 			if ( session.contains( hibernateEntityName( session, entityName ), managed ) ) {
 				return managed;
 			}
 			Object id = getEntityPersister( session, entityName ).getIdentifier( managed, ( SharedSessionContractImplementor ) session );
 			// Transient (no id yet): let Hibernate handle it rather than fabricate a reference.
-			return id == null ? managed : referenceFor( session, entityName, id, facades );
+			return id == null ? managed : referenceFor( session, entityName, id );
 		}
 		// A raw primary key value.
-		return referenceFor( session, entityName, value, facades );
+		return referenceFor( session, entityName, value );
 	}
 
 	/**
-	 * Resolve a managed reference for an entity by id. In facade mode a lazy {@code BoxProxy} is not assignable to the
-	 * entity's generated facade class (which Hibernate's query-parameter type check requires), so fetch the managed
-	 * facade itself; in MAP mode a lazy proxy reference is sufficient.
+	 * Resolve a managed reference for an entity by id. A lazy {@code BoxProxy} is not assignable to the entity's generated
+	 * facade class (which Hibernate's query-parameter type check requires), so fetch the managed facade itself.
 	 *
 	 * @param session    The Hibernate session.
 	 * @param entityName The entity name.
 	 * @param id         The identifier.
-	 * @param facades    Whether facade mode is enabled.
 	 *
 	 * @return A managed reference assignable to the entity's mapped representation.
 	 */
-	private Object referenceFor( Session session, String entityName, Object id, boolean facades ) {
-		String hibernateName = hibernateEntityName( session, entityName );
-		return facades ? session.get( hibernateName, id ) : session.getReference( hibernateName, id );
+	private Object referenceFor( Session session, String entityName, Object id ) {
+		return session.get( hibernateEntityName( session, entityName ), id );
 	}
 
 	/**

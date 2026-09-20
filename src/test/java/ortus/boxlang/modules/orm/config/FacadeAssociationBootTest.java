@@ -38,8 +38,8 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 
 /**
- * Boots a full facade-mode ({@code entityFacades=true}) ORM application against embedded Derby and proves ASSOCIATIONS
- * and LAZY PROXIES work end-to-end through the real BIFs, at parity with MAP mode.
+ * Boots a full ORM application against embedded Derby and proves ASSOCIATIONS and LAZY PROXIES work end-to-end through
+ * the real BIFs.
  * <p>
  * Covers (all uuid-keyed):
  * <ul>

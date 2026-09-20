@@ -159,9 +159,8 @@ public class BoxClassInstantiator implements EntityInstantiator {
 					    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
 				    }
 
-				    // getX() override: return a stable snapshot in facade mode so structural modification during iteration
-				    // (getX().each( e => removeX(e) )) is safe; a no-op passthrough in MAP mode. Force-installed over the
-				    // generated accessor.
+				    // getX() override: return a stable snapshot so structural modification during iteration
+				    // (getX().each( e => removeX(e) )) is safe. Force-installed over the generated accessor.
 				    if ( association.getAsString( Key.type ).endsWith( "to-many" ) ) {
 					    DynamicFunction getUDF = getToManyGetMethod( association );
 					    theEntity.getThisScope().put( getUDF.getName(), getUDF );
@@ -333,7 +332,7 @@ public class BoxClassInstantiator implements EntityInstantiator {
 						    return bagCollection.size() > 0;
 					    }
 				    }
-				    // The scope collection is an Array (MAP mode) or a FacadeCollectionView (facade mode); both are List<Object>.
+				    // The scope collection is a plain Array (unmanaged entity) or a FacadeCollectionView (managed); both are List<Object>.
 				    if ( itemToCheck != null ) {
 					    return ( ( List<Object> ) collection ).stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
 				    } else {
@@ -371,8 +370,8 @@ public class BoxClassInstantiator implements EntityInstantiator {
 	 * while iterating what {@code getX()} returned (the common {@code getChildren().each( c => parent.removeChild( c ) )}
 	 * pattern) would shift indices under BoxLang's index-based iteration and drop or null elements. Returning a snapshot
 	 * (a copy of the current {@link IClassRunnable} elements) makes iteration stable while {@code addX}/{@code removeX}
-	 * keep mutating the live view underneath - matching MAP-mode BoxLang {@code Array} semantics. In MAP mode the scope
-	 * already holds a plain {@code Array}, which is returned as-is (live), preserving existing behavior.
+	 * keep mutating the live view underneath - matching BoxLang {@code Array} semantics. An unmanaged entity's scope
+	 * still holds a plain {@code Array}, which is returned as-is (live).
 	 *
 	 * @param associationMeta The metadata for the association.
 	 *
@@ -436,8 +435,8 @@ public class BoxClassInstantiator implements EntityInstantiator {
 				    if ( bag instanceof PersistentBag bagCollection ) {
 					    bagCollection.add( itemToAdd );
 				    } else {
-					    // Array (MAP mode) or FacadeCollectionView (facade mode); both are List<Object>. The view wraps the
-					    // added IClassRunnable into a facade and pushes it onto the managed Hibernate collection.
+					    // Plain Array (unmanaged entity) or FacadeCollectionView (managed); both are List<Object>. The view wraps
+					    // the added IClassRunnable into a facade and pushes it onto the managed Hibernate collection.
 					    ( ( List<Object> ) bag ).add( itemToAdd );
 				    }
 			    } else {
@@ -495,7 +494,7 @@ public class BoxClassInstantiator implements EntityInstantiator {
 				    if ( collection instanceof PersistentBag bagCollection ) {
 					    bagCollection.remove( itemToRemove );
 				    } else {
-					    // Array (MAP mode) or FacadeCollectionView (facade mode); both are List<Object>. Remove the element the
+					    // Plain Array (unmanaged entity) or FacadeCollectionView (managed); both are List<Object>. Remove the element the
 					    // developer passed by identity/equality. It comes from iterating this same association, so this matches it
 					    // regardless of the element's id property name (which is not necessarily the owning entity's - e.g. owner
 					    // id "id", element id "vin"). The FacadeCollectionView unwraps facades on compare, so an IClassRunnable

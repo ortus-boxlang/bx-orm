@@ -358,11 +358,10 @@ public class EventListener
 		}
 		for ( int i = 0; i < persistProperties.length; i++ ) {
 			// Never write association or collection state from the BoxLang scope back into Hibernate's event state array.
-			// In facade mode the scope holds a facade / FacadeCollectionView that differs from Hibernate's own state entry
-			// for that slot, so overwriting it corrupts Hibernate's association/collection tracking and provokes a spurious
-			// second UPDATE - which double-fires preUpdate/postUpdate. Event handlers change basic property values, not
-			// associations, so this only ever needs to sync basic slots. (MAP mode never overwrote these either: the scope
-			// held Hibernate's own collection instance, so the equality check below already skipped them.)
+			// The scope holds a facade / FacadeCollectionView that differs from Hibernate's own state entry for that slot,
+			// so overwriting it corrupts Hibernate's association/collection tracking and provokes a spurious second UPDATE -
+			// which double-fires preUpdate/postUpdate. Event handlers change basic property values, not associations, so
+			// this only ever needs to sync basic slots.
 			if ( propertyTypes != null && i < propertyTypes.length && propertyTypes[ i ] != null
 			    && ( propertyTypes[ i ].isAssociationType() || propertyTypes[ i ].isCollectionType() ) ) {
 				continue;

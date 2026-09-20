@@ -58,12 +58,9 @@ public class ORMGetSessionFactory extends BaseORMBIF {
 		    ? ormApp.getDefaultSessionFactoryOrThrow()
 		    : ormApp.getSessionFactoryOrThrow( Key.of( datasourceName ), context );
 
-		// In facade (POJO) mode, hand the developer a facade-aware SessionFactory so BoxLang entity names work against its raw
-		// API and its getCache()/getMetamodel()/getMappingMetamodel(). In MAP mode the entity-name IS the BoxLang name.
-		if ( ormApp.getConfig().entityFacades ) {
-			return ortus.boxlang.modules.orm.hibernate.facade.FacadeAwareHibernate.wrap( factory );
-		}
-		return factory;
+		// Hand the developer a facade-aware SessionFactory so BoxLang entity names work against its raw API and its
+		// getCache()/getMetamodel()/getMappingMetamodel(), even though Hibernate manages the generated facade classes.
+		return ortus.boxlang.modules.orm.hibernate.facade.FacadeAwareHibernate.wrap( factory );
 	}
 
 }

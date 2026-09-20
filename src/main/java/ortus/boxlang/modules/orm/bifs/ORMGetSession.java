@@ -60,12 +60,9 @@ public class ORMGetSession extends BaseORMBIF {
 
 		Session		session			= datasourceName.isBlank() ? ormContext.getSession() : ormContext.getSession( Key.of( datasourceName ) );
 
-		// In facade (POJO) mode, hand the developer a facade-aware Session so BoxLang entity names/instances work against its
-		// raw API (detach/evict/contains/get/...). In MAP mode the raw session already understands the BoxLang representation.
-		if ( ormContext.getConfig().entityFacades ) {
-			return ortus.boxlang.modules.orm.hibernate.facade.FacadeAwareHibernate.wrap( session );
-		}
-		return session;
+		// Hand the developer a facade-aware Session so BoxLang entity names/instances work against its raw API
+		// (detach/evict/contains/get/...) even though Hibernate manages the generated facade classes.
+		return ortus.boxlang.modules.orm.hibernate.facade.FacadeAwareHibernate.wrap( session );
 	}
 
 }

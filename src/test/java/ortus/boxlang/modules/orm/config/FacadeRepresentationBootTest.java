@@ -36,10 +36,10 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 
 /**
- * Boots a full ORM application/SessionFactory against an embedded, in-memory Apache Derby datasource with the
- * {@code entityFacades} flag ON, proving the POJO-facade representation works end-to-end through bx-orm's real BIFs.
+ * Boots a full ORM application/SessionFactory against an embedded, in-memory Apache Derby datasource, proving the
+ * POJO-facade representation works end-to-end through bx-orm's real BIFs.
  * <p>
- * The entity uses a {@code uuid}-generated string id, which is impossible for class-less dynamic (MAP) entities: this
+ * The entity uses a {@code uuid}-generated string id: this
  * test round-trips {@code entityNew}/{@code entitySave}/{@code entityLoadByPK}/{@code ormExecuteQuery} and asserts a
  * non-empty uuid was generated onto the entity. Standalone (does not extend {@code tools.BaseORMTest}) so it runs
  * everywhere against embedded Derby with no database server.

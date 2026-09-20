@@ -123,8 +123,7 @@ public class EntityLoadByExample extends BaseORMBIF {
 		if ( unique ) {
 			query.setMaxResults( 1 );
 		}
-		// In facade mode Hibernate returns POJO facades; unwrap each to its BoxLang instance so callers only ever see
-		// IClassRunnables. No-op passthrough in MAP mode.
+		// Hibernate returns POJO facades; unwrap each to its BoxLang instance so callers only ever see IClassRunnables.
 		List<Object> results = query.list()
 		    .stream()
 		    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
