@@ -95,7 +95,19 @@ public class EntityNew extends BaseORMBIF {
 			entity.getVariablesScope().putAll( properties );
 		}
 
-		// Only announce if we have a state on it.
+		// Fire the postNew event on the entity itself and on the global event-handler class. Hibernate has no
+		// "instantiate/new" event, so entityNew() is the single place this fires - for developer-initiated creation only,
+		// not for hydration during a load (that is what postLoad is for). Dispatched through the same ORMEventDispatcher
+		// the Hibernate events use, so the global handler resolves identically.
+		IStruct eventArgs = Struct.of(
+		    ORMKeys.entity, entity,
+		    ORMKeys.entityName, entityRecord.getEntityName(),
+		    Key.context, context
+		);
+		ortus.boxlang.modules.orm.config.ORMEventDispatcher.announceEntity( entity, ORMKeys.postNew, eventArgs );
+		ormApp.getConfig().getEventDispatcher().announceGlobal( ORMKeys.postNew, eventArgs );
+
+		// Also announce the post_new interception point so any registered BoxLang interceptors can observe it.
 		if ( interceptorService.hasState( ORMKeys.EVENT_POST_NEW ) ) {
 			interceptorService.announce(
 			    ORMKeys.EVENT_POST_NEW,

@@ -120,12 +120,14 @@ class {
 	}
 
 	/**
-	 * postNew called by ColdBox which in turn announces a coldbox interception: ORMPostNew
+	 * postNew: core bx-orm event fired by entityNew() when a new entity is created.
 	 */
 	public void function postNew( any entity, any entityName ) {
 		// Process the announcement
 		System.out.println(
 				"EventHandler action firing: ORMPostNew"
 			);
+		application.postNewFired = true;
+		application.postNewEntityName = arguments.entityName;
 	}
 }

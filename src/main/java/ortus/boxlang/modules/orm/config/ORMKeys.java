@@ -222,6 +222,7 @@ public class ORMKeys {
 	public static final Key	preDelete					= Key.of( "preDelete" );
 	public static final Key	postUpdate					= Key.of( "postUpdate" );
 	public static final Key	postInsert					= Key.of( "postInsert" );
+	public static final Key	postNew						= Key.of( "postNew" );
 	public static final Key	oldData						= Key.of( "oldData" );
 
 	/**

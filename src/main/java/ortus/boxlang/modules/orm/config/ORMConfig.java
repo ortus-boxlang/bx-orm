@@ -337,6 +337,13 @@ public class ORMConfig {
 	private PhysicalNamingStrategy				instantiatedNamingStrategy;
 
 	/**
+	 * The shared ORM event dispatcher for this application, lazily built from {@link #eventHandler}. Cached so the
+	 * Hibernate event listeners (one per datasource) and the {@code entityNew()}-driven {@code postNew} event all
+	 * resolve and invoke the same single global event-handler instance.
+	 */
+	private ORMEventDispatcher					eventDispatcher;
+
+	/**
 	 * Constructor
 	 *
 	 * @param properties Struct of ORM configuration properties.
@@ -608,15 +615,12 @@ public class ORMConfig {
 	 * @return Hibernate Configuration object.
 	 */
 	public Configuration toHibernateConfig() {
-		// Load the event handler class if it is specified, else null
-		DynamicObject eventHandlerClass = this.eventHandler != null
-		    ? loadBoxLangClassByFQN( this.eventHandler )
-		    : null;
-		// Build the BootstrapServiceRegistry with the event listener integrator if an event handler class was specified. This registry will be closed by
+		// Build the BootstrapServiceRegistry with the event listener integrator, sharing the single event dispatcher (its global
+		// event-handler class may be null when none is configured). This registry will be closed by
 		// SessionFactoryBuilder if session factory construction fails to prevent leaks; on success it remains open as the root of the Hibernate service
 		// hierarchy and is closed transitively via SessionFactory.close().
 		this.bootstrapRegistry = new BootstrapServiceRegistryBuilder()
-		    .applyIntegrator( new EventListener( eventHandlerClass ) )
+		    .applyIntegrator( new EventListener( getEventDispatcher() ) )
 		    .build();
 		Configuration	configuration		= new Configuration( this.bootstrapRegistry );
 		var				sysEnvProps			= new Properties();
@@ -816,6 +820,24 @@ public class ORMConfig {
 			    ctx.getCurrentImports()
 			).invokeConstructor( ctx );
 		} );
+	}
+
+	/**
+	 * Get the shared ORM event dispatcher for this application, building it once from the configured
+	 * {@link #eventHandler}. The dispatcher's global event-handler class is {@code null} when no {@code eventHandler} is
+	 * configured; entity-level events still dispatch to the entity's own methods in that case. Cached so the Hibernate
+	 * event listeners and the {@code entityNew()}-driven {@code postNew} event share one global handler instance.
+	 *
+	 * @return The shared {@link ORMEventDispatcher}.
+	 */
+	public ORMEventDispatcher getEventDispatcher() {
+		if ( this.eventDispatcher == null ) {
+			DynamicObject globalListener = ( this.eventHandler != null && !this.eventHandler.isBlank() )
+			    ? loadBoxLangClassByFQN( this.eventHandler )
+			    : null;
+			this.eventDispatcher = new ORMEventDispatcher( globalListener );
+		}
+		return this.eventDispatcher;
 	}
 
 	/**

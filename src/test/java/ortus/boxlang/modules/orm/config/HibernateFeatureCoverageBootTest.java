@@ -353,6 +353,25 @@ public class HibernateFeatureCoverageBootTest {
 		assertThat( variables.getAsBoolean( Key.of( "firedClear" ) ) ).isTrue();
 	}
 
+	@DisplayName( "It fires postNew on the entity and the global handler when entityNew() creates an entity" )
+	@Test
+	public void testPostNewEvent() {
+		// @formatter:off
+		instance.executeSource( """
+			application.ormEvents = [];
+			p = entityNew( "Product", { name : "widget", price : 5 } );
+			firedGlobal = application.ormEvents.findNoCase( "postNew" ) > 0;
+			firedEntity = application.ormEvents.findNoCase( "entityPostNew" ) > 0;
+			gotEntity   = !isNull( p ) && p.getName() == "widget";
+		""", context );
+		// @formatter:on
+
+		// postNew fires on the entity's own method AND the global event handler, purely from entityNew() (no persist).
+		assertThat( variables.getAsBoolean( Key.of( "firedGlobal" ) ) ).isTrue();
+		assertThat( variables.getAsBoolean( Key.of( "firedEntity" ) ) ).isTrue();
+		assertThat( variables.getAsBoolean( Key.of( "gotEntity" ) ) ).isTrue();
+	}
+
 	@DisplayName( "It supports the native and guid id generators" )
 	@Test
 	public void testNativeAndGuidGenerators() {

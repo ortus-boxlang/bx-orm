@@ -38,4 +38,8 @@ class {
 	public void function postInsert( any entity ) {
 		record( "postInsert" );
 	}
+
+	public void function postNew( any entity, any entityName ) {
+		record( "postNew" );
+	}
 }

@@ -62,8 +62,6 @@ import org.hibernate.service.spi.SessionFactoryServiceRegistry;
 
 import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.context.RequestBoxContext;
-import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
@@ -83,7 +81,7 @@ public class EventListener
 	/**
 	 * Runtime
 	 */
-	private static final BoxRuntime	runtime			= BoxRuntime.getInstance();
+	private static final BoxRuntime	runtime	= BoxRuntime.getInstance();
 
 	/**
 	 * The logger for the ORM application.
@@ -91,23 +89,18 @@ public class EventListener
 	private BoxLangLogger			logger;
 
 	/**
-	 * Global listener for this event handler.
+	 * Shared dispatcher that resolves and invokes the global event-handler class (and entity methods).
 	 */
-	private DynamicObject			globalListener;
-
-	/**
-	 * Flag so that we can lazy instantiate the listener on first use
-	 */
-	private boolean					listenerReady	= false;
+	private ORMEventDispatcher		dispatcher;
 
 	/**
 	 * Constructor
 	 *
-	 * @param globalListener The global event listener to fire on each event.
+	 * @param dispatcher The shared event dispatcher wrapping the global event-handler class (may wrap {@code null}).
 	 */
-	EventListener( DynamicObject globalListener ) {
-		this.logger			= runtime.getLoggingService().getLogger( "orm" );
-		this.globalListener	= globalListener;
+	EventListener( ORMEventDispatcher dispatcher ) {
+		this.logger		= runtime.getLoggingService().getLogger( "orm" );
+		this.dispatcher	= dispatcher;
 	}
 
 	@Override
@@ -306,40 +299,11 @@ public class EventListener
 	}
 
 	private void announceGlobalEvent( Key eventType, Object event, IStruct args ) {
-		if ( globalListener == null ) {
-			return;
-		}
-		if ( !listenerReady ) {
-			RequestBoxContext.runInContext( ( ctx ) -> globalListener.invokeConstructor( ctx ) );
-			listenerReady = true;
-		}
-
-		boolean hasMethod = false;
-
-		if ( IClassRunnable.class.isAssignableFrom( globalListener.getTargetClass() ) ) {
-			hasMethod = ( ( IClassRunnable ) globalListener.unWrapBoxLangClass() ).getThisScope().containsKey( eventType );
-		} else {
-			hasMethod = globalListener.hasMethodNoCase( eventType.getNameNoCase() );
-		}
-
-		if ( hasMethod ) {
-			if ( logger.isTraceEnabled() ) {
-				logger.trace( "Ready to invoke {} on global EventHandler with args {}", eventType.getName(), args.toString() );
-			}
-			// Fire the method on the global event handler
-			RequestBoxContext.runInContext( ( ctx ) -> this.globalListener.dereferenceAndInvoke( ctx, eventType, args, false ) );
-		}
+		this.dispatcher.announceGlobal( eventType, args );
 	}
 
 	private void announceEntityEvent( Key eventType, IClassRunnable entity, IStruct args ) {
-		if ( entity.containsKey( eventType ) ) {
-			if ( logger.isTraceEnabled() ) {
-				logger.trace( "Ready to invoke {} on entity with args {}", eventType.getName(), args.toString() );
-			}
-
-			// Fire the method on the entity itself
-			RequestBoxContext.runInContext( ( ctx ) -> entity.dereferenceAndInvoke( ctx, eventType, args, false ) );
-		}
+		ORMEventDispatcher.announceEntity( entity, eventType, args );
 	}
 
 	/**

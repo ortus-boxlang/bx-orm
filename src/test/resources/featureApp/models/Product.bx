@@ -14,4 +14,13 @@ class accessors="true" persistent="true" entityname="Product" table="feat_produc
 
 	// Computed, read-only formula property (raw SQL evaluated by the DB on load).
 	property name="priceWithTax" formula="price + (price / 10)" ormType="integer";
+
+	// Entity-level postNew event: fired by entityNew() when this entity is created. Records into application scope so the
+	// test can assert the entity's own postNew() fired (alongside the global event handler's).
+	public void function postNew( any entity, any entityName ) {
+		if ( !structKeyExists( application, "ormEvents" ) ) {
+			application.ormEvents = [];
+		}
+		application.ormEvents.append( "entityPostNew" );
+	}
 }
