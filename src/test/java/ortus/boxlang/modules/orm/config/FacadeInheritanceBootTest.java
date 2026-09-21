@@ -193,4 +193,44 @@ public class FacadeInheritanceBootTest {
 		assertThat( variables.get( Key.of( "loadedSide" ) ) ).isEqualTo( 5 );
 		assertThat( ( ( String ) variables.get( Key.of( "loadedClass" ) ) ).toLowerCase() ).endsWith( "square" );
 	}
+
+	@DisplayName( "An INHERITED to-many can be structurally modified while iterating its getter" )
+	@Test
+	public void testInheritedToManyRemoveDuringIteration() {
+		// @formatter:off
+		instance.executeSource( """
+			// Cat inherits the toys one-to-many declared on the Animal root. Persist a cat with toys, then reload it so its
+			// getToys() returns the MANAGED FacadeCollectionView - the case the snapshot getX() override protects. Then run
+			// the remove-during-iteration pattern on the INHERITED getter; it only stays safe if the snapshot getter is
+			// installed on the subclass instance too.
+			transaction {
+				cat = entityNew( "Cat", { name : "Felix", livesLeft : 9 } );
+				[ "ball", "mouse", "string" ].each( ( lbl ) => {
+					toy = entityNew( "Toy", { label : lbl } );
+					toy.setAnimal( cat );
+					cat.addToy( toy );
+				} );
+				entitySave( cat );
+			}
+			ormFlush();
+			ormClearSession();
+
+			reloaded    = entityLoad( "Cat", { name : "Felix" }, true );
+			beforeCount = reloaded.getToys().len();
+			reloaded.getToys().each( ( toy ) => reloaded.removeToy( toy ) );
+			afterCount  = reloaded.getToys().len();
+
+			// Clean up so this shared PER_CLASS Derby app's fac_animals table is not polluted for the other tests.
+			transaction {
+				entityDelete( reloaded );
+			}
+			ormFlush();
+		""", context );
+		// @formatter:on
+
+		// Without the inherited snapshot getter, index-based iteration over the live managed view drops elements / errors and
+		// afterCount != 0.
+		assertThat( variables.getAsInteger( Key.of( "beforeCount" ) ) ).isEqualTo( 3 );
+		assertThat( variables.getAsInteger( Key.of( "afterCount" ) ) ).isEqualTo( 0 );
+	}
 }

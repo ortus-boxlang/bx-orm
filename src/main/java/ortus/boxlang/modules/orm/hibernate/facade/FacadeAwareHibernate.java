@@ -48,6 +48,13 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
  * BoxLang entity name to that entity's Hibernate entity-name (non-entity strings - HQL, property names - are left alone),
  * (2) wraps any {@code IClassRunnable} argument to its managed facade, and (3) unwraps facade return values back to the
  * BoxLang instance and re-wraps returned Session/SessionFactory/Cache/Metamodel objects so chained calls stay translated.
+ * <p>
+ * Returned {@code Query}/{@code SelectionQuery}/{@code NativeQuery} objects (from HQL/JPQL, named queries, native queries,
+ * and criteria queries built via {@code createQuery(CriteriaQuery)}) are wrapped too, so their terminal results -
+ * {@code list()} / {@code getResultList()} / {@code getSingleResult()} / {@code uniqueResult()} /
+ * {@code uniqueResultOptional()} / {@code getResultStream()} - come back as {@code IClassRunnable}s rather than generated
+ * facades, and any {@code IClassRunnable} bound via {@code setParameter} is wrapped to its facade. Facades held in a
+ * returned collection / optional / stream are unwrapped element-by-element.
  *
  * @since 1.5.0
  */
@@ -199,21 +206,66 @@ public final class FacadeAwareHibernate {
 			if ( result == null ) {
 				return null;
 			}
+			// A managed facade -> the backing BoxLang instance.
 			Object unwrapped = FacadeSupport.unwrapIfFacade( result );
 			if ( unwrapped != result ) {
 				return unwrapped;
 			}
+			// Chainable Hibernate objects: re-wrap so their calls keep translating.
 			if ( result instanceof Session session ) {
 				return wrap( session );
 			}
 			if ( result instanceof SessionFactory factory ) {
 				return wrap( factory );
 			}
+			// Query objects (HQL/JPQL, named, native, and criteria queries built via createQuery(CriteriaQuery)) yield facades
+			// from list()/getResultList()/getSingleResult()/uniqueResult()/getResultStream(). Wrapping the query routes those
+			// terminal results back through this translator (so callers only ever see IClassRunnables) and wraps any
+			// IClassRunnable bound via setParameter to its facade. CommonQueryContract covers Query/SelectionQuery/
+			// MutationQuery/NativeQuery; jakarta types cover TypedQuery and stored-procedure queries.
+			if ( result instanceof org.hibernate.query.CommonQueryContract || result instanceof jakarta.persistence.Query
+			    || result instanceof jakarta.persistence.StoredProcedureQuery ) {
+				return proxy( result, resolver );
+			}
 			if ( result instanceof Cache || result instanceof jakarta.persistence.metamodel.Metamodel
 			    || result instanceof org.hibernate.metamodel.MappingMetamodel ) {
 				return proxy( result, resolver );
 			}
+			// Query result shapes: unwrap facades held in a returned collection / optional / stream.
+			if ( result instanceof java.util.Collection<?> collection ) {
+				return unwrapCollection( collection );
+			}
+			if ( result instanceof java.util.Optional<?> optional ) {
+				return optional.map( FacadeSupport::unwrapIfFacade );
+			}
+			if ( result instanceof java.util.stream.Stream<?> stream ) {
+				return stream.map( FacadeSupport::unwrapIfFacade );
+			}
 			return result;
+		}
+
+		/**
+		 * Unwrap any managed facades held in a query-result collection back to their BoxLang instances. Returns the original
+		 * collection untouched when it holds no facades, so scalar/projection results (and their identity) are preserved.
+		 */
+		private Object unwrapCollection( java.util.Collection<?> collection ) {
+			boolean hasFacade = false;
+			for ( Object element : collection ) {
+				if ( FacadeSupport.unwrapIfFacade( element ) != element ) {
+					hasFacade = true;
+					break;
+				}
+			}
+			if ( !hasFacade ) {
+				return collection;
+			}
+			java.util.Collection<Object> unwrapped = ( collection instanceof java.util.Set )
+			    ? new java.util.LinkedHashSet<>()
+			    : new java.util.ArrayList<>( collection.size() );
+			for ( Object element : collection ) {
+				unwrapped.add( FacadeSupport.unwrapIfFacade( element ) );
+			}
+			return unwrapped;
 		}
 	}
 }

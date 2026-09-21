@@ -23,7 +23,6 @@ import java.util.Set;
 
 import org.hibernate.EntityNameResolver;
 import org.hibernate.collection.spi.PersistentBag;
-import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.metamodel.spi.EntityInstantiator;
 
@@ -74,7 +73,6 @@ public class BoxClassInstantiator implements EntityInstantiator {
 
 	private String						entityName;
 	private EntityRecord				entityRecord;
-	private List<Key>					identifierKeys		= new ArrayList<>();
 	private List<String>				subclassClassNames	= new ArrayList<>();
 	private EntityNameResolver			entityNameResolver	= new BoxEntityNameResolver();
 
@@ -96,12 +94,6 @@ public class BoxClassInstantiator implements EntityInstantiator {
 		this.logger			= runtime.getLoggingService().getLogger( "orm" );
 		this.entityName		= mappingInfo.getEntityName();
 		this.entityRecord	= entityRecord;
-
-		if ( mappingInfo.hasIdentifierProperty() ) {
-			this.identifierKeys.add( Key.of( mappingInfo.getIdentifierProperty().getName() ) );
-		} else if ( mappingInfo.getIdentifier() instanceof Component compositeId ) {
-			compositeId.getProperties().forEach( idProperty -> this.identifierKeys.add( Key.of( idProperty.getName() ) ) );
-		}
 
 		if ( mappingInfo.hasSubclasses() ) {
 			for ( PersistentClass subclassInfo : mappingInfo.getSubclassClosure() ) {
@@ -160,7 +152,9 @@ public class BoxClassInstantiator implements EntityInstantiator {
 				    }
 
 				    // getX() override: return a stable snapshot so structural modification during iteration
-				    // (getX().each( e => removeX(e) )) is safe. Force-installed over the generated accessor.
+				    // (getX().each( e => removeX(e) )) is safe. Force-installed (no containsKey guard, unlike has/add/remove)
+				    // precisely because the entity's own generated accessor is already present - it must be overridden, or the
+				    // snapshot semantics are lost.
 				    if ( association.getAsString( Key.type ).endsWith( "to-many" ) ) {
 					    DynamicFunction getUDF = getToManyGetMethod( association );
 					    theEntity.getThisScope().put( getUDF.getName(), getUDF );
@@ -213,6 +207,14 @@ public class BoxClassInstantiator implements EntityInstantiator {
 						    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
 						    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
 					    }
+
+					    // getX() snapshot override for an INHERITED to-many association - same safe-iteration guarantee as the
+					    // main loop above, which otherwise would not apply to associations declared on a persistent parent.
+					    if ( associationType.endsWith( "to-many" ) ) {
+						    DynamicFunction getUDF = getToManyGetMethod( association );
+						    theEntity.getThisScope().put( getUDF.getName(), getUDF );
+						    theEntity.getVariablesScope().put( getUDF.getName(), getUDF );
+					    }
 				    }
 			    } );
 		}
@@ -252,7 +254,10 @@ public class BoxClassInstantiator implements EntityInstantiator {
 	@Override
 	public boolean isSameClass( Object object ) {
 		if ( object instanceof IClassRunnable theClass ) {
-			return this.entityName.equals( entityNameResolver.resolveEntityName( theClass ) );
+			// Accept either the Hibernate entity-name (the facade FQN this.entityName carries in the modern mapping) or the
+			// BoxLang short name, since the resolver may report either for a raw IClassRunnable.
+			String objectEntityName = entityNameResolver.resolveEntityName( theClass );
+			return this.entityName.equals( objectEntityName ) || entityRecord.getEntityName().equals( objectEntityName );
 		}
 		return false;
 	}
@@ -263,7 +268,9 @@ public class BoxClassInstantiator implements EntityInstantiator {
 			logger.trace( "Checking to see if {} is an instance of {}", theClass.getClass().getName(), this.entityName );
 			String objectEntityName = entityNameResolver.resolveEntityName( theClass );
 			logger.trace( "Looking at annotations, found entity name {}", objectEntityName );
+			// Match on the Hibernate entity-name (facade FQN), the BoxLang short name, or any subclass entity name.
 			return this.entityName.equals( objectEntityName )
+			    || entityRecord.getEntityName().equals( objectEntityName )
 			    || subclassClassNames.contains( objectEntityName );
 		}
 		return false;
@@ -494,17 +501,28 @@ public class BoxClassInstantiator implements EntityInstantiator {
 				    if ( collection instanceof PersistentBag bagCollection ) {
 					    bagCollection.remove( itemToRemove );
 				    } else {
-					    // Plain Array (unmanaged entity) or FacadeCollectionView (managed); both are List<Object>. Remove the element the
-					    // developer passed by identity/equality. It comes from iterating this same association, so this matches it
-					    // regardless of the element's id property name (which is not necessarily the owning entity's - e.g. owner
-					    // id "id", element id "vin"). The FacadeCollectionView unwraps facades on compare, so an IClassRunnable
-					    // argument still matches its managed facade in the backing collection.
+					    // Remove the element the developer passed. It comes from iterating this same association, so it matches
+					    // regardless of the element's id property name (not necessarily the owner's - e.g. owner id "id", element
+					    // id "vin").
 					    List<Object> arrayCollection = ( List<Object> ) collection;
-					    if ( !arrayCollection.remove( itemToRemove ) ) {
-						    arrayCollection.stream()
-						        .filter( item -> item == itemToRemove || java.util.Objects.equals( item, itemToRemove ) )
-						        .findFirst()
-						        .ifPresent( arrayCollection::remove );
+					    if ( arrayCollection instanceof Array ) {
+						    // Unmanaged BoxLang Array of transients: prefer an exact identity match so a distinct-but-equal transient
+						    // (two content-equal, id-less instances) is not removed by mistake; fall back to equals().
+						    int identityIndex = indexOfIdentity( arrayCollection, itemToRemove );
+						    if ( identityIndex >= 0 ) {
+							    arrayCollection.remove( identityIndex );
+						    } else {
+							    arrayCollection.remove( itemToRemove );
+						    }
+					    } else {
+						    // Managed FacadeCollectionView: its remove()/equals() unwrap facades so an IClassRunnable argument matches
+						    // its managed facade in the backing collection.
+						    if ( !arrayCollection.remove( itemToRemove ) ) {
+							    arrayCollection.stream()
+							        .filter( item -> item == itemToRemove || java.util.Objects.equals( item, itemToRemove ) )
+							        .findFirst()
+							        .ifPresent( arrayCollection::remove );
+						    }
 					    }
 				    }
 			    } else {
@@ -541,5 +559,17 @@ public class BoxClassInstantiator implements EntityInstantiator {
 		)
 		    .invokeConstructor( context )
 		    .unWrapBoxLangClass();
+	}
+
+	/**
+	 * Index of the first element that is the exact same instance ({@code ==}) as {@code target}, or {@code -1} if none.
+	 */
+	private static int indexOfIdentity( List<Object> list, Object target ) {
+		for ( int i = 0; i < list.size(); i++ ) {
+			if ( list.get( i ) == target ) {
+				return i;
+			}
+		}
+		return -1;
 	}
 }

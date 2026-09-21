@@ -27,10 +27,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+import ortus.boxlang.modules.orm.hibernate.facade.BoxEntityFacade;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.modules.ModuleRecord;
+import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
@@ -450,5 +452,38 @@ public class HibernateFeatureCoverageBootTest {
 		// The generated key is a non-empty string that round-trips through a primary-key load.
 		assertThat( variables.get( Key.of( "uid" ) ).toString() ).isNotEmpty();
 		assertThat( variables.getAsBoolean( Key.of( "sameId" ) ) ).isTrue();
+	}
+
+	@DisplayName( "It unwraps facades from queries run through the raw ormGetSession() (HQL list, unique, criteria)" )
+	@Test
+	public void testRawSessionQueryUnwrapping() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				entitySave( entityNew( "Product", { name : "raw-query", price : 7 } ) );
+			}
+			ormFlush();
+
+			session = ormGetSession();
+
+			// HQL through the raw session -> list() / uniqueResult() must yield the BoxLang instance, not a generated facade.
+			hqlFirst    = session.createQuery( "from Product where name = :n" ).setParameter( "n", "raw-query" ).list()[ 1 ];
+			hqlSingle   = session.createQuery( "from Product where name = :n" ).setParameter( "n", "raw-query" ).uniqueResult();
+
+			// Criteria query built via getCriteriaBuilder()/createQuery(CriteriaQuery) -> same wrapped-Query path.
+			builder     = session.getCriteriaBuilder();
+			criteria    = builder.createQuery();
+			root        = criteria.from( session.getMetamodel().entity( "Product" ) );
+			criteria.select( root );
+			critFirst   = session.createQuery( criteria ).list()[ 1 ];
+		""", context );
+		// @formatter:on
+
+		// Each query result must be the BoxLang entity (IClassRunnable), never the generated facade.
+		for ( String key : new String[] { "hqlFirst", "hqlSingle", "critFirst" } ) {
+			Object result = variables.get( Key.of( key ) );
+			assertThat( result ).isInstanceOf( IClassRunnable.class );
+			assertThat( result ).isNotInstanceOf( BoxEntityFacade.class );
+		}
 	}
 }

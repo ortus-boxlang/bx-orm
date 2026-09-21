@@ -56,6 +56,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `entitySave()` on a detached entity leaves the passed-in object live and carrying generated ids/event changes (Hibernate 7 removed `saveOrUpdate()`).
 - Date/time properties retain millisecond precision (`DateTimeConverter` maps to `java.sql.Timestamp`).
 - Removed a stale `fieldtype="collection" … not yet supported` warning that logged on every value/element collection even though collections are now supported.
+- `ormGetSession()`/`ormGetSessionFactory()` now unwrap facades from **query** results: HQL/JPQL, named, native, and criteria queries run through the raw session return `IClassRunnable`s (via `list()`/`getResultList()`/`getSingleResult()`/`uniqueResult()`/`uniqueResultOptional()`/`getResultStream()`), and facades held in a returned collection/optional/stream are unwrapped element-by-element. Previously such raw-session queries returned generated facade objects.
+- Inherited to-many associations now get the stable-snapshot getter, so `parent.getChildren().each( c => parent.removeChild( c ) )` is safe for a collection declared on a persistent parent entity (previously only associations declared directly on the entity were protected).
+- `removeX()` on an unmanaged (transient) collection now prefers an exact identity match, so a distinct-but-equal transient element is not removed by mistake.
 
 ## [1.7.0] - 2026-09-14
 
