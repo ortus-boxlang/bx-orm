@@ -17,6 +17,9 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import ortus.boxlang.modules.orm.hibernate.facade.BoxEntityFacade;
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
+
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
@@ -162,9 +165,9 @@ public class ORMExecuteQuery extends BaseORMBIF {
 			return param;
 		} else if ( param instanceof BoxProxy proxyClass ) {
 			return ORMService.getEntityIdentifier( proxyClass.getRunnable() );
-		} else if ( param instanceof ortus.boxlang.modules.orm.hibernate.facade.BoxEntityFacade ) {
+		} else if ( param instanceof BoxEntityFacade ) {
 			// A facade passed as a query parameter (facade mode): resolve its identifier via the backing BoxLang instance.
-			return ORMService.getEntityIdentifier( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrap( param ) );
+			return ORMService.getEntityIdentifier( FacadeSupport.unwrap( param ) );
 		} else if ( param instanceof IClassRunnable runnable ) {
 			return ORMService.getEntityIdentifier( runnable );
 		} else {

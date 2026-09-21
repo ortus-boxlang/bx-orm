@@ -17,6 +17,8 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
+
 import java.util.Set;
 
 import org.hibernate.Session;
@@ -71,10 +73,10 @@ public class EntityMerge extends BaseORMBIF {
 		// Hibernate manages the generated facade, not the IClassRunnable. Merge the facade by its Hibernate entity-name and
 		// return the caller's BoxLang instance (unwrapped from the managed facade).
 		String			hbName			= ORMApp.hibernateEntityName( session, entityName );
-		Object			facade			= ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName,
+		Object			facade			= FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName,
 		    entity );
 		Object			managed			= session.merge( hbName, facade );
-		return ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( managed );
+		return FacadeSupport.unwrapIfFacade( managed );
 	}
 
 }

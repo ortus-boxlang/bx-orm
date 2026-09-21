@@ -17,6 +17,8 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeAwareHibernate;
+
 import java.util.Set;
 
 import org.hibernate.Session;
@@ -62,7 +64,7 @@ public class ORMGetSession extends BaseORMBIF {
 
 		// Hand the developer a facade-aware Session so BoxLang entity names/instances work against its raw API
 		// (detach/evict/contains/get/...) even though Hibernate manages the generated facade classes.
-		return ortus.boxlang.modules.orm.hibernate.facade.FacadeAwareHibernate.wrap( session );
+		return FacadeAwareHibernate.wrap( session );
 	}
 
 }

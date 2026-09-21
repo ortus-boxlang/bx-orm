@@ -17,6 +17,8 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
+
 import java.util.Set;
 
 import ortus.boxlang.modules.orm.ORMContext;
@@ -65,7 +67,7 @@ public class EntityReload extends BaseORMBIF {
 		// Hibernate manages the generated facade, not the IClassRunnable, so refresh the facade (its state delegates back to
 		// the same instance). The caller still gets the BoxLang instance back.
 		Object		managed		= entity instanceof ortus.boxlang.runtime.runnables.IClassRunnable runnable
-		    ? ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.managed(
+		    ? FacadeSupport.managed(
 		        ormContext.getConfig().facadeNamespace, getEntityName( runnable ), runnable )
 		    : entity;
 		ormContext

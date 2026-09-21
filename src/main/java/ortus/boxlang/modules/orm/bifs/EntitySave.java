@@ -17,6 +17,10 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
+import org.hibernate.engine.internal.ForeignKeys;
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
+
 import java.util.Set;
 
 import org.hibernate.Session;
@@ -83,15 +87,15 @@ public class EntitySave extends BaseORMBIF {
 		// and writes generated ids straight back onto - the caller's BoxLang instance). The same instance always maps to the
 		// same facade via FacadeSupport's per-instance memoization. On a detached merge we copy the managed state back onto
 		// the caller's instance so it stays live and carries generated ids/event changes.
-		Object			facade			= ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName,
+		Object			facade			= FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName,
 		    entity );
 		if ( session.contains( hbName, facade ) ) {
 			// Already managed: nothing to do; the flush will persist any changes.
 		} else if ( forceInsert || isTransient( session, hbName, facade ) ) {
 			session.persist( hbName, facade );
 		} else {
-			Object											managed			= session.merge( hbName, facade );
-			ortus.boxlang.runtime.runnables.IClassRunnable	managedRunnable	= ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport
+			Object			managed			= session.merge( hbName, facade );
+			IClassRunnable	managedRunnable	= FacadeSupport
 			    .unwrap( managed );
 			if ( managedRunnable != null && managedRunnable != entity ) {
 				entity.getThisScope().putAll( managedRunnable.getThisScope() );
@@ -107,11 +111,11 @@ public class EntitySave extends BaseORMBIF {
 	 * former <code>saveOrUpdate()</code> used to decide between an insert and a re-attach.
 	 */
 	private boolean isTransient( Session session, String entityName, Object entity ) {
-		return org.hibernate.engine.internal.ForeignKeys.isTransient(
+		return ForeignKeys.isTransient(
 		    entityName,
 		    entity,
 		    null,
-		    ( org.hibernate.engine.spi.SharedSessionContractImplementor ) session
+		    ( SharedSessionContractImplementor ) session
 		);
 	}
 

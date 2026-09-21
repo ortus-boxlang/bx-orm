@@ -589,11 +589,7 @@ public class MappingGenerator {
 			transformer.setOutputProperty( OutputKeys.INDENT, "yes" );
 			transformer.setOutputProperty( OutputKeys.OMIT_XML_DECLARATION, "no" );
 			transformer.setOutputProperty( OutputKeys.METHOD, "xml" );
-			// The modern mapping.xml format has no DOCTYPE (root <entity-mappings> is namespace-detected); only the legacy HBM format carries a DTD.
-			if ( doc.getDoctype() != null ) {
-				transformer.setOutputProperty( OutputKeys.DOCTYPE_PUBLIC, doc.getDoctype().getPublicId() );
-				transformer.setOutputProperty( OutputKeys.DOCTYPE_SYSTEM, doc.getDoctype().getSystemId() );
-			}
+			// The modern mapping.xml format has no DOCTYPE (root <entity-mappings> is namespace-detected), so none is emitted.
 
 			StringWriter writer = new StringWriter();
 

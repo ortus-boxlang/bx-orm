@@ -17,6 +17,9 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
+import ortus.boxlang.modules.orm.config.ORMEventDispatcher;
+
 import java.util.Set;
 
 import org.hibernate.engine.spi.SessionFactoryImplementor;
@@ -82,7 +85,7 @@ public class EntityNew extends BaseORMBIF {
 		    context
 		);
 		// The instantiator returns a POJO facade; unwrap it to the BoxLang instance the developer expects.
-		IClassRunnable				entity				= ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade(
+		IClassRunnable				entity				= ( IClassRunnable ) FacadeSupport.unwrapIfFacade(
 		    sessionFactoryImpl.getMappingMetamodel()
 		        .getEntityDescriptor( ORMApp.hibernateEntityName( sessionFactoryImpl, entityRecord.getEntityName() ) )
 		        .getRepresentationStrategy()
@@ -104,7 +107,7 @@ public class EntityNew extends BaseORMBIF {
 		    ORMKeys.entityName, entityRecord.getEntityName(),
 		    Key.context, context
 		);
-		ortus.boxlang.modules.orm.config.ORMEventDispatcher.announceEntity( entity, ORMKeys.postNew, eventArgs );
+		ORMEventDispatcher.announceEntity( entity, ORMKeys.postNew, eventArgs );
 		ormApp.getConfig().getEventDispatcher().announceGlobal( ORMKeys.postNew, eventArgs );
 
 		// Also announce the post_new interception point so any registered BoxLang interceptors can observe it.

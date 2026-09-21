@@ -17,6 +17,10 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
+import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
+
 import java.util.List;
 import java.util.Map;
 
@@ -68,12 +72,12 @@ public class EntityLoadByExample extends BaseORMBIF {
 	 *
 	 * @return {@code true} when the property is an id, the version, or an association.
 	 */
-	private static boolean isExcludedFromExample( ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta entityMeta,
-	    ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta property ) {
+	private static boolean isExcludedFromExample( IEntityMeta entityMeta,
+	    IPropertyMeta property ) {
 		if ( property.isAssociationType() ) {
 			return true;
 		}
-		ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta version = entityMeta.getVersionProperty();
+		IPropertyMeta version = entityMeta.getVersionProperty();
 		if ( version != null && version.getName().equals( property.getName() ) ) {
 			return true;
 		}
@@ -103,10 +107,10 @@ public class EntityLoadByExample extends BaseORMBIF {
 		Map<String, Object>	params			= new java.util.HashMap<>();
 		int					index			= 0;
 		for ( Object propertyMeta : entityRecord.getEntityMeta().getAllPersistentProperties() ) {
-			String propertyName = ( ( ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta ) propertyMeta ).getName();
+			String propertyName = ( ( IPropertyMeta ) propertyMeta ).getName();
 			// Skip ids, the version, and associations: example queries match on regular property values, and an
 			// association value is an entity/PK that Hibernate 7 rejects as a simple equality predicate.
-			if ( isExcludedFromExample( entityRecord.getEntityMeta(), ( ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta ) propertyMeta ) ) {
+			if ( isExcludedFromExample( entityRecord.getEntityMeta(), ( IPropertyMeta ) propertyMeta ) ) {
 				continue;
 			}
 			Object value = workingEntity.getVariablesScope().get( Key.of( propertyName ) );
@@ -126,7 +130,7 @@ public class EntityLoadByExample extends BaseORMBIF {
 		// Hibernate returns POJO facades; unwrap each to its BoxLang instance so callers only ever see IClassRunnables.
 		List<Object> results = query.list()
 		    .stream()
-		    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
+		    .map( FacadeSupport::unwrapIfFacade )
 		    .collect( java.util.stream.Collectors.toList() );
 
 		if ( unique ) {
