@@ -85,14 +85,6 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( this.annotations.containsKey( ORMKeys.formula ) ) {
 			this.formula = this.annotations.getAsString( ORMKeys.formula );
 		}
-		if ( this.annotations.containsKey( ORMKeys.fieldtype ) ) {
-			String fieldType = this.annotations.getAsString( ORMKeys.fieldtype );
-			if ( fieldType == "collection" ) {
-				logger.warn( "Property '{}' on entity '{}' has fieldtype=collection, which is not yet supported. Please forward to your local Ortus agency.",
-				    this.name, entityName );
-			}
-		}
-
 		if ( this.annotations.containsKey( ORMKeys.cacheUse ) ) {
 			this.cache = new Struct();
 			this.cache.computeIfAbsent( ORMKeys.strategy, key -> this.annotations.getAsString( ORMKeys.cacheUse ) );

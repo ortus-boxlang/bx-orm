@@ -476,11 +476,14 @@ public class MappingXMLWriter {
 	/**
 	 * Append the id-generator declaration.
 	 * <p>
-	 * IMPORTANT: BoxLang entities are dynamic (MAP) models with a {@code null} backing class. Hibernate 7's JPA-centric id-generator resolver
-	 * ({@code IdGeneratorResolverSecondPass}) dereferences the entity class name while resolving a {@code <generated-value>}, which NPEs for a class-less
-	 * entity — <em>except</em> for the special {@code generator="increment"} fast path, and except for standalone generator annotations (such as
-	 * {@code <uuid-generator/>}) that do not rely on {@code @GeneratedValue}. We therefore map the legacy Hibernate generator strategies our models use
-	 * (uuid, increment) onto those two NPE-safe forms.
+	 * Each entity is mapped to a real, per-application generated facade class, so Hibernate's JPA-centric id-generator resolver can dereference the
+	 * entity
+	 * class while resolving a {@code <generated-value>}. The common legacy strategies are mapped explicitly: {@code uuid}/{@code uuid2}/{@code guid} to
+	 * the
+	 * string UUID generator (a {@code VARCHAR}-compatible hex string, so a primary-key load binds against the string id column), {@code increment} to its
+	 * matching {@code <generated-value>}, and {@code identity}/{@code native} to {@code IDENTITY}. Any other strategy (e.g. {@code sequence},
+	 * {@code foreign}, {@code select}, {@code sequence-identity}, or a custom generator class) is emitted best-effort as a {@code <generic-generator>}
+	 * carrying its strategy and any params; {@code sequence} is verified working, the rarer ones are unverified.
 	 */
 	private void appendGenerator( Element idNode, IPropertyMeta prop ) {
 		IStruct	generatorInfo	= prop.getGenerator();
@@ -522,12 +525,12 @@ public class MappingXMLWriter {
 				idNode.appendChild( generatedValue );
 			}
 			default -> {
-				// Other legacy generators (sequence, foreign, seqhilo, custom classes, and any carrying <param>s) cannot currently be expressed for a
-				// dynamic (class-less) entity in the modern format without tripping Hibernate's class-name-dependent id-generator resolver. None are used
-				// by the current entity models. Emit the generic-generator form (correct for class-backed entities) and warn.
-				// TODO: Revisit if/when Hibernate makes the modern id-generator resolver dynamic-entity aware, or add per-strategy NPE-safe handling.
-				logger.warn(
-				    "ORM mapping.xml writer: id generator strategy [{}] on property [{}] of entity [{}] may not resolve for a dynamic (class-less) entity in the modern mapping format.",
+				// Other legacy generators (sequence, foreign, select, sequence-identity, custom classes, and any carrying <param>s) are emitted best-effort as
+				// a
+				// generic-generator carrying the strategy and its params. Because the entity is a real facade class, Hibernate's id-generator resolver can
+				// dereference it; `sequence` is verified working, the rarer strategies are unverified.
+				logger.debug(
+				    "ORM mapping.xml writer: id generator strategy [{}] on property [{}] of entity [{}] emitted as a generic-generator (verify uncommon strategies).",
 				    strategy, prop.getName(), entity.getEntityName() );
 				String	generatorName	= entity.getEntityName() + "_" + prop.getName() + "_generator";
 				Element	generatedValue	= createEl( "generated-value" );

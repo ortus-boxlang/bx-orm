@@ -298,6 +298,33 @@ public class MappingGeneratorTest {
 		assertThrows( BoxRuntimeException.class, () -> AbstractEntityMeta.autoDiscoverMetaType( meta ) );
 	}
 
+	@DisplayName( "It emits a generic-generator for the less-common generator strategies" )
+	@ParameterizedTest
+	@CsvSource( {
+	    "sequence",
+	    "foreign",
+	    "select",
+	    "sequence-identity"
+	} )
+	public void testWriterGenericGenerator( String strategy ) {
+		Document	doc	= writeXML( "class persistent { property name=\"the_id\" fieldtype=\"id\" generator=\"" + strategy + "\"; }" );
+		Element		gg	= first( doc, "generic-generator" );
+		assertThat( gg ).isNotNull();
+		assertThat( gg.getAttribute( "class" ) ).isEqualTo( strategy );
+	}
+
+	@DisplayName( "It carries the property param for a foreign generator" )
+	@Test
+	public void testWriterForeignGeneratorParam() {
+		Document	doc	= writeXML( "class persistent { property name=\"the_id\" fieldtype=\"id\" generator=\"foreign\" params={ property : \"owner\" }; }" );
+		Element		gg	= first( doc, "generic-generator" );
+		assertThat( gg.getAttribute( "class" ) ).isEqualTo( "foreign" );
+		Element param = childElement( gg, "parameter" );
+		assertThat( param ).isNotNull();
+		assertThat( param.getAttribute( "name" ) ).isEqualTo( "property" );
+		assertThat( param.getAttribute( "value" ) ).isEqualTo( "owner" );
+	}
+
 	@DisplayName( "It defaults a property to the String converter" )
 	@Test
 	public void testWriterPropertyDefaultsToStringConverter() {

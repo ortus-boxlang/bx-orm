@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `entityLoadByExample()` builds predicates from the inheritance-aware property set and excludes ids, version, and associations.
 - `entitySave()` on a detached entity leaves the passed-in object live and carrying generated ids/event changes (Hibernate 7 removed `saveOrUpdate()`).
 - Date/time properties retain millisecond precision (`DateTimeConverter` maps to `java.sql.Timestamp`).
+- Removed a stale `fieldtype="collection" … not yet supported` warning that logged on every value/element collection even though collections are now supported.
 
 ## [1.7.0] - 2026-09-14
 
