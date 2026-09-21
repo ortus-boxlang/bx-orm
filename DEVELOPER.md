@@ -127,7 +127,7 @@ sequenceDiagram
     BIF->>FS: wrap(namespace, "User", user)
     FS-->>BIF: UserFacade (delegates state to user)
     BIF->>HB: session.persist("...UserFacade", facade)
-    HB-->>FS: manages facade; writes generated id back onto `user`
+    HB-->>FS: manages facade("writes generated id back onto `user`")
     BIF-->>Dev: same live `user` instance (now carries id/changes)
 ```
 
