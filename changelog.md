@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ⚡ Changed
 
 - Upgraded the ORM engine from Hibernate 5.6.15 to 7.4.8. BoxLang-facing BIF behavior is preserved.
+- Facade hot-path optimizations (no behavior change): cache the property `Key` per mapped property so hydrate/dirty-check/flush stop re-resolving fixed names, skip the argument-array copy in the facade-aware Session/SessionFactory proxy when no argument needs rewriting, and cache the proxy interface set per class. Measured ~13% faster bulk hydration and ~7% faster save/load in the JMH suite.
 - Legacy dialect aliases (e.g. `MySQL57`, `Oracle10g`, `DerbyTenSeven`) now map to their Hibernate 7 equivalents with a one-time deprecation warning; community-dialect databases (SQLite, Derby, Firebird, …) resolve automatically.
 - `ormGetSession()` / `ormGetSessionFactory()` return facade-aware wrappers so a BoxLang entity name or instance works against the raw Hibernate API.
 

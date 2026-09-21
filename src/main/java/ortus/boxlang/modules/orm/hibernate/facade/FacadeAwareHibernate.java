@@ -22,7 +22,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.UnaryOperator;
 
 import org.hibernate.Cache;
@@ -59,6 +61,13 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
  * @since 1.5.0
  */
 public final class FacadeAwareHibernate {
+
+	/**
+	 * Cache of target class -> the full interface set the proxy must implement. The interface set of a class is invariant,
+	 * and {@code wrap()} runs again for every Session/SessionFactory/Query returned through a call chain, so the reflective
+	 * hierarchy walk is done once per class and reused thereafter.
+	 */
+	private static final Map<Class<?>, Class<?>[]> INTERFACE_CACHE = new ConcurrentHashMap<>();
 
 	private FacadeAwareHibernate() {
 	}
@@ -117,7 +126,7 @@ public final class FacadeAwareHibernate {
 	 */
 	private static Object proxy( Object target, UnaryOperator<String> resolver ) {
 		try {
-			Class<?>[] interfaces = allInterfaces( target.getClass() );
+			Class<?>[] interfaces = INTERFACE_CACHE.computeIfAbsent( target.getClass(), FacadeAwareHibernate::allInterfaces );
 			if ( interfaces.length == 0 ) {
 				return target;
 			}
@@ -163,11 +172,18 @@ public final class FacadeAwareHibernate {
 
 		@Override
 		public Object invoke( Object proxy, Method method, Object[] args ) throws Throwable {
+			// Most proxied calls carry no entity-name String and no IClassRunnable, so nothing is rewritten. Only clone the
+			// argument array when a translation actually changes an element, otherwise pass the original array through.
 			Object[] translated = args;
 			if ( args != null ) {
-				translated = new Object[ args.length ];
 				for ( int i = 0; i < args.length; i++ ) {
-					translated[ i ] = translateArgument( args[ i ] );
+					Object rewritten = translateArgument( args[ i ] );
+					if ( rewritten != args[ i ] ) {
+						if ( translated == args ) {
+							translated = args.clone();
+						}
+						translated[ i ] = rewritten;
+					}
 				}
 			}
 			Object result;
