@@ -53,6 +53,8 @@ public final class ManifestService {
 	public static final String	MANIFEST_NAME	= "manifest.json";
 	/** The integrity checksum sidecar (sha256 of manifest.json bytes). */
 	public static final String	CHECKSUM_NAME	= "manifest.sha256";
+	/** The pre-generated facade bytecode archive (written in auto, loaded in trust). */
+	public static final String	FACADES_JAR		= "facades.jar";
 
 	private ManifestService() {
 	}

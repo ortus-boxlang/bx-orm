@@ -94,7 +94,20 @@ public final class EntityFacadeFactory {
 	}
 
 	/** Generated facade classes, cached by fully-qualified class name. */
-	private static final Map<String, Class<?>> CACHE = new ConcurrentHashMap<>();
+	private static final Map<String, Class<?>>	CACHE			= new ConcurrentHashMap<>();
+
+	/**
+	 * Bytecode of every facade generated this JVM (FQN -> class bytes), captured at generation so it can be persisted to a
+	 * {@code .bxorm/facades.jar} for trust-mode boots that skip ByteBuddy codegen.
+	 */
+	private static final Map<String, byte[]>	BYTECODE		= new ConcurrentHashMap<>();
+
+	/**
+	 * Pre-generated facade bytecode loaded from a {@code .bxorm/facades.jar} (FQN -> class bytes). When a facade is
+	 * requested and present here, its bytecode is injected into the module classloader instead of re-running ByteBuddy. On
+	 * any injection failure the generator falls back to ByteBuddy, so a jar is always a best-effort optimization.
+	 */
+	private static final Map<String, byte[]>	JAR_BYTECODE	= new ConcurrentHashMap<>();
 
 	/**
 	 * Generate (or return a cached) facade class for a single-id, non-inheriting entity.
@@ -162,9 +175,72 @@ public final class EntityFacadeFactory {
 			builder = defineAccessor( builder, prop );
 		}
 
-		return builder.make()
-		    .load( loader, ClassLoadingStrategy.Default.INJECTION )
-		    .getLoaded();
+		// Trust mode: if this facade's bytecode was loaded from a .bxorm/facades.jar, inject it into the module classloader
+		// instead of running ByteBuddy. The caller generates parents-first, so a subclass's parent facade is already defined.
+		// Any failure falls through to normal ByteBuddy generation, so the jar is always a best-effort optimization.
+		byte[] preGenerated = JAR_BYTECODE.get( className );
+		if ( preGenerated != null ) {
+			try {
+				return new net.bytebuddy.dynamic.loading.ClassInjector.UsingUnsafe( loader )
+				    .injectRaw( java.util.Collections.singletonMap( className, preGenerated ) )
+				    .get( className );
+			} catch ( RuntimeException | LinkageError e ) {
+				// Fall back to ByteBuddy codegen below.
+			}
+		}
+
+		DynamicType.Unloaded<?> unloaded = builder.make();
+		BYTECODE.put( className, unloaded.getBytes() );
+		return unloaded.load( loader, ClassLoadingStrategy.Default.INJECTION ).getLoaded();
+	}
+
+	/**
+	 * Load pre-generated facade bytecode from a {@code facades.jar} into the pre-generated cache, so subsequent
+	 * {@link #generate} calls inject those classes instead of running ByteBuddy. Best-effort: a missing or unreadable jar
+	 * is ignored (generation then proceeds normally).
+	 *
+	 * @param jarFile The {@code .bxorm/facades.jar} to load.
+	 */
+	public static void loadFacadeJar( java.nio.file.Path jarFile ) {
+		if ( jarFile == null || !java.nio.file.Files.exists( jarFile ) ) {
+			return;
+		}
+		try ( var jar = new java.util.jar.JarInputStream( java.nio.file.Files.newInputStream( jarFile ) ) ) {
+			java.util.jar.JarEntry entry;
+			while ( ( entry = jar.getNextJarEntry() ) != null ) {
+				if ( entry.getName().endsWith( ".class" ) ) {
+					String fqn = entry.getName().substring( 0, entry.getName().length() - ".class".length() ).replace( '/', '.' );
+					JAR_BYTECODE.put( fqn, jar.readAllBytes() );
+				}
+			}
+		} catch ( java.io.IOException e ) {
+			// Best-effort: ignore a bad jar and let ByteBuddy generate.
+		}
+	}
+
+	/**
+	 * Write the facades generated for a namespace to a {@code facades.jar}. Only classes whose FQN contains the namespace
+	 * segment are written, so one application's jar never captures another's facades.
+	 *
+	 * @param jarFile   The destination {@code .bxorm/facades.jar}.
+	 * @param namespace The application's facade namespace (the {@code generated.<namespace>} package segment).
+	 */
+	public static void writeFacadeJar( java.nio.file.Path jarFile, String namespace ) {
+		String infix = ".generated." + namespace + ".";
+		try {
+			java.nio.file.Files.createDirectories( jarFile.getParent() );
+			try ( var jos = new java.util.jar.JarOutputStream( java.nio.file.Files.newOutputStream( jarFile ) ) ) {
+				for ( Map.Entry<String, byte[]> entry : BYTECODE.entrySet() ) {
+					if ( entry.getKey().contains( infix ) ) {
+						jos.putNextEntry( new java.util.jar.JarEntry( entry.getKey().replace( '.', '/' ) + ".class" ) );
+						jos.write( entry.getValue() );
+						jos.closeEntry();
+					}
+				}
+			}
+		} catch ( java.io.IOException e ) {
+			throw new ortus.boxlang.runtime.types.exceptions.BoxRuntimeException( "Failed to write facades.jar to [" + jarFile + "]", e );
+		}
 	}
 
 	/**

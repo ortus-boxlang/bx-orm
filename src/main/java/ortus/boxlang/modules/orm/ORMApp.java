@@ -198,6 +198,18 @@ public class ORMApp {
 			this.sessionFactories.put( this.defaultDataSource, this.defaultSessionFactory );
 		}
 
+		// In auto manifest mode, persist the just-generated facade bytecode to .bxorm/facades.jar so a later trust-mode boot
+		// can inject those classes instead of re-running ByteBuddy. Best-effort; a failure never breaks boot.
+		if ( "auto".equals( this.config.ormManifest ) ) {
+			try {
+				java.nio.file.Path jar = ortus.boxlang.modules.orm.mapping.manifest.ManifestService.resolveFolder( context.getRequestContext() )
+				    .resolve( ortus.boxlang.modules.orm.mapping.manifest.ManifestService.FACADES_JAR );
+				ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory.writeFacadeJar( jar, this.config.facadeNamespace );
+			} catch ( RuntimeException e ) {
+				logger.warn( "ORM manifest [auto] mode: failed to write facades.jar (continuing normally): {}", e.getMessage() );
+			}
+		}
+
 		// Configure logging according to the ORM configuration, after all session factories are built.
 		// This ensures that any logging during session factory construction is not affected by the new configuration, which could cause confusion or issues
 		// if the new configuration is invalid.
@@ -227,6 +239,10 @@ public class ORMApp {
 			    .resolveFolder( context.getRequestContext() );
 			ortus.boxlang.modules.orm.mapping.manifest.OrmManifest	manifest	= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
 			    .read( folder, true );
+			// Load pre-generated facade bytecode (if a facades.jar was shipped) so the session factory build injects those
+			// classes instead of re-running ByteBuddy. Best-effort: a missing jar just means facades are regenerated.
+			ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory
+			    .loadFacadeJar( folder.resolve( ortus.boxlang.modules.orm.mapping.manifest.ManifestService.FACADES_JAR ) );
 			logger.info( "ORM manifest [trust] mode: booting from [{}] with {} entities; discovery/parsing/generation skipped.", folder,
 			    manifest.getEntities().size() );
 			return ortus.boxlang.modules.orm.mapping.manifest.ManifestService.toEntityMap( manifest );

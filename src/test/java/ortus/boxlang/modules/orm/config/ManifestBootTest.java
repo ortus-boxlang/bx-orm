@@ -113,10 +113,25 @@ public class ManifestBootTest {
 		assertThat( variables.getAsInteger( Key.of( "gadgetCount" ) ) ).isEqualTo( 1 );
 		assertThat( variables.getAsInteger( Key.of( "widgetCount" ) ) ).isEqualTo( 1 );
 
-		// The manifest was written during boot.
+		// The manifest and the pre-generated facades.jar were written during boot.
 		Path manifestFile = manifestFolder.resolve( ManifestService.MANIFEST_NAME );
 		assertThat( Files.exists( manifestFile ) ).isTrue();
 		assertThat( Files.exists( manifestFolder.resolve( ManifestService.CHECKSUM_NAME ) ) ).isTrue();
+		assertThat( Files.exists( manifestFolder.resolve( ManifestService.FACADES_JAR ) ) ).isTrue();
+
+		// The facades.jar contains the generated facade classes (so a trust-mode boot can inject them instead of ByteBuddy).
+		int facadeClasses = 0;
+		try ( var jar = new java.util.jar.JarInputStream( Files.newInputStream( manifestFolder.resolve( ManifestService.FACADES_JAR ) ) ) ) {
+			java.util.jar.JarEntry e;
+			while ( ( e = jar.getNextJarEntry() ) != null ) {
+				if ( e.getName().endsWith( "Facade.class" ) ) {
+					facadeClasses++;
+				}
+			}
+		} catch ( java.io.IOException e ) {
+			throw new RuntimeException( e );
+		}
+		assertThat( facadeClasses ).isAtLeast( 2 );
 
 		// The written manifest is valid, integrity-checks, and rehydrates both entities (the trust-mode load path).
 		OrmManifest manifest = ManifestService.read( manifestFolder, true );
