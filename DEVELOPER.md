@@ -256,20 +256,27 @@ feeds Hibernate from memory — no entity-file I/O at all.
 `read()` recomputes and compares it, failing closed on mismatch (detects corruption / naive edits).
 Stronger tamper-resistance (an HMAC/signature keyed by a deploy secret) is a documented v2 option.
 
-Code: `ortus.boxlang.modules.orm.mapping.manifest` (`OrmManifest`, `ManifestService`); wired in
-`ORMApp.startup` → `resolveEntityMap`.
+**`facades.jar` bytecode cache.** In `auto`, the ByteBuddy-generated facade bytecode is captured into
+`.bxorm/facades.jar` after the session factories build; in `trust`, those classes are injected
+(`ClassInjector.UsingUnsafe`) instead of re-running codegen, with a transparent ByteBuddy fallback if
+injection fails. ByteBuddy stays a dependency (it is only skipped at runtime, not removed).
+
+**`bxorm` CLI.** `box.json` declares the `bxorm` executable and `ModuleConfig.main()` dispatches to
+the Java `ManifestCli`, which reads/validates/clears the `.bxorm/` boot cache with no ORM boot:
+`info` (default), `validate`, `entities`, `entity <name>`, `mappings`, `clear`, `version`, `help`.
+The `.bxorm/` folder is resolved against the working directory, overridable with `--dir=<path>`.
+Generation is not a verb: `auto` mode writes the manifest on every boot, which is the generation path.
+
+Code: `ortus.boxlang.modules.orm.mapping.manifest` (`OrmManifest`, `ManifestService`, `ManifestCli`);
+wired in `ORMApp.startup` → `resolveEntityMap`, `EntityFacadeFactory` (facade jar load/write), and
+`ModuleConfig.main`.
 
 ### Planned follow-ons (designed, not yet built)
 
-- **`facades.jar`** — in `auto`, capture the ByteBuddy-generated facade bytecode into
-  `.bxorm/facades.jar`; in `trust`, load those classes instead of re-running codegen. ByteBuddy
-  stays a dependency (it is only skipped at runtime, not removed). A fixed ~400ms cold-start saving.
 - **Auto-mode self-watcher** — in `auto`, a BoxLang `watcherNew()` over the entity paths (+ the
   config file's mtime) that debounces and triggers an ORM reload on change; started at boot, stopped
-  at shutdown, never watching `.bxorm/` itself.
-- **`bxorm` CLI** (`box.json` executable + `ModuleConfig.main`): `manifest generate|validate|info|
-  clear`, `validate` (BoxLang compile + map every entity, no DB — a CI gate), `entities list`,
-  `entity show <Name>`, `mappings export`, `doctor`.
+  at shutdown, never watching `.bxorm/` itself. Deferred: `watcherNew()` is not in the pinned BoxLang
+  runtime yet, and a raw watcher thread risks leaks/mid-run reloads in the test suite.
 
 ## 11. Where we go next
 
