@@ -134,9 +134,18 @@ public class OrmManifest {
 	public List<EntityRecord> toEntityRecords() {
 		List<EntityRecord> records = new ArrayList<>( entities.size() );
 		for ( Entity entity : entities ) {
+			IStruct meta = entity.metadata();
+			// The metadata came through JSON, where a Key-valued entry (notably `datasource`, stamped at discovery) rehydrates
+			// as a nested struct. Normalize the datasource back to its scalar name (we track it separately on the entity) so
+			// AbstractEntityMeta can read it as a string.
+			if ( entity.datasource() != null ) {
+				meta.put( DATASOURCE_KEY, entity.datasource() );
+			} else {
+				meta.remove( DATASOURCE_KEY );
+			}
 			Key				ds		= entity.datasource() == null ? null : Key.of( entity.datasource() );
-			EntityRecord	record	= new EntityRecord( entity.entityName(), entity.classFQN(), entity.metadata(), ds );
-			record.setEntityMeta( AbstractEntityMeta.autoDiscoverMetaType( entity.metadata() ) );
+			EntityRecord	record	= new EntityRecord( entity.entityName(), entity.classFQN(), meta, ds );
+			record.setEntityMeta( AbstractEntityMeta.autoDiscoverMetaType( meta ) );
 			records.add( record );
 		}
 		return records;

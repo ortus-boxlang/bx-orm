@@ -156,10 +156,11 @@ public class ORMApp {
 		this.config.facadeNamespace = ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming
 		    .sanitizeNamespace( ORMService.getAppNameFromContext( context ).getName() );
 
-		// Discover entities for this application and group them by datasource.
-		// We use the Request Context for discovery, so all mappings are discovered
+		// Resolve entities for this application and group them by datasource. In `trust` manifest mode this loads a
+		// pre-generated .bxorm/manifest.json with zero discovery/parsing/mapping-generation; otherwise it discovers
+		// normally (and, in `auto` mode, rewrites the manifest so it stays current).
 		long discoverStart = System.currentTimeMillis();
-		this.entityMap = MappingGenerator.discoverEntities( context.getRequestContext(), this.config );
+		this.entityMap = resolveEntityMap( context );
 		if ( logger.isDebugEnabled() ) {
 			logger.debug( "Discovered entities on [{}] datasources", this.entityMap.size() );
 			logger.debug( "ORM startup metric - total entity discovery, parsing and meta collection: {}ms", System.currentTimeMillis() - discoverStart,
@@ -203,6 +204,58 @@ public class ORMApp {
 		configureLoggingPerORMConfig();
 
 		return this;
+	}
+
+	/**
+	 * Resolve the entity map for this application, honoring the {@code ormManifest} mode.
+	 * <ul>
+	 * <li>{@code trust} - load {@code .bxorm/manifest.json} (integrity-checked, fail-closed) and rehydrate entities with no
+	 * discovery, parsing or mapping generation.</li>
+	 * <li>{@code auto} - discover normally, then (best-effort) rewrite the manifest so it stays current for shipping.</li>
+	 * <li>{@code off} - discover normally (default, unchanged behavior).</li>
+	 * </ul>
+	 *
+	 * @param context The BoxLang context for this ORM application.
+	 *
+	 * @return The entity map keyed by datasource.
+	 */
+	private Map<Key, List<EntityRecord>> resolveEntityMap( IBoxContext context ) {
+		String mode = this.config.ormManifest == null ? "off" : this.config.ormManifest;
+
+		if ( "trust".equals( mode ) ) {
+			java.nio.file.Path										folder		= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
+			    .resolveFolder( context.getRequestContext() );
+			ortus.boxlang.modules.orm.mapping.manifest.OrmManifest	manifest	= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
+			    .read( folder, true );
+			logger.info( "ORM manifest [trust] mode: booting from [{}] with {} entities; discovery/parsing/generation skipped.", folder,
+			    manifest.getEntities().size() );
+			return ortus.boxlang.modules.orm.mapping.manifest.ManifestService.toEntityMap( manifest );
+		}
+
+		Map<Key, List<EntityRecord>> map = MappingGenerator.discoverEntities( context.getRequestContext(), this.config );
+
+		if ( "auto".equals( mode ) ) {
+			try {
+				java.nio.file.Path folder = ortus.boxlang.modules.orm.mapping.manifest.ManifestService.resolveFolder( context.getRequestContext() );
+				ortus.boxlang.modules.orm.mapping.manifest.ManifestService.write(
+				    ortus.boxlang.modules.orm.mapping.manifest.ManifestService.build( map, this.config, moduleVersion() ), folder );
+				if ( logger.isDebugEnabled() ) {
+					logger.debug( "ORM manifest [auto] mode: wrote manifest to [{}]", folder );
+				}
+			} catch ( RuntimeException e ) {
+				logger.warn( "ORM manifest [auto] mode: failed to write manifest (continuing normally): {}", e.getMessage() );
+			}
+		}
+
+		return map;
+	}
+
+	/**
+	 * The ORM module version stamp recorded in a manifest. Falls back to {@code "dev"} when no packaged version is present.
+	 */
+	private String moduleVersion() {
+		String version = getClass().getPackage().getImplementationVersion();
+		return version == null ? "dev" : version;
 	}
 
 	/**
