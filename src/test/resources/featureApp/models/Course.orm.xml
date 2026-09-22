@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormfeaturecoveragetest.CourseFacade" name="Course">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.CourseFacade" name="Course">
         <table name="feat_course"/>
         <batch-size>25</batch-size>
         <attributes>
@@ -21,7 +21,7 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <many-to-many classification="BAG" mapped-by="courses" name="students" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormfeaturecoveragetest.StudentFacade"/>
+            <many-to-many classification="BAG" mapped-by="courses" name="students" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.StudentFacade"/>
         </attributes>
     </entity>
 </entity-mappings>

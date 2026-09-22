@@ -554,6 +554,9 @@ public class MappingGenerator {
 				logger.debug( "Writing Hibernate XML mapping file for entity [{}] to [{}]", name, xmlPath );
 
 			String finalXML = generateXML( entity );
+			// Keep the mapping in memory so the session factory can combine mappings without re-reading from disk, and so
+			// the ORM manifest can store it.
+			entity.setXmlMapping( finalXML );
 			Files.write( xmlPath, !finalXML.isEmpty() ? finalXML.getBytes() : new byte[ 0 ] );
 
 		} catch ( IOException e ) {

@@ -202,7 +202,7 @@ public class SessionFactoryBuilder {
 		// The modern mapping.xml format resolves a dynamic entity's <extends> superclass eagerly (Hibernate registers each dynamic class as its file is
 		// processed and does NOT defer the lookup), so a subclass file must be added AFTER its parent's file. We therefore order the files by inheritance
 		// depth (roots first).
-		List<EntityRecord> ordered = entityMap.values()
+		List<EntityRecord>	ordered		= entityMap.values()
 		    .stream()
 		    .sorted( java.util.Comparator.comparingInt( e -> mappingRank( e, entityMap ) ) )
 		    .toList();
@@ -211,7 +211,10 @@ public class SessionFactoryBuilder {
 		// separate files, Hibernate can stub an as-yet-undefined entity referenced by an association (or a subclass), leaving it without its
 		// superclass or id member and breaking inheritance/id-generation. Merge all per-entity <entity> elements (parent-first) into a single
 		// <entity-mappings> document and hand Hibernate that one file.
-		configuration.addFile( buildCombinedMappingFile( ordered ) );
+		// Feed Hibernate the combined mapping straight from memory (no temp file): eliminates a write+read on every boot and
+		// lets a manifest-loaded boot supply the mapping with zero entity-file I/O.
+		String				combinedXml	= buildCombinedMappingXml( ordered );
+		configuration.addInputStream( new java.io.ByteArrayInputStream( combinedXml.getBytes( java.nio.charset.StandardCharsets.UTF_8 ) ) );
 
 		configuration.addProperties( properties );
 
@@ -250,7 +253,7 @@ public class SessionFactoryBuilder {
 	 *
 	 * @return Absolute path of the combined mapping file.
 	 */
-	private String buildCombinedMappingFile( List<EntityRecord> ordered ) {
+	private String buildCombinedMappingXml( List<EntityRecord> ordered ) {
 		try {
 			var factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
 			factory.setNamespaceAware( true );
@@ -260,26 +263,29 @@ public class SessionFactoryBuilder {
 			combined.getDocumentElement().setAttribute( "version", ortus.boxlang.modules.orm.mapping.MappingXMLWriter.ORM_VERSION );
 
 			for ( EntityRecord entity : ordered ) {
-				Path xmlPath = entity.getXmlFilePath();
-				if ( xmlPath == null ) {
+				// Prefer the in-memory mapping (freshly generated, or supplied by a manifest) so no entity file is read;
+				// fall back to the on-disk file only for the pre-generated (generateMappings=false) path.
+				org.w3c.dom.Document	doc;
+				String					xml	= entity.getXmlMapping();
+				if ( xml != null && !xml.isEmpty() ) {
+					doc = builder.parse( new org.xml.sax.InputSource( new java.io.StringReader( xml ) ) );
+				} else if ( entity.getXmlFilePath() != null ) {
+					doc = builder.parse( entity.getXmlFilePath().toFile() );
+				} else {
 					continue;
 				}
-				org.w3c.dom.Document	doc			= builder.parse( xmlPath.toFile() );
-				org.w3c.dom.NodeList	entities	= doc.getElementsByTagNameNS( ortus.boxlang.modules.orm.mapping.MappingXMLWriter.ORM_NAMESPACE,
+				org.w3c.dom.NodeList entities = doc.getElementsByTagNameNS( ortus.boxlang.modules.orm.mapping.MappingXMLWriter.ORM_NAMESPACE,
 				    "entity" );
 				for ( int i = 0; i < entities.getLength(); i++ ) {
 					combined.getDocumentElement().appendChild( combined.importNode( entities.item( i ), true ) );
 				}
 			}
 
-			Path	out			= java.nio.file.Files.createTempFile( "bxorm-combined-" + this.datasourceName.getName() + "-", ".orm.xml" );
-			var		transformer	= javax.xml.transform.TransformerFactory.newInstance().newTransformer();
+			var transformer = javax.xml.transform.TransformerFactory.newInstance().newTransformer();
 			transformer.setOutputProperty( javax.xml.transform.OutputKeys.INDENT, "yes" );
-			try ( var os = java.nio.file.Files.newOutputStream( out ) ) {
-				transformer.transform( new javax.xml.transform.dom.DOMSource( combined ), new javax.xml.transform.stream.StreamResult( os ) );
-			}
-			out.toFile().deleteOnExit();
-			return out.toString();
+			java.io.StringWriter sw = new java.io.StringWriter();
+			transformer.transform( new javax.xml.transform.dom.DOMSource( combined ), new javax.xml.transform.stream.StreamResult( sw ) );
+			return sw.toString();
 		} catch ( Exception e ) {
 			throw new ortus.boxlang.runtime.types.exceptions.BoxRuntimeException( "Failed to build combined ORM mapping.xml document", e );
 		}

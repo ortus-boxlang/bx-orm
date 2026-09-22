@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormfeaturecoveragetest.PersonFacade" name="Person">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.PersonFacade" name="Person">
         <table name="feat_person"/>
         <batch-size>25</batch-size>
         <attributes>
@@ -21,7 +21,7 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <one-to-one name="passport" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormfeaturecoveragetest.PassportFacade">
+            <one-to-one name="passport" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.PassportFacade">
                 <cascade>
                     <cascade-all/>
                 </cascade>
