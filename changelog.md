@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JMH benchmark suite (`src/jmh`) for entity CRUD, bulk hydration, and cold boot, plus a `jmhCompare` task benchmarking Hibernate 5 vs 7.
 - Standalone boot + CRUD smoke tests for Derby, PostgreSQL, and MariaDB (Postgres/MariaDB gated by env vars).
 - Restored the mapping-writer logical test coverage (from the retired `HibernateXMLWriterTest`) in `MappingGeneratorTest`, adapted to the modern schema.
+- ORM manifest boot cache (`ormManifest` setting: `off`/`auto`/`trust`). In `auto` the resolved boot model (per-entity metadata + mapping) is written to `.bxorm/manifest.json` after each boot; in `trust` the app boots straight from that manifest with zero entity discovery, parsing or mapping generation (integrity-checked, fail-closed). Aimed at cold-start-heavy and large-entity apps. Off by default.
+- The combined Hibernate `mapping.xml` is now fed to Hibernate in-memory (`addInputStream`) instead of via a temp file, removing a write+read on every boot.
 
 ### 🐛 Fixed
 
