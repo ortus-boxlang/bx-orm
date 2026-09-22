@@ -224,7 +224,54 @@ flowchart TD
 
 ---
 
-## 10. Where we go next
+## 10. The ORM manifest boot cache (`.bxorm/`)
+
+Boot has three costs: entity **discovery** (walking the tree), **metadata parsing** (per entity,
+scales linearly with entity count), **mapping generation**, and Hibernate's own `SessionFactory`
+build (a fixed floor we cannot avoid). Profiling a cold boot showed metadata parsing + mapping
+generation dominate for large-entity apps, while Hibernate's build is a fixed ~2s floor. The
+manifest cache targets the part we *can* remove.
+
+**The `ormManifest` setting** (default `off`):
+
+| Mode | Behavior |
+| --- | --- |
+| `off` | Discover, parse and generate every boot (unchanged legacy behavior). |
+| `auto` | Discover normally, then write the resolved boot model to `.bxorm/manifest.json` so it stays current. Dev mode. |
+| `trust` | Boot **straight from** `.bxorm/manifest.json` — no discovery, parsing or mapping generation. Integrity-checked and **fail-closed** (a missing/corrupt manifest is a hard error, never a silent fallback). Production mode. |
+
+**What the manifest stores** (`OrmManifest`, serialized as JSON via BoxLang's own `JSONUtil` so it
+round-trips through BoxLang types): a format version, an ORM version stamp, a config fingerprint,
+and per entity its name, class FQN, datasource, a source-file fingerprint (`path`/`hash`/`mtime`/
+`size`), the **normalized metadata struct** (exactly what `AbstractEntityMeta.autoDiscoverMetaType`
+consumes), and its generated `<entity>` mapping XML. Rehydration rebuilds each `IEntityMeta` from
+the stored metadata and produces a **byte-identical** mapping — this invariant is the core test.
+
+**Zero-I/O boot.** The combined Hibernate `mapping.xml` is now handed to Hibernate **in memory**
+via `Configuration.addInputStream()` (previously a temp file was written and re-read). `EntityRecord`
+carries its mapping XML in memory; a `trust`-mode boot reads exactly one file (the manifest) and
+feeds Hibernate from memory — no entity-file I/O at all.
+
+**Integrity guard (v1).** `write()` is atomic (temp + move) and emits a `manifest.sha256` sidecar;
+`read()` recomputes and compares it, failing closed on mismatch (detects corruption / naive edits).
+Stronger tamper-resistance (an HMAC/signature keyed by a deploy secret) is a documented v2 option.
+
+Code: `ortus.boxlang.modules.orm.mapping.manifest` (`OrmManifest`, `ManifestService`); wired in
+`ORMApp.startup` → `resolveEntityMap`.
+
+### Planned follow-ons (designed, not yet built)
+
+- **`facades.jar`** — in `auto`, capture the ByteBuddy-generated facade bytecode into
+  `.bxorm/facades.jar`; in `trust`, load those classes instead of re-running codegen. ByteBuddy
+  stays a dependency (it is only skipped at runtime, not removed). A fixed ~400ms cold-start saving.
+- **Auto-mode self-watcher** — in `auto`, a BoxLang `watcherNew()` over the entity paths (+ the
+  config file's mtime) that debounces and triggers an ORM reload on change; started at boot, stopped
+  at shutdown, never watching `.bxorm/` itself.
+- **`bxorm` CLI** (`box.json` executable + `ModuleConfig.main`): `manifest generate|validate|info|
+  clear`, `validate` (BoxLang compile + map every entity, no DB — a CI gate), `entities list`,
+  `entity show <Name>`, `mappings export`, `doctor`.
+
+## 11. Where we go next
 
 - **AOP / byte-weaving spike** — investigate weaving the *real* BoxLang class as the Hibernate
   entity (via ByteBuddy advice) instead of generating a separate facade, to shrink the
@@ -234,7 +281,7 @@ flowchart TD
 
 ---
 
-## 11. Where the code lives
+## 12. Where the code lives
 
 | Area | Package / path |
 | --- | --- |
@@ -242,6 +289,7 @@ flowchart TD
 | Config, events, dialects, naming | `ortus.boxlang.modules.orm.config` |
 | Facade bridge (representation, proxies, wrap/unwrap) | `ortus.boxlang.modules.orm.hibernate` and `…/hibernate/facade` |
 | Mapping generation & the modern writer | `ortus.boxlang.modules.orm.mapping` |
+| ORM manifest boot cache (`.bxorm/`) | `ortus.boxlang.modules.orm.mapping.manifest` |
 | Session lifecycle | `ORMService` → `ORMApp` → `ORMContext`, `SessionFactoryBuilder` |
 | Subsystem deep-dives | `.agents/skills-custom/` |
 
