@@ -80,13 +80,14 @@ public class ManifestServiceTest {
 
 	@BeforeEach
 	public void setupEach() {
+		// A bare request context is enough to parse entity code and build an ORMConfig; we deliberately do NOT load an
+		// application descriptor or fire onRequestStart, so no Hibernate/datasource boot happens. These tests exercise
+		// pure manifest build/write/read/rehydrate + XML generation and must run without any database.
 		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
 		RequestBoxContext.setCurrent( context );
-		context.loadApplicationDescriptor( Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
-		context.getApplicationListener().onRequestStart( context, null );
 		variables	= context.getScopeNearby( VariablesScope.name );
 		ormConfig	= new ORMConfig(
-		    Struct.of( "ignoreParseErrors", "true", "generateMappings", "true", "saveMapping", "true" ),
+		    Struct.of( "datasource", "myds", "ignoreParseErrors", "true", "generateMappings", "true", "saveMapping", "true" ),
 		    context.getRequestContext()
 		);
 	}
@@ -94,7 +95,6 @@ public class ManifestServiceTest {
 	@AfterEach
 	public void teardownEach() {
 		variables.clear();
-		context.getApplicationListener().onRequestEnd( context, null );
 		RequestBoxContext.removeCurrent();
 		context.shutdown();
 	}
