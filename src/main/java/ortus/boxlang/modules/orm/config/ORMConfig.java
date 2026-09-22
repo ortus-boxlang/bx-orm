@@ -45,6 +45,7 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.IntegerCaster;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.loader.ClassLocator;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
@@ -106,6 +107,18 @@ public class ORMConfig {
 	 * the fly based on the structure of the persistent CFCs and their properties.
 	 */
 	public boolean								generateMappings		= true;
+
+	/**
+	 * ORM manifest mode - controls the {@code .bxorm/} boot cache (manifest.json + facades.jar).
+	 * <ul>
+	 * <li>{@code off} (default) - no manifest; discover, parse and generate every boot (current behavior).</li>
+	 * <li>{@code auto} - dev mode: use the manifest when fresh (source hashes + config fingerprint + versions all match),
+	 * else regenerate and rewrite it; a file watcher auto-reloads on entity/setting changes.</li>
+	 * <li>{@code trust} - production mode: load the manifest as-is (integrity-checked, fail-closed on mismatch); never
+	 * regenerate at runtime. Regeneration is an explicit build step ({@code bxorm manifest generate}).</li>
+	 * </ul>
+	 */
+	public String								ormManifest				= "off";
 
 	/**
 	 * Backwards-compatible alias for `generateMappings`. {@link #generateMappings}
@@ -448,6 +461,16 @@ public class ORMConfig {
 			// note that generateMappings takes precedence over autoGenMap if both are specified
 			generateMappings	= BooleanCaster.cast( properties.get( ORMKeys.generateMappings ) );
 			autoGenMap			= generateMappings;
+		}
+		if ( properties.containsKey( ORMKeys.ormManifest ) && properties.get( ORMKeys.ormManifest ) != null ) {
+			String mode = StringCaster.cast( properties.get( ORMKeys.ormManifest ) ).toLowerCase().trim();
+			switch ( mode ) {
+				case "off", "auto", "trust" -> ormManifest = mode;
+				default -> {
+					logger.warn( "Invalid `ormManifest` value [{}]; expected one of off|auto|trust. Defaulting to `off`.", mode );
+					ormManifest = "off";
+				}
+			}
 		}
 		if ( properties.containsKey( ORMKeys.autoManageSession ) && properties.get( ORMKeys.autoManageSession ) != null ) {
 			autoManageSession = BooleanCaster.cast( properties.get( ORMKeys.autoManageSession ) );

@@ -189,7 +189,7 @@ public class EntityRecord {
 	}
 
 	private String parseResolverPrefix( String filePath ) {
-		return filePath.endsWith( "cfc" ) ? "cfc" : ClassLocator.BX_PREFIX;
+		return filePath != null && filePath.endsWith( "cfc" ) ? "cfc" : ClassLocator.BX_PREFIX;
 	}
 
 	/**
