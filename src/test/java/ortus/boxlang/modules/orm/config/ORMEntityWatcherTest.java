@@ -100,7 +100,7 @@ public class ORMEntityWatcherTest {
 
 		AtomicInteger		changes	= new AtomicInteger( 0 );
 		Key					appName	= Key.of( "watcherTestApp" );
-		ORMEntityWatcher	watcher	= ORMEntityWatcher.startFor( appName, ormConfig, context, changes::incrementAndGet, logger );
+		ORMEntityWatcher	watcher	= ORMEntityWatcher.startFor( appName, ormConfig, context, () -> changes.incrementAndGet(), logger );
 
 		assertThat( watcher ).isNotNull();
 		Key watcherKey = Key.of( "orm-entities-watcherTestApp" );
@@ -122,7 +122,7 @@ public class ORMEntityWatcherTest {
 		ormConfig = configForPath( modelDir );
 
 		AtomicInteger		changes	= new AtomicInteger( 0 );
-		ORMEntityWatcher	watcher	= ORMEntityWatcher.startFor( Key.of( "ignoreApp" ), ormConfig, context, changes::incrementAndGet, logger );
+		ORMEntityWatcher	watcher	= ORMEntityWatcher.startFor( Key.of( "ignoreApp" ), ormConfig, context, () -> changes.incrementAndGet(), logger );
 		assertThat( watcher ).isNotNull();
 
 		try {
@@ -148,7 +148,7 @@ public class ORMEntityWatcherTest {
 		    context.getRequestContext()
 		);
 		AtomicInteger		changes	= new AtomicInteger( 0 );
-		ORMEntityWatcher	watcher	= ORMEntityWatcher.startFor( Key.of( "emptyApp" ), ormConfig, context, changes::incrementAndGet, logger );
+		ORMEntityWatcher	watcher	= ORMEntityWatcher.startFor( Key.of( "emptyApp" ), ormConfig, context, () -> changes.incrementAndGet(), logger );
 		assertThat( watcher ).isNull();
 	}
 }

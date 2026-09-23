@@ -267,22 +267,27 @@ the Java `ManifestCli`, which reads/validates/clears the `.bxorm/` boot cache wi
 The `.bxorm/` folder is resolved against the working directory, overridable with `--dir=<path>`.
 Generation is not a verb: `auto` mode writes the manifest on every boot, which is the generation path.
 
-**Auto-mode self-watcher.** In `auto` mode, `ORMApp.startup` starts an `ORMEntityWatcher` over the
-entity paths (recursive, 500ms debounce), built on BoxLang's `WatcherService`. Because a file-change
-event fires on a background thread with no request/JDBC context (and a reload requires one), the
-watcher does not reload directly: its listener only flags the `ORMApp` dirty (an `AtomicBoolean`).
-`ORMService.getORMAppByContext` — which runs on a real request thread — sees the flag, clears it with
-a compare-and-set (so a single request reloads while concurrent ones do not), and calls `reloadApp`.
-The reload naturally cycles the watcher (old app's `shutdown` stops it; the new app starts a fresh
-one). Generated `*.orm.xml` and any `/.bxorm/` path are ignored by the listener so a reload's own
-writes never retrigger it. Startup is wrapped so a runtime without a watcher service just logs a
-warning and disables live reload. Class: `ORMEntityWatcher`; wired in `ORMApp.startup`/`shutdown` and
-`ORMService.getORMAppByContext`.
+**Auto-mode self-watcher.** In `auto` mode, `ORMApp.startup` calls `ORMService.ensureEntityWatcher`,
+which starts one `ORMEntityWatcher` per application (idempotent) over the entity paths (recursive,
+500ms debounce), built on BoxLang's `WatcherService`. A file-change event fires on a background
+thread that has neither a request/JDBC context nor the `loadApplicationDescriptor`/`onRequestStart`
+initialization a reload needs, so the watcher does not reload directly — attempting a reload there
+fails to open a datasource connection. Instead its listener flags the app for reload
+(`ORMService.dirtyApps`). `ORMService.getORMAppByContext` — which runs on a real request thread with
+a fully-initialized, thread-valid context — sees the flag, clears it (`Set.remove`, so a single
+request reloads while concurrent ones do not), and calls `reloadApp`. This is also the correct
+semantics: a reload is only observable through a request (edit a file, hit the app, see the change).
+The watcher is owned by the `ORMService`, not the `ORMApp`, so a reload (which swaps the `ORMApp` but
+not the entity paths) leaves it running and it keeps detecting changes across reloads; it is stopped
+only on a real `shutdownApp`. Generated `*.orm.xml` and any `/.bxorm/` path are ignored by the
+listener so a reload's own writes never retrigger it. Startup is wrapped so a runtime without a
+watcher service just logs a warning and disables live reload. Class: `ORMEntityWatcher`; wired via
+`ORMService.ensureEntityWatcher`/`stopEntityWatcher` and the reload check in `getORMAppByContext`.
 
 Code: `ortus.boxlang.modules.orm.mapping.manifest` (`OrmManifest`, `ManifestService`, `ManifestCli`)
 and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startup` →
-`resolveEntityMap`, `EntityFacadeFactory` (facade jar load/write), `ModuleConfig.main`, and the
-auto-reload check in `ORMService.getORMAppByContext`.
+`resolveEntityMap`, `EntityFacadeFactory` (facade jar load/write), `ModuleConfig.main`,
+`ORMService.ensureEntityWatcher`, and the auto-reload check in `ORMService.getORMAppByContext`.
 
 ## 11. Where we go next
 

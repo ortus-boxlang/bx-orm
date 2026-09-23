@@ -153,37 +153,49 @@ public class ManifestBootTest {
 		assertThat( instance.getWatcherService().hasWatcher( Key.of( "orm-entities-BXORMManifestTest" ) ) ).isTrue();
 	}
 
-	@DisplayName( "a new entity source file is picked up by a live reload on the next request (watcher -> dirty -> reload)" )
+	@DisplayName( "new entity source files are picked up by live reloads, and the watcher survives across reloads" )
 	@Test
 	@Order( 3 )
 	public void testLiveReloadPicksUpNewEntity() throws Exception {
-		Path	modelsDir	= Path.of( "src/test/resources/manifestApp/models" ).toAbsolutePath();
-		Path	sprocket	= modelsDir.resolve( "Sprocket.bx" );
-		Path	sprocketXml	= modelsDir.resolve( "Sprocket.orm.xml" );
+		Path			modelsDir	= Path.of( "src/test/resources/manifestApp/models" ).toAbsolutePath();
+		Path			sprocket	= modelsDir.resolve( "Sprocket.bx" );
+		Path			sprocketXml	= modelsDir.resolve( "Sprocket.orm.xml" );
+		Path			gizmo		= modelsDir.resolve( "Gizmo.bx" );
+		Path			gizmoXml	= modelsDir.resolve( "Gizmo.orm.xml" );
+		final String	entityTpl	= "class persistent=\"true\" table=\"%s\" { property name=\"id\" fieldtype=\"id\" generator=\"increment\" ormType=\"integer\"; property name=\"label\" ormType=\"string\"; }";
 		try {
-			// Sanity: Sprocket is unknown before the file exists.
+			// Sanity: unknown before the file exists.
 			assertThat( entityKnownInFreshRequest( "Sprocket" ) ).isFalse();
 
-			// Drop a new entity into a watched path; the watcher marks the app dirty and the next request reloads.
-			Files.writeString( sprocket,
-			    "class persistent=\"true\" table=\"sprockets\" { property name=\"id\" fieldtype=\"id\" generator=\"increment\" ormType=\"integer\"; property name=\"label\" ormType=\"string\"; }",
-			    java.nio.charset.StandardCharsets.UTF_8 );
+			// First edit: dropping a new entity into a watched path triggers a live reload; it becomes known.
+			Files.writeString( sprocket, String.format( entityTpl, "sprockets" ), java.nio.charset.StandardCharsets.UTF_8 );
+			assertThat( awaitEntityKnown( "Sprocket" ) ).isTrue();
 
-			boolean	known		= false;
-			long	deadline	= System.currentTimeMillis() + 15000;
-			while ( System.currentTimeMillis() < deadline ) {
-				if ( entityKnownInFreshRequest( "Sprocket" ) ) {
-					known = true;
-					break;
-				}
-				Thread.sleep( 300 );
-			}
-			assertThat( known ).isTrue();
+			// Second edit AFTER a reload: proves the ORMService-owned watcher is still alive (a per-app-instance watcher
+			// would have been torn down by the first reload).
+			Files.writeString( gizmo, String.format( entityTpl, "gizmos" ), java.nio.charset.StandardCharsets.UTF_8 );
+			assertThat( awaitEntityKnown( "Gizmo" ) ).isTrue();
 		} finally {
 			Files.deleteIfExists( sprocket );
 			Files.deleteIfExists( sprocketXml );
+			Files.deleteIfExists( gizmo );
+			Files.deleteIfExists( gizmoXml );
 			RequestBoxContext.setCurrent( context );
 		}
+	}
+
+	/**
+	 * Poll until an entity is known through a fresh request, up to ~15s (absorbs the watcher debounce + FS-event
+	 * latency). Each fresh request creates a new ORMContext, which is what applies a pending auto-reload.
+	 */
+	private boolean awaitEntityKnown( String entityName ) throws InterruptedException {
+		for ( int attempt = 0; attempt < 50; attempt++ ) {
+			if ( entityKnownInFreshRequest( entityName ) ) {
+				return true;
+			}
+			Thread.sleep( 300 );
+		}
+		return false;
 	}
 
 	@DisplayName( "the bxorm CLI dispatches through ModuleConfig.main() and honors --dir (clear removes the cache)" )
@@ -204,12 +216,12 @@ public class ManifestBootTest {
 	}
 
 	/**
-	 * Resolve whether an entity is known, using a fresh request context each call so a new ORMContext is created - which
-	 * is what triggers the deferred auto-reload (mid-request reloads are intentionally avoided). Restores the class
-	 * context as current before returning.
+	 * Whether an entity is known, checked through a fresh request context. A new request creates a new ORMContext, whose
+	 * creation resolves the ORM app via {@code getORMAppByContext} - the point where a pending auto-reload is applied (on
+	 * this request thread, which has the request/JDBC context a reload needs). Restores the class context before return.
 	 */
 	private boolean entityKnownInFreshRequest( String entityName ) {
-		RequestBoxContext reqCtx = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
+		ScriptingRequestBoxContext reqCtx = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
 		try {
 			RequestBoxContext.setCurrent( reqCtx );
 			reqCtx.loadApplicationDescriptor( Path.of( "src/test/resources/manifestApp/index.bxs" ).toAbsolutePath().toUri() );

@@ -31,6 +31,7 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.config.ORMEntityWatcher;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.hibernate.BoxProxy;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
@@ -60,24 +61,37 @@ import ortus.boxlang.runtime.util.EncryptionUtil;
  */
 public class ORMService extends BaseService {
 
-	public static final String	BX_CLASS_SUFFIX			= "$bx";
-	public static final String	CFC_CLASS_SUFFIX		= "$cfc";
-	public static final String	COMPILED_CLASS_PREFIX	= "boxgenerated.class.";
+	public static final String			BX_CLASS_SUFFIX			= "$bx";
+	public static final String			CFC_CLASS_SUFFIX		= "$cfc";
+	public static final String			COMPILED_CLASS_PREFIX	= "boxgenerated.class.";
 
 	/**
 	 * The logger for the ORMEngine.
 	 */
-	private BoxLangLogger		logger;
+	private BoxLangLogger				logger;
 
 	/**
 	 * A map of ORM applications, keyed by the unique name of the ORM application.
 	 */
-	private Map<Key, ORMApp>	ormApps					= new ConcurrentHashMap<>();
+	private Map<Key, ORMApp>			ormApps					= new ConcurrentHashMap<>();
+
+	/**
+	 * Auto-mode entity watchers, keyed by ORM application name. Owned here (not by {@link ORMApp}) so a single watcher
+	 * survives reloads - a reload swaps the {@link ORMApp} but the entity paths do not change - and is stopped only on a
+	 * real application shutdown.
+	 */
+	private Map<Key, ORMEntityWatcher>	entityWatchers			= new ConcurrentHashMap<>();
+
+	/**
+	 * Auto-mode: application names flagged for reload by their entity watcher. The reload itself happens on the next
+	 * request that resolves the app (which has the request/JDBC context a reload requires); the watcher thread does not.
+	 */
+	private java.util.Set<Key>			dirtyApps				= ConcurrentHashMap.newKeySet();
 
 	/**
 	 * Interception points for the ORM service.
 	 */
-	private static final Key[]	ORM_INTERCEPTION_POINTS	= List.of(
+	private static final Key[]			ORM_INTERCEPTION_POINTS	= List.of(
 	    ORMKeys.EVENT_POST_NEW,
 	    ORMKeys.EVENT_POST_LOAD ).toArray( new Key[ 0 ] );
 
@@ -409,6 +423,9 @@ public class ORMService extends BaseService {
 	 * @param uniqueAppName The unique name of the ORM application to shut down.
 	 */
 	public void shutdownApp( Key uniqueAppName ) {
+		// Stop the auto-mode entity watcher (if any) on a real shutdown; reloads intentionally keep it running.
+		stopEntityWatcher( uniqueAppName );
+
 		// We remove it first to prevent further access to the ORMApp
 		ORMApp app = this.ormApps.remove( uniqueAppName );
 
@@ -515,19 +532,18 @@ public class ORMService extends BaseService {
 		if ( appContext == null ) {
 			throw new BoxRuntimeException( "No application context available to retrieve ORM application." );
 		}
-		ORMApp app = getORMApp( appContext.getApplication().getName() );
-		// Auto-mode live reload: the entity watcher runs on a background thread with no request context, so it only flags
-		// the app dirty. Here we have a request context, so perform the deferred reload. compareAndSet inside
-		// isDirtyAndClear() guarantees a single reload across concurrent callers; a freshly reloaded app is never dirty,
-		// so the eager ORMContext init inside reloadApp cannot recurse.
-		if ( app != null && app.isDirtyAndClear() ) {
+		Key appName = appContext.getApplication().getName();
+		// Auto-mode live reload: if the entity watcher flagged this app, reload now - we are on a request thread with the
+		// context a reload needs. remove() returns true for a single caller under concurrency, so only one reload runs; a
+		// freshly reloaded app is not dirty, so the eager ORMContext init inside reloadApp cannot recurse here.
+		if ( this.dirtyApps.remove( appName ) ) {
 			try {
-				app = reloadApp( context );
+				return reloadApp( context );
 			} catch ( Exception e ) {
 				logger.warn( "ORM auto-mode reload failed: {}", e.getMessage(), e );
 			}
 		}
-		return app;
+		return getORMApp( appName );
 	}
 
 	/**
@@ -539,6 +555,46 @@ public class ORMService extends BaseService {
 	 */
 	public ORMApp getORMApp( Key appName ) {
 		return this.ormApps.containsKey( appName ) ? this.ormApps.get( appName ) : null;
+	}
+
+	/**
+	 * Ensure a single auto-mode entity watcher exists for an application (idempotent across reloads). On a source change
+	 * the watcher reloads the application via {@link #reloadApp(IBoxContext)}, run inside a request context obtained with
+	 * {@link RequestBoxContext#runInContext} (the watcher fires on a background thread that has none). Best-effort: a
+	 * runtime without a watcher service just leaves live reload disabled.
+	 *
+	 * @param appName The ORM application name.
+	 * @param config  The ORM configuration (entity paths to watch).
+	 * @param context The boot context, whose application context anchors the reload's request context.
+	 */
+	public void ensureEntityWatcher( Key appName, ORMConfig config, IBoxContext context ) {
+		if ( this.entityWatchers.containsKey( appName ) ) {
+			return;
+		}
+		try {
+			// The watcher runs on a background thread with no request context, so it only flags the app dirty; the reload
+			// runs later on a request thread (see getORMAppByContext) which has the context a reload needs.
+			ORMEntityWatcher watcher = ORMEntityWatcher.startFor( appName, config, context, () -> this.dirtyApps.add( appName ), getLogger() );
+			if ( watcher != null ) {
+				this.entityWatchers.put( appName, watcher );
+			}
+		} catch ( Throwable t ) {
+			getLogger().warn( "ORM auto-mode entity watcher unavailable for [{}], live reload disabled: {}", appName.getName(), t.getMessage() );
+		}
+	}
+
+	/**
+	 * Stop and remove the auto-mode entity watcher for an application, if any. Called on a real application shutdown (not
+	 * on reload, which keeps the watcher running).
+	 *
+	 * @param appName The ORM application name.
+	 */
+	public void stopEntityWatcher( Key appName ) {
+		this.dirtyApps.remove( appName );
+		ORMEntityWatcher watcher = this.entityWatchers.remove( appName );
+		if ( watcher != null ) {
+			watcher.stop();
+		}
 	}
 
 	/**

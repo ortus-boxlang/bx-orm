@@ -31,12 +31,15 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.util.FileSystemUtil;
 
 /**
- * Auto-mode entity watcher: watches an application's ORM entity paths and, on any relevant source change, marks the
- * owning {@link ortus.boxlang.modules.orm.ORMApp} dirty so it is reloaded on the next request.
+ * Auto-mode entity watcher: watches an application's ORM entity paths and, on any relevant source change, flags the
+ * application for reload.
  * <p>
- * Why mark-dirty instead of reloading here: a file-change event fires on the {@code WatcherService}'s background
- * thread, which has no request/JDBC context, whereas an ORM reload requires one. So the watcher only flips a flag; the
- * actual reload happens lazily on the next request that resolves the ORM app (which does have a context).
+ * A file-change event fires on the {@code WatcherService}'s background thread, which has no request/JDBC context, and an
+ * ORM reload requires a fully-initialized request context (application binding + a thread-valid datasource) that a
+ * background thread cannot reproduce. So the listener does not reload directly: it invokes a lightweight callback that
+ * marks the application dirty, and the reload happens on the next request that resolves the ORM app - which has exactly
+ * that context. The watcher is owned by the {@code ORMService} (one per application) and is not stopped by a reload, so
+ * it keeps detecting changes across reloads.
  * <p>
  * This class is only referenced from the {@code auto} manifest-mode branch of ORM startup and is deliberately isolated
  * so its BoxLang watcher-service dependencies are not loaded in {@code off}/{@code trust} modes or on runtimes that
@@ -61,7 +64,7 @@ public final class ORMEntityWatcher {
 	 * @param appName  The ORM application name (used to key the watcher uniquely).
 	 * @param config   The ORM configuration (source of the entity paths).
 	 * @param context  The boot context (used to expand relative entity paths and as the watcher's parent context).
-	 * @param onChange Invoked on each relevant source change (typically marks the ORM app dirty).
+	 * @param onChange Invoked on each relevant source change; marks the application for reload (no context needed).
 	 * @param logger   The ORM logger.
 	 *
 	 * @return A started watcher, or {@code null} if there are no existing paths to watch.
@@ -84,7 +87,7 @@ public final class ORMEntityWatcher {
 		    .build();
 
 		BoxRuntime.getInstance().getWatcherService().registerAndStart( instance, true );
-		logger.info( "ORM auto-mode watcher started for [{}] over {} (live reload on change).", appName.getName(), paths );
+		logger.info( "ORM auto-mode watcher started for [{}] over {} (reload on next request after a change).", appName.getName(), paths );
 		return new ORMEntityWatcher( instance );
 	}
 
@@ -139,11 +142,11 @@ public final class ORMEntityWatcher {
 			if ( !isRelevant( event ) ) {
 				return;
 			}
-			logger.debug( "ORM auto-mode watcher: [{}] {} -> marking ORM app for reload", event.getKind(), event.getPath() );
+			logger.debug( "ORM auto-mode watcher: [{}] {} -> flagging ORM app for reload", event.getKind(), event.getPath() );
 			try {
 				onChange.run();
 			} catch ( RuntimeException e ) {
-				logger.warn( "ORM auto-mode watcher: failed to mark app dirty: {}", e.getMessage() );
+				logger.warn( "ORM auto-mode watcher: failed to flag app for reload: {}", e.getMessage() );
 			}
 		}
 
