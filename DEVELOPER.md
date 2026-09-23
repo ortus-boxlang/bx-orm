@@ -331,6 +331,23 @@ app root, an absolute path is used as-is, and the folder name is always `.bxorm`
 moves). The `bxorm` CLI mirrors this with `--dir=<path>`. `ManifestService.resolveFolder(context,
 location)` is the single resolver all boot reads/writes go through.
 
+**Performance (estimated).** These are extrapolations from cold-boot profiling, not a fresh
+benchmark run — replace them with formal `./gradlew jmhCompare` numbers when available. A cold boot
+pays four costs: entity **discovery**, **metadata parsing** (scales with entity count),
+**mapping generation**, and **facade codegen** — plus Hibernate's own `SessionFactory` build, a
+fixed **~2s floor** we cannot remove. Profiling showed the first four dominate for large-entity
+apps. `trust` mode removes all four: it reads a single `manifest.json` and injects the pre-built
+`facades.jar`, so boot collapses toward the ~2s Hibernate floor.
+
+| App size | `off` cold boot (discover + parse + map + codegen + ~2s build) | `trust` cold boot (manifest read + ~2s build) | Estimated cold-start speedup |
+| --- | --- | --- | --- |
+| Small (a handful of entities) | Floor-dominated | ≈ floor | Modest — the fixed ~2s build dominates either way |
+| Large (dozens of entities) | Parse/map/codegen is the **majority** of above-floor time | ≈ floor + one file read | **Considerable** — an estimated ~2–4× faster cold start |
+
+The boost grows with entity count: the removed work scales with the number of entities, while
+`trust` mode's cost (one manifest read + facade injection) is effectively flat. Zero entity-file
+I/O and no ByteBuddy codegen at boot are the two levers.
+
 **What the manifest stores** (`OrmManifest`, serialized as JSON via BoxLang's own `JSONUtil` so it
 round-trips through BoxLang types): a format version, an ORM version stamp, a config fingerprint,
 and per entity its name, class FQN, datasource, a source-file fingerprint (`path`/`hash`/`mtime`/

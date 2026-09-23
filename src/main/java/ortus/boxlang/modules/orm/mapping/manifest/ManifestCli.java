@@ -81,7 +81,7 @@ public final class ManifestCli {
 				case "entity" -> entity( folder, args.length > 1 ? args[ 1 ] : null );
 				case "mappings" -> mappings( folder );
 				case "clear" -> clear( folder );
-				default -> new CliResult( "Unknown verb [" + verb + "].\n\n" + usage(), 1 );
+				default -> new CliResult( "❌ Unknown verb [" + verb + "].\n\n" + usage(), 1 );
 			};
 		} catch ( CliError e ) {
 			return new CliResult( e.getMessage(), 1 );
@@ -99,7 +99,7 @@ public final class ManifestCli {
 	private static CliResult version( Path folder, String moduleVersion ) {
 		OrmManifest		manifest	= readOptional( folder );
 		StringBuilder	sb			= new StringBuilder();
-		sb.append( "bx-orm module : " ).append( moduleVersion == null ? "unknown" : moduleVersion ).append( '\n' );
+		sb.append( "🏷️  bx-orm module : " ).append( moduleVersion == null ? "unknown" : moduleVersion ).append( '\n' );
 		sb.append( "manifest format expected : " ).append( OrmManifest.FORMAT_VERSION );
 		if ( manifest != null ) {
 			sb.append( '\n' ).append( "manifest format on disk  : " ).append( manifest.getFormatVersion() );
@@ -111,16 +111,18 @@ public final class ManifestCli {
 	private static CliResult info( Path folder ) {
 		OrmManifest manifest = readOptional( folder );
 		if ( manifest == null ) {
-			return new CliResult( "No ORM manifest found at [" + folder + "]. Boot the app once with ormManifest=\"auto\" to generate it.", 0 );
+			return new CliResult( "ℹ️  No ORM manifest found at [" + folder + "]. Boot the app once with ormManifest=\"auto\" to generate it.", 0 );
 		}
 		StringBuilder sb = new StringBuilder();
-		sb.append( "ORM manifest [" ).append( folder ).append( "]\n" );
+		sb.append( "📦 ORM manifest [" ).append( folder ).append( "]\n" );
 		sb.append( "  format version   : " ).append( manifest.getFormatVersion() ).append( '\n' );
 		sb.append( "  built by ORM     : " ).append( manifest.getOrmVersion() ).append( '\n' );
 		sb.append( "  config fingerprint: " ).append( shorten( manifest.getConfigFingerprint() ) ).append( '\n' );
 		sb.append( "  entities         : " ).append( manifest.getEntities().size() ).append( '\n' );
-		sb.append( "  integrity        : " ).append( Files.exists( folder.resolve( ManifestService.CHECKSUM_NAME ) ) ? "checksummed" : "no checksum" );
-		sb.append( '\n' ).append( "  facades.jar      : " ).append( Files.exists( folder.resolve( ManifestService.FACADES_JAR ) ) ? "present" : "absent" );
+		sb.append( "  integrity        : " )
+		    .append( Files.exists( folder.resolve( ManifestService.CHECKSUM_NAME ) ) ? "✅ checksummed" : "⚠️  no checksum" );
+		sb.append( '\n' ).append( "  facades.jar      : " )
+		    .append( Files.exists( folder.resolve( ManifestService.FACADES_JAR ) ) ? "✅ present" : "➖ absent" );
 		return new CliResult( sb.toString(), 0 );
 	}
 
@@ -128,21 +130,21 @@ public final class ManifestCli {
 		// read( failIfAbsent=true ) performs the integrity + format-version checks and throws on any problem.
 		try {
 			OrmManifest manifest = ManifestService.read( folder, true );
-			return new CliResult( "ORM manifest at [" + folder + "] is valid (" + manifest.getEntities().size() + " entities, format "
+			return new CliResult( "✅ ORM manifest at [" + folder + "] is valid (" + manifest.getEntities().size() + " entities, format "
 			    + manifest.getFormatVersion() + ").", 0 );
 		} catch ( RuntimeException e ) {
-			return new CliResult( "ORM manifest is INVALID: " + e.getMessage(), 1 );
+			return new CliResult( "❌ ORM manifest is INVALID: " + e.getMessage(), 1 );
 		}
 	}
 
 	private static CliResult entities( Path folder ) {
 		OrmManifest manifest = requireManifest( folder );
 		if ( manifest.getEntities().isEmpty() ) {
-			return new CliResult( "The ORM manifest contains no entities.", 0 );
+			return new CliResult( "📭 The ORM manifest contains no entities.", 0 );
 		}
-		StringBuilder sb = new StringBuilder( "Entities in the ORM manifest:\n" );
+		StringBuilder sb = new StringBuilder( "📦 Entities in the ORM manifest (" + manifest.getEntities().size() + "):\n" );
 		for ( OrmManifest.Entity e : manifest.getEntities() ) {
-			sb.append( "  " ).append( e.entityName() )
+			sb.append( "  • " ).append( e.entityName() )
 			    .append( "  [" ).append( e.classFQN() ).append( "]" )
 			    .append( "  datasource=" ).append( e.datasource() == null ? "<default>" : e.datasource() )
 			    .append( '\n' );
@@ -160,10 +162,10 @@ public final class ManifestCli {
 		    .findFirst()
 		    .orElse( null );
 		if ( match == null ) {
-			return new CliResult( "No entity named [" + name + "] in the ORM manifest.", 1 );
+			return new CliResult( "❌ No entity named [" + name + "] in the ORM manifest.", 1 );
 		}
 		StringBuilder sb = new StringBuilder();
-		sb.append( "Entity [" ).append( match.entityName() ).append( "]\n" );
+		sb.append( "🔎 Entity [" ).append( match.entityName() ).append( "]\n" );
 		sb.append( "  class     : " ).append( match.classFQN() ).append( '\n' );
 		sb.append( "  datasource: " ).append( match.datasource() == null ? "<default>" : match.datasource() ).append( '\n' );
 		sb.append( "  source    : " ).append( match.source() == null ? "<none>" : match.source() ).append( '\n' );
@@ -184,12 +186,12 @@ public final class ManifestCli {
 				sb.append( e.mappingXml() ).append( '\n' );
 			}
 		}
-		return new CliResult( sb.length() == 0 ? "The ORM manifest contains no mapping XML." : sb.toString().stripTrailing(), 0 );
+		return new CliResult( sb.length() == 0 ? "📭 The ORM manifest contains no mapping XML." : sb.toString().stripTrailing(), 0 );
 	}
 
 	private static CliResult clear( Path folder ) {
 		if ( !Files.exists( folder ) ) {
-			return new CliResult( "Nothing to clear; no [" + folder + "] folder exists.", 0 );
+			return new CliResult( "ℹ️  Nothing to clear; no [" + folder + "] folder exists.", 0 );
 		}
 		try ( var walk = Files.walk( folder ) ) {
 			List<Path> paths = walk.sorted( Comparator.reverseOrder() ).toList();
@@ -199,7 +201,7 @@ public final class ManifestCli {
 		} catch ( IOException e ) {
 			return new CliResult( "Failed to clear [" + folder + "]: " + e.getMessage(), 1 );
 		}
-		return new CliResult( "Cleared the ORM boot cache at [" + folder + "].", 0 );
+		return new CliResult( "🧹 Cleared the ORM boot cache at [" + folder + "].", 0 );
 	}
 
 	/** Read the manifest, tolerating absence (returns null). */
@@ -211,7 +213,7 @@ public final class ManifestCli {
 	private static OrmManifest requireManifest( Path folder ) {
 		OrmManifest manifest = ManifestService.read( folder, false );
 		if ( manifest == null ) {
-			throw new CliError( "No ORM manifest found at [" + folder + "]. Boot the app once with ormManifest=\"auto\" to generate it." );
+			throw new CliError( "❌ No ORM manifest found at [" + folder + "]. Boot the app once with ormManifest=\"auto\" to generate it." );
 		}
 		return manifest;
 	}
@@ -223,7 +225,7 @@ public final class ManifestCli {
 	/** The usage / help text. */
 	public static String usage() {
 		return """
-		       bxorm - ORM manifest boot-cache tool
+		       📦 bxorm - ORM manifest boot-cache tool
 
 		       Usage: boxlang module:orm <verb> [args]
 
