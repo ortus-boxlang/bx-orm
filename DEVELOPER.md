@@ -161,6 +161,13 @@ Key rules that fall out of this design:
 - **`duplicate()` never shares a facade.** Root facades are `Serializable` with a `writeReplace`
   that yields a marker, so a deep copy of an entity drops the original's memoized facade, and
   `FacadeSupport` ignores any memoized facade that does not wrap the instance it is stored on.
+- **To-many getters: snapshot reads, live writes.** On a managed entity, `getChildren()` returns a
+  `ToManyGetterView`. Reads and iteration use a snapshot taken when the getter was called, so
+  `parent.getChildren().each( c -> parent.removeChild( c ) )` visits every child. Writes through it
+  (`append`/`arrayAppend`, `set`, `remove`) also go to the managed collection, so
+  `parent.getChildren().append( c )` is persisted as it was on Hibernate 5.
+- **A getter the developer wrote is kept.** The ORM only installs its to-many getter when the entity
+  has no getter of that name, or the existing one is BoxLang's generated accessor (`GeneratedGetter`).
 
 ---
 
@@ -349,6 +356,20 @@ when the runtime enables that experimental flag.
   that artifact automatically.
 - **Removed the `entityFacades` and `ormXmlMapping` settings** — the facade + modern-mapping
   paths are now the only paths.
+
+### Testing notes
+
+- **One Derby database per test class.** Never boot the same application against the same
+  in-memory Derby database from two test classes. After rows are deleted, Derby's background
+  cleanup thread (`rawStoreDaemon`) can fail under BoxLang's `DynamicClassLoader` (the thread has no
+  context classloader) and leave a lock held. The next boot's `dbcreate="dropcreate"` schema drop
+  then waits on that lock (60s per table), and in CI the second class ran without its tables. Each
+  Derby test app has its own `jdbc:derby:memory:<name>` (for example `facadeSemanticsApp` reuses the
+  `mappingRegressionApp` entities under its own app name and DB); `ManifestLifecycleBootTest` uses a
+  fresh DB name per test.
+- **Transaction tests** use a unique row value per test (`uniqueName(...)`) and check commits from a
+  separate pooled connection (`committedCount(...)`), so they never depend on test order and never
+  pass without asserting anything.
 
 ---
 
