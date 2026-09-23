@@ -38,13 +38,14 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 /**
  * Live (embedded Derby) tests for how BoxLang entity instances behave on top of their generated facades: a
  * {@code duplicate()}d entity saves its own state, a managed to-many getter is live for writes but snapshot-safe for
- * iteration, and a developer-written getter is never replaced. Uses {@code src/test/resources/mappingRegressionApp}.
+ * iteration, and a developer-written getter is never replaced. Uses {@code src/test/resources/facadeSemanticsApp} (the mappingRegressionApp entities
+ * on their own app and Derby DB).
  */
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 public class FacadeSemanticsBootTest {
 
-	private static final Key	APP_NAME	= Key.of( "BXORMMappingRegressionTest" );
-	private static final Path	APP_ROOT	= Path.of( "src/test/resources/mappingRegressionApp" ).toAbsolutePath();
+	private static final Key	APP_NAME	= Key.of( "BXORMFacadeSemanticsTest" );
+	private static final Path	APP_ROOT	= Path.of( "src/test/resources/facadeSemanticsApp" ).toAbsolutePath();
 
 	private BoxRuntime			instance;
 

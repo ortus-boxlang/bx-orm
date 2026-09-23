@@ -1,0 +1,26 @@
+/**
+ * Test app for FacadeSemanticsBootTest. It reuses the mappingRegressionApp entities but runs as its own application on
+ * its own in-memory Derby database: two test classes must never re-boot one application against the same Derby DB
+ * (a Derby background cleanup that fails under the BoxLang classloader can leave a lock that stalls the next boot's
+ * schema drop).
+ */
+class {
+	this.name = "BXORMFacadeSemanticsTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() ) & "../mappingRegressionApp/";
+
+	this.datasources = {
+		"FacadeSemanticsDB" : { "connectionString" : "jdbc:derby:memory:ormFacadeSemantics;create=true" }
+	};
+	this.datasource = "FacadeSemanticsDB";
+
+	this.ormSettings = {
+		"datasource"  : "FacadeSemanticsDB",
+		"dialect"     : "Derby",
+		"entityPaths" : [ "/root/models" ],
+		"logSQL"      : "false",
+		"dbcreate"    : "dropcreate",
+		"saveMapping" : false
+	};
+	this.ormEnabled = "true";
+}
