@@ -194,7 +194,90 @@ flowchart TD
 
 ---
 
-## 8. Design decisions, at a glance
+## 8. Transactions: riding the BoxLang connection
+
+BoxLang owns transactions through the `transaction{}` block. The ORM does **not** run a Hibernate
+transaction of its own; it **rides the BoxLang transaction's JDBC connection** so that ORM writes
+and native `queryExecute` calls land on the same connection and are governed by one demarcation
+unit — committed together, rolled back together. BoxLang performs the real JDBC commit/rollback.
+
+Four pieces cooperate:
+
+- **`ORMConnectionProvider`** — `getConnection()` asks BoxLang's `ConnectionManager` for the
+  connection, which is transaction-aware: inside a `transaction{}` bound to this datasource it
+  returns the transaction's shared connection, otherwise a fresh pooled one. `closeConnection()`
+  **skips** closing a connection that belongs to the active transaction (BoxLang owns its
+  lifecycle). `supportsAggressiveRelease()` returns `true`.
+- **`SessionFactoryBuilder`** — sets `CONNECTION_HANDLING` to
+  `DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT`, so the session acquires a connection per
+  statement and releases it immediately instead of holding one for its lifetime. Each acquisition
+  therefore re-reads the *current* transaction connection (or a fresh pooled one outside a
+  transaction). This is what makes "ride the transaction connection" work across a request, and it
+  avoids a stale reference to a connection BoxLang closed at transaction end.
+- **`TransactionManager`** (interceptor) — synchronizes the session with BoxLang's transaction
+  events without owning demarcation: **flush** on commit/end (so pending SQL is emitted on the
+  shared connection before BoxLang commits it), **clear** on rollback (so the session drops state
+  BoxLang rolls back at the JDBC level).
+- **`ORMContext.flushForQuery(session)`** — Hibernate suppresses auto-flush-before-query when no
+  Hibernate transaction is in progress (and we run none), so the query choke points
+  (`ORMApp.loadEntitiesByFilter`, `HQLQuery.execute`) call this to flush first when a transaction
+  is active, giving in-transaction ORM queries read-your-writes.
+
+**Connection selection and release, per statement:**
+
+```mermaid
+flowchart TD
+    Q["Hibernate needs a connection<br/>(per statement)"] --> P["ORMConnectionProvider.getConnection()"]
+    P --> C{"ConnectionManager.isInTransaction()<br/>for this datasource?"}
+    C -- yes --> T["return the transaction's<br/>shared connection"]
+    C -- no --> F["return a fresh<br/>pooled connection"]
+    T --> R["after the statement:<br/>closeConnection(conn)"]
+    F --> R
+    R --> S{"conn == active<br/>transaction connection?"}
+    S -- yes --> K["skip close<br/>(BoxLang owns it)"]
+    S -- no --> X["conn.close()<br/>(return to pool)"]
+```
+
+**Transaction lifecycle** (the ORM flushes/clears; BoxLang does the real commit/rollback):
+
+```mermaid
+sequenceDiagram
+    participant BX as "BoxLang transaction{}"
+    participant TM as "TransactionManager"
+    participant HS as "Hibernate Session"
+    participant CX as "shared JDBC connection"
+
+    BX->>TM: onTransactionBegin
+    Note over BX,CX: BoxLang sets autocommit=0 on the shared connection
+    BX->>HS: entitySave(...) — pending in session
+    BX->>HS: EntityLoad(...) — in-transaction query
+    HS->>TM: flushForQuery() (read-your-writes)
+    TM->>CX: INSERT ... (uncommitted)
+    HS->>CX: SELECT ... (sees its own pending writes)
+    alt commit
+      BX->>TM: onTransactionCommit
+      TM->>CX: flush pending SQL
+      BX->>CX: COMMIT
+    else rollback
+      BX->>TM: onTransactionRollback
+      TM->>HS: session.clear()
+      BX->>CX: ROLLBACK
+    end
+    BX->>TM: onTransactionEnd
+    TM->>CX: final flush (no-op if already committed/cleared)
+```
+
+**Nested transactions** are governed entirely by BoxLang. With the default runtime setting
+(`enableNestedTransactions=false`, still experimental), BoxLang **flattens** a nested
+`transaction{}` into the single outer demarcation unit: a nested `transactionCommit()` performs a
+real JDBC commit on the shared connection (it commits the parent too). The `TransactionManager`
+does not try to reinterpret this — it treats every event uniformly and lets BoxLang decide what
+actually commits. Savepoint-based nesting (where a child commit/rollback is scoped) only exists
+when the runtime enables that experimental flag.
+
+---
+
+## 9. Design decisions, at a glance
 
 | Decision | Why |
 | --- | --- |
@@ -205,10 +288,12 @@ flowchart TD
 | One documented internal touch-point (embeddables) | Hibernate has no public embeddable-strategy factory; isolate and guard the single delegation. |
 | Facade-aware Session/SessionFactory wrappers | Preserve the pre-Hibernate-7 behavior consumers such as cborm rely on (by-name calls, `IClassRunnable` args). |
 | Single `ORMEventDispatcher` for all events | One resolution/invocation path for Hibernate events and the bx-orm-native `postNew`. |
+| ORM rides the BoxLang transaction connection (no own Hibernate tx) | One demarcation unit for ORM + native queries; BoxLang owns commit/rollback, so its transaction model governs ORM writes. |
+| Per-statement connection release (`RELEASE_AFTER_STATEMENT` + aggressive release) | Lets each statement re-read the current transaction connection and avoids a stale reference after BoxLang closes it at transaction end. |
 
 ---
 
-## 9. Migration notes (5.6 → 7.4)
+## 10. Migration notes (5.6 → 7.4)
 
 - **Tuplizer → representation strategy** injected via `hibernate.persister.factory` (see §4).
 - **`saveOrUpdate()` removed** — `entitySave()` now uses `persist()` for new entities and
@@ -224,7 +309,7 @@ flowchart TD
 
 ---
 
-## 10. The ORM manifest boot cache (`.bxorm/`)
+## 11. The ORM manifest boot cache (`.bxorm/`)
 
 Boot has three costs: entity **discovery** (walking the tree), **metadata parsing** (per entity,
 scales linearly with entity count), **mapping generation**, and Hibernate's own `SessionFactory`
@@ -289,7 +374,7 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
 `resolveEntityMap`, `EntityFacadeFactory` (facade jar load/write), `ModuleConfig.main`,
 `ORMService.ensureEntityWatcher`, and the auto-reload check in `ORMService.getORMAppByContext`.
 
-## 11. Where we go next
+## 12. Where we go next
 
 - **AOP / byte-weaving spike** — investigate weaving the *real* BoxLang class as the Hibernate
   entity (via ByteBuddy advice) instead of generating a separate facade, to shrink the
@@ -299,7 +384,7 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
 
 ---
 
-## 12. Where the code lives
+## 13. Where the code lives
 
 | Area | Package / path |
 | --- | --- |

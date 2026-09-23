@@ -27,6 +27,7 @@ import java.util.Properties;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.resource.jdbc.spi.PhysicalConnectionHandlingMode;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMConnectionProvider;
@@ -182,6 +183,11 @@ public class SessionFactoryBuilder {
 
 		// Any configuration which needs a specific java type (such as the connection provider instance) goes here
 		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasourceName ) );
+		// Acquire a connection lazily per statement and release it immediately after. Each acquisition goes
+		// back through ORMConnectionProvider, which is transaction-aware, so ORM writes issued inside a
+		// BoxLang transaction{} ride that transaction's shared connection and are governed by BoxLang's
+		// single-unit commit/rollback. Outside a transaction each statement uses a fresh pooled connection.
+		properties.put( AvailableSettings.CONNECTION_HANDLING, PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT );
 		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
 		properties.put( AvailableSettings.CLASSLOADERS, classLoaders );
 		properties.put( AvailableSettings.GLOBALLY_QUOTED_IDENTIFIERS, StringCaster.cast( ormConfig.quoteIdentifiers ) );

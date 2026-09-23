@@ -233,8 +233,25 @@ public class ORMContext {
 	}
 
 	/**
+	 * Flush the given session before an ORM query when a BoxLang transaction is active, so the query
+	 * observes the transaction's own pending writes (read-your-writes).
+	 * <p>
+	 * The ORM rides the BoxLang transaction connection and runs no Hibernate transaction of its own;
+	 * Hibernate therefore suppresses auto-flush-before-query (and sessions are MANUAL when
+	 * {@code autoManageSession} is false), so this explicit flush provides the expected in-transaction
+	 * read consistency. Outside a transaction it is a no-op.
+	 *
+	 * @param session The Hibernate session about to execute a query.
+	 */
+	public void flushForQuery( Session session ) {
+		if ( session != null && session.isOpen() && getConnectionManager().isInTransaction() ) {
+			session.flush();
+		}
+	}
+
+	/**
 	 * Get the datasource for a given name, falling back to the default datasource if the name is null.
-	 * 
+	 *
 	 * @param datasourceName The name of the datasource to retrieve, or null to retrieve the default datasource.
 	 *
 	 * @throws BoxRuntimeException if neither the named nor a default datasource could be found.

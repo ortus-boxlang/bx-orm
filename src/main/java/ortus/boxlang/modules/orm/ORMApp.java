@@ -442,11 +442,14 @@ public class ORMApp {
 	 * @param options    Struct of options, including maxResults, offset, order, etc.
 	 */
 	public Array loadEntitiesByFilter( IBoxContext context, String entityName, IStruct filter, IStruct options ) {
-		EntityRecord		entityRecord	= this.lookupEntity( entityName, true );
-		Session				session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
-		StringBuilder		hql				= new StringBuilder( "select e from " ).append( entityRecord.getEntityName() ).append( " e" );
-		Map<String, Object>	params			= new HashMap<>();
-		Array				properties		= entityRecord.getEntityMeta().getPropertyNamesArray();
+		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
+		ORMContext		ormContext		= ORMContext.getForContext( context );
+		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
+		// Read-your-writes: flush pending ORM writes when inside a BoxLang transaction so this query sees them.
+		ormContext.flushForQuery( session );
+		StringBuilder		hql			= new StringBuilder( "select e from " ).append( entityRecord.getEntityName() ).append( " e" );
+		Map<String, Object>	params		= new HashMap<>();
+		Array				properties	= entityRecord.getEntityMeta().getPropertyNamesArray();
 
 		if ( filter != null && !filter.isEmpty() ) {
 

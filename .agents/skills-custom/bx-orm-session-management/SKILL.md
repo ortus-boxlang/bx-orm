@@ -6,7 +6,7 @@ domain: bx-orm
 triggers: ORMService, ORMApp, ORMContext, SessionFactoryBuilder, HQLQuery, hibernate session, session factory, orm session, session lifecycle, flush, evict, clear session, close session, getSession, datasource binding, context attachment
 role: expert
 scope: bx-orm
-related-skills: bx-orm-hibernate-bridge, bx-orm-configuration, bx-orm-event-system
+related-skills: bx-orm-hibernate-bridge, bx-orm-configuration, bx-orm-event-system, bx-orm-transactions
 ---
 
 # BoxLang ORM — Session Management
@@ -187,9 +187,27 @@ public Session getSession( Key datasource ) {
     return sessions.computeIfAbsent( datasource, ds -> {
         SessionFactory factory = ormApp.getSessionFactory( ds );
         Session session = factory.openSession();
-        // Apply flush mode, connection, etc.
+        if ( !config.autoManageSession ) {
+            session.setHibernateFlushMode( FlushMode.MANUAL );  // only explicit flush() writes
+        }
         return session;
     } );
+}
+```
+
+### flushForQuery — in-transaction read-your-writes
+
+Because the ORM runs no Hibernate transaction (it rides the BoxLang transaction connection),
+Hibernate suppresses auto-flush-before-query. `ORMContext.flushForQuery(session)` flushes when a
+BoxLang transaction is active so an in-transaction ORM query sees its own pending writes. It is
+called by the query choke points (`ORMApp.loadEntitiesByFilter`, `HQLQuery.execute`). See the
+**`bx-orm-transactions`** skill for the whole transaction design.
+
+```java
+public void flushForQuery( Session session ) {
+    if ( session != null && session.isOpen() && getConnectionManager().isInTransaction() ) {
+        session.flush();
+    }
 }
 ```
 
@@ -248,10 +266,16 @@ public class SessionFactoryBuilder {
         configuration.getProperties().put( "hibernate.persister.factory", new BoxPersisterFactory( entityMap ) );
         configuration.setInterceptor( new ORMInterceptor() );
 
-        // 3. Set connection provider (BoxLang datasource → JDBC)
-        configuration.setProperty(
+        // 3. Set connection provider (BoxLang datasource → JDBC) — transaction-aware, see bx-orm-transactions
+        configuration.getProperties().put(
             AvailableSettings.CONNECTION_PROVIDER,
-            ORMConnectionProvider.class.getName()
+            new ORMConnectionProvider( datasourceName )
+        );
+        // 3b. Acquire/release a connection PER STATEMENT so each statement rides the current
+        //     BoxLang transaction connection (or a fresh pooled one). See bx-orm-transactions.
+        configuration.getProperties().put(
+            AvailableSettings.CONNECTION_HANDLING,
+            PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT
         );
 
         // 4. Generate and add entity mappings

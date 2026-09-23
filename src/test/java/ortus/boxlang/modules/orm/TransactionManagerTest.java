@@ -183,6 +183,7 @@ public class TransactionManagerTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( Key.of( "inside" ) ).size() ).isEqualTo( 0 );
 	}
 
+	@Disabled( "Requires the runtime's experimental enableNestedTransactions=true. With the default (false), BoxLang flattens nested transaction{} blocks into a single demarcation unit, so a nested transactionCommit() performs a real JDBC commit on the shared connection and does commit the parent." )
 	@DisplayName( "Child transaction cannot commit parent transaction" )
 	@Test
 	public void testORMChildTransactionCantCommitParent() {

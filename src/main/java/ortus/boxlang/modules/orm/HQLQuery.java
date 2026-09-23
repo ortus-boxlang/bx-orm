@@ -342,10 +342,15 @@ public class HQLQuery {
 	}
 
 	public Object execute() {
-		boolean							isUpdate	= this.hql.trim().toUpperCase().startsWith( UPDATE_PREFIX )
+		boolean isUpdate = this.hql.trim().toUpperCase().startsWith( UPDATE_PREFIX )
 		    || this.hql.trim().toUpperCase().startsWith( DELETE_PREFIX );
 
-		org.hibernate.query.Query<?>	hqlQuery	= session.createQuery( this.hql );
+		// Read-your-writes: flush pending ORM writes when inside a BoxLang transaction so this query sees them.
+		if ( !isUpdate ) {
+			ormContext.flushForQuery( session );
+		}
+
+		org.hibernate.query.Query<?> hqlQuery = session.createQuery( this.hql );
 
 		if ( !ormContext.getConfig().autoManageSession ) {
 			hqlQuery.setHibernateFlushMode( org.hibernate.FlushMode.MANUAL );

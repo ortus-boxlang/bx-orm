@@ -6,7 +6,7 @@ domain: bx-orm
 triggers: event listener, hibernate integrator, entity event, preInsert, postLoad, preUpdate, preDelete, TransactionManager, ApplicationListener, ORM transaction, event type registration, EventListenerRegistry, global listener, entity handler, interception point, onTransactionBegin
 role: expert
 scope: bx-orm
-related-skills: bx-orm-session-management, bx-orm-configuration, boxlang-core-dev-interceptors
+related-skills: bx-orm-session-management, bx-orm-configuration, bx-orm-transactions, boxlang-core-dev-interceptors
 ---
 
 # BoxLang ORM — Event System
@@ -29,7 +29,7 @@ flowchart TB
     D --> F["Announce BoxLang<br/>interception point"]
     E --> F
     F --> G["BoxLang InterceptorService"]
-    G --> H["TransactionManager<br/>(tx begin/commit/rollback)"]
+    G --> H["TransactionManager<br/>(flush on commit/end, clear on rollback)"]
     G --> I["ApplicationListener<br/>(app start/shutdown)"]
 
     subgraph "Entity-Level"
@@ -44,7 +44,7 @@ flowchart TB
 | Class | Package | Responsibility |
 |---|---|---|
 | `EventListener` | `ortus.boxlang.modules.orm.config` | Hibernate `Integrator`; registers for all event types; dispatches to global & entity listeners |
-| `TransactionManager` | `ortus.boxlang.modules.orm.interceptors` | BoxLang interceptor; manages Hibernate transaction lifecycle |
+| `TransactionManager` | `ortus.boxlang.modules.orm.interceptors` | BoxLang interceptor; syncs the session to BoxLang tx events (flush/clear). ORM rides the BoxLang tx connection — see `bx-orm-transactions`. |
 | `ApplicationListener` | `ortus.boxlang.modules.orm.interceptors` | BoxLang interceptor; manages ORM app startup/shutdown |
 
 ## EventListener — Hibernate Integrator
@@ -152,30 +152,37 @@ private void ensureListenerReady() {
 
 ## TransactionManager — Transaction Lifecycle
 
-`TransactionManager` is a BoxLang interceptor that listens to BoxLang transaction events and translates them into Hibernate session transaction operations:
+> **The ORM does NOT run its own Hibernate transaction.** It **rides the BoxLang transaction's
+> JDBC connection** (via `ORMConnectionProvider`), so BoxLang owns the real commit/rollback. The
+> `TransactionManager` interceptor only synchronizes the Hibernate session with BoxLang's
+> transaction events. **For the full design see the `bx-orm-transactions` skill.**
+
+`TransactionManager` is a BoxLang interceptor that listens to BoxLang transaction events and
+flushes/clears the Hibernate session accordingly — it does **not** call
+`beginTransaction()`/`commit()`/`rollback()` on the Hibernate transaction:
 
 ```java
 public class TransactionManager extends BaseInterceptor {
 
     @InterceptionPoint
-    public void onTransactionBegin( IStruct args ) {
-        IBoxContext context = args.getAs( IBoxContext.class, Key.context );
-        ORMApp ormApp = ormService.getORMAppByContext( context );
-
-        ORMContext ormContext = ORMContext.getForContext( jdbcContext );
-
+    public void onTransactionCommit( IStruct args ) {
+        // Flush pending SQL onto the shared transaction connection; BoxLang performs the JDBC commit.
         ormApp.getDatasources().forEach( datasource -> {
             Session session = ormContext.getSession( datasource );
-
-            if ( config.autoManageSession ) {
-                session.flush();  // Flush pending ops before tx start
+            if ( session.isOpen() ) {
+                session.flush();
             }
+        } );
+    }
 
-            if ( session.isJoinedToTransaction() ) {
-                return;  // Already in a transaction (nested txs not supported)
+    @InterceptionPoint
+    public void onTransactionRollback( IStruct args ) {
+        // Clear the session so it drops state BoxLang rolls back at the JDBC level (always, not gated on autoManageSession).
+        ormApp.getDatasources().forEach( datasource -> {
+            Session session = ormContext.getSession( datasource );
+            if ( session.isOpen() ) {
+                session.clear();
             }
-
-            session.beginTransaction();
         } );
     }
 }
@@ -183,26 +190,33 @@ public class TransactionManager extends BaseInterceptor {
 
 ### Transaction Events
 
-| Interception Point | Hibernate Action |
+| Interception Point | ORM Action (BoxLang owns the real JDBC commit/rollback) |
 |---|---|
-| `onTransactionBegin` | `session.beginTransaction()` for each datasource |
-| `onTransactionCommit` | `session.getTransaction().commit()` |
-| `onTransactionRollback` | `session.getTransaction().rollback()` |
-| `onTransactionEnd` | Cleanup (close sessions if auto-managed) |
-| `onTransactionSetSavepoint` | `session.setSavepoint( name )` |
-| `onTransactionRollbackSavepoint` | `session.rollbackToSavepoint( name )` |
+| `onTransactionBegin` | Pre-flush pending work **only when** `autoManageSession=true` (Lucee compat). No Hibernate `beginTransaction()`. |
+| `onTransactionCommit` | `session.flush()` — emit pending SQL on the shared connection; BoxLang commits it. |
+| `onTransactionRollback` | `session.clear()` — discard pending/first-level cache; BoxLang rolls back the connection. Always runs (not gated on `autoManageSession`). |
+| `onTransactionEnd` | `session.flush()` — final flush (no-op if already committed/cleared); BoxLang ends the unit. |
+| `onTransactionSetSavepoint` | `session.flush()` on a `CHILD_*_END` savepoint (nested-unit boundary). |
 
-### Auto-Managed Session Behavior
+### Read-your-writes inside a transaction
 
-When `autoManageSession=true`:
-```java
-if ( config.autoManageSession ) {
-    session.flush();  // Flush pending operations before transaction start
-}
-```
+Because there is no Hibernate transaction, Hibernate suppresses auto-flush-before-query. The query
+choke points (`ORMApp.loadEntitiesByFilter`, `HQLQuery.execute`) therefore call
+`ORMContext.flushForQuery(session)`, which flushes when a BoxLang transaction is active so an
+in-transaction ORM query observes its own pending writes.
 
-This provides Lucee compatibility:
-- [extension-hibernate Transaction.java](https://github.com/Ortus-Solutions/extension-hibernate/blob/857aef3/extension/src/main/java/ortus/extension/orm/HibernateORMTransaction.java#L48)
+### Nested transactions
+
+Governed entirely by BoxLang. With the default `enableNestedTransactions=false` (experimental),
+BoxLang **flattens** a nested `transaction{}`: a nested `transactionCommit()` performs a real JDBC
+commit on the shared connection (commits the parent too). The interceptor treats every event
+uniformly and lets BoxLang decide what commits.
+
+Historical note: earlier the ORM ran its own Hibernate transaction (`beginTransaction()` /
+`getTransaction().commit()` / `rollback()`) on a separate connection. That was replaced by the
+connection-riding model so ORM writes and native `queryExecute` share one demarcation unit. The
+`autoManageSession=true` pre-flush on begin retains [Lucee
+compatibility](https://github.com/Ortus-Solutions/extension-hibernate/blob/857aef3/extension/src/main/java/ortus/extension/orm/HibernateORMTransaction.java#L48).
 
 ## ApplicationListener — Application Lifecycle
 
