@@ -258,13 +258,13 @@ public class ORMApp {
 			ortus.boxlang.modules.orm.mapping.manifest.OrmManifest	manifest	= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
 			    .read( folder, true );
 			// Fail closed on a stale manifest: booting old mappings against changed entities or settings would silently
-			// persist to the wrong columns/tables. Regenerate with an auto-mode boot or `bxorm manifest generate`.
+			// persist to the wrong columns/tables. Regenerate it with an auto-mode boot.
 			List<String>											stale		= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
 			    .verify( manifest, this.config, moduleVersion() );
 			if ( !stale.isEmpty() ) {
 				throw new BoxRuntimeException( "ORM manifest mode is [trust] but the manifest at [" + folder + "] is stale: "
 				    + String.join( "; ", stale )
-				    + ". Regenerate it (boot once with ormManifest=\"auto\" or run `bxorm manifest generate`), or switch ormManifest to [auto]." );
+				    + ". Regenerate it by booting once with ormManifest=\"auto\", then switch back to [trust]." );
 			}
 			// Load pre-generated facade bytecode (if a facades.jar was shipped) so the session factory build injects those
 			// classes instead of re-running ByteBuddy. Best-effort: a missing jar just means facades are regenerated.

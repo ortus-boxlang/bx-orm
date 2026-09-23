@@ -604,12 +604,12 @@ After `clear`, `info` reports the absence (exit `0`), while `validate` fails clo
 
 ```text
 $ boxlang module:orm info
-ℹ️  No ORM manifest found at [/app/.bxorm]. Boot the app once with ormManifest="auto" to generate it.
+ℹ️  No ORM manifest found at [/app/.bxorm]. Boot the app once with ormManifest="auto" to generate it. If your app sets ormManifestLocation, point the CLI at it with --dir=<that folder>.
 ```
 
 ```text
 $ boxlang module:orm validate
-❌ ORM manifest is INVALID: ORM manifest mode is [trust] but no manifest was found at [/app/.bxorm/manifest.json]. Generate it first (bxorm manifest generate) or switch ormManifest to [auto].
+❌ No ORM manifest found at [/app/.bxorm]. Boot the app once with ormManifest="auto" to generate it. If your app sets ormManifestLocation, point the CLI at it with --dir=<that folder>.
 ```
 
 **Auto-mode self-watcher.** In `auto` mode, `ORMApp.startup` calls `ORMService.ensureEntityWatcher`,

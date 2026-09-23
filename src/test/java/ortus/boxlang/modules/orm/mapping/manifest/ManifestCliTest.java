@@ -70,6 +70,8 @@ public class ManifestCliTest {
 		CliResult result = ManifestCli.run( folder, "2.0.0", "info" );
 		assertThat( result.exitCode() ).isEqualTo( 0 );
 		assertThat( result.message() ).contains( "No ORM manifest found" );
+		assertThat( result.message() ).contains( "ormManifest=\"auto\"" );
+		assertThat( result.message() ).contains( "--dir=" );
 	}
 
 	@DisplayName( "info summarizes a written manifest" )
@@ -100,7 +102,24 @@ public class ManifestCliTest {
 	@DisplayName( "validate fails closed when the manifest is missing" )
 	@Test
 	public void testValidateMissing( @TempDir Path folder ) {
-		assertThat( ManifestCli.run( folder, "2.0.0", "validate" ).exitCode() ).isEqualTo( 1 );
+		CliResult result = ManifestCli.run( folder, "2.0.0", "validate" );
+		assertThat( result.exitCode() ).isEqualTo( 1 );
+		// Same guidance as the other verbs, and never a command that does not exist.
+		assertThat( result.message() ).contains( "No ORM manifest found" );
+		assertThat( result.message() ).contains( "ormManifest=\"auto\"" );
+		assertThat( result.message() ).contains( "--dir=" );
+		assertThat( result.message() ).doesNotContain( "manifest generate" );
+	}
+
+	@DisplayName( "entities, entity and mappings fail with exit 1 and the same guidance when no manifest exists" )
+	@Test
+	public void testReadVerbsWhenAbsent( @TempDir Path folder ) {
+		for ( String[] args : new String[][] { { "entities" }, { "entity", "User" }, { "mappings" } } ) {
+			CliResult result = ManifestCli.run( folder, "2.0.0", args );
+			assertThat( result.exitCode() ).isEqualTo( 1 );
+			assertThat( result.message() ).contains( "No ORM manifest found" );
+			assertThat( result.message() ).contains( "--dir=" );
+		}
 	}
 
 	@DisplayName( "entities lists all recorded entities" )

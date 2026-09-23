@@ -111,7 +111,7 @@ public final class ManifestCli {
 	private static CliResult info( Path folder ) {
 		OrmManifest manifest = readOptional( folder );
 		if ( manifest == null ) {
-			return new CliResult( "ℹ️  No ORM manifest found at [" + folder + "]. Boot the app once with ormManifest=\"auto\" to generate it.", 0 );
+			return new CliResult( "ℹ️  " + noManifestMessage( folder ), 0 );
 		}
 		StringBuilder sb = new StringBuilder();
 		sb.append( "📦 ORM manifest [" ).append( folder ).append( "]\n" );
@@ -127,7 +127,11 @@ public final class ManifestCli {
 	}
 
 	private static CliResult validate( Path folder ) {
-		// read( failIfAbsent=true ) performs the integrity + format-version checks and throws on any problem.
+		// A missing manifest fails closed (exit 1) with the same guidance as the other verbs; read() then performs the
+		// integrity + format-version checks and throws on any problem.
+		if ( !Files.exists( folder.resolve( ManifestService.MANIFEST_NAME ) ) ) {
+			return new CliResult( "❌ " + noManifestMessage( folder ), 1 );
+		}
 		try {
 			OrmManifest manifest = ManifestService.read( folder, true );
 			return new CliResult( "✅ ORM manifest at [" + folder + "] is valid (" + manifest.getEntities().size() + " entities, format "
@@ -213,9 +217,19 @@ public final class ManifestCli {
 	private static OrmManifest requireManifest( Path folder ) {
 		OrmManifest manifest = ManifestService.read( folder, false );
 		if ( manifest == null ) {
-			throw new CliError( "❌ No ORM manifest found at [" + folder + "]. Boot the app once with ormManifest=\"auto\" to generate it." );
+			throw new CliError( "❌ " + noManifestMessage( folder ) );
 		}
 		return manifest;
+	}
+
+	/**
+	 * The guidance shown whenever no manifest exists at the folder the CLI is looking at. The CLI looks in
+	 * {@code <--dir or current directory>/.bxorm} and does not read the application's {@code ormManifestLocation}, so say
+	 * how to point it there.
+	 */
+	static String noManifestMessage( Path folder ) {
+		return "No ORM manifest found at [" + folder + "]. Boot the app once with ormManifest=\"auto\" to generate it."
+		    + " If your app sets ormManifestLocation, point the CLI at it with --dir=<that folder>.";
 	}
 
 	private static String shorten( String hash ) {

@@ -175,7 +175,7 @@ public final class ManifestService {
 			if ( failIfAbsent ) {
 				throw new BoxRuntimeException(
 				    "ORM manifest mode is [trust] but no manifest was found at [" + manifestFile
-				        + "]. Generate it first (bxorm manifest generate) or switch ormManifest to [auto]." );
+				        + "]. Boot the app once with ormManifest=\"auto\" to generate it, then switch back to [trust]." );
 			}
 			return null;
 		}
