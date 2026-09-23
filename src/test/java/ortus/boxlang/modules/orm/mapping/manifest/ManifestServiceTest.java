@@ -185,4 +185,23 @@ public class ManifestServiceTest {
 			throw new RuntimeException( e );
 		}
 	}
+
+	@DisplayName( "resolveFolder defaults to the app root and honors a configured location" )
+	@Test
+	public void testResolveFolderLocation( @TempDir Path tmp ) {
+		// Default (null/blank) → .bxorm at the application root, unchanged behavior.
+		Path rootDefault = ManifestService.resolveFolder( context );
+		assertThat( rootDefault.getFileName().toString() ).isEqualTo( ManifestService.FOLDER_NAME );
+		assertThat( ManifestService.resolveFolder( context, null ) ).isEqualTo( rootDefault );
+		assertThat( ManifestService.resolveFolder( context, "   " ) ).isEqualTo( rootDefault );
+
+		// Absolute location → <location>/.bxorm, used as-is.
+		Path abs = ManifestService.resolveFolder( context, tmp.toAbsolutePath().toString() );
+		assertThat( abs ).isEqualTo( tmp.toAbsolutePath().resolve( ManifestService.FOLDER_NAME ) );
+
+		// Relative location → resolved (still ends in .bxorm, and carries the relative segment).
+		Path rel = ManifestService.resolveFolder( context, "build/tmp/manifest-here" );
+		assertThat( rel.getFileName().toString() ).isEqualTo( ManifestService.FOLDER_NAME );
+		assertThat( rel.toString() ).contains( "manifest-here" );
+	}
 }

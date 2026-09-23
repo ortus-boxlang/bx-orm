@@ -202,7 +202,8 @@ public class ORMApp {
 		// can inject those classes instead of re-running ByteBuddy. Best-effort; a failure never breaks boot.
 		if ( "auto".equals( this.config.ormManifest ) ) {
 			try {
-				java.nio.file.Path jar = ortus.boxlang.modules.orm.mapping.manifest.ManifestService.resolveFolder( context.getRequestContext() )
+				java.nio.file.Path jar = ortus.boxlang.modules.orm.mapping.manifest.ManifestService
+				    .resolveFolder( context.getRequestContext(), this.config.manifestLocation )
 				    .resolve( ortus.boxlang.modules.orm.mapping.manifest.ManifestService.FACADES_JAR );
 				ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory.writeFacadeJar( jar, this.config.facadeNamespace );
 			} catch ( RuntimeException e ) {
@@ -240,7 +241,7 @@ public class ORMApp {
 
 		if ( "trust".equals( mode ) ) {
 			java.nio.file.Path										folder		= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
-			    .resolveFolder( context.getRequestContext() );
+			    .resolveFolder( context.getRequestContext(), this.config.manifestLocation );
 			ortus.boxlang.modules.orm.mapping.manifest.OrmManifest	manifest	= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
 			    .read( folder, true );
 			// Load pre-generated facade bytecode (if a facades.jar was shipped) so the session factory build injects those
@@ -256,7 +257,8 @@ public class ORMApp {
 
 		if ( "auto".equals( mode ) ) {
 			try {
-				java.nio.file.Path folder = ortus.boxlang.modules.orm.mapping.manifest.ManifestService.resolveFolder( context.getRequestContext() );
+				java.nio.file.Path folder = ortus.boxlang.modules.orm.mapping.manifest.ManifestService
+				    .resolveFolder( context.getRequestContext(), this.config.manifestLocation );
 				ortus.boxlang.modules.orm.mapping.manifest.ManifestService.write(
 				    ortus.boxlang.modules.orm.mapping.manifest.ManifestService.build( map, this.config, moduleVersion() ), folder );
 				if ( logger.isDebugEnabled() ) {

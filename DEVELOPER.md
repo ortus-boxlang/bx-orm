@@ -325,6 +325,12 @@ manifest cache targets the part we *can* remove.
 | `auto` | Discover normally, then write the resolved boot model to `.bxorm/manifest.json` so it stays current. Dev mode. |
 | `trust` | Boot **straight from** `.bxorm/manifest.json` — no discovery, parsing or mapping generation. Integrity-checked and **fail-closed** (a missing/corrupt manifest is a hard error, never a silent fallback). Production mode. |
 
+**Location.** By default the `.bxorm/` folder lives at the application root. Set `ormManifestLocation`
+in `Application.bx` (`this.ormSettings`) to put it elsewhere: a relative path resolves against the
+app root, an absolute path is used as-is, and the folder name is always `.bxorm` (only its parent
+moves). The `bxorm` CLI mirrors this with `--dir=<path>`. `ManifestService.resolveFolder(context,
+location)` is the single resolver all boot reads/writes go through.
+
 **What the manifest stores** (`OrmManifest`, serialized as JSON via BoxLang's own `JSONUtil` so it
 round-trips through BoxLang types): a format version, an ORM version stamp, a config fingerprint,
 and per entity its name, class FQN, datasource, a source-file fingerprint (`path`/`hash`/`mtime`/
@@ -346,11 +352,29 @@ Stronger tamper-resistance (an HMAC/signature keyed by a deploy secret) is a doc
 (`ClassInjector.UsingUnsafe`) instead of re-running codegen, with a transparent ByteBuddy fallback if
 injection fails. ByteBuddy stays a dependency (it is only skipped at runtime, not removed).
 
-**`bxorm` CLI.** `box.json` declares the `bxorm` executable and `ModuleConfig.main()` dispatches to
-the Java `ManifestCli`, which reads/validates/clears the `.bxorm/` boot cache with no ORM boot:
-`info` (default), `validate`, `entities`, `entity <name>`, `mappings`, `clear`, `version`, `help`.
-The `.bxorm/` folder is resolved against the working directory, overridable with `--dir=<path>`.
-Generation is not a verb: `auto` mode writes the manifest on every boot, which is the generation path.
+### The `bxorm` CLI
+
+`box.json` declares the `bxorm` executable and `ModuleConfig.main()` dispatches to the Java
+`ManifestCli`. Every verb inspects the on-disk `.bxorm/` boot cache **without booting Hibernate**.
+The folder is resolved against the working directory, overridable with `--dir=<path>`.
+
+```text
+boxlang module:orm <verb> [args]      # or, via the declared executable:  bxorm <verb> [args]
+```
+
+| Verb | What it does |
+| --- | --- |
+| `info` (default) | Manifest header (versions, config fingerprint) + entity count |
+| `validate` | Integrity- and format-check the manifest; non-zero exit on failure |
+| `entities` | List the entities recorded in the manifest |
+| `entity <name>` | Show one entity's class, datasource, source and mapping XML (case-insensitive) |
+| `mappings` | Print the combined Hibernate `mapping.xml` |
+| `clear` | Delete the `.bxorm/` boot cache |
+| `version` | Module + manifest format versions |
+| `help` | Show usage (aliases: `-h`, `--help`; `version` also as `-v`/`--version`) |
+
+Generation is intentionally **not** a verb: `auto` mode writes the manifest on every boot, which is
+the supported generation path.
 
 **Auto-mode self-watcher.** In `auto` mode, `ORMApp.startup` calls `ORMService.ensureEntityWatcher`,
 which starts one `ORMEntityWatcher` per application (idempotent) over the entity paths (recursive,
@@ -376,9 +400,6 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
 
 ## 12. Where we go next
 
-- **AOP / byte-weaving spike** — investigate weaving the *real* BoxLang class as the Hibernate
-  entity (via ByteBuddy advice) instead of generating a separate facade, to shrink the
-  wrap/unwrap surface.
 - **cborm-compatible path** — produce a facade/representation that cborm can adopt; cborm keeps
   working as-is until a new path is proven.
 

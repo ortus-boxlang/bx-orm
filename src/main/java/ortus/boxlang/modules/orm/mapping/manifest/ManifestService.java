@@ -67,7 +67,27 @@ public final class ManifestService {
 	 * @return The absolute path to the {@code .bxorm/} folder.
 	 */
 	public static Path resolveFolder( IBoxContext context ) {
-		return Path.of( FileSystemUtil.expandPath( context, FOLDER_NAME ).absolutePath().toString() );
+		return resolveFolder( context, null );
+	}
+
+	/**
+	 * Resolve the {@code .bxorm/} folder for an application, under the given location.
+	 * <p>
+	 * A blank location resolves to the application root (the default). A relative location is resolved against the
+	 * application root; an absolute location is used as-is. The folder name is always {@code .bxorm}; only its parent
+	 * directory moves. Configured in {@code Application.bx} via the {@code ormManifestLocation} ORM setting.
+	 *
+	 * @param context  The request context (used to expand the application-relative path).
+	 * @param location The directory that holds the {@code .bxorm/} folder, or {@code null}/blank for the application root.
+	 *
+	 * @return The absolute path to the {@code .bxorm/} folder.
+	 */
+	public static Path resolveFolder( IBoxContext context, String location ) {
+		if ( location == null || location.isBlank() ) {
+			return Path.of( FileSystemUtil.expandPath( context, FOLDER_NAME ).absolutePath().toString() );
+		}
+		Path base = Path.of( FileSystemUtil.expandPath( context, location.trim() ).absolutePath().toString() );
+		return base.resolve( FOLDER_NAME );
 	}
 
 	/**
