@@ -19,44 +19,55 @@ package ortus.boxlang.modules.orm;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.UUID;
+
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
 
 public class TransactionManagerTest extends BaseORMTest {
 
-	@DisplayName( "Can save/flush entity modifications outside of a transaction block" )
+	@DisplayName( "An ORM write outside any transaction is committed (visible from a separate connection)" )
 	@Test
-	public void testAutomaticTransactions() {
+	public void testAutomaticTransactions() throws SQLException {
+		String name = uniqueName( "Audi" );
 		// @formatter:off
 		instance.executeSource(
 			"""
-			entitySave( entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } ) );
+			entitySave( entityNew( "manufacturer", { name : "%s", address : "101 Audi Way" } ) );
 			ormFlush();
-			""",
+			""".formatted( name ),
 			context
 		);
 		// @formatter:on
+		assertThat( committedCount( name ) ).isEqualTo( 1 );
 	}
 
 	@DisplayName( "It wont cause table/connection locking when ORM and native JDBC queries coexist" )
 	@Test
 	public void testORMAndNativeQueryCoexistence() {
+		String name = uniqueName( "Audi" );
 		// @formatter:off
 		instance.executeSource(
 			"""
-			entitySave( entityNew( "manufacturer", { name : "Audi Corp", address : "101 Audi Way" } ), true );
+			entitySave( entityNew( "manufacturer", { name : "%s", address : "101 Audi Way" } ), true );
 			ormFlush();
-			result = queryExecute( "SELECT * FROM manufacturers WHERE name = 'Audi Corp'" );
-			""",
+			result = queryExecute( "SELECT * FROM manufacturers WHERE name = :name", { name : "%s" } );
+			""".formatted( name, name ),
 			context
 		);
 		// @formatter:on
 		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
-		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Audi Corp" );
+		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( name );
 	}
 
 	@DisplayName( "It commits on transaction close" )
@@ -91,6 +102,35 @@ public class TransactionManagerTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( Key.of( "result2" ) ).size() ).isEqualTo( 1 );
 		assertThat( variables.getAsQuery( Key.of( "result2" ) ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Chrysler Corporation" );
 		assertThat( variables.getAsInteger( Key.of( "result3" ) ) ).isEqualTo( 3 );
+	}
+
+	@DisplayName( "Id allocation through Hibernate isolated work never commits the surrounding BoxLang transaction" )
+	@Test
+	public void testIsolatedWorkDoesNotCommitTransaction() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			queryExecute( "INSERT INTO manufacturers ( id, name, address ) VALUES ( 9001, 'Isolation Corp', 'original' )" );
+			try {
+				transaction {
+					queryExecute( "UPDATE manufacturers SET address = 'changed-in-tx' WHERE id = 9001" );
+					// A sequence-style id on MySQL/MariaDB is allocated via Hibernate isolated work, which commits its own connection.
+					entitySave( entityNew( "SeqGadget", { name : "isolated" } ) );
+					throw( "boom" );
+				}
+			} catch ( any e ) {
+				// expected: the transaction rolls back
+			}
+			address  = queryExecute( "SELECT address FROM manufacturers WHERE id = 9001" ).address;
+			gadgets  = queryExecute( "SELECT count(*) AS n FROM seq_gadgets WHERE name = 'isolated'" ).n;
+			queryExecute( "DELETE FROM manufacturers WHERE id = 9001" );
+			""",
+			context
+		);
+		// @formatter:on
+		// The native update and the ORM insert were both inside the rolled-back transaction.
+		assertThat( variables.getAsString( Key.of( "address" ) ) ).isEqualTo( "original" );
+		assertThat( ( ( Number ) variables.get( Key.of( "gadgets" ) ) ).intValue() ).isEqualTo( 0 );
 	}
 
 	@DisplayName( "It rolls back on transaction rollback" )
@@ -131,7 +171,7 @@ public class TransactionManagerTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( "Mitsubishi Corp" );
 	}
 
-	@Disabled( "AutoManageSession only" )
+	@Disabled( "Requires autoManageSession=true, which the test app leaves off: only then does onTransactionBegin flush pre-transaction writes, so a later rollback cannot discard them." )
 	@DisplayName( "Rollbacks are limited to changes in the transaction context" )
 	@Test
 	public void testORMChildTransactionRollback() {
@@ -156,7 +196,7 @@ public class TransactionManagerTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( Key.of( "inside" ) ).size() ).isEqualTo( 0 );
 	}
 
-	@Disabled( "Fails! Need to prevent inner transaction rollbacks from rolling back the outer transaction." )
+	@Disabled( "Requires the runtime's experimental enableNestedTransactions=true. With the default (false), BoxLang flattens nested transaction{} blocks into a single demarcation unit, so a nested transactionRollback() rolls back the parent's work too." )
 	@DisplayName( "Child transaction cannot roll back parent transaction" )
 	@Test
 	public void testORMChildTransactionCantRollbackParent() {
@@ -239,41 +279,98 @@ public class TransactionManagerTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 0 );
 	}
 
-	@DisplayName( "Inner transaction shares Hibernate session with outer transaction" )
+	@DisplayName( "ORM writes and queryExecute inside one transaction share its connection and roll back together" )
 	@Test
-	public void testORMNestedTransactionSessionSharing() {
+	public void testORMNestedTransactionSessionSharing() throws SQLException {
+		String name = uniqueName( "Shared" );
 		// @formatter:off
 		instance.executeSource(
 			"""
-			outsideTransactionConnection = ORMGetSession()
-					.getJdbcCoordinator()
-					.getLogicalConnection()
-					.getPhysicalConnection();
-			transaction{
-				entityNew( "manufacturer" );
-
-				outerConnection = ORMGetSession()
-					.getJdbcCoordinator()
-					.getLogicalConnection()
-					.getPhysicalConnection();
-				
-				transaction{
-					entityNew( "manufacturer" );
-					innerConnection = ORMGetSession()
-						.getJdbcCoordinator()
-						.getLogicalConnection()
-						.getPhysicalConnection();
+			transaction {
+				entitySave( entityNew( "manufacturer", { name : "%1$s", address : "outer" } ) );
+				transaction {
+					ormFlush();
+					// Only the transaction's own connection can see this uncommitted ORM row.
+					insideCount = queryExecute( "SELECT count(*) AS n FROM manufacturers WHERE name = :name", { name : "%1$s" } ).n;
 				}
+				transactionRollback();
 			}
-			outsideTransactionSession = ORMGetSession();
-			""",
+			afterCount = queryExecute( "SELECT count(*) AS n FROM manufacturers WHERE name = :name", { name : "%1$s" } ).n;
+			""".formatted( name ),
 			context
 		);
 		// @formatter:on
+		assertThat( ( ( Number ) variables.get( Key.of( "insideCount" ) ) ).intValue() ).isEqualTo( 1 );
+		assertThat( ( ( Number ) variables.get( Key.of( "afterCount" ) ) ).intValue() ).isEqualTo( 0 );
+		assertThat( committedCount( name ) ).isEqualTo( 0 );
+	}
 
-		// Verify they are the same connection object (connection sharing)
-		assertThat( variables.get( Key.of( "outerConnection" ) ) ).isSameInstanceAs( variables.get( Key.of( "innerConnection" ) ) );
-		// Unsure if this should be the same or different connection. Ignore for now.
-		// assertThat( variables.get( Key.of( "outerConnection" ) ) ).isNotSameInstanceAs( variables.get( Key.of( "outsideTransactionConnection" ) ) );
+	@DisplayName( "An exception inside transaction{} rolls back both the ORM write and the native queryExecute write" )
+	@Test
+	public void testExceptionRollsBackORMAndNativeWrites() throws SQLException {
+		String	ormName		= uniqueName( "OrmBoom" );
+		String	nativeName	= uniqueName( "NativeBoom" );
+		// @formatter:off
+		instance.executeSource(
+			"""
+			try {
+				transaction {
+					entitySave( entityNew( "manufacturer", { name : "%s", address : "orm" } ) );
+					ormFlush();
+					queryExecute( "INSERT INTO manufacturers ( id, name, address ) VALUES ( 9101, :name, 'native' )", { name : "%s" } );
+					throw( "boom" );
+				}
+			} catch ( any e ) {
+				caught = e.message;
+			}
+			""".formatted( ormName, nativeName ),
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsString( Key.of( "caught" ) ) ).isEqualTo( "boom" );
+		assertThat( committedCount( ormName ) ).isEqualTo( 0 );
+		assertThat( committedCount( nativeName ) ).isEqualTo( 0 );
+	}
+
+	@DisplayName( "An ORM query inside a transaction sees the transaction's unflushed ORM writes (read-your-writes)" )
+	@Test
+	public void testReadYourWritesInsideTransaction() throws SQLException {
+		String name = uniqueName( "Ryw" );
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction {
+				entitySave( entityNew( "manufacturer", { name : "%1$s", address : "ryw" } ) );
+				// No ormFlush(): the ORM query must flush pending writes on the transaction connection before it runs.
+				loadedCount = entityLoad( "manufacturer", { name : "%1$s" } ).len();
+				hqlCount    = ormExecuteQuery( "select count(m) from Manufacturer m where m.name = :name", { name : "%1$s" }, true );
+			}
+			""".formatted( name ),
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsInteger( Key.of( "loadedCount" ) ) ).isEqualTo( 1 );
+		assertThat( ( ( Number ) variables.get( Key.of( "hqlCount" ) ) ).intValue() ).isEqualTo( 1 );
+		assertThat( committedCount( name ) ).isEqualTo( 1 );
+	}
+
+	/** A manufacturer name unique to this run, so tests never depend on each other's rows or on execution order. */
+	private static String uniqueName( String prefix ) {
+		return prefix + " " + UUID.randomUUID().toString().substring( 0, 8 );
+	}
+
+	/**
+	 * Count committed manufacturer rows with the given name, from a fresh pooled connection outside any transaction.
+	 */
+	private int committedCount( String name ) throws SQLException {
+		DataSource datasource = ( ( IJDBCCapableContext ) context ).getConnectionManager().getDefaultDatasourceOrThrow();
+		try ( Connection conn = datasource.getBoxConnection();
+		    PreparedStatement statement = conn.prepareStatement( "SELECT count(*) FROM manufacturers WHERE name = ?" ) ) {
+			statement.setString( 1, name );
+			try ( ResultSet rows = statement.executeQuery() ) {
+				rows.next();
+				return rows.getInt( 1 );
+			}
+		}
 	}
 }

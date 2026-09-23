@@ -73,7 +73,7 @@ public class EntityMerge extends BaseORMBIF {
 		// Hibernate manages the generated facade, not the IClassRunnable. Merge the facade by its Hibernate entity-name and
 		// return the caller's BoxLang instance (unwrapped from the managed facade).
 		String			hbName			= ORMApp.hibernateEntityName( session, entityName );
-		Object			facade			= FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName,
+		Object			facade			= FacadeSupport.wrap( ormContext.getFacadeNamespace(), entityName,
 		    entity );
 		Object			managed			= session.merge( hbName, facade );
 		return FacadeSupport.unwrapIfFacade( managed );

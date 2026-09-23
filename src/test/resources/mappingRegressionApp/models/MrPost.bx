@@ -1,0 +1,5 @@
+class accessors="true" persistent="true" table="mr_posts" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="title" ormType="string";
+	property name="comments" fieldtype="one-to-many" cfc="MrComment" cascade="all" type="array" singularName="comment";
+}

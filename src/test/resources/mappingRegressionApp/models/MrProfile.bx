@@ -1,0 +1,4 @@
+class accessors="true" persistent="true" table="mr_profiles" {
+	property name="id" fieldtype="id" generator="assigned" ormType="integer";
+	property name="bio" ormType="string";
+}

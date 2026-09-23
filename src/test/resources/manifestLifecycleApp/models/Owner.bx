@@ -1,0 +1,5 @@
+class accessors="true" persistent="true" table="lc_owners" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="name" ormType="string";
+	property name="pets" fieldtype="one-to-many" cfc="Pet" fkcolumn="ownerId" inverse="true" cascade="all" type="array" singularName="pet";
+}

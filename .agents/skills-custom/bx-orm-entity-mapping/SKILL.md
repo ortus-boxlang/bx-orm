@@ -1,9 +1,9 @@
 ---
 name: bx-orm-entity-mapping
-description: "Use when working with BoxLang ORM entity mapping: entity discovery via MappingGenerator, EntityRecord construction, metadata inspection (IEntityMeta, ClassicEntityMeta, AbstractEntityMeta), HBM XML generation via HibernateXMLWriter, property metadata (IPropertyMeta, ClassicPropertyMeta), entity file scanning (.bx/.cfc), parallel processing thresholds, and save-mapping options."
+description: "Use when working with BoxLang ORM entity mapping: entity discovery via MappingGenerator, EntityRecord construction, metadata inspection (IEntityMeta, ClassicEntityMeta, AbstractEntityMeta), mapping.xml generation via MappingXMLWriter, property metadata (IPropertyMeta, ClassicPropertyMeta), entity file scanning (.bx/.cfc), parallel processing thresholds, and save-mapping options."
 version: "1.0.0"
 domain: bx-orm
-triggers: entity mapping, entity discovery, HBM XML, MappingGenerator, EntityRecord, HibernateXMLWriter, entity metadata, persistent CFC, bx entity, orm mapping, generate mapping, hbm.xml, IEntityMeta, ClassicEntityMeta, property meta, entity scanning
+triggers: entity mapping, entity discovery, mapping.xml, MappingGenerator, EntityRecord, MappingXMLWriter, entity metadata, persistent CFC, bx entity, orm mapping, generate mapping, orm.xml, IEntityMeta, ClassicEntityMeta, property meta, entity scanning
 role: expert
 scope: bx-orm
 related-skills: bx-orm-hibernate-bridge, bx-orm-configuration, bx-orm-bif-development
@@ -13,7 +13,7 @@ related-skills: bx-orm-hibernate-bridge, bx-orm-configuration, bx-orm-bif-develo
 
 ## Overview
 
-Entity mapping is the **BoxLang → Hibernate** bridge entry point. The `MappingGenerator` walks the configured entity directories, discovers persistent BoxLang classes (`.bx` / `.cfc`), parses their metadata via inspectors, and produces Hibernate `hbm.xml` mapping documents that the `SessionFactoryBuilder` feeds into Hibernate's `Configuration`.
+Entity mapping is the **BoxLang → Hibernate** bridge entry point. The `MappingGenerator` walks the configured entity directories, discovers persistent BoxLang classes (`.bx` / `.cfc`), parses their metadata via inspectors, and produces Hibernate 7 `mapping.xml` documents that the `SessionFactoryBuilder` feeds into Hibernate's `Configuration`.
 
 ## Data Flow
 
@@ -22,8 +22,8 @@ flowchart LR
     A[".bx / .cfc files<br/>on disk"] --> B["MappingGenerator<br/>scanEntityDirectories()"]
     B --> C["EntityRecord<br/>(entityName, classFQN, metadata)"]
     C --> D["IEntityMeta<br/>(ClassicEntityMeta)"]
-    D --> E["HibernateXMLWriter<br/>generateMapping()"]
-    E --> F["hbm.xml<br/>(saved to temp or alongside entity)"]
+    D --> E["MappingXMLWriter<br/>generateXML()"]
+    E --> F["combined mapping.xml<br/>(in memory; *.orm.xml when saveMapping)"]
     F --> G["Hibernate Configuration<br/>addXML()"]
 ```
 
@@ -38,7 +38,7 @@ flowchart LR
 | `ClassicEntityMeta` | `ortus.boxlang.modules.orm.mapping.inspectors` | Translates CFML annotations (`persistent=true`, `fieldtype="id"`) into `IEntityMeta` |
 | `IPropertyMeta` | `ortus.boxlang.modules.orm.mapping.inspectors` | Interface for normalized property metadata |
 | `ClassicPropertyMeta` | `ortus.boxlang.modules.orm.mapping.inspectors` | Translates CFML property annotations into `IPropertyMeta` |
-| `HibernateXMLWriter` | `ortus.boxlang.modules.orm.mapping` | Builds a DOM `Document` from `IEntityMeta` and serializes it to `hbm.xml` |
+| `MappingXMLWriter` | `ortus.boxlang.modules.orm.mapping` | Builds a DOM `Document` from `IEntityMeta` in the Hibernate 7 `mapping.xml` format |
 
 ## Entity Discovery
 
@@ -82,7 +82,7 @@ public class EntityRecord {
     String      className;      // e.g. "Vehicle"
     Key         datasource;     // Datasource name this entity uses
     IStruct     metadata;       // Raw BoxLang class metadata struct
-    Path        xmlFilePath;    // Path to generated .hbm.xml
+    Path        xmlFilePath;    // Path to generated .orm.xml
     IEntityMeta entityMeta;     // Parsed normalized metadata
     String      resolverPrefix; // "bx" or "cfc" — used when instantiating
 }
@@ -99,7 +99,7 @@ this.resolverPrefix = parseResolverPrefix(
 
 ### `IEntityMeta` — The Normalized Contract
 
-All entity metadata flows through this interface so the `HibernateXMLWriter` works regardless of whether the entity uses CFML annotations or modern JPA-style annotations.
+All entity metadata flows through this interface so the `MappingXMLWriter` works regardless of whether the entity uses CFML annotations or modern JPA-style annotations.
 
 ```java
 public interface IEntityMeta {
@@ -155,37 +155,47 @@ public interface IPropertyMeta {
 }
 ```
 
-## HBM XML Generation
+## Mapping XML Generation (`mapping.xml`)
 
-### `HibernateXMLWriter.generateMapping(IEntityMeta)`
+### `MappingXMLWriter`
 
-Creates a DOM `Document` with the Hibernate `hibernate-mapping` DTD and builds the complete XML tree:
+The only mapping writer (the legacy `HibernateXMLWriter`/`hbm.xml` path was removed). It builds a DOM
+`Document` in the Hibernate 7 `mapping.xml` format: root `<entity-mappings>` in namespace
+`http://www.hibernate.org/xsd/orm/mapping`, version `7.0`, one `<entity name="User" class="...UserFacade">`
+per entity.
 
-1. **Root element**: `<hibernate-mapping>` with entity/package attributes
-2. **Class element**: `<class>` with table, schema, catalog, batch-size, optimistic-lock, mutable, discriminator
-3. **Identifier**: `<id>` or `<composite-id>` for composite keys
-4. **Properties**: `<property>`, `<many-to-one>`, `<one-to-many>`, `<component>`, etc.
-5. **Cache**: `<cache>` element if caching is configured
+- `new MappingXMLWriter( entityMeta, entityLookup, ormConfig )` then `generateXML()` / `generateEntityElement()`.
+- Per-element builders: `generateIdElement`, `generateVersionElement`, `generateBasicElement`,
+  `generateToOneAssociation`, `generateToManyAssociation`, `generateCachingElement`, `addDiscriminatorData`.
+- Child elements must follow `mapping-7.0.xsd` order. For a to-many: `order-by`, `map-key-class` +
+  `map-key-column`/`map-key-formula`, `batch-size`, `sql-restriction`, `join-table`/`join-column`, `cascade`.
 
-The generated XML is written to the determined path (temp or alongside) and registered with Hibernate via:
-```java
-configuration.addXML( xmlString );
-```
+### Hibernate 5 parity defaults
+
+JPA `mapping.xml` defaults differ from classic `hbm.xml`; the writer states these explicitly so existing
+apps keep their behavior. Keep them when changing the writer:
+
+| BoxLang mapping | Written as | Why |
+| --- | --- | --- |
+| `many-to-one` / `one-to-one` | explicit `fetch="LAZY"` unless `lazy="false"` or `fetch="join"` | JPA defaults to-one to EAGER |
+| hierarchy root with `discriminatorValue` | `<discriminator-value>` on the root too | JPA defaults it to the entity name |
+| `one-to-one` without `fkcolumn`/`mappedBy` | `<primary-key-join-column/>`; `constrained` side: `optional="false"` + FK; unconstrained side: `NO_CONSTRAINT`, or `mapped-by` when the target has a `constrained` one-to-one back | hbm shared the primary key, FK only on the constrained side |
+| owning `one-to-many` without `fkcolumn` | `<join-column>` borrowed from the target's back-reference to-one (`resolveBackReferenceColumn`) | JPA would create a join table |
+| collection `where` | `<sql-restriction>` (entity and element collections) | |
+| `type="struct"` to-many | `map-key-class` + `map-key-column`/`map-key-formula` (`structKeyColumn`, `structKeyType`) | |
+| `fieldtype="timestamp"` version | version typed `java.time.Instant` | |
 
 ### Entity Registration Pattern
 
+`SessionFactoryBuilder` merges every entity's `<entity>` element into one combined `<entity-mappings>`
+document (`buildCombinedMappingXml`) and hands it to Hibernate **in memory**:
+
 ```java
-// In SessionFactoryBuilder
-for ( EntityRecord entity : entities ) {
-    HibernateXMLWriter writer = new HibernateXMLWriter( ormConfig, strategy );
-    String xmlMapping = writer.generateMapping( entity.getEntityMeta() );
-    configuration.addXML( xmlMapping );
-    // Optionally save to disk
-    if ( ormConfig.saveMapping ) {
-        writer.writeMappingToFile( entity.getXmlFilePath() );
-    }
-}
+String combinedXml = buildCombinedMappingXml( ordered );
+configuration.addInputStream( new ByteArrayInputStream( combinedXml.getBytes( StandardCharsets.UTF_8 ) ) );
 ```
+
+With `saveMapping=true` each entity's XML is also written to a `*.orm.xml` file next to the entity.
 
 ## Custom Entity Metadata Inspector
 
@@ -213,7 +223,7 @@ Then update `EntityRecord.setEntityMeta()` to detect the annotation style and in
 src/main/java/ortus/boxlang/modules/orm/mapping/
 ├── MappingGenerator.java       # Entity discovery orchestrator
 ├── EntityRecord.java           # Entity value object
-├── HibernateXMLWriter.java     # DOM-based HBM XML builder
+├── MappingXMLWriter.java       # DOM-based mapping.xml builder
 └── inspectors/
     ├── IEntityMeta.java        # Normalized entity metadata interface
     ├── IPropertyMeta.java      # Normalized property metadata interface

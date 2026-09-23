@@ -68,6 +68,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ormGetSession()`/`ormGetSessionFactory()` now unwrap facades from **query** results: HQL/JPQL, named, native, and criteria queries run through the raw session return `IClassRunnable`s (via `list()`/`getResultList()`/`getSingleResult()`/`uniqueResult()`/`uniqueResultOptional()`/`getResultStream()`), and facades held in a returned collection/optional/stream are unwrapped element-by-element. Previously such raw-session queries returned generated facade objects.
 - Inherited to-many associations now get the stable-snapshot getter, so `parent.getChildren().each( c => parent.removeChild( c ) )` is safe for a collection declared on a persistent parent entity (previously only associations declared directly on the entity were protected).
 - `removeX()` on an unmanaged (transient) collection now prefers an exact identity match, so a distinct-but-equal transient element is not removed by mistake.
+- `ormManifest="trust"` boots now define the entity facades from `.bxorm/facades.jar` correctly (previously the pre-generated classes failed with a `NullPointerException` in every accessor).
+- Each ORM build (first boot and every `ormReload()`) generates its facades into its own classloader, so a reload picks up a changed entity (e.g. a new property) instead of reusing the previous build's facade class.
+- `ormManifest="trust"` fails closed on a stale manifest: a changed entity source, changed ORM settings (dialect, datasource, naming strategy, application name, `dbcreate`, `quoteIdentifiers`, `entityPaths`) or a different bx-orm version stops the boot with a message naming each change.
+- `many-to-one` / `one-to-one` associations are lazy by default again (Hibernate 5 behavior); `lazy="false"` or `fetch="join"` makes them eager.
+- The root of a discriminated hierarchy persists its own `discriminatorValue` instead of the entity name.
+- A `one-to-one` without `fkcolumn` shares the primary key (Hibernate 5 behavior) instead of adding a foreign-key column; only the `constrained="true"` side carries the foreign key.
+- An owning `one-to-many` without `fkcolumn` reuses the target's back-reference foreign key instead of creating a join table.
+- The `where` attribute on a collection (entity and value collections) restricts the loaded rows again.
+- A struct-typed (`type="struct"`) `one-to-many`/`many-to-many` maps its key (`structKeyColumn`/`structKeyType`) and round-trips by key.
+- A `fieldtype="timestamp"` version property boots and is stamped on save.
+- Hibernate isolated work (e.g. sequence/table id allocation) inside a `transaction{}` runs on its own pooled connection, so it can no longer commit or roll back the surrounding BoxLang transaction mid-flight.
+- `duplicate()` of an ORM entity produces an independent copy that saves its own state instead of sharing the original's Hibernate facade.
+- `entitySave()`, `entityDelete()`, `entityMerge()`, `entityReload()` and `entityIsAttached()` resolve the application's facade namespace from the booted ORM application instead of the per-request configuration.
+- A to-many getter (`getChildren()`) iterates a stable snapshot while `append`/`arrayAppend`, `set` and `remove` through it change the managed collection, so both `parent.getChildren().append( c )` and removing while iterating work.
+- A hand-written to-many getter on an entity is kept; the ORM no longer replaces it with its generated one.
 
 ## [1.7.0] - 2026-09-14
 

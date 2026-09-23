@@ -27,11 +27,10 @@ import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.FieldAccessor;
+import net.bytebuddy.implementation.Implementation;
+import net.bytebuddy.implementation.LoadedTypeInitializer;
 import net.bytebuddy.implementation.MethodCall;
-import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.AllArguments;
-import net.bytebuddy.implementation.bind.annotation.RuntimeType;
-import net.bytebuddy.implementation.bind.annotation.This;
+import net.bytebuddy.implementation.bytecode.assign.Assigner;
 
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 
@@ -69,7 +68,12 @@ public final class EntityFacadeFactory {
 		 * A map-classified collection (an entity map or a value/element map collection). The accessor is a {@code Map}
 		 * rather than a {@code List}; scalar keys/values pass through unwrapped.
 		 */
-		TO_MANY_MAP
+		TO_MANY_MAP,
+		/**
+		 * A struct-typed (map-classified) entity collection: a {@code Map} accessor whose values are entities. Hibernate
+		 * holds facade values; the developer sees {@code IClassRunnable} values through a {@link FacadeMapView}.
+		 */
+		TO_MANY_ENTITY_MAP
 	}
 
 	/**
@@ -93,21 +97,19 @@ public final class EntityFacadeFactory {
 		}
 	}
 
-	/** Generated facade classes, cached by fully-qualified class name. */
-	private static final Map<String, Class<?>>	CACHE			= new ConcurrentHashMap<>();
+	/**
+	 * Facades generated directly into a non-{@link FacadeClassLoader} loader (callers outside an ORM application build,
+	 * such as unit tests), cached by fully-qualified class name. ORM application builds use a per-build
+	 * {@link FacadeClassLoader} and its own cache instead, so a reload can redefine changed facades.
+	 */
+	private static final Map<String, Class<?>>	CACHE		= new ConcurrentHashMap<>();
 
 	/**
 	 * Bytecode of every facade generated this JVM (FQN -> class bytes), captured at generation so it can be persisted to a
-	 * {@code .bxorm/facades.jar} for trust-mode boots that skip ByteBuddy codegen.
+	 * {@code .bxorm/facades.jar} for trust-mode boots that skip ByteBuddy codegen. A later build of the same facade
+	 * overwrites its entry, so the jar always reflects the latest generation.
 	 */
-	private static final Map<String, byte[]>	BYTECODE		= new ConcurrentHashMap<>();
-
-	/**
-	 * Pre-generated facade bytecode loaded from a {@code .bxorm/facades.jar} (FQN -> class bytes). When a facade is
-	 * requested and present here, its bytecode is injected into the module classloader instead of re-running ByteBuddy. On
-	 * any injection failure the generator falls back to ByteBuddy, so a jar is always a best-effort optimization.
-	 */
-	private static final Map<String, byte[]>	JAR_BYTECODE	= new ConcurrentHashMap<>();
+	private static final Map<String, byte[]>	BYTECODE	= new ConcurrentHashMap<>();
 
 	/**
 	 * Generate (or return a cached) facade class for a single-id, non-inheriting entity.
@@ -143,6 +145,11 @@ public final class EntityFacadeFactory {
 	 * @return The generated facade {@link Class}, implementing {@link BoxEntityFacade}.
 	 */
 	public static Class<?> generate( String className, List<PropertySpec> ids, List<PropertySpec> properties, Class<?> superClass, ClassLoader loader ) {
+		// An ORM application build generates into its own FacadeClassLoader (one per startup/reload), whose cache is scoped
+		// to that build - so a reload with a changed entity defines a fresh class instead of reusing the previous one.
+		if ( loader instanceof FacadeClassLoader facadeLoader ) {
+			return facadeLoader.facades().computeIfAbsent( className, name -> build( name, ids, properties, superClass, loader ) );
+		}
 		return CACHE.computeIfAbsent( className, name -> build( name, ids, properties, superClass, loader ) );
 	}
 
@@ -155,6 +162,13 @@ public final class EntityFacadeFactory {
 			// accessors (so Hibernate's id-generator resolution sees a real member). Subclasses inherit all of this.
 			builder = builder
 			    .implement( BoxEntityFacade.class )
+			    // Serializable with writeReplace() -> a constant marker: when BoxLang deep-copies an entity (duplicate()) or
+			    // serializes it (session storage), the facade memoized in its variables scope is replaced by a harmless
+			    // string instead of dragging the whole entity graph along (or failing outright). The copy then gets its own
+			    // facade on its next save. The marker is a bytecode constant, so the class stays self-contained.
+			    .implement( java.io.Serializable.class )
+			    .defineMethod( "writeReplace", Object.class, Visibility.PROTECTED )
+			    .intercept( net.bytebuddy.implementation.FixedValue.value( DETACHED_FACADE_MARKER ) )
 			    .defineField( "boxState", BoxEntityState.class, Visibility.PUBLIC )
 			    // Expose the backing state (BoxEntityFacade.boxState()) straight from the field.
 			    .method( named( "boxState" ) ).intercept( FieldAccessor.ofField( "boxState" ) )
@@ -175,47 +189,61 @@ public final class EntityFacadeFactory {
 			builder = defineAccessor( builder, prop );
 		}
 
-		// Trust mode: if this facade's bytecode was loaded from a .bxorm/facades.jar, inject it into the module classloader
-		// instead of running ByteBuddy. The caller generates parents-first, so a subclass's parent facade is already defined.
-		// Any failure falls through to normal ByteBuddy generation, so the jar is always a best-effort optimization.
-		byte[] preGenerated = JAR_BYTECODE.get( className );
-		if ( preGenerated != null ) {
-			try {
-				return new net.bytebuddy.dynamic.loading.ClassInjector.UsingUnsafe( loader )
-				    .injectRaw( java.util.Collections.singletonMap( className, preGenerated ) )
-				    .get( className );
-			} catch ( RuntimeException | LinkageError e ) {
-				// Fall back to ByteBuddy codegen below.
+		// Trust mode: if this build's loader carries pre-generated bytecode for this facade (read from .bxorm/facades.jar),
+		// define it directly instead of running ByteBuddy. The caller generates parents-first, so a subclass's parent facade
+		// is already defined. Any failure falls through to normal ByteBuddy generation, so the jar is only an optimization.
+		if ( loader instanceof FacadeClassLoader facadeLoader ) {
+			byte[] preGenerated = facadeLoader.pregenerated( className );
+			if ( preGenerated != null ) {
+				try {
+					return facadeLoader.defineFromBytes( className, preGenerated );
+				} catch ( RuntimeException | LinkageError e ) {
+					// Fall back to ByteBuddy codegen below.
+				}
 			}
 		}
 
-		DynamicType.Unloaded<?> unloaded = builder.make();
-		BYTECODE.put( className, unloaded.getBytes() );
+		DynamicType.Unloaded<?>	unloaded		= builder.make();
+		// Only self-contained bytecode may be written to facades.jar: a trust boot defines those raw bytes directly, so a
+		// class that relies on ByteBuddy's load-time initializers (e.g. instance delegation stored in static fields) would
+		// be defined half-initialized. The accessors below are plain static calls, so this always holds; the guard keeps
+		// any future change from silently producing a broken jar.
+		boolean					selfContained	= unloaded.getLoadedTypeInitializers().values().stream().noneMatch( LoadedTypeInitializer::isAlive );
+		if ( selfContained ) {
+			BYTECODE.put( className, unloaded.getBytes() );
+		} else {
+			BYTECODE.remove( className );
+		}
 		return unloaded.load( loader, ClassLoadingStrategy.Default.INJECTION ).getLoaded();
 	}
 
 	/**
-	 * Load pre-generated facade bytecode from a {@code facades.jar} into the pre-generated cache, so subsequent
-	 * {@link #generate} calls inject those classes instead of running ByteBuddy. Best-effort: a missing or unreadable jar
-	 * is ignored (generation then proceeds normally).
+	 * Read pre-generated facade bytecode from a {@code facades.jar}, to hand to a trust-mode build's
+	 * {@link FacadeClassLoader} so it defines those classes instead of running ByteBuddy. Best-effort: a missing or
+	 * unreadable jar yields an empty map (generation then proceeds normally).
 	 *
-	 * @param jarFile The {@code .bxorm/facades.jar} to load.
+	 * @param jarFile The {@code .bxorm/facades.jar} to read.
+	 *
+	 * @return The facade bytecode keyed by fully-qualified class name (empty if there is none).
 	 */
-	public static void loadFacadeJar( java.nio.file.Path jarFile ) {
+	public static Map<String, byte[]> readFacadeJar( java.nio.file.Path jarFile ) {
+		Map<String, byte[]> bytecode = new java.util.HashMap<>();
 		if ( jarFile == null || !java.nio.file.Files.exists( jarFile ) ) {
-			return;
+			return bytecode;
 		}
 		try ( var jar = new java.util.jar.JarInputStream( java.nio.file.Files.newInputStream( jarFile ) ) ) {
 			java.util.jar.JarEntry entry;
 			while ( ( entry = jar.getNextJarEntry() ) != null ) {
 				if ( entry.getName().endsWith( ".class" ) ) {
 					String fqn = entry.getName().substring( 0, entry.getName().length() - ".class".length() ).replace( '/', '.' );
-					JAR_BYTECODE.put( fqn, jar.readAllBytes() );
+					bytecode.put( fqn, jar.readAllBytes() );
 				}
 			}
 		} catch ( java.io.IOException e ) {
 			// Best-effort: ignore a bad jar and let ByteBuddy generate.
+			bytecode.clear();
 		}
+		return bytecode;
 	}
 
 	/**
@@ -266,60 +294,99 @@ public final class EntityFacadeFactory {
 		String cap = Character.toUpperCase( prop.name().charAt( 0 ) ) + prop.name().substring( 1 );
 		if ( prop.assoc() == AssocKind.TO_MANY ) {
 			return builder
-			    .defineMethod( "get" + cap, LIST_OF_OBJECT, Visibility.PUBLIC )
-			    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), true, prop.assoc() ) ) )
-			    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( LIST_OF_OBJECT )
-			    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), false, prop.assoc() ) ) );
+			    .defineMethod( "get" + cap, LIST_OF_OBJECT, Visibility.PUBLIC ).intercept( getter( prop ) )
+			    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( LIST_OF_OBJECT ).intercept( setter( prop ) );
 		}
-		if ( prop.assoc() == AssocKind.TO_MANY_MAP ) {
+		if ( prop.assoc() == AssocKind.TO_MANY_MAP || prop.assoc() == AssocKind.TO_MANY_ENTITY_MAP ) {
 			return builder
-			    .defineMethod( "get" + cap, MAP_OF_OBJECT, Visibility.PUBLIC )
-			    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), true, prop.assoc() ) ) )
-			    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( MAP_OF_OBJECT )
-			    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), false, prop.assoc() ) ) );
+			    .defineMethod( "get" + cap, MAP_OF_OBJECT, Visibility.PUBLIC ).intercept( getter( prop ) )
+			    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( MAP_OF_OBJECT ).intercept( setter( prop ) );
 		}
 		return builder
-		    .defineMethod( "get" + cap, prop.javaType(), Visibility.PUBLIC )
-		    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), true, prop.assoc() ) ) )
-		    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( prop.javaType() )
-		    .intercept( MethodDelegation.to( new PropertyInterceptor( prop.name(), false, prop.assoc() ) ) );
+		    .defineMethod( "get" + cap, prop.javaType(), Visibility.PUBLIC ).intercept( getter( prop ) )
+		    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( prop.javaType() ).intercept( setter( prop ) );
 	}
 
-	private static final java.lang.reflect.Constructor<Object> OBJECT_CTOR;
+	/**
+	 * A generated getter: {@code return (T) Accessors.get( this, "<property>", "<assocKind>" );}. The property name and
+	 * association kind are bytecode constants, so the class needs no load-time initialization and its raw bytes are
+	 * complete (safe to write to, and define from, {@code facades.jar}).
+	 */
+	private static Implementation getter( PropertySpec prop ) {
+		return MethodCall.invoke( ACCESSOR_GET )
+		    .withThis()
+		    .with( prop.name(), prop.assoc().name() )
+		    .withAssigner( Assigner.DEFAULT, Assigner.Typing.DYNAMIC );
+	}
+
+	/**
+	 * A generated setter: {@code Accessors.set( this, value, "<property>", "<assocKind>" );}. See {@link #getter}.
+	 */
+	private static Implementation setter( PropertySpec prop ) {
+		return MethodCall.invoke( ACCESSOR_SET )
+		    .withThis()
+		    .withArgument( 0 )
+		    .with( prop.name(), prop.assoc().name() )
+		    .withAssigner( Assigner.DEFAULT, Assigner.Typing.DYNAMIC );
+	}
+
+	/**
+	 * What a facade serializes as ({@code writeReplace}): a marker string, never the facade or its entity. Seeing it in an
+	 * entity's scope just means "this copy has no facade yet".
+	 */
+	public static final String									DETACHED_FACADE_MARKER	= "bx-orm:detached-facade";
+
+	private static final java.lang.reflect.Constructor<Object>	OBJECT_CTOR;
+	private static final java.lang.reflect.Method				ACCESSOR_GET;
+	private static final java.lang.reflect.Method				ACCESSOR_SET;
 	static {
 		try {
-			OBJECT_CTOR = Object.class.getConstructor();
+			OBJECT_CTOR		= Object.class.getConstructor();
+			ACCESSOR_GET	= Accessors.class.getMethod( "get", Object.class, String.class, String.class );
+			ACCESSOR_SET	= Accessors.class.getMethod( "set", Object.class, Object.class, String.class, String.class );
 		} catch ( NoSuchMethodException e ) {
 			throw new ExceptionInInitializerError( e );
 		}
 	}
 
 	/**
-	 * Routes a single generated getter or setter to the facade's {@link BoxEntityState}. One instance is bound per
-	 * method, carrying the property name and whether it is a getter, so no method-name parsing is needed at call time.
+	 * The runtime targets of every generated facade getter and setter. Each generated accessor calls {@link #get} or
+	 * {@link #set} with the facade, the property name and the association kind as bytecode constants, and these route the
+	 * call to the facade's {@link BoxEntityState} (the backing BoxLang instance). Public because generated classes, in a
+	 * child classloader, call it.
 	 */
-	public static class PropertyInterceptor {
+	public static final class Accessors {
 
-		private final String	property;
-		private final boolean	getter;
-		private final AssocKind	assoc;
-
-		public PropertyInterceptor( String property, boolean getter, AssocKind assoc ) {
-			this.property	= property;
-			this.getter		= getter;
-			this.assoc		= assoc;
+		private Accessors() {
 		}
 
-		@RuntimeType
-		public Object intercept( @This Object self, @AllArguments Object[] args ) {
+		/**
+		 * Read a property for Hibernate.
+		 *
+		 * @param self     The facade instance.
+		 * @param property The BoxLang property name.
+		 * @param assoc    The {@link AssocKind} name.
+		 *
+		 * @return The value, translated for Hibernate.
+		 */
+		public static Object get( Object self, String property, String assoc ) {
 			BoxEntityState state = ( ( BoxEntityFacade ) self ).boxState();
-			if ( getter ) {
-				return state == null ? null : readForHibernate( state.get( property ) );
-			}
+			return state == null ? null : readForHibernate( AssocKind.valueOf( assoc ), state.get( property ) );
+		}
+
+		/**
+		 * Write a property from Hibernate onto the backing BoxLang instance.
+		 *
+		 * @param self     The facade instance.
+		 * @param value    The value Hibernate is setting.
+		 * @param property The BoxLang property name.
+		 * @param assoc    The {@link AssocKind} name.
+		 */
+		public static void set( Object self, Object value, String property, String assoc ) {
+			BoxEntityState state = ( ( BoxEntityFacade ) self ).boxState();
 			if ( state != null ) {
-				state.set( property, writeToScope( args.length > 0 ? args[ 0 ] : null ) );
+				state.set( property, writeToScope( AssocKind.valueOf( assoc ), value ) );
 			}
-			return null;
 		}
 
 		/**
@@ -330,7 +397,7 @@ public final class EntityFacadeFactory {
 		 *
 		 * @return The value to hand back to Hibernate.
 		 */
-		private Object readForHibernate( Object scopeValue ) {
+		private static Object readForHibernate( AssocKind assoc, Object scopeValue ) {
 			switch ( assoc ) {
 				case TO_ONE :
 					// The developer holds an IClassRunnable in the scope; Hibernate needs the target's (managed) facade so it
@@ -375,6 +442,22 @@ public final class EntityFacadeFactory {
 						return converted;
 					}
 					return scopeValue;
+				case TO_MANY_ENTITY_MAP :
+					// Hand Hibernate its own managed map (facade values). A developer-supplied struct (transient) is converted:
+					// Key keys become their scalar name and IClassRunnable values become facades.
+					if ( scopeValue instanceof FacadeMapView view ) {
+						return view.backing();
+					}
+					if ( scopeValue instanceof java.util.Map<?, ?> map ) {
+						java.util.LinkedHashMap<Object, Object> converted = new java.util.LinkedHashMap<>();
+						for ( java.util.Map.Entry<?, ?> entry : map.entrySet() ) {
+							Object	key		= entry.getKey() instanceof ortus.boxlang.runtime.scopes.Key k ? k.getName() : entry.getKey();
+							Object	value	= entry.getValue() instanceof IClassRunnable runnable ? FacadeSupport.wrapInstance( runnable ) : entry.getValue();
+							converted.put( key, value );
+						}
+						return converted;
+					}
+					return scopeValue;
 				default :
 					return scopeValue;
 			}
@@ -388,7 +471,7 @@ public final class EntityFacadeFactory {
 		 *
 		 * @return The value to store in the BoxLang instance's scope.
 		 */
-		private Object writeToScope( Object hibernateValue ) {
+		private static Object writeToScope( AssocKind assoc, Object hibernateValue ) {
 			switch ( assoc ) {
 				case TO_ONE :
 					// Hibernate sets the target's facade (eager) or a Hibernate proxy (lazy). A proxy that is itself an
@@ -406,6 +489,15 @@ public final class EntityFacadeFactory {
 					}
 					if ( hibernateValue instanceof java.util.List<?> list ) {
 						return new FacadeCollectionView( list );
+					}
+					return hibernateValue;
+				case TO_MANY_ENTITY_MAP :
+					// Store a live view so the developer sees IClassRunnable values over Hibernate's managed map.
+					if ( hibernateValue instanceof FacadeMapView ) {
+						return hibernateValue;
+					}
+					if ( hibernateValue instanceof java.util.Map<?, ?> map ) {
+						return new FacadeMapView( map );
 					}
 					return hibernateValue;
 				default :

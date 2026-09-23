@@ -354,6 +354,13 @@ public class ORMConfig {
 	public String								facadeNamespace			= "default";
 
 	/**
+	 * The classloader holding this ORM application build's generated entity facades (a fresh
+	 * {@link ortus.boxlang.modules.orm.hibernate.facade.FacadeClassLoader} per startup/reload, so a reload can define
+	 * changed facades). Set at startup; not a user setting. {@code null} means "generate into the module classloader".
+	 */
+	public transient ClassLoader				facadeClassLoader		= null;
+
+	/**
 	 * The instantiated naming strategy object.
 	 */
 	private PhysicalNamingStrategy				instantiatedNamingStrategy;
@@ -654,9 +661,15 @@ public class ORMConfig {
 		// event-handler class may be null when none is configured). This registry will be closed by
 		// SessionFactoryBuilder if session factory construction fails to prevent leaks; on success it remains open as the root of the Hibernate service
 		// hierarchy and is closed transitively via SessionFactory.close().
-		this.bootstrapRegistry = new BootstrapServiceRegistryBuilder()
-		    .applyIntegrator( new EventListener( getEventDispatcher() ) )
-		    .build();
+		BootstrapServiceRegistryBuilder registryBuilder = new BootstrapServiceRegistryBuilder()
+		    .applyIntegrator( new EventListener( getEventDispatcher() ) );
+		// Hibernate resolves the mapped <entity class="..."> names through the bootstrap registry's ClassLoaderService. This
+		// build's generated entity facades live in its own facade classloader (see FacadeClassLoader), so register it here -
+		// applied loaders are consulted before the thread context loader, so a reload always resolves its own facades.
+		if ( this.facadeClassLoader != null ) {
+			registryBuilder.applyClassLoader( this.facadeClassLoader );
+		}
+		this.bootstrapRegistry = registryBuilder.build();
 		Configuration	configuration		= new Configuration( this.bootstrapRegistry );
 		var				sysEnvProps			= new Properties();
 		Field[]			availableSettings	= AvailableSettings.class.getFields();

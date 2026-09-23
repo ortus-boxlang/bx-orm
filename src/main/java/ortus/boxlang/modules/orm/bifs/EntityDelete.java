@@ -74,7 +74,7 @@ public class EntityDelete extends BaseORMBIF {
 		// Hibernate manages the generated facade, not the IClassRunnable. Remove the facade (a detached one must be
 		// re-associated via merge first, since Hibernate 6+ rejects removing an unmanaged instance).
 		String			hbName			= ORMApp.hibernateEntityName( session, entityName );
-		Object			facade			= FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName,
+		Object			facade			= FacadeSupport.wrap( ormContext.getFacadeNamespace(), entityName,
 		    entity );
 		session.remove( session.contains( hbName, facade ) ? facade : session.merge( hbName, facade ) );
 

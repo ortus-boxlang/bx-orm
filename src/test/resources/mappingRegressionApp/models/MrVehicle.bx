@@ -1,0 +1,4 @@
+class accessors="true" persistent="true" table="mr_vehicles" discriminatorColumn="kind" discriminatorValue="vehicle" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="name" ormType="string";
+}

@@ -34,6 +34,7 @@ import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
+import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
@@ -54,6 +55,17 @@ public class MappingGeneratorTest {
 	@BeforeAll
 	public static void setUp() {
 		instance = BoxRuntime.getInstance( false );
+		// This test boots the MySQL-backed test app, so it must load the MySQL JDBC driver module itself rather than rely
+		// on an earlier test class in the same JVM having done so (which made it pass or fail depending on test order).
+		Key mysqlModule = Key.of( "bx-mysql" );
+		if ( !instance.getModuleService().hasModule( mysqlModule ) ) {
+			ModuleRecord mysqlRecord = new ModuleRecord( Path.of( "./src/test/resources/modules/bx-mysql" ).toAbsolutePath().toString() );
+			instance.getModuleService().getRegistry().put( mysqlModule, mysqlRecord );
+			mysqlRecord
+			    .loadDescriptor( instance.getRuntimeContext() )
+			    .register( instance.getRuntimeContext() )
+			    .activate( instance.getRuntimeContext() );
+		}
 	}
 
 	@BeforeEach
@@ -481,6 +493,81 @@ public class MappingGeneratorTest {
 		Element		cache	= first( doc, "caching" );
 		assertThat( cache.getAttribute( "access" ) ).isEqualTo( "READ_WRITE" );
 		assertThat( cache.getAttribute( "region" ) ).isEqualTo( "foo" );
+	}
+
+	@DisplayName( "Regression: a to-one association defaults to LAZY (Hibernate 5 lazy-proxy default), EAGER only when asked" )
+	@Test
+	public void testWriterToOneDefaultFetchIsLazy() {
+		BiFunction<String, Key, EntityRecord>	lookup	= ( a, b ) -> new EntityRecord( "Person", "models.Person" );
+		Document								def		= writeXML(
+		    "class persistent { property name=\"id\" fieldtype=\"id\"; property name=\"owner\" fieldtype=\"many-to-one\" cfc=\"Person\" fkcolumn=\"ownerId\"; }",
+		    lookup );
+		assertThat( first( def, "many-to-one" ).getAttribute( "fetch" ) ).isEqualTo( "LAZY" );
+
+		Document eager = writeXML(
+		    "class persistent { property name=\"id\" fieldtype=\"id\"; property name=\"owner\" fieldtype=\"many-to-one\" cfc=\"Person\" fkcolumn=\"ownerId\" lazy=\"false\"; }",
+		    lookup );
+		assertThat( first( eager, "many-to-one" ).getAttribute( "fetch" ) ).isEqualTo( "EAGER" );
+
+		Document join = writeXML(
+		    "class persistent { property name=\"id\" fieldtype=\"id\"; property name=\"owner\" fieldtype=\"many-to-one\" cfc=\"Person\" fkcolumn=\"ownerId\" fetch=\"join\"; }",
+		    lookup );
+		assertThat( first( join, "many-to-one" ).getAttribute( "fetch" ) ).isEqualTo( "EAGER" );
+	}
+
+	@DisplayName( "Regression: a hierarchy root writes its own discriminator value" )
+	@Test
+	public void testWriterRootDiscriminatorValue() {
+		Document doc = writeXML(
+		    "class persistent discriminatorColumn=\"kind\" discriminatorValue=\"vehicle\" { property name=\"id\" fieldtype=\"id\"; }" );
+		assertThat( first( doc, "discriminator-value" ).getTextContent() ).isEqualTo( "vehicle" );
+		assertThat( first( doc, "discriminator-column" ).getAttribute( "name" ) ).isEqualTo( "kind" );
+	}
+
+	@DisplayName( "Regression: a one-to-one without fkcolumn is a shared primary-key association" )
+	@Test
+	public void testWriterOneToOnePrimaryKey() {
+		BiFunction<String, Key, EntityRecord>	lookup	= ( a, b ) -> new EntityRecord( "Profile", "models.Profile" );
+		Document								doc		= writeXML(
+		    "class persistent { property name=\"id\" fieldtype=\"id\"; property name=\"profile\" fieldtype=\"one-to-one\" cfc=\"Profile\"; }", lookup );
+		Element									o2o		= first( doc, "one-to-one" );
+		assertThat( childElement( o2o, "primary-key-join-column" ) ).isNotNull();
+		assertThat( childElement( o2o, "join-column" ) ).isNull();
+		// Unconstrained side: no FK (only the constrained side carries one, as in hbm).
+		assertThat( childElement( o2o, "primary-key-foreign-key" ).getAttribute( "constraint-mode" ) ).isEqualTo( "NO_CONSTRAINT" );
+
+		Document constrained = writeXML(
+		    "class persistent { property name=\"id\" fieldtype=\"id\"; property name=\"profile\" fieldtype=\"one-to-one\" cfc=\"Profile\" constrained=\"true\"; }",
+		    lookup );
+		assertThat( first( constrained, "one-to-one" ).getAttribute( "optional" ) ).isEqualTo( "false" );
+		assertThat( childElement( first( constrained, "one-to-one" ), "primary-key-foreign-key" ) ).isNull();
+	}
+
+	@DisplayName( "Regression: a collection where= becomes sql-restriction (entity and value collections)" )
+	@Test
+	public void testWriterCollectionWhere() {
+		Document	doc	= writeXML(
+		    "class persistent { property name=\"id\" fieldtype=\"id\"; property name=\"activeBooks\" type=\"array\" fieldtype=\"one-to-many\" cfc=\"Book\" fkcolumn=\"authorId\" where=\"active = 1\"; }",
+		    ( a, b ) -> new EntityRecord( "Book", "models.Book" ) );
+		Element		o2m	= first( doc, "one-to-many" );
+		assertThat( childText( o2m, "sql-restriction" ) ).isEqualTo( "active = 1" );
+
+		Document values = writeXML(
+		    "class persistent { property name=\"id\" fieldtype=\"id\"; property name=\"tags\" fieldtype=\"collection\" type=\"array\" table=\"t_tags\" fkcolumn=\"FK_id\" elementColumn=\"tag\" elementType=\"string\" where=\"tag <> 'x'\"; }" );
+		assertThat( childText( first( values, "element-collection" ), "sql-restriction" ) ).isEqualTo( "tag <> 'x'" );
+	}
+
+	@DisplayName( "Regression: a struct-typed one-to-many writes its map key (class + column)" )
+	@Test
+	public void testWriterStructOneToManyMapKey() {
+		Document	doc	= writeXML(
+		    "class persistent { property name=\"id\" fieldtype=\"id\"; property name=\"itemsByCode\" type=\"struct\" fieldtype=\"one-to-many\" cfc=\"Item\" fkcolumn=\"shelfId\" structKeyColumn=\"itemCode\" structKeyType=\"string\"; }",
+		    ( a, b ) -> new EntityRecord( "Item", "models.Item" ) );
+		Element		o2m	= first( doc, "one-to-many" );
+		assertThat( o2m.getAttribute( "classification" ) ).isEqualTo( "MAP" );
+		assertThat( childElement( o2m, "map-key-class" ).getAttribute( "class" ) ).isEqualTo( "java.lang.String" );
+		assertThat( childElement( o2m, "map-key-column" ).getAttribute( "name" ) ).isEqualTo( "itemCode" );
+		assertThat( childElement( o2m, "join-column" ).getAttribute( "name" ) ).isEqualTo( "shelfId" );
 	}
 
 	/**

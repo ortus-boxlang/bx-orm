@@ -68,7 +68,7 @@ public class EntityReload extends BaseORMBIF {
 		// the same instance). The caller still gets the BoxLang instance back.
 		Object		managed		= entity instanceof ortus.boxlang.runtime.runnables.IClassRunnable runnable
 		    ? FacadeSupport.managed(
-		        ormContext.getConfig().facadeNamespace, getEntityName( runnable ), runnable )
+		        ormContext.getFacadeNamespace(), getEntityName( runnable ), runnable )
 		    : entity;
 		ormContext
 		    .getSession()

@@ -87,7 +87,7 @@ public class EntitySave extends BaseORMBIF {
 		// and writes generated ids straight back onto - the caller's BoxLang instance). The same instance always maps to the
 		// same facade via FacadeSupport's per-instance memoization. On a detached merge we copy the managed state back onto
 		// the caller's instance so it stays live and carries generated ids/event changes.
-		Object			facade			= FacadeSupport.wrap( ormContext.getConfig().facadeNamespace, entityName,
+		Object			facade			= FacadeSupport.wrap( ormContext.getFacadeNamespace(), entityName,
 		    entity );
 		if ( session.contains( hbName, facade ) ) {
 			// Already managed: nothing to do; the flush will persist any changes.

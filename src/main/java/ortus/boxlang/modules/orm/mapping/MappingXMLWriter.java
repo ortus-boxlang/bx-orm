@@ -362,8 +362,9 @@ public class MappingXMLWriter {
 			entityElement.appendChild( inheritance );
 		}
 
-		// 11. discriminator-value + discriminator-column
-		if ( isDiscriminated ) {
+		// 11. discriminator-value + discriminator-column. A subclass always carries its own value; a hierarchy ROOT may declare
+		// one too (discriminatorValue on the root), which must be written or Hibernate falls back to the entity name.
+		if ( isDiscriminated || ( !isSubclass && entity.getDiscriminator().get( Key.value ) != null ) ) {
 			appendTextElement( entityElement, "discriminator-value", entity.getDiscriminator().getAsString( Key.value ) );
 		}
 		if ( !isSubclass ) {
@@ -619,6 +620,8 @@ public class MappingXMLWriter {
 			orderBy.setTextContent( assoc.getAsString( ORMKeys.orderBy ) );
 			node.appendChild( orderBy );
 		}
+		// where="..." on a value collection (collection-structure-group: after the map key / order-by).
+		appendSqlRestriction( node, assoc );
 
 		// 2. element value: <column> + explicit <java-type> (basic-type-group).
 		String	elementColumn	= assoc.containsKey( ORMKeys.elementColumn ) && assoc.getAsString( ORMKeys.elementColumn ) != null
@@ -883,11 +886,13 @@ public class MappingXMLWriter {
 			theNode.setAttribute( "target-entity", targetEntity );
 		}
 
-		// fetch: a lazy proxy -> LAZY; explicit lazy="false" -> EAGER.
-		String lazy = association.containsKey( ORMKeys.lazy ) ? association.getAsString( ORMKeys.lazy ) : prop.getLazy();
-		if ( lazy != null ) {
-			theNode.setAttribute( "fetch", lazy.equalsIgnoreCase( "false" ) ? "EAGER" : "LAZY" );
-		}
+		// fetch: always explicit. Classic (hbm) to-one associations defaulted to a lazy proxy, but the mapping.xml (JPA)
+		// default for many-to-one/one-to-one is EAGER, so leaving it out silently turned every to-one eager. EAGER only for
+		// lazy="false" or fetch="join"; everything else (unset, "true", "proxy", "no-proxy") is LAZY.
+		String	lazy		= association.containsKey( ORMKeys.lazy ) ? association.getAsString( ORMKeys.lazy ) : prop.getLazy();
+		String	fetchMode	= association.containsKey( ORMKeys.fetch ) ? association.getAsString( ORMKeys.fetch ) : null;
+		boolean	eager		= lazy != null ? lazy.trim().equalsIgnoreCase( "false" ) : "join".equalsIgnoreCase( fetchMode );
+		theNode.setAttribute( "fetch", eager ? "EAGER" : "LAZY" );
 
 		// mappedBy (one-to-one inverse side)
 		if ( association.containsKey( ORMKeys.mappedBy ) && association.getAsString( ORMKeys.mappedBy ) != null ) {
@@ -915,6 +920,29 @@ public class MappingXMLWriter {
 		} else if ( association.containsKey( Key.column ) && association.getAsString( Key.column ) != null ) {
 			for ( String col : association.getAsString( Key.column ).split( "," ) ) {
 				theNode.appendChild( buildJoinColumn( col.trim(), association ) );
+			}
+		} else if ( type.equals( "one-to-one" ) && !theNode.hasAttribute( "mapped-by" )
+		    && !isConstrained( association ) && constrainedBackReference( prop ).isPresent() ) {
+			// The unconstrained side of a two-sided shared-PK one-to-one is the inverse side (hbm inserted it first and put the
+			// FK only on the constrained side), so map it by the target's constrained one-to-one.
+			theNode.setAttribute( "mapped-by", facadeAttributeName( constrainedBackReference( prop ).get().getName() ) );
+		} else if ( type.equals( "one-to-one" ) && !theNode.hasAttribute( "mapped-by" ) ) {
+			// A classic <one-to-one> without an fkcolumn is a PRIMARY-KEY association: both rows share the same primary key
+			// and there is no foreign-key column. Without <primary-key-join-column> the JPA default is a foreign-key
+			// one-to-one, which looks for a "<property>_id" column that does not exist.
+			theNode.appendChild( createEl( "primary-key-join-column" ) );
+			if ( isConstrained( association ) ) {
+				// constrained="true" (this row's PK references the target's PK) maps to a non-optional PK association and keeps
+				// the PK foreign-key constraint.
+				if ( !theNode.hasAttribute( "optional" ) ) {
+					theNode.setAttribute( "optional", "false" );
+				}
+			} else {
+				// As in hbm, only the constrained side carries a foreign key. An unconstrained side must not add one, or a
+				// two-sided shared-PK one-to-one gets FKs in both directions and no insert order can satisfy them.
+				Element noConstraint = createEl( "primary-key-foreign-key" );
+				noConstraint.setAttribute( "constraint-mode", "NO_CONSTRAINT" );
+				theNode.appendChild( noConstraint );
 			}
 		}
 
@@ -988,15 +1016,22 @@ public class MappingXMLWriter {
 		boolean	isInverse		= association.containsKey( ORMKeys.inverse ) && association.getAsBoolean( ORMKeys.inverse );
 		boolean	isManyToMany	= type.equals( "many-to-many" );
 
+		// collection-structure-group, in schema order: order-by, map key, batch-size, sql-restriction.
 		// order-by (child element, must come before join structures)
 		if ( association.containsKey( ORMKeys.orderBy ) && association.getAsString( ORMKeys.orderBy ) != null ) {
 			appendTextElement( theNode, "order-by", association.getAsString( ORMKeys.orderBy ) );
 		}
 
+		// A struct-typed (MAP) entity collection: the struct key lives in structKeyColumn (or a structKeyFormula).
+		appendMapKey( theNode, association );
+
 		// batch-size (child element)
 		if ( association.containsKey( ORMKeys.batchsize ) && association.getAsString( ORMKeys.batchsize ) != null ) {
 			appendTextElement( theNode, "batch-size", association.getAsString( ORMKeys.batchsize ) );
 		}
+
+		// where="..." restricts which rows belong to the collection (classic hbm collection where).
+		appendSqlRestriction( theNode, association );
 
 		String mappedBy = association.containsKey( ORMKeys.mappedBy ) ? association.getAsString( ORMKeys.mappedBy ) : null;
 		if ( mappedBy == null && isInverse ) {
@@ -1026,12 +1061,26 @@ public class MappingXMLWriter {
 				}
 			}
 			theNode.appendChild( joinTable );
-		} else if ( association.containsKey( Key.column ) && association.getAsString( Key.column ) != null ) {
-			// Owning one-to-many: FK join-column(s).
-			for ( String col : association.getAsString( Key.column ).split( "," ) ) {
-				Element jc = createEl( "join-column" );
-				jc.setAttribute( "name", escapeReservedWords( col.trim() ) );
-				theNode.appendChild( jc );
+		} else {
+			// Owning one-to-many: FK join-column(s). When the collection declares no fkcolumn, the FK is the one the target
+			// entity's back-reference (its to-one pointing at this entity) maps - the classic writer borrowed that column too.
+			// Without a join-column JPA would default to a separate join table (e.g. "Post_comments") that does not exist.
+			String fkColumns = association.getAsString( Key.column );
+			if ( fkColumns == null ) {
+				fkColumns = resolveBackReferenceColumn( prop );
+				if ( fkColumns == null ) {
+					logger.warn(
+					    "One-to-many [{}] on entity [{}] has no fkcolumn and no back-reference on the target entity to borrow one from; "
+					        + "Hibernate will default to a join table. Declare fkcolumn to map a foreign key.",
+					    prop.getName(), this.entity.getEntityName() );
+				}
+			}
+			if ( fkColumns != null ) {
+				for ( String col : fkColumns.split( "," ) ) {
+					Element jc = createEl( "join-column" );
+					jc.setAttribute( "name", escapeReservedWords( col.trim() ) );
+					theNode.appendChild( jc );
+				}
 			}
 		}
 
@@ -1042,6 +1091,117 @@ public class MappingXMLWriter {
 		}
 
 		return theNode;
+	}
+
+	/**
+	 * Append the map key of a struct-typed (MAP) entity collection: {@code <map-key-class>} for the key's Java type, then
+	 * {@code <map-key-column>} (structKeyColumn) or {@code <map-key-formula>} (structKeyFormula). No-op for a bag.
+	 *
+	 * @param collectionNode The {@code <one-to-many>}/{@code <many-to-many>} element.
+	 * @param association    The collection's association metadata.
+	 */
+	private void appendMapKey( Element collectionNode, IStruct association ) {
+		if ( !"map".equalsIgnoreCase( association.getAsString( ORMKeys.collectionType ) ) ) {
+			return;
+		}
+		Element mapKeyClass = createEl( "map-key-class" );
+		mapKeyClass.setAttribute( "class", elementJavaClass( association.getAsString( ORMKeys.structKeyType ) ) );
+		collectionNode.appendChild( mapKeyClass );
+		String keyFormula = association.getAsString( ORMKeys.structKeyFormula );
+		if ( keyFormula != null && !keyFormula.isBlank() ) {
+			appendTextElement( collectionNode, "map-key-formula", keyFormula );
+			return;
+		}
+		String keyColumn = association.getAsString( ORMKeys.structKeyColumn );
+		if ( keyColumn != null && !keyColumn.isBlank() ) {
+			Element mapKeyColumn = createEl( "map-key-column" );
+			mapKeyColumn.setAttribute( "name", escapeReservedWords( keyColumn.trim() ) );
+			collectionNode.appendChild( mapKeyColumn );
+		}
+	}
+
+	/**
+	 * Append a collection's {@code where} restriction as {@code <sql-restriction>}.
+	 *
+	 * @param collectionNode The collection element.
+	 * @param association    The collection's association metadata.
+	 */
+	private void appendSqlRestriction( Element collectionNode, IStruct association ) {
+		String where = association.getAsString( ORMKeys.where );
+		if ( where != null && !where.isBlank() ) {
+			appendTextElement( collectionNode, "sql-restriction", where );
+		}
+	}
+
+	/** Whether a one-to-one association is {@code constrained="true"}. */
+	private static boolean isConstrained( IStruct association ) {
+		return association.containsKey( ORMKeys.constrained ) && association.getAsBoolean( ORMKeys.constrained );
+	}
+
+	/** The target's {@code constrained} one-to-one pointing back at this entity (the owning side of a shared-PK pair). */
+	private java.util.Optional<IPropertyMeta> constrainedBackReference( IPropertyMeta prop ) {
+		return findBackReference( prop, remote -> remote.getFieldType() == IPropertyMeta.FIELDTYPE.ONE_TO_ONE
+		    && isConstrained( remote.getAssociation() ) );
+	}
+
+	/**
+	 * For an owning one-to-many that declares no fkcolumn, find the foreign-key column(s) mapped by the target entity's
+	 * back-reference - its many-to-one/one-to-one that points back at this entity - as the classic writer did.
+	 *
+	 * @param prop The one-to-many collection property.
+	 *
+	 * @return The back-reference's fkcolumn(s), or null if the target has no such to-one.
+	 */
+	private String resolveBackReferenceColumn( IPropertyMeta prop ) {
+		return findBackReference( prop, remote -> ( remote.getFieldType() == IPropertyMeta.FIELDTYPE.MANY_TO_ONE
+		    || remote.getFieldType() == IPropertyMeta.FIELDTYPE.ONE_TO_ONE )
+		    && remote.getAssociation().getAsString( Key.column ) != null )
+		    .map( remote -> remote.getAssociation().getAsString( Key.column ) )
+		    .orElse( null );
+	}
+
+	/**
+	 * Find the target entity's association that points back at this entity and matches the given filter.
+	 *
+	 * @param prop   The association on this entity.
+	 * @param filter Which of the target's associations qualify.
+	 *
+	 * @return The target's back-reference association, if any.
+	 */
+	private java.util.Optional<IPropertyMeta> findBackReference( IPropertyMeta prop, java.util.function.Predicate<IPropertyMeta> filter ) {
+		String targetClass = prop.getAssociation().getAsString( Key._CLASS );
+		if ( targetClass == null ) {
+			return java.util.Optional.empty();
+		}
+		Key				datasourceName		= this.entity.getDatasource().isEmpty() ? this.ormConfig.datasource : Key.of( this.entity.getDatasource() );
+		EntityRecord	associatedEntity	= entityLookup.apply( targetClass, datasourceName );
+		if ( associatedEntity == null ) {
+			return java.util.Optional.empty();
+		}
+		IEntityMeta associatedEntityMeta = associatedEntity.getEntityMeta();
+		if ( associatedEntityMeta == null ) {
+			IStruct meta = associatedEntity.getMetadata();
+			// No inspectable metadata (e.g. a bare record): nothing to find.
+			if ( meta == null || !meta.containsKey( Key.properties ) ) {
+				return java.util.Optional.empty();
+			}
+			meta.put( ORMKeys.classFQN, associatedEntity.getClassFQN() );
+			meta.put( Key.datasource, datasourceName );
+			associatedEntityMeta = AbstractEntityMeta.autoDiscoverMetaType( meta );
+		}
+		String thisEntityName = this.entity.getEntityName();
+		return associatedEntityMeta.getAssociations()
+		    .stream()
+		    .filter( filter )
+		    .filter( remote -> {
+			    String remoteClass = remote.getAssociation().getAsString( Key._CLASS );
+			    if ( remoteClass == null ) {
+				    return false;
+			    }
+			    EntityRecord backReference = entityLookup.apply( remoteClass, datasourceName );
+			    return backReference != null && thisEntityName.equalsIgnoreCase( backReference.getEntityName() );
+		    } )
+		    .findFirst();
 	}
 
 	/**

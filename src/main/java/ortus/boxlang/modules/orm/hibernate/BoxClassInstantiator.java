@@ -151,14 +151,11 @@ public class BoxClassInstantiator implements EntityInstantiator {
 					    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
 				    }
 
-				    // getX() override: return a stable snapshot so structural modification during iteration
-				    // (getX().each( e => removeX(e) )) is safe. Force-installed (no containsKey guard, unlike has/add/remove)
-				    // precisely because the entity's own generated accessor is already present - it must be overridden, or the
-				    // snapshot semantics are lost.
+				    // getX() override for a managed to-many: reads from a snapshot (so getX().each( e => removeX(e) ) is safe)
+				    // while writes through the returned array persist. Replaces only BoxLang's generated accessor - a getter the
+				    // developer wrote is left alone (see installToManyGetter).
 				    if ( association.getAsString( Key.type ).endsWith( "to-many" ) ) {
-					    DynamicFunction getUDF = getToManyGetMethod( association );
-					    theEntity.getThisScope().put( getUDF.getName(), getUDF );
-					    theEntity.getVariablesScope().put( getUDF.getName(), getUDF );
+					    installToManyGetter( theEntity, getToManyGetMethod( association ) );
 				    }
 			    }
 		    } );
@@ -211,9 +208,7 @@ public class BoxClassInstantiator implements EntityInstantiator {
 					    // getX() snapshot override for an INHERITED to-many association - same safe-iteration guarantee as the
 					    // main loop above, which otherwise would not apply to associations declared on a persistent parent.
 					    if ( associationType.endsWith( "to-many" ) ) {
-						    DynamicFunction getUDF = getToManyGetMethod( association );
-						    theEntity.getThisScope().put( getUDF.getName(), getUDF );
-						    theEntity.getVariablesScope().put( getUDF.getName(), getUDF );
+						    installToManyGetter( theEntity, getToManyGetMethod( association ) );
 					    }
 				    }
 			    } );
@@ -370,6 +365,23 @@ public class BoxClassInstantiator implements EntityInstantiator {
 	}
 
 	/**
+	 * Install the to-many getter on an entity instance, unless the developer wrote their own. The ORM getter replaces only
+	 * BoxLang's auto-generated accessor ({@code accessors="true"}); a hand-written {@code getX()} in the entity source is
+	 * the developer's code and is never overridden.
+	 *
+	 * @param theEntity The entity instance.
+	 * @param getUDF    The ORM to-many getter.
+	 */
+	private static void installToManyGetter( IClassRunnable theEntity, DynamicFunction getUDF ) {
+		Object existing = theEntity.getThisScope().get( getUDF.getName() );
+		if ( existing != null && ! ( existing instanceof ortus.boxlang.runtime.runnables.accessors.GeneratedGetter ) ) {
+			return;
+		}
+		theEntity.getThisScope().put( getUDF.getName(), getUDF );
+		theEntity.getVariablesScope().put( getUDF.getName(), getUDF );
+	}
+
+	/**
 	 * Create a `get*` accessor for a to-many association (e.g. {@code getVehicles()}) that, in facade (POJO) mode, returns
 	 * a stable snapshot of the collection rather than the live {@link FacadeCollectionView}.
 	 * <p>
@@ -393,7 +405,9 @@ public class BoxClassInstantiator implements EntityInstantiator {
 		    ( context, function ) -> {
 			    Object collection = context.getThisClass().getVariablesScope().get( collectionKey );
 			    if ( collection instanceof FacadeCollectionView view ) {
-				    return Array.copyFromList( new ArrayList<>( view ) );
+				    // Managed collection: reads from a snapshot (safe to removeX() while iterating), writes made through the
+				    // returned array (append/arrayAppend/deleteAt/...) go to Hibernate's live collection so they persist.
+				    return Array.fromList( new ortus.boxlang.modules.orm.hibernate.facade.ToManyGetterView( view ) );
 			    }
 			    return collection;
 		    },
@@ -447,9 +461,14 @@ public class BoxClassInstantiator implements EntityInstantiator {
 					    ( ( List<Object> ) bag ).add( itemToAdd );
 				    }
 			    } else {
-				    // @TODO: implement/test this
+				    // Struct-typed collection: a BoxLang Struct (unmanaged entity) or a FacadeMapView over Hibernate's managed map.
 				    String structKey = StringCaster.cast( context.getArgumentsScope().get( Key.key ) );
-				    variablesScope.getAsStruct( collectionKey ).put( structKey, itemToAdd );
+				    Object map		= variablesScope.get( collectionKey );
+				    if ( map instanceof IStruct struct ) {
+					    struct.put( structKey, itemToAdd );
+				    } else {
+					    ( ( java.util.Map<Object, Object> ) map ).put( structKey, itemToAdd );
+				    }
 			    }
 
 			    // Return this for chainability.
@@ -528,7 +547,12 @@ public class BoxClassInstantiator implements EntityInstantiator {
 			    } else {
 				    // @TODO: test this!
 				    String structKey = StringCaster.cast( context.getArgumentsScope().get( Key.key ) );
-				    variablesScope.getAsStruct( collectionKey ).remove( structKey );
+				    Object map		= variablesScope.get( collectionKey );
+				    if ( map instanceof IStruct struct ) {
+					    struct.remove( Key.of( structKey ) );
+				    } else if ( map instanceof java.util.Map<?, ?> javaMap ) {
+					    javaMap.remove( structKey );
+				    }
 			    }
 
 			    // Return this for chainability.

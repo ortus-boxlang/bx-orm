@@ -147,6 +147,32 @@ Getter and setter each handle two owners:
 
 `getMember()` must return Hibernate's synthetic `MapMember` (as dynamic-map entities do); returning `null` breaks the JPA metamodel builder for MAP entities.
 
+## Entity facades (`hibernate/facade/`)
+
+Hibernate manages a generated POJO **facade** per entity, never the `IClassRunnable` itself. Rules to keep:
+
+- **Generation**: `EntityFacadeFactory` builds each facade with ByteBuddy. Accessors are static
+  `MethodCall`s to `EntityFacadeFactory.Accessors.get/set( self, [value,] propertyName, assocKind )` with
+  the property name and `AssocKind` as constants. Do **not** switch back to `MethodDelegation.to(instance)`:
+  that stores the interceptor in static fields set by a `LoadedTypeInitializer`, so the bytecode is not
+  self-contained and breaks when defined from `facades.jar` (trust mode NPE). Bytecode is only captured
+  for `facades.jar` when no loaded-type initializer is alive.
+- **Classloading**: each ORM build creates a `FacadeClassLoader` (`ORMConfig.facadeClassLoader`),
+  registered via `BootstrapServiceRegistryBuilder.applyClassLoader` (the `CLASSLOADERS` property is
+  ignored when a bootstrap registry is supplied). Facade FQNs are stable per app/entity, and a loader can
+  define a name only once, so the per-build loader is what lets `ormReload()` pick up a changed entity.
+  In trust mode the loader is seeded with `facades.jar` bytes (`EntityFacadeFactory.readFacadeJar`) and
+  defines from them, falling back to ByteBuddy.
+- **Wrap/unwrap**: `FacadeSupport.wrap(namespace, entityName, instance)` memoizes the facade on the
+  instance. Get the namespace from `ORMContext.getFacadeNamespace()` (the booted `ORMApp`'s config), never
+  `ormContext.getConfig().facadeNamespace` (the per-request config always holds the default).
+  `memoizedFacade` ignores a stored facade that does not wrap the instance (e.g. after `duplicate()`),
+  and root facades are `Serializable` with a `writeReplace` marker so a deep copy never shares one.
+- **Collections**: to-many accessors expose `FacadeCollectionView` / `FacadeMapView` (struct to-many,
+  `AssocKind.TO_MANY_ENTITY_MAP`). The BoxLang getter returns a `ToManyGetterView`: reads come from a
+  snapshot (safe removal while iterating), writes through it reach the live collection. A developer-written
+  getter (not a `GeneratedGetter`) is never replaced.
+
 ## Identifiers and Key normalization
 
 The old tuplizer's `getIdentifier`/`setIdentifier` and its `Key`→`String` normalization are gone. Identifier access now flows through the persister's `identifierMapping`, which uses `BoxPropertyAccess` like any other property. BoxLang scope keys are still `Key` instances, so the getter/setter convert names with `Key.of(...)` at the scope boundary. Composite identifiers arrive as a `java.util.Map` owner and are handled by the getter/setter's map branch.

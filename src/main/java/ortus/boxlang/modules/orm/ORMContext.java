@@ -272,6 +272,18 @@ public class ORMContext {
 	}
 
 	/**
+	 * The facade namespace of this context's ORM application. Read it from the booted application, never from this
+	 * context's own (per-request) {@link ORMConfig}: the namespace is derived at application startup, so the request copy
+	 * always holds the unset default.
+	 *
+	 * @return The owning ORM application's facade namespace.
+	 */
+	public String getFacadeNamespace() {
+		ORMApp ormApp = getORMApp();
+		return ormApp != null ? ormApp.getConfig().facadeNamespace : this.config.facadeNamespace;
+	}
+
+	/**
 	 * Shut down this ORM context.
 	 * <p>
 	 * Will close all Hibernate sessions and unregister the transaction manager.

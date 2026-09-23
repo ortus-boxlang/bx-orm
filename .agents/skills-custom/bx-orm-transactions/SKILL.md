@@ -41,6 +41,11 @@ commit or roll back independently of the surrounding `transaction{}`).
 public Connection getConnection() throws SQLException {
     ConnectionManager cm = getConnectionManager();          // from RequestBoxContext → IJDBCCapableContext
     DataSource        ds = resolveDatasource( cm );
+    // Hibernate isolated work (JdbcIsolationDelegate: sequence/table id allocation) commits or rolls back
+    // the connection it gets, so it must never receive the transaction's shared connection.
+    if ( cm.isInTransaction() && isHibernateIsolatedWork() ) {
+        return ds.getBoxConnection();
+    }
     // Transaction-aware: inside a transaction{} bound to this datasource, returns the transaction's
     // shared connection; otherwise a fresh pooled connection.
     return cm.getBoxConnection( ds );
@@ -63,6 +68,10 @@ public void closeConnection( Connection conn ) throws SQLException {
   `connectionManager.getTransaction().getBoxConnection()`, but only once the transaction has bound
   a datasource (so we never force lazy creation of a transaction connection just to compare).
 - `supportsAggressiveRelease()` **must** return `true` — see below.
+- `isHibernateIsolatedWork()` is a `StackWalker` check (first 16 frames) for
+  `org.hibernate.resource.transaction.backend.jdbc.internal.JdbcIsolationDelegate`, only run inside a
+  transaction. Without it, a sequence-style id allocation would commit (or on error roll back) the whole
+  surrounding `transaction{}` mid-flight. Covered by `TransactionManagerTest.testIsolatedWorkDoesNotCommitTransaction`.
 
 ## Why per-statement connection handling
 
@@ -192,6 +201,11 @@ that flag is experimental.
   transaction makes Hibernate hold the connection for the transaction duration, defeating
   `RELEASE_AFTER_STATEMENT` and reintroducing the stale-closed-connection bug. Use
   `flushForQuery` instead.
+- Never hand Hibernate isolated work the shared transaction connection (see `isHibernateIsolatedWork`):
+  `JdbcIsolationDelegate` calls `commit()`/`rollback()` on whatever connection it gets.
+- Transaction tests must use unique row values per test (`uniqueName(...)` in `TransactionManagerTest`) and
+  assert commits from a separate pooled connection (`committedCount`), so they neither depend on test order
+  nor pass vacuously.
 - `closeConnection` must compare by **identity** and must not force creation of a transaction
   connection just to compare (guard on `transaction.getDataSource() != null`).
 - Clearing on rollback is **unconditional** (not `autoManageSession`-gated) in the connection-riding

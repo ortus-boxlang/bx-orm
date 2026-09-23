@@ -308,7 +308,8 @@ public class SessionFactoryBuilder {
 	 * @param entities The discovered entity records for this session factory.
 	 */
 	private void generateEntityFacades( Collection<EntityRecord> entities ) {
-		ClassLoader						loader		= runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader;
+		ClassLoader						loader		= ormConfig.facadeClassLoader != null ? ormConfig.facadeClassLoader
+		    : runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader;
 
 		// Facades must be generated parents-first: a subclass facade extends its parent facade, so the parent class must
 		// already exist. Order by inheritance depth (roots first), reusing the same depth calculation the mapping-file
@@ -376,8 +377,11 @@ public class SessionFactoryBuilder {
 				// type and fails SessionFactory build. Match the version's ormType (Integer/Long/Short/Instant).
 				// - everything else: an Object accessor (bx-orm's converters are declared AttributeConverter<Object, ?>).
 				Class<?> accessorType;
-				if ( prop.getFieldType() == IPropertyMeta.FIELDTYPE.VERSION ) {
-					accessorType = versionJavaType( prop.getORMType() );
+				if ( prop.getFieldType() == IPropertyMeta.FIELDTYPE.VERSION || prop.getFieldType() == IPropertyMeta.FIELDTYPE.TIMESTAMP ) {
+					// fieldtype="timestamp" is a timestamp-based version whatever its (often absent, defaulting to string)
+					// ormType; fieldtype="version" follows its ormType.
+					accessorType = prop.getFieldType() == IPropertyMeta.FIELDTYPE.TIMESTAMP ? java.time.Instant.class
+					    : versionJavaType( prop.getORMType() );
 				} else if ( "binary".equals( ortus.boxlang.modules.orm.mapping.MappingXMLWriter.toHibernateType( prop.getORMType() ) ) ) {
 					accessorType = byte[].class;
 				} else {
@@ -437,7 +441,10 @@ public class SessionFactoryBuilder {
 				    ? EntityFacadeFactory.AssocKind.TO_MANY_MAP
 				    : EntityFacadeFactory.AssocKind.TO_MANY;
 			case ONE_TO_MANY, MANY_TO_MANY :
-				return EntityFacadeFactory.AssocKind.TO_MANY;
+				// A struct-typed entity collection is a MAP of entities (keyed by structKeyColumn); an array is a List.
+				return "map".equalsIgnoreCase( prop.getAssociation().getAsString( ortus.boxlang.modules.orm.config.ORMKeys.collectionType ) )
+				    ? EntityFacadeFactory.AssocKind.TO_MANY_ENTITY_MAP
+				    : EntityFacadeFactory.AssocKind.TO_MANY;
 			default :
 				return EntityFacadeFactory.AssocKind.NONE;
 		}

@@ -83,9 +83,36 @@ public class ORMConnectionProvider implements ConnectionProvider {
 	public Connection getConnection() throws SQLException {
 		ConnectionManager	connectionManager	= getConnectionManager();
 		DataSource			datasource			= resolveDatasource( connectionManager );
-		Connection			connection			= connectionManager.getBoxConnection( datasource );
+		// Hibernate "isolated work" (e.g. table/sequence-table id allocation) runs on its own connection and COMMITS it
+		// (JdbcIsolationDelegate.doWorkAndCommit). Handing it the shared BoxLang transaction connection would commit - or
+		// on error roll back - the whole surrounding transaction{} mid-flight, so give it a fresh pooled connection instead,
+		// exactly as Hibernate intends. Only checked inside a transaction, where it matters.
+		if ( connectionManager.isInTransaction() && isHibernateIsolatedWork() ) {
+			Connection isolated = datasource.getBoxConnection();
+			logger.trace( "Getting isolated-work connection {} for datasource: {}", isolated, datasourceName.getOriginalValue() );
+			return isolated;
+		}
+		Connection connection = connectionManager.getBoxConnection( datasource );
 		logger.trace( "Getting connection {} for datasource: {}", connection, datasourceName.getOriginalValue() );
 		return connection;
+	}
+
+	/** Hibernate's JDBC isolation delegate: the only caller that commits/rolls back the connection it is given. */
+	private static final String	ISOLATION_DELEGATE	= "org.hibernate.resource.transaction.backend.jdbc.internal.JdbcIsolationDelegate";
+
+	/** How far up the stack to look for the isolation delegate (it sits a handful of frames above the provider). */
+	private static final int	ISOLATION_DEPTH		= 16;
+
+	/**
+	 * Whether the current connection request comes from Hibernate isolated work ({@code JdbcIsolationDelegate}), which
+	 * commits and releases the connection itself.
+	 *
+	 * @return true if called (transitively) from the JDBC isolation delegate.
+	 */
+	private static boolean isHibernateIsolatedWork() {
+		return StackWalker.getInstance().walk( frames -> frames
+		    .limit( ISOLATION_DEPTH )
+		    .anyMatch( frame -> ISOLATION_DELEGATE.equals( frame.getClassName() ) ) );
 	}
 
 	/**

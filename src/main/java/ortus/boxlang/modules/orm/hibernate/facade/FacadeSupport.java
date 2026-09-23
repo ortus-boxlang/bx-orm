@@ -88,6 +88,28 @@ public final class FacadeSupport {
 	}
 
 	/**
+	 * The facade memoized on an instance - but only if it really wraps <em>that</em> instance. A shallow
+	 * {@code duplicate()} copies the variables scope by reference, hidden facade key included, so a copy would otherwise
+	 * reuse the original's facade and every save of the copy would write to the original; a deep {@code duplicate()}
+	 * leaves {@link EntityFacadeFactory#DETACHED_FACADE_MARKER} there instead (the facade's {@code writeReplace}). Either
+	 * way the copy is treated as having no facade, so it gets its own.
+	 *
+	 * @param instance The BoxLang entity instance.
+	 *
+	 * @return The instance's own facade, or null if it has none (or only carries a copied one).
+	 */
+	private static Object memoizedFacade( IClassRunnable instance ) {
+		Object existing = instance.getVariablesScope().get( FACADE_KEY );
+		if ( existing instanceof BoxEntityFacade facade ) {
+			if ( unwrap( facade ) == instance ) {
+				return facade;
+			}
+			instance.getVariablesScope().remove( FACADE_KEY );
+		}
+		return null;
+	}
+
+	/**
 	 * Register a generated facade class for an entity within an application's namespace.
 	 *
 	 * @param namespace   The owning application's facade namespace.
@@ -142,8 +164,8 @@ public final class FacadeSupport {
 		// A managed/created instance already carries its memoized facade, so it round-trips without a registry lookup. Only
 		// a not-yet-wrapped instance reaches the registry, and it must be resolved within its own application's namespace
 		// (stamped on the instance at creation), never by bare entity name - which could collide across applications.
-		Object existing = instance.getVariablesScope().get( FACADE_KEY );
-		if ( existing instanceof BoxEntityFacade ) {
+		Object existing = memoizedFacade( instance );
+		if ( existing != null ) {
 			return existing;
 		}
 		Object stamped = instance.getVariablesScope().get( NAMESPACE_KEY );
@@ -187,8 +209,8 @@ public final class FacadeSupport {
 	}
 
 	public static Object wrap( String namespace, String entityName, IClassRunnable instance ) {
-		Object existing = instance.getVariablesScope().get( FACADE_KEY );
-		if ( existing instanceof BoxEntityFacade ) {
+		Object existing = memoizedFacade( instance );
+		if ( existing != null ) {
 			return existing;
 		}
 		Class<?> facadeClass = facadeClassFor( namespace, entityName );

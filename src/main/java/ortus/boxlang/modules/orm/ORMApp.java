@@ -153,8 +153,12 @@ public class ORMApp {
 		// Derive this application's facade namespace from its (unique) application name, so its generated entity facades
 		// are segregated from any other application's same-named entities sharing this JVM. Set before mapping generation
 		// and facade generation, both of which read it.
-		this.config.facadeNamespace = ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming
+		this.config.facadeNamespace		= ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming
 		    .sanitizeNamespace( ORMService.getAppNameFromContext( context ).getName() );
+		// Each build (first boot and every reload) generates its facades into a fresh classloader, so a reload with a
+		// changed entity defines new facade classes instead of reusing the previous build's (a loader can only define a
+		// given class name once). Trust mode replaces this with a loader carrying the pre-generated facades.jar bytecode.
+		this.config.facadeClassLoader	= new ortus.boxlang.modules.orm.hibernate.facade.FacadeClassLoader( moduleClassLoader() );
 
 		// Resolve entities for this application and group them by datasource. In `trust` manifest mode this loads a
 		// pre-generated .bxorm/manifest.json with zero discovery/parsing/mapping-generation; otherwise it discovers
@@ -224,6 +228,15 @@ public class ORMApp {
 	}
 
 	/**
+	 * The ORM module classloader: the parent of each build's facade classloader.
+	 *
+	 * @return The module classloader.
+	 */
+	private static ClassLoader moduleClassLoader() {
+		return runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader;
+	}
+
+	/**
 	 * Resolve the entity map for this application, honoring the {@code ormManifest} mode.
 	 * <ul>
 	 * <li>{@code trust} - load {@code .bxorm/manifest.json} (integrity-checked, fail-closed) and rehydrate entities with no
@@ -244,10 +257,20 @@ public class ORMApp {
 			    .resolveFolder( context.getRequestContext(), this.config.manifestLocation );
 			ortus.boxlang.modules.orm.mapping.manifest.OrmManifest	manifest	= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
 			    .read( folder, true );
+			// Fail closed on a stale manifest: booting old mappings against changed entities or settings would silently
+			// persist to the wrong columns/tables. Regenerate with an auto-mode boot or `bxorm manifest generate`.
+			List<String>											stale		= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
+			    .verify( manifest, this.config, moduleVersion() );
+			if ( !stale.isEmpty() ) {
+				throw new BoxRuntimeException( "ORM manifest mode is [trust] but the manifest at [" + folder + "] is stale: "
+				    + String.join( "; ", stale )
+				    + ". Regenerate it (boot once with ormManifest=\"auto\" or run `bxorm manifest generate`), or switch ormManifest to [auto]." );
+			}
 			// Load pre-generated facade bytecode (if a facades.jar was shipped) so the session factory build injects those
 			// classes instead of re-running ByteBuddy. Best-effort: a missing jar just means facades are regenerated.
-			ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory
-			    .loadFacadeJar( folder.resolve( ortus.boxlang.modules.orm.mapping.manifest.ManifestService.FACADES_JAR ) );
+			this.config.facadeClassLoader = new ortus.boxlang.modules.orm.hibernate.facade.FacadeClassLoader( moduleClassLoader(),
+			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory
+			        .readFacadeJar( folder.resolve( ortus.boxlang.modules.orm.mapping.manifest.ManifestService.FACADES_JAR ) ) );
 			logger.info( "ORM manifest [trust] mode: booting from [{}] with {} entities; discovery/parsing/generation skipped.", folder,
 			    manifest.getEntities().size() );
 			return ortus.boxlang.modules.orm.mapping.manifest.ManifestService.toEntityMap( manifest );
@@ -273,11 +296,12 @@ public class ORMApp {
 	}
 
 	/**
-	 * The ORM module version stamp recorded in a manifest. Falls back to {@code "dev"} when no packaged version is present.
+	 * The ORM module version stamp recorded in a manifest (the module record's version, as the CLI reports it). Falls back
+	 * to {@code "dev"} when the module record carries no version.
 	 */
-	private String moduleVersion() {
-		String version = getClass().getPackage().getImplementationVersion();
-		return version == null ? "dev" : version;
+	private static String moduleVersion() {
+		ortus.boxlang.runtime.modules.ModuleRecord record = runtime.getModuleService().getModuleRecord( Key.of( "orm" ) );
+		return record == null || record.version == null || record.version.isBlank() ? "dev" : record.version;
 	}
 
 	/**
