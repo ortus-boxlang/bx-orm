@@ -168,6 +168,9 @@ Hibernate manages a generated POJO **facade** per entity, never the `IClassRunna
   `ormContext.getConfig().facadeNamespace` (the per-request config always holds the default).
   `memoizedFacade` ignores a stored facade that does not wrap the instance (e.g. after `duplicate()`),
   and root facades are `Serializable` with a `writeReplace` marker so a deep copy never shares one.
+  An instance made with `new` has no namespace stamp: `wrapInstance` falls back to the current request's
+  ORM app. `FacadeSupport.rebind(facade, instance, namespace)` re-points a managed facade at another
+  instance (used by `entityReload()` for detached entities, since Hibernate 7 has no public reattach).
 - **Collections**: to-many accessors expose `FacadeCollectionView` / `FacadeMapView` (struct to-many,
   `AssocKind.TO_MANY_ENTITY_MAP`). The BoxLang getter returns a `ToManyGetterView`: reads come from a
   snapshot (safe removal while iterating), writes through it reach the live collection. A developer-written

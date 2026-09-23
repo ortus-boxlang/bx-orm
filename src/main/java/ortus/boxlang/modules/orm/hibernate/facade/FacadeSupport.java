@@ -168,13 +168,35 @@ public final class FacadeSupport {
 		if ( existing != null ) {
 			return existing;
 		}
-		Object stamped = instance.getVariablesScope().get( NAMESPACE_KEY );
-		if ( ! ( stamped instanceof String namespace ) ) {
+		Object	stamped		= instance.getVariablesScope().get( NAMESPACE_KEY );
+		String	namespace	= stamped instanceof String s ? s : currentRequestNamespace();
+		if ( namespace == null ) {
 			throw new BoxRuntimeException(
 			    "Cannot resolve the ORM application namespace for a facade of entity ["
-			        + ortus.boxlang.modules.orm.ORMService.getEntityName( instance ) + "]; the instance was not created through the ORM." );
+			        + ortus.boxlang.modules.orm.ORMService.getEntityName( instance )
+			        + "]; the instance was not created through the ORM and there is no ORM-enabled request in scope." );
 		}
 		return wrap( namespace, ortus.boxlang.modules.orm.ORMService.getEntityName( instance ), instance );
+	}
+
+	/**
+	 * The facade namespace of the ORM application running the current request. An instance created with {@code new}
+	 * (rather than {@code entityNew()}) carries no namespace stamp; it can only belong to the application whose request is
+	 * handling it, e.g. a {@code new Comment()} added to a parent and saved through the parent's cascade.
+	 *
+	 * @return The namespace, or {@code null} when there is no ORM-enabled request context.
+	 */
+	private static String currentRequestNamespace() {
+		ortus.boxlang.runtime.context.IBoxContext context = ortus.boxlang.runtime.context.RequestBoxContext.getCurrent();
+		if ( context == null ) {
+			return null;
+		}
+		try {
+			return ortus.boxlang.modules.orm.ORMContext.getForContext( context ).getFacadeNamespace();
+		} catch ( RuntimeException e ) {
+			// Not an ORM-enabled request: report the missing namespace to the caller.
+			return null;
+		}
 	}
 
 	/**
@@ -226,6 +248,26 @@ public final class FacadeSupport {
 		} catch ( ReflectiveOperationException e ) {
 			throw new BoxRuntimeException( "Unable to instantiate entity facade for entity [" + entityName + "]", e );
 		}
+	}
+
+	/**
+	 * Point a (managed) facade at a different BoxLang instance, and memoize it on that instance, so Hibernate's managed
+	 * entry for the row now reads and writes the given instance. Used by {@code entityReload()} to re-attach a detached
+	 * entity: Hibernate 7 has no public reattach, so a freshly loaded managed facade is rebound to the caller's object.
+	 *
+	 * @param facade    A generated entity facade.
+	 * @param instance  The BoxLang instance the facade should delegate to from now on.
+	 * @param namespace The owning application's facade namespace.
+	 */
+	public static void rebind( Object facade, IClassRunnable instance, String namespace ) {
+		try {
+			// The root facade declares a public "boxState" field (see EntityFacadeFactory); getField finds it on subclasses.
+			facade.getClass().getField( "boxState" ).set( facade, new BoxIClassRunnableState( instance ) );
+		} catch ( ReflectiveOperationException e ) {
+			throw new BoxRuntimeException( "Unable to rebind entity facade [" + facade.getClass().getName() + "]", e );
+		}
+		instance.getVariablesScope().put( FACADE_KEY, facade );
+		instance.getVariablesScope().put( NAMESPACE_KEY, namespace );
 	}
 
 	/**

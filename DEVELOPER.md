@@ -151,6 +151,13 @@ Key rules that fall out of this design:
   no class initializer and can be written to `facades.jar` and defined again later as plain bytes.
 - **The namespace comes from the booted app.** BIFs resolve it via `ORMContext.getFacadeNamespace()`
   (the `ORMApp`'s config), never the per-request `ORMConfig`, which only ever holds the default.
+- **Instances made with `new`** carry no namespace stamp; `FacadeSupport.wrapInstance` falls back to the
+  current request's ORM application, so they work even when they only reach Hibernate through a cascade.
+- **`entityReload()` on a detached entity.** Hibernate 7 refuses to refresh or `lock()`-reattach a detached
+  entity. `EntityReload` loads the row, rebinds that managed facade to the caller's object
+  (`FacadeSupport.rebind`, which sets the facade's `boxState`) and refreshes, so the object is managed
+  again. If another variable already holds the managed row, it refreshes that one and copies the mapped
+  properties onto the caller's object instead.
 - **`duplicate()` never shares a facade.** Root facades are `Serializable` with a `writeReplace`
   that yields a marker, so a deep copy of an entity drops the original's memoized facade, and
   `FacadeSupport` ignores any memoized facade that does not wrap the instance it is stored on.

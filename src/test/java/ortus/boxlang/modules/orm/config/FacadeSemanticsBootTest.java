@@ -145,6 +145,82 @@ public class FacadeSemanticsBootTest {
 	}
 
 	/** Run one request against the regression app and return its variables scope. */
+	@DisplayName( "entityReload() of an entity detached by ormClearSession() re-reads it and makes it managed again" )
+	@Test
+	public void testReloadDetachedAfterClearSession() {
+		IScope vars = runRequest( """
+		                          entitySave( entityNew( "MrItem", { label : "reload-original" } ) );
+		                          ormFlush();
+		                          ormClearSession();
+		                          item = entityLoad( "MrItem", { label : "reload-original" }, true );
+		                          ormClearSession();
+		                          queryExecute( "UPDATE mr_items SET label = 'reload-db' WHERE id = :id", { id : item.getId() } );
+		                          entityReload( item );
+		                          reloaded = item.getLabel();
+		                          // Managed again: a change is flushed without calling entitySave().
+		                          item.setLabel( "reload-managed" );
+		                          ormFlush();
+		                          persisted = queryExecute( "SELECT label FROM mr_items WHERE id = :id", { id : item.getId() } ).label;
+		                          """ );
+		assertThat( vars.getAsString( Key.of( "reloaded" ) ) ).isEqualTo( "reload-db" );
+		assertThat( vars.getAsString( Key.of( "persisted" ) ) ).isEqualTo( "reload-managed" );
+	}
+
+	@DisplayName( "entityReload() after a rolled-back transaction discards the rolled-back changes" )
+	@Test
+	public void testReloadAfterRollback() {
+		IScope vars = runRequest( """
+		                          entitySave( entityNew( "MrItem", { label : "rollback-original" } ) );
+		                          ormFlush();
+		                          ormClearSession();
+		                          item = entityLoad( "MrItem", { label : "rollback-original" }, true );
+		                          transaction {
+		                              item.setLabel( "rollback-dirty" );
+		                              transactionRollback();
+		                          }
+		                          entityReload( item );
+		                          reloaded = item.getLabel();
+		                          """ );
+		assertThat( vars.getAsString( Key.of( "reloaded" ) ) ).isEqualTo( "rollback-original" );
+	}
+
+	@DisplayName( "entityReload() of a detached copy while another variable holds the managed row gives it the DB values" )
+	@Test
+	public void testReloadDetachedWhileRowIsManagedElsewhere() {
+		IScope vars = runRequest( """
+		                          entitySave( entityNew( "MrItem", { label : "twin-original" } ) );
+		                          ormFlush();
+		                          ormClearSession();
+		                          stale = entityLoad( "MrItem", { label : "twin-original" }, true );
+		                          ormClearSession();
+		                          fresh = entityLoadByPK( "MrItem", stale.getId() );
+		                          queryExecute( "UPDATE mr_items SET label = 'twin-db' WHERE id = :id", { id : stale.getId() } );
+		                          entityReload( stale );
+		                          staleLabel = stale.getLabel();
+		                          freshLabel = fresh.getLabel();
+		                          """ );
+		assertThat( vars.getAsString( Key.of( "staleLabel" ) ) ).isEqualTo( "twin-db" );
+		assertThat( vars.getAsString( Key.of( "freshLabel" ) ) ).isEqualTo( "twin-db" );
+	}
+
+	@DisplayName( "A child created with new (not entityNew) is saved through its parent's cascade" )
+	@Test
+	public void testNewInstanceSavedThroughCascade() {
+		IScope vars = runRequest( """
+		                          post = entityNew( "MrPost", { title : "cascade-new" } );
+		                          comment = new root.models.MrComment();
+		                          comment.setBody( "made-with-new" );
+		                          post.addComment( comment );
+		                          entitySave( post );
+		                          ormFlush();
+		                          ormClearSession();
+		                          saved = queryExecute( "SELECT count(*) AS n FROM mr_comments WHERE body = 'made-with-new'" ).n;
+		                          loadedBody = entityLoad( "MrPost", { title : "cascade-new" }, true ).getComments()[ 1 ].getBody();
+		                          """ );
+		assertThat( ( ( Number ) vars.get( Key.of( "saved" ) ) ).intValue() ).isEqualTo( 1 );
+		assertThat( vars.getAsString( Key.of( "loadedBody" ) ) ).isEqualTo( "made-with-new" );
+	}
+
 	private IScope runRequest( String source ) {
 		ScriptingRequestBoxContext context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
 		RequestBoxContext.setCurrent( context );

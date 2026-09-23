@@ -83,6 +83,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `entitySave()`, `entityDelete()`, `entityMerge()`, `entityReload()` and `entityIsAttached()` resolve the application's facade namespace from the booted ORM application instead of the per-request configuration.
 - A to-many getter (`getChildren()`) iterates a stable snapshot while `append`/`arrayAppend`, `set` and `remove` through it change the managed collection, so both `parent.getChildren().append( c )` and removing while iterating work.
 - A hand-written to-many getter on an entity is kept; the ORM no longer replaces it with its generated one.
+- `entityReload()` works on a detached entity again (after `ormClearSession()`, a rolled-back `transaction{}`, or one loaded in an earlier request): it re-reads the row and the entity is managed again, as on Hibernate 5. Hibernate 7 itself refuses to refresh a detached entity.
+- An entity created with `new` (instead of `entityNew()`) and saved only through a parent's cascade (e.g. `post.addComment( new Comment() )`) no longer fails with "the instance was not created through the ORM"; it resolves to the current request's ORM application.
 
 ## [1.7.0] - 2026-09-14
 
