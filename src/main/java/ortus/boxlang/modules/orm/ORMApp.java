@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.hibernate.Session;
@@ -34,6 +35,7 @@ import org.hibernate.query.Query;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.config.ORMEntityWatcher;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.hibernate.BoxProxy;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
@@ -108,6 +110,16 @@ public class ORMApp {
 	 * A map of entities discovered for this ORM application, keyed by datasource name.
 	 */
 	private Map<Key, List<EntityRecord>>	entityMap;
+
+	/**
+	 * Auto manifest mode only: the entity-source watcher (or {@code null} when not in auto mode / nothing to watch).
+	 */
+	private ORMEntityWatcher				entityWatcher;
+
+	/**
+	 * Auto manifest mode only: set true by the watcher when an entity source changes; the next request reloads and clears it.
+	 */
+	private final AtomicBoolean				dirty				= new AtomicBoolean( false );
 
 	/**
 	 * ------------------------------------------------------------------------------------------------------------
@@ -208,6 +220,14 @@ public class ORMApp {
 			} catch ( RuntimeException e ) {
 				logger.warn( "ORM manifest [auto] mode: failed to write facades.jar (continuing normally): {}", e.getMessage() );
 			}
+
+			// Start a source watcher over the entity paths so edits trigger an automatic ORM reload on the next request.
+			// Guarded against runtimes without a watcher service: a failure just disables live reload, never breaks boot.
+			try {
+				this.entityWatcher = ORMEntityWatcher.startFor( this.name, this.config, context, this::markDirty, this.logger );
+			} catch ( Throwable t ) {
+				logger.warn( "ORM manifest [auto] mode: entity watcher unavailable, live reload disabled: {}", t.getMessage() );
+			}
 		}
 
 		// Configure logging according to the ORM configuration, after all session factories are built.
@@ -307,6 +327,24 @@ public class ORMApp {
 	 */
 	public Key getName() {
 		return this.name;
+	}
+
+	/**
+	 * Mark this ORM application as needing a reload (called by the auto-mode entity watcher on a source change). The
+	 * reload itself is deferred to the next request, which has the request/JDBC context a reload requires.
+	 */
+	public void markDirty() {
+		this.dirty.set( true );
+	}
+
+	/**
+	 * Atomically test-and-clear the dirty flag: returns {@code true} at most once per change, so a single request
+	 * performs the reload while concurrent requests do not.
+	 *
+	 * @return true if the app was dirty (and is now cleared), false otherwise.
+	 */
+	public boolean isDirtyAndClear() {
+		return this.dirty.compareAndSet( true, false );
 	}
 
 	/**
@@ -763,6 +801,16 @@ public class ORMApp {
 	 */
 	public void shutdown() {
 		logger.debug( "Shutting down ORM App: " + this.name );
+
+		// Stop the auto-mode entity watcher first so no reload is triggered mid-shutdown and no watcher thread leaks.
+		if ( this.entityWatcher != null ) {
+			try {
+				this.entityWatcher.stop();
+			} catch ( Throwable t ) {
+				logger.warn( "ORMApp.shutdown: error stopping entity watcher: {}", t.getMessage() );
+			}
+			this.entityWatcher = null;
+		}
 
 		// Close all session factories, which should also close any open sessions and connections.
 		// Log each close for visibility into shutdown progress, since it can

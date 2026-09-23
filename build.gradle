@@ -24,7 +24,8 @@ if ( branch == 'development' ) {
 	// If the branch is 'development', ensure the version ends with '-snapshot'
 	// This replaces any existing prerelease identifier with '-snapshot'
 	version = version.contains('-') ? version.replaceAll(/-.*/, '-snapshot') : "${version}-snapshot"
-	boxlangVersion = boxlangVersion.contains('-') ? boxlangVersion.replaceAll(/-.*/, '-snapshot') : "${boxlangVersion}-snapshot"
+	// NOTE: boxlangVersion is pinned to an explicit BoxLang release (see gradle.properties); it is used verbatim and
+	// is intentionally NOT snapshot-ified here, so the same release resolves on development and feature branches alike.
 }
 
 repositories {

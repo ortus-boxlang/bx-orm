@@ -267,16 +267,22 @@ the Java `ManifestCli`, which reads/validates/clears the `.bxorm/` boot cache wi
 The `.bxorm/` folder is resolved against the working directory, overridable with `--dir=<path>`.
 Generation is not a verb: `auto` mode writes the manifest on every boot, which is the generation path.
 
-Code: `ortus.boxlang.modules.orm.mapping.manifest` (`OrmManifest`, `ManifestService`, `ManifestCli`);
-wired in `ORMApp.startup` → `resolveEntityMap`, `EntityFacadeFactory` (facade jar load/write), and
-`ModuleConfig.main`.
+**Auto-mode self-watcher.** In `auto` mode, `ORMApp.startup` starts an `ORMEntityWatcher` over the
+entity paths (recursive, 500ms debounce), built on BoxLang's `WatcherService`. Because a file-change
+event fires on a background thread with no request/JDBC context (and a reload requires one), the
+watcher does not reload directly: its listener only flags the `ORMApp` dirty (an `AtomicBoolean`).
+`ORMService.getORMAppByContext` — which runs on a real request thread — sees the flag, clears it with
+a compare-and-set (so a single request reloads while concurrent ones do not), and calls `reloadApp`.
+The reload naturally cycles the watcher (old app's `shutdown` stops it; the new app starts a fresh
+one). Generated `*.orm.xml` and any `/.bxorm/` path are ignored by the listener so a reload's own
+writes never retrigger it. Startup is wrapped so a runtime without a watcher service just logs a
+warning and disables live reload. Class: `ORMEntityWatcher`; wired in `ORMApp.startup`/`shutdown` and
+`ORMService.getORMAppByContext`.
 
-### Planned follow-ons (designed, not yet built)
-
-- **Auto-mode self-watcher** — in `auto`, a BoxLang `watcherNew()` over the entity paths (+ the
-  config file's mtime) that debounces and triggers an ORM reload on change; started at boot, stopped
-  at shutdown, never watching `.bxorm/` itself. Deferred: `watcherNew()` is not in the pinned BoxLang
-  runtime yet, and a raw watcher thread risks leaks/mid-run reloads in the test suite.
+Code: `ortus.boxlang.modules.orm.mapping.manifest` (`OrmManifest`, `ManifestService`, `ManifestCli`)
+and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startup` →
+`resolveEntityMap`, `EntityFacadeFactory` (facade jar load/write), `ModuleConfig.main`, and the
+auto-reload check in `ORMService.getORMAppByContext`.
 
 ## 11. Where we go next
 

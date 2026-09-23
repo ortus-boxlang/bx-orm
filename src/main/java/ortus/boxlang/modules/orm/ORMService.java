@@ -515,7 +515,19 @@ public class ORMService extends BaseService {
 		if ( appContext == null ) {
 			throw new BoxRuntimeException( "No application context available to retrieve ORM application." );
 		}
-		return getORMApp( appContext.getApplication().getName() );
+		ORMApp app = getORMApp( appContext.getApplication().getName() );
+		// Auto-mode live reload: the entity watcher runs on a background thread with no request context, so it only flags
+		// the app dirty. Here we have a request context, so perform the deferred reload. compareAndSet inside
+		// isDirtyAndClear() guarantees a single reload across concurrent callers; a freshly reloaded app is never dirty,
+		// so the eager ORMContext init inside reloadApp cannot recurse.
+		if ( app != null && app.isDirtyAndClear() ) {
+			try {
+				app = reloadApp( context );
+			} catch ( Exception e ) {
+				logger.warn( "ORM auto-mode reload failed: {}", e.getMessage(), e );
+			}
+		}
+		return app;
 	}
 
 	/**

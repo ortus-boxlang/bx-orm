@@ -26,8 +26,12 @@ import java.util.Comparator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.io.TempDir;
 
 import ortus.boxlang.modules.orm.mapping.manifest.ManifestService;
 import ortus.boxlang.modules.orm.mapping.manifest.OrmManifest;
@@ -45,6 +49,7 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
  * end-to-end while the manifest is being maintained.
  */
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
+@TestMethodOrder( MethodOrderer.OrderAnnotation.class )
 public class ManifestBootTest {
 
 	private static BoxRuntime	instance;
@@ -93,6 +98,7 @@ public class ManifestBootTest {
 
 	@DisplayName( "auto mode writes a valid, reloadable .bxorm/ manifest during a real boot and entities work" )
 	@Test
+	@Order( 1 )
 	public void testAutoModeWritesManifest() {
 		// @formatter:off
 		instance.executeSource( """
@@ -137,5 +143,88 @@ public class ManifestBootTest {
 		OrmManifest manifest = ManifestService.read( manifestFolder, true );
 		assertThat( manifest.getEntities() ).hasSize( 2 );
 		assertThat( ManifestService.toEntityMap( manifest ).values().stream().mapToInt( java.util.List::size ).sum() ).isEqualTo( 2 );
+	}
+
+	@DisplayName( "auto mode registers an entity watcher for the application during boot" )
+	@Test
+	@Order( 2 )
+	public void testAutoModeRegistersWatcher() {
+		// The watcher is keyed orm-entities-<appName>; WatcherService/Key are core types, so no module cast is needed.
+		assertThat( instance.getWatcherService().hasWatcher( Key.of( "orm-entities-BXORMManifestTest" ) ) ).isTrue();
+	}
+
+	@DisplayName( "a new entity source file is picked up by a live reload on the next request (watcher -> dirty -> reload)" )
+	@Test
+	@Order( 3 )
+	public void testLiveReloadPicksUpNewEntity() throws Exception {
+		Path	modelsDir	= Path.of( "src/test/resources/manifestApp/models" ).toAbsolutePath();
+		Path	sprocket	= modelsDir.resolve( "Sprocket.bx" );
+		Path	sprocketXml	= modelsDir.resolve( "Sprocket.orm.xml" );
+		try {
+			// Sanity: Sprocket is unknown before the file exists.
+			assertThat( entityKnownInFreshRequest( "Sprocket" ) ).isFalse();
+
+			// Drop a new entity into a watched path; the watcher marks the app dirty and the next request reloads.
+			Files.writeString( sprocket,
+			    "class persistent=\"true\" table=\"sprockets\" { property name=\"id\" fieldtype=\"id\" generator=\"increment\" ormType=\"integer\"; property name=\"label\" ormType=\"string\"; }",
+			    java.nio.charset.StandardCharsets.UTF_8 );
+
+			boolean	known		= false;
+			long	deadline	= System.currentTimeMillis() + 15000;
+			while ( System.currentTimeMillis() < deadline ) {
+				if ( entityKnownInFreshRequest( "Sprocket" ) ) {
+					known = true;
+					break;
+				}
+				Thread.sleep( 300 );
+			}
+			assertThat( known ).isTrue();
+		} finally {
+			Files.deleteIfExists( sprocket );
+			Files.deleteIfExists( sprocketXml );
+			RequestBoxContext.setCurrent( context );
+		}
+	}
+
+	@DisplayName( "the bxorm CLI dispatches through ModuleConfig.main() and honors --dir (clear removes the cache)" )
+	@Test
+	@Order( 4 )
+	public void testModuleConfigMainCliDispatch( @TempDir Path tmp ) throws Exception {
+		// Seed a .bxorm cache under a temp app root, then drive the REAL CLI entry point: ModuleConfig.main().
+		Path bxorm = tmp.resolve( ManifestService.FOLDER_NAME );
+		Files.createDirectories( bxorm );
+		Files.writeString( bxorm.resolve( ManifestService.MANIFEST_NAME ), "{}" );
+		assertThat( Files.exists( bxorm ) ).isTrue();
+
+		ModuleRecord rec = instance.getModuleService().getRegistry().get( ORMKeys.moduleName );
+		// main() parses --dir, resolves <dir>/.bxorm, and dispatches to the Java ManifestCli 'clear' verb.
+		rec.moduleConfig.main( context, new String[] { "clear", "--dir=" + tmp.toAbsolutePath() } );
+
+		assertThat( Files.exists( bxorm ) ).isFalse();
+	}
+
+	/**
+	 * Resolve whether an entity is known, using a fresh request context each call so a new ORMContext is created - which
+	 * is what triggers the deferred auto-reload (mid-request reloads are intentionally avoided). Restores the class
+	 * context as current before returning.
+	 */
+	private boolean entityKnownInFreshRequest( String entityName ) {
+		RequestBoxContext reqCtx = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
+		try {
+			RequestBoxContext.setCurrent( reqCtx );
+			reqCtx.loadApplicationDescriptor( Path.of( "src/test/resources/manifestApp/index.bxs" ).toAbsolutePath().toUri() );
+			reqCtx.getApplicationListener().onRequestStart( reqCtx, null );
+			IScope vars = reqCtx.getScopeNearby( VariablesScope.name );
+			instance.executeSource( "k = false; try { entityNew( \"" + entityName + "\" ); k = true; } catch( any e ) { k = false; }", reqCtx );
+			return Boolean.TRUE.equals( vars.get( Key.of( "k" ) ) );
+		} finally {
+			try {
+				reqCtx.getApplicationListener().onRequestEnd( reqCtx, null );
+			} catch ( Exception ignored ) {
+				// ignore
+			}
+			reqCtx.shutdown();
+			RequestBoxContext.setCurrent( context );
+		}
 	}
 }
