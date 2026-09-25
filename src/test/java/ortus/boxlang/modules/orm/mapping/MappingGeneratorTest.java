@@ -570,6 +570,80 @@ public class MappingGeneratorTest {
 		assertThat( childElement( o2m, "join-column" ).getAttribute( "name" ) ).isEqualTo( "shelfId" );
 	}
 
+	@DisplayName( "Regression: uniquekey groups columns into one named unique-constraint on the table" )
+	@Test
+	public void testWriterUniqueKeyGroupsColumns() {
+		Document	doc		= writeXML( """
+		                                class persistent table="people" {
+		                                	property name="id" fieldtype="id";
+		                                	property name="firstName" column="first_name" uniquekey="uk_person_name";
+		                                	property name="lastName" column="last_name" uniquekey="uk_person_name";
+		                                	property name="email" uniquekey="uk_person_email";
+		                                }
+		                                """ );
+		Element		table	= first( doc, "table" );
+		Element		name	= byName( doc, "unique-constraint", "uk_person_name" );
+		assertThat( name ).isNotNull();
+		assertThat( name.getParentNode() ).isEqualTo( table );
+		NodeList cols = name.getElementsByTagName( "column-name" );
+		assertThat( cols.getLength() ).isEqualTo( 2 );
+		assertThat( cols.item( 0 ).getTextContent() ).isEqualTo( "first_name" );
+		assertThat( cols.item( 1 ).getTextContent() ).isEqualTo( "last_name" );
+		Element email = byName( doc, "unique-constraint", "uk_person_email" );
+		assertThat( email.getElementsByTagName( "column-name" ).item( 0 ).getTextContent() ).isEqualTo( "email" );
+	}
+
+	@DisplayName( "Regression: index creates a named table index, grouping properties that share a name" )
+	@Test
+	public void testWriterIndexGroupsColumns() {
+		Document	doc		= writeXML( """
+		                                class persistent table="orders" {
+		                                	property name="id" fieldtype="id";
+		                                	property name="status" index="idx_status";
+		                                	property name="region" column="region_code" index="idx_region_date";
+		                                	property name="placedOn" column="placed_on" ormtype="timestamp" index="idx_region_date";
+		                                }
+		                                """ );
+		Element		status	= byName( doc, "index", "idx_status" );
+		assertThat( status ).isNotNull();
+		assertThat( status.getAttribute( "column-list" ) ).isEqualTo( "status" );
+		assertThat( status.getParentNode() ).isEqualTo( first( doc, "table" ) );
+		assertThat( byName( doc, "index", "idx_region_date" ).getAttribute( "column-list" ) ).isEqualTo( "region_code, placed_on" );
+	}
+
+	@DisplayName( "Regression: many-to-one index and uniquekey apply to the foreign key column" )
+	@Test
+	public void testWriterManyToOneIndexAndUniqueKey() {
+		Document doc = writeXML(
+		    "class persistent table=\"cars\" { property name=\"id\" fieldtype=\"id\"; property name=\"owner\" fieldtype=\"many-to-one\" cfc=\"Person\" fkcolumn=\"owner_id\" index=\"idx_owner\" uniquekey=\"uk_owner\"; }",
+		    ( a, b ) -> new EntityRecord( "Person", "models.Person" ) );
+		assertThat( byName( doc, "index", "idx_owner" ).getAttribute( "column-list" ) ).isEqualTo( "owner_id" );
+		assertThat( byName( doc, "unique-constraint", "uk_owner" ).getElementsByTagName( "column-name" ).item( 0 ).getTextContent() )
+		    .isEqualTo( "owner_id" );
+	}
+
+	@DisplayName( "Regression: a comma-separated index list puts one column in several indexes" )
+	@Test
+	public void testWriterIndexList() {
+		Document doc = writeXML( """
+		                         class persistent {
+		                         	property name="id" fieldtype="id";
+		                         	property name="sku" index="idx_sku, idx_sku_color";
+		                         	property name="color" index="idx_sku_color";
+		                         }
+		                         """ );
+		assertThat( byName( doc, "index", "idx_sku" ).getAttribute( "column-list" ) ).isEqualTo( "sku" );
+		assertThat( byName( doc, "index", "idx_sku_color" ).getAttribute( "column-list" ) ).isEqualTo( "sku, color" );
+	}
+
+	@DisplayName( "Regression: no uniquekey or index annotations means no table constraints" )
+	@Test
+	public void testWriterNoTableConstraints() {
+		Document doc = writeXML( "class persistent table=\"plain\" { property name=\"id\" fieldtype=\"id\"; property name=\"name\"; }" );
+		assertThat( doc.getElementsByTagName( "unique-constraint" ).getLength() ).isEqualTo( 0 );
+		assertThat( doc.getElementsByTagName( "index" ).getLength() ).isEqualTo( 0 );
+	}
+
 	/**
 	 * ------------------------------------------------------------------------------------------------------------------
 	 * Writer test helpers

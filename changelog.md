@@ -66,6 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A `fieldtype="timestamp"` version property boots and is stamped on save.
 - Hibernate isolated work (e.g. sequence/table id allocation) inside a `transaction{}` runs on its own pooled connection, so it can no longer commit or roll back the surrounding BoxLang transaction mid-flight.
 - `duplicate()` of an ORM entity produces an independent copy that saves its own state instead of sharing the original's Hibernate facade.
+- The `uniquekey` and `index` property annotations create their unique constraints and indexes again (lost in the move to `mapping.xml`). Properties sharing a name form one multi-column constraint or index; both accept a comma-separated list, and both work on `many-to-one` foreign keys.
 
 ## [1.7.0] - 2026-09-14
 

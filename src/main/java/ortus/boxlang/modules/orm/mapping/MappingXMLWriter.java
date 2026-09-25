@@ -425,11 +425,16 @@ public class MappingXMLWriter {
 	 * } element (with schema/catalog) for the entity, if it has a table name.
 	 */
 	private void appendTableElement( Element entityElement ) {
-		String tableName = entity.getTableName();
+		String	tableName	= entity.getTableName();
+		Element	tableEl		= createEl( "table" );
 		if ( tableName == null ) {
+			// No explicit table: keep Hibernate's default table name, but still carry any uniquekey/index constraints.
+			appendTableConstraints( tableEl );
+			if ( tableEl.hasChildNodes() ) {
+				entityElement.appendChild( tableEl );
+			}
 			return;
 		}
-		Element tableEl = createEl( "table" );
 		tableEl.setAttribute( "name", escapeReservedWords( tableName ) );
 		if ( entity.getSchema() != null ) {
 			tableEl.setAttribute( "schema", entity.getSchema() );
@@ -437,7 +442,86 @@ public class MappingXMLWriter {
 		if ( entity.getCatalog() != null ) {
 			tableEl.setAttribute( "catalog", entity.getCatalog() );
 		}
+		appendTableConstraints( tableEl );
 		entityElement.appendChild( tableEl );
+	}
+
+	/**
+	 * Append the {@code <unique-constraint>} and {@code <index>} children of the entity's {@code 
+	 * 
+	<table>
+	 * }, built from the
+	 * {@code uniquekey} and {@code index} property annotations. Properties that share a name are grouped into one
+	 * multi-column constraint or index (e.g. two properties with {@code uniquekey="uk_name"}). Both annotations also
+	 * accept a comma-separated list of names. Columns mapped to another table (secondary/join tables) are skipped.
+	 */
+	private void appendTableConstraints( Element tableEl ) {
+		java.util.Map<String, java.util.List<String>>	uniqueKeys	= new java.util.LinkedHashMap<>();
+		java.util.Map<String, java.util.List<String>>	indexes		= new java.util.LinkedHashMap<>();
+
+		java.util.List<IPropertyMeta>					props		= new java.util.ArrayList<>( entity.getProperties() );
+		props.addAll( entity.getAssociations() );
+		for ( IPropertyMeta prop : props ) {
+			if ( prop.getFormula() != null ) {
+				continue;
+			}
+			IStruct					column		= prop.getColumn();
+			IStruct					association	= prop.getAssociation();
+			java.util.List<String>	columnNames;
+			IPropertyMeta.FIELDTYPE	fieldType	= prop.getFieldType();
+			if ( fieldType == IPropertyMeta.FIELDTYPE.MANY_TO_ONE || fieldType == IPropertyMeta.FIELDTYPE.ONE_TO_ONE ) {
+				columnNames = splitNames( association == null ? null : association.getAsString( Key.column ) );
+			} else if ( fieldType == IPropertyMeta.FIELDTYPE.COLUMN || fieldType == IPropertyMeta.FIELDTYPE.TIMESTAMP ) {
+				if ( column == null || column.getAsString( Key.table ) != null ) {
+					continue;
+				}
+				columnNames = splitNames( column.getAsString( Key._name ) );
+			} else {
+				continue;
+			}
+			if ( columnNames.isEmpty() ) {
+				continue;
+			}
+			String	uniqueKey	= firstNonBlank( column == null ? null : column.getAsString( ORMKeys.uniqueKey ),
+			    association == null ? null : association.getAsString( ORMKeys.uniqueKey ) );
+			String	index		= firstNonBlank( prop.getAnnotations().getAsString( ORMKeys.index ),
+			    association == null ? null : association.getAsString( ORMKeys.index ) );
+			for ( String name : splitNames( uniqueKey ) ) {
+				uniqueKeys.computeIfAbsent( name, k -> new java.util.ArrayList<>() ).addAll( columnNames );
+			}
+			for ( String name : splitNames( index ) ) {
+				indexes.computeIfAbsent( name, k -> new java.util.ArrayList<>() ).addAll( columnNames );
+			}
+		}
+
+		uniqueKeys.forEach( ( name, columns ) -> {
+			Element uc = createEl( "unique-constraint" );
+			uc.setAttribute( "name", name );
+			for ( String col : columns ) {
+				appendTextElement( uc, "column-name", escapeReservedWords( col ) );
+			}
+			tableEl.appendChild( uc );
+		} );
+		indexes.forEach( ( name, columns ) -> {
+			Element idx = createEl( "index" );
+			idx.setAttribute( "name", name );
+			idx.setAttribute( "column-list", String.join( ", ", columns.stream().map( MappingXMLWriter::escapeReservedWords ).toList() ) );
+			tableEl.appendChild( idx );
+		} );
+	}
+
+	/**
+	 * Split a comma-separated list of names, trimming blanks. Returns an empty list for null or blank input.
+	 */
+	private static java.util.List<String> splitNames( String value ) {
+		if ( value == null || value.isBlank() ) {
+			return java.util.List.of();
+		}
+		return java.util.Arrays.stream( value.split( "," ) ).map( String::trim ).filter( s -> !s.isEmpty() ).toList();
+	}
+
+	private static String firstNonBlank( String a, String b ) {
+		return a != null && !a.isBlank() ? a : b;
 	}
 
 	/**
