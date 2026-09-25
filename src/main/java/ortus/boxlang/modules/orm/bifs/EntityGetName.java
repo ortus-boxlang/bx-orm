@@ -17,46 +17,51 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import org.hibernate.Session;
+import java.util.Set;
 
+import ortus.boxlang.modules.orm.EntityInspector;
+import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.validation.Validator;
 
+/**
+ * {@code entityGetName()}: The entity name of an entity instance, lazy reference or name (a name comes back with its declared casing).
+ */
 @BoxBIF
-public class ORMFlush extends BaseORMBIF {
+public class EntityGetName extends BaseORMBIF {
 
 	/**
-	 * Constructor
+	 * Declare the BIF's arguments.
 	 */
-	public ORMFlush() {
+	public EntityGetName() {
 		super();
 		declaredArguments = new Argument[] {
-		    new Argument( false, "String", ORMKeys.datasource )
+		    new Argument( true, "any", ORMKeys.entity, Set.of( Validator.REQUIRED ) )
 		};
 	}
 
 	/**
-	 * Flush the Hibernate session - synchronizing the in-memory state with the database.
+	 * The entity name of an entity instance, lazy reference or name (a name comes back with its declared casing).
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
-	 * 
-	 * @argument.datasource The datasource on which to flush the current session. If not provided, the default datasource will be used.
+	 *
+	 * @argument.entity An entity instance (loaded, new or a lazy reference) or an entity name.
+	 *
+	 * @return The entity name, e.g. "User".
 	 */
-	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
-		ORMContext	ormContext		= ORMContext.getForContext( jdbcBoxContext );
-		String		datasource		= arguments.getAsString( ORMKeys.datasource );
-		Session		session			= datasource == null || datasource.isBlank() ? ormContext.getSession()
-		    : ormContext.getSession( ortus.boxlang.runtime.scopes.Key.of( datasource ) );
-		ORMContext.flush( session, "ormFlush" );
-		// @TODO: Announce 'onFlush' event
-		return null;
+	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		ORMContext		ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMApp			ormApp		= ormContext.requireORMApp();
+		Object			entity		= arguments.get( ORMKeys.entity );
+		EntityRecord	record		= EntityInspector.resolve( ormApp, entity, "entityGetName" );
+		return record.getEntityName();
 	}
-
 }

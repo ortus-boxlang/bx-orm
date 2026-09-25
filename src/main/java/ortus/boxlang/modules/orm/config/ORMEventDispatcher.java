@@ -74,10 +74,13 @@ public class ORMEventDispatcher {
 	 *
 	 * @param eventType The event name; its name is the handler method to invoke (e.g. {@code postLoad}).
 	 * @param args      The named arguments to pass to the handler method.
+	 *
+	 * @return What the handler method returned (a pre-event handler returns {@code false} to veto), or null when there is
+	 *         no global handler or it has no such method.
 	 */
-	public void announceGlobal( Key eventType, IStruct args ) {
+	public Object announceGlobal( Key eventType, IStruct args ) {
 		if ( globalListener == null ) {
-			return;
+			return null;
 		}
 		if ( !listenerReady ) {
 			RequestBoxContext.runInContext( ( ctx ) -> globalListener.invokeConstructor( ctx ) );
@@ -97,8 +100,9 @@ public class ORMEventDispatcher {
 				logger.trace( "Ready to invoke {} on global EventHandler with args {}", eventType.getName(), args.toString() );
 			}
 			// Fire the method on the global event handler
-			RequestBoxContext.runInContext( ( ctx ) -> this.globalListener.dereferenceAndInvoke( ctx, eventType, args, false ) );
+			return RequestBoxContext.runInContext( ( ctx ) -> this.globalListener.dereferenceAndInvoke( ctx, eventType, args, false ) );
 		}
+		return null;
 	}
 
 	/**
@@ -107,12 +111,34 @@ public class ORMEventDispatcher {
 	 * @param entity    The entity instance.
 	 * @param eventType The event name; its name is the entity method to invoke (e.g. {@code postNew}).
 	 * @param args      The named arguments to pass to the entity method.
+	 *
+	 * @return What the entity method returned (a pre-event method returns {@code false} to veto), or null when the entity
+	 *         has no such method.
 	 */
-	public static void announceEntity( IClassRunnable entity, Key eventType, IStruct args ) {
+	public static Object announceEntity( IClassRunnable entity, Key eventType, IStruct args ) {
 		if ( entity.containsKey( eventType ) ) {
 			// Fire the method on the entity itself
-			RequestBoxContext.runInContext( ( ctx ) -> entity.dereferenceAndInvoke( ctx, eventType, args, false ) );
+			return RequestBoxContext.runInContext( ( ctx ) -> entity.dereferenceAndInvoke( ctx, eventType, args, false ) );
 		}
+		return null;
+	}
+
+	/**
+	 * Whether an event handler's return value vetoes the operation: only an explicit {@code false} does. Returning
+	 * nothing, {@code true} or any other value lets the operation continue.
+	 *
+	 * @param handlerResult The value the handler returned (may be null).
+	 *
+	 * @return True when the handler returned false.
+	 */
+	public static boolean isVeto( Object handlerResult ) {
+		if ( handlerResult instanceof Boolean b ) {
+			return !b;
+		}
+		if ( handlerResult instanceof String str ) {
+			return "false".equalsIgnoreCase( str.trim() ) || "no".equalsIgnoreCase( str.trim() );
+		}
+		return false;
 	}
 
 }

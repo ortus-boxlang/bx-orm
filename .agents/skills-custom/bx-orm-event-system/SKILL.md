@@ -42,7 +42,7 @@ flowchart TB
 ## Key Classes
 
 | Class | Package | Responsibility |
-|---|---|---|
+| --- | --- | --- |
 | `EventListener` | `ortus.boxlang.modules.orm.config` | Hibernate `Integrator`; registers for all event types; dispatches to global & entity listeners |
 | `TransactionManager` | `ortus.boxlang.modules.orm.interceptors` | BoxLang interceptor; syncs the session to BoxLang tx events (flush/clear). ORM rides the BoxLang tx connection — see `bx-orm-transactions`. |
 | `ApplicationListener` | `ortus.boxlang.modules.orm.interceptors` | BoxLang interceptor; manages ORM app startup/shutdown |
@@ -93,27 +93,36 @@ public void integrate( Metadata metadata, SessionFactoryImplementor sessionFacto
 
 ### Event Dispatch Pattern
 
-Each event handler follows the same pattern: build an args struct, optionally invoke the global listener, then invoke the entity-level handler:
+Each event handler follows the same pattern: build an args struct, invoke the global listener, then the entity-level handler, both through `ORMEventDispatcher`. The pre-operation events (`preInsert`, `preUpdate`, `preDelete`) are vetoable: `announceVetoable` calls both handlers and returns `true` to Hibernate when either returned `false`.
 
 ```java
 @Override
 public boolean onPreInsert( PreInsertEvent event ) {
-    IClassRunnable entity = unwrapEntity( event.getEntity() );
-    IStruct args = Struct.of(
-        "entity", entity
-    );
+    IClassRunnable entity = FacadeSupport.unwrap( event.getEntity() );
+    IStruct args = Struct.of( ORMKeys.event, event, ORMKeys.entity, entity );
 
-    // 1. Global listener (if configured)
-    if ( globalListener != null ) {
-        globalListener.inoke( "preInsert", args );
+    // Global handler, then the entity's own method. Either returning false vetoes.
+    if ( announceVetoable( ORMKeys.preInsert, event, entity, args ) ) {
+        if ( event.getId() == null ) {
+            // identity id: Hibernate cannot skip the INSERT, raise orm.event.veto instead
+            throw new ORMException( ORMErrorType.EVENT_VETO, ... );
+        }
+        return true;  // true = veto
     }
-
-    // 2. Entity-level handler (if entity has a handler method)
-    invokeEntityEvent( entity, "preInsert", args );
-
-    return false;  // false = don't veto the operation
+    updateEntityEventState( ... );  // copy handler changes into Hibernate's state
+    return false;
 }
 ```
+
+### Veto semantics
+
+- Only an explicit `false` (or the strings `"false"` / `"no"`) vetoes (`ORMEventDispatcher.isVeto`). `void` handlers never veto.
+- Both handlers always run, even when the first one vetoes.
+- Vetoed insert: no row, but the entity stays in the session (evict it before changing it, or the next flush fails with `orm.stale`).
+- Vetoed update: no SQL, the change stays, the entity stays dirty, and the update (and `preUpdate`) repeat on every flush. `entityReload()` discards it.
+- Vetoed delete: the row stays; the entity leaves the session.
+- Identity-id insert: cannot be vetoed; `orm.event.veto` error.
+- Tests: `config/EventVetoTest`, fixtures `VetoThing.bx`, `VetoIdentityThing.bx`, global veto in `events/EventHandler.bx`.
 
 ### Entity Unwrapping
 
@@ -191,7 +200,7 @@ public class TransactionManager extends BaseInterceptor {
 ### Transaction Events
 
 | Interception Point | ORM Action (BoxLang owns the real JDBC commit/rollback) |
-|---|---|
+| --- | --- |
 | `onTransactionBegin` | Pre-flush pending work **only when** `autoManageSession=true` (Lucee compat). No Hibernate `beginTransaction()`. |
 | `onTransactionCommit` | `session.flush()` — emit pending SQL on the shared connection; BoxLang commits it. |
 | `onTransactionRollback` | `session.clear()` — discard pending/first-level cache; BoxLang rolls back the connection. Always runs (not gated on `autoManageSession`). |
@@ -255,10 +264,13 @@ To listen to a Hibernate event type not yet covered by `EventListener`:
 
 1. Implement the corresponding Hibernate listener interface (e.g., `RefreshEventListener`).
 2. Register it in the `integrate()` method:
+
    ```java
    registry.prependListeners( EventType.REFRESH, this );
    ```
+
 3. Implement the callback method:
+
    ```java
    @Override
    public void onRefresh( RefreshEvent event ) throws HibernateException {
@@ -280,6 +292,7 @@ class {
 
     function preInsert() {
         log.info( "About to insert Vehicle: #this.make# #this.model#" )
+        // return false to veto the insert
     }
 
     function postLoad() {

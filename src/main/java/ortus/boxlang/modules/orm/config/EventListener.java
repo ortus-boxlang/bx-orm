@@ -60,6 +60,9 @@ import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.service.spi.SessionFactoryServiceRegistry;
 
+import ortus.boxlang.modules.orm.errors.ORMErrorType;
+import ortus.boxlang.modules.orm.errors.ORMErrors;
+import ortus.boxlang.modules.orm.errors.ORMException;
 import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
@@ -224,9 +227,10 @@ public class EventListener
 		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() ),
 		    ORMKeys.oldData, oldData
 		);
-		announceGlobalEvent( ORMKeys.preUpdate, event, args );
-		announceEntityEvent( ORMKeys.preUpdate, FacadeSupport.unwrap( event.getEntity() ), args );
-		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
+		// A handler that returns false cancels the update (Hibernate skips the SQL; the entity keeps its changes).
+		if ( announceVetoable( ORMKeys.preUpdate, event, FacadeSupport.unwrap( event.getEntity() ), args ) ) {
+			return true;
+		}
 		// Update state so that changes made in the event are persisted
 		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), event.getPersister().getPropertyTypes(),
 		    event.getPersister().isVersioned() ? event.getPersister().getVersionPropertyIndex() : -1,
@@ -266,10 +270,8 @@ public class EventListener
 		    ORMKeys.event, event,
 		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
-		announceGlobalEvent( ORMKeys.preDelete, event, args );
-		announceEntityEvent( ORMKeys.preDelete, FacadeSupport.unwrap( event.getEntity() ), args );
-		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
-		return false;
+		// A handler that returns false cancels the delete.
+		return announceVetoable( ORMKeys.preDelete, event, FacadeSupport.unwrap( event.getEntity() ), args );
 	}
 
 	@Override
@@ -289,21 +291,74 @@ public class EventListener
 		    ORMKeys.event, event,
 		    ORMKeys.entity, entity
 		);
-		announceGlobalEvent( ORMKeys.preInsert, event, args );
-		announceEntityEvent( ORMKeys.preInsert, ( IClassRunnable ) entity, args );
-		// @TODO: Allow the event to be vetoed from EITHER the global or the entity-specific event listener.
+		// A handler that returns false cancels the insert.
+		if ( announceVetoable( ORMKeys.preInsert, event, entity, args ) ) {
+			if ( event.getId() == null ) {
+				// The id comes from the database (identity), so the INSERT is the only way to get one: Hibernate cannot
+				// skip it and fails with a bare "null identifier" assertion. Say so plainly instead.
+				String name = ORMErrors.entityName( event.getPersister().getEntityName() );
+				throw new ORMException(
+				    ORMErrorType.EVENT_VETO,
+				    "The preInsert handler of [" + name + "] returned false, but [" + name
+				        + "] gets its id from the database (generator=\"identity\"), so its insert cannot be skipped.",
+				    "Decide before calling entitySave() instead, or throw an error from preInsert to abort the save. Returning false from preInsert works for entities whose id is known before the insert (assigned, increment, uuid, sequence, ...).",
+				    Struct.of( "entityName", name, "event", "preInsert" ),
+				    null );
+			}
+			return true;
+		}
 		// update our entity state to ensure changes persist
 		updateEntityEventState( event.getState(), event.getPersister().getPropertyNames(), event.getPersister().getPropertyTypes(),
 		    event.getPersister().isVersioned() ? event.getPersister().getVersionPropertyIndex() : -1, ( IClassRunnable ) entity );
 		return false;
 	}
 
-	private void announceGlobalEvent( Key eventType, Object event, IStruct args ) {
-		this.dispatcher.announceGlobal( eventType, args );
+	/**
+	 * Fire an event on the global event handler.
+	 *
+	 * @param eventType The event name (the handler method to call).
+	 * @param event     The Hibernate event (unused; kept for symmetry and future use).
+	 * @param args      The arguments passed to the handler method.
+	 *
+	 * @return What the handler returned, or null when there is no handler or method.
+	 */
+	private Object announceGlobalEvent( Key eventType, Object event, IStruct args ) {
+		return this.dispatcher.announceGlobal( eventType, args );
 	}
 
-	private void announceEntityEvent( Key eventType, IClassRunnable entity, IStruct args ) {
-		ORMEventDispatcher.announceEntity( entity, eventType, args );
+	/**
+	 * Fire an event on the entity's own method of the same name.
+	 *
+	 * @param eventType The event name (the entity method to call).
+	 * @param entity    The entity.
+	 * @param args      The arguments passed to the method.
+	 *
+	 * @return What the method returned, or null when the entity has no such method.
+	 */
+	private Object announceEntityEvent( Key eventType, IClassRunnable entity, IStruct args ) {
+		return ORMEventDispatcher.announceEntity( entity, eventType, args );
+	}
+
+	/**
+	 * Fire a pre-operation event on the global handler and on the entity, and report whether either vetoed it by
+	 * returning {@code false}. Both are always called, so each sees the event even when the other vetoes.
+	 *
+	 * @param eventType The event name ({@code preInsert}, {@code preUpdate} or {@code preDelete}).
+	 * @param event     The Hibernate event.
+	 * @param entity    The entity.
+	 * @param args      The arguments passed to the handlers.
+	 *
+	 * @return True when the operation must be cancelled.
+	 */
+	private boolean announceVetoable( Key eventType, Object event, IClassRunnable entity, IStruct args ) {
+		boolean	globalVeto	= ORMEventDispatcher.isVeto( announceGlobalEvent( eventType, event, args ) );
+		boolean	entityVeto	= ORMEventDispatcher.isVeto( announceEntityEvent( eventType, entity, args ) );
+		if ( globalVeto || entityVeto ) {
+			logger.debug( "ORM {} of [{}] vetoed by the {} event handler", eventType.getName(), entity.bxGetName().getName(),
+			    globalVeto ? "global" : "entity" );
+			return true;
+		}
+		return false;
 	}
 
 	/**

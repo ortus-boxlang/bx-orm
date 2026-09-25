@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ormDiagnostics()`: the ORM's state for the current application (status, last startup error, entities per datasource, warnings, key settings, this request's open sessions). Never throws.
 - Startup validation: duplicate entity names on one datasource are reported with both classes; unknown `ormtype` values are warned about and named if Hibernate fails to start; broken startups (bad entity path, fieldtype, cfc or datasource) raise one `orm.config` error, and the last failure is remembered for later ORM calls and `ormDiagnostics()`.
 - `uniqueFirst` option for `ormExecuteQuery()` and `entityLoad()`: take the first row of a multi-row result.
+- Entity inspection BIFs: `entityGetName()`, `entityGetDatasource()`, `entityGetId()`, `entityGetMetadata()` (cached per ORM application), `entityIsDirty()` and `entityGetDirtyProperties()` (Hibernate's own dirty check; no SQL for managed entities), `ormIsSessionDirty()` and `ormGetSessionStatistics()`.
+- Event veto: a `preInsert`, `preUpdate` or `preDelete` handler (on the entity or the global `eventHandler`) that returns `false` cancels the operation. Vetoing the insert of a database-identity entity raises `orm.event.veto`, since Hibernate cannot skip that insert.
 
 - POJO-facade entity representation (now the only representation): each entity maps to a generated Java facade whose accessors delegate to the BoxLang instance, unlocking `uuid` (and other) id generators, composite ids, `byte[]`, and full metamodel access.
 - Facades are namespaced per ORM application, so same-named entities in different apps do not collide.
@@ -78,6 +80,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ORM BIFs no longer fail with a `NullPointerException` when the application is not ORM-enabled or the ORM failed to start; they raise `orm.notEnabled` / `orm.notReady` with the reason.
 - Entity lookup no longer fails with "No entities found for datasource" when every entity lives on a non-default datasource.
 - A detached entity bound as an `ormExecuteQuery()` or `entityLoad()` filter parameter resolves correctly (the generated facade name no longer leaks into the lookup).
+- `ormExecuteQuery()` now applies the `cacheable`, `cacheName` and `timeout` options (they were ignored), and `entityLoad()` applies `cacheName` as the query cache region.
+- `entityLoad()` with `ignorecase` no longer wraps numeric or date sort properties in `lower()`.
+- `ormFlush( datasource )` flushes that datasource's session instead of the default one.
 - A failed flush at the end of a request still closes the request's ORM sessions.
 - The `uniquekey` and `index` property annotations create their unique constraints and indexes again (lost in the move to `mapping.xml`). Properties sharing a name form one multi-column constraint or index; both accept a comma-separated list, and both work on `many-to-one` foreign keys.
 

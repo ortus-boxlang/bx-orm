@@ -66,6 +66,9 @@ public enum ORMErrorType {
 	/** An optimistic-lock (version) conflict: the row changed since it was loaded. */
 	STALE( "orm.stale" ),
 
+	/** An event handler vetoed an operation that cannot be vetoed (e.g. the insert of an identity-id entity). */
+	EVENT_VETO( "orm.event.veto" ),
+
 	/** A database constraint rejected the change. */
 	CONSTRAINT( "orm.constraint" ),
 	/** A unique constraint rejected the change. */

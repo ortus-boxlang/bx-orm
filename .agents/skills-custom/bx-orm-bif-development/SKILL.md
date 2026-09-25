@@ -18,12 +18,13 @@ ORM BIFs (Built-In Functions) provide the public API for BoxLang developers to i
 ## BIF Inventory
 
 | Category | BIFs |
-|---|---|
+| --- | --- |
 | **Entity CRUD** | `EntityNew`, `EntityLoad`, `EntityLoadByPK`, `EntityLoadByExample`, `EntitySave`, `EntityDelete`, `EntityMerge`, `EntityReload`, `EntityNameArray`, `EntityToQuery` |
 | **Session Management** | `ORMGetSession`, `ORMGetSessionFactory`, `ORMCloseSession`, `ORMCloseAllSessions`, `ORMClearSession`, `ORMFlush`, `ORMFlushAll`, `ORMReload` |
 | **Cache & Eviction** | `ORMEvictEntity`, `ORMEvictCollection`, `ORMEvictQueries` |
 | **HQL Queries** | `ORMExecuteQuery` |
-| **Metadata** | `ORMGetHibernateVersion` |
+| **Inspection** | `EntityGetName`, `EntityGetDatasource`, `EntityGetId`, `EntityGetMetadata`, `EntityIsDirty`, `EntityGetDirtyProperties`, `ORMIsSessionDirty`, `ORMGetSessionStatistics` (all delegate to `EntityInspector`) |
+| **Metadata** | `ORMGetHibernateVersion`, `ORMDiagnostics` |
 
 ## BaseORMBIF — The Parent Class
 
@@ -149,6 +150,7 @@ public class EntityLoad extends BaseORMBIF {
 ```
 
 Options struct:
+
 ```js
 var options = {
     unique     : false,    // Return single entity?
@@ -233,6 +235,19 @@ public class ORMFlush extends BaseORMBIF {
 public class ORMFlushAll extends BaseORMBIF {
     // Signature: ormFlushAll()
     // Flushes all pending changes across all datasources
+}
+```
+
+### Inspection BIFs
+
+Resolve the entity argument with `EntityInspector.resolve( ormApp, value, bifName )` (a name or an instance; a struct is `orm.argument`) and keep the logic in `EntityInspector`, so every BIF shares one set of rules:
+
+```java
+@BoxBIF
+public class EntityIsDirty extends BaseORMBIF {
+    // Signature: entityIsDirty( entity )
+    // ORMContext.getForContext( context ) -> requireORMApp() -> EntityInspector.resolve(...)
+    // -> EntityInspector.dirtyProperties(...) is not empty
 }
 ```
 
@@ -407,6 +422,15 @@ src/main/java/ortus/boxlang/modules/orm/bifs/
 ├── EntityReload.java
 ├── EntityNameArray.java
 ├── EntityToQuery.java
+├── EntityGetName.java         # Inspection BIFs: see EntityInspector
+├── EntityGetDatasource.java
+├── EntityGetId.java
+├── EntityGetMetadata.java
+├── EntityIsDirty.java
+├── EntityGetDirtyProperties.java
+├── ORMIsSessionDirty.java
+├── ORMGetSessionStatistics.java
+├── ORMDiagnostics.java
 ├── ORMExecuteQuery.java
 ├── ORMGetSession.java
 ├── ORMGetSessionFactory.java
@@ -431,6 +455,7 @@ src/main/resources/META-INF/services/ortus.boxlang.runtime.bifs.BIF
 ```
 
 Each line in this file is the fully-qualified class name of a BIF:
+
 ```
 ortus.boxlang.modules.orm.bifs.EntityNew
 ortus.boxlang.modules.orm.bifs.EntityLoad

@@ -425,6 +425,27 @@ public class ORMApp {
 		}
 	}
 
+	/** Metadata structs for {@code entityGetMetadata()}, built once per entity and kept for this application's life. */
+	private final Map<String, IStruct> metadataCache = new ConcurrentHashMap<>();
+
+	/**
+	 * The metadata struct of an entity (see {@code entityGetMetadata()}). Built once per entity and cached for the life of
+	 * this ORM application (an {@code ormReload()} creates a new application and so a fresh cache). Each call returns a
+	 * deep copy, so callers may change it freely.
+	 *
+	 * @param entityName The entity name (any casing).
+	 *
+	 * @return A copy of the entity's metadata struct.
+	 *
+	 * @throws ortus.boxlang.modules.orm.errors.ORMException ({@code orm.entity.notFound}) for an unknown entity.
+	 */
+	public IStruct getEntityMetadata( String entityName ) {
+		EntityRecord	record	= lookupEntity( entityName, true );
+		IStruct			cached	= this.metadataCache.computeIfAbsent( record.getEntityName().toLowerCase(),
+		    key -> EntityInspector.buildMetadata( this, record ) );
+		return ortus.boxlang.runtime.util.DuplicationUtil.duplicateStruct( cached, true );
+	}
+
 	/**
 	 * Unknown ormtype warnings found at startup (see {@link #validateEntities()}).
 	 *
@@ -678,8 +699,13 @@ public class ORMApp {
 					throw ortus.boxlang.modules.orm.errors.ORMErrors.propertyNotFound( entityRecord.getEntityName(),
 					    order.getAsString( ORMKeys.property ), getPropertyNames( entityRecord.getEntityName() ), "entityLoad (sort order)" );
 				}
-				String orderProp = KeyCaster.cast( properties.get( orderPropIndex ) ).getName();
-				orderClauses.add( "e." + orderProp + ( order.getAsBoolean( ORMKeys.ascending ) ? " asc" : " desc" ) );
+				String	orderProp	= KeyCaster.cast( properties.get( orderPropIndex ) ).getName();
+				// ignorecase: sort text properties case-insensitively. Non-text properties are sorted as-is (lower() on a
+				// number or date is an error on some databases).
+				boolean	ignoreCase	= BooleanCaster.cast( options.getOrDefault( Key.of( "ignorecase" ), false ) )
+				    && isTextProperty( entityRecord, orderProp );
+				String	sortExpr	= ignoreCase ? "lower(e." + orderProp + ")" : "e." + orderProp;
+				orderClauses.add( sortExpr + ( order.getAsBoolean( ORMKeys.ascending ) ? " asc" : " desc" ) );
 			} );
 			if ( !orderClauses.isEmpty() ) {
 				hql.append( " order by " ).append( String.join( ", ", orderClauses ) );
@@ -708,6 +734,31 @@ public class ORMApp {
 		        .map( entity -> ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity ) )
 		        .toArray()
 		);
+	}
+
+	/**
+	 * Whether a property holds text (ormtype string, text, character or unset, which defaults to string).
+	 *
+	 * @param record   The entity record.
+	 * @param property The property name.
+	 *
+	 * @return True for a text property; false for other types or an unknown property.
+	 */
+	private static boolean isTextProperty( EntityRecord record, String property ) {
+		if ( record.getEntityMeta() == null ) {
+			return false;
+		}
+		for ( var prop : record.getEntityMeta().getAllPersistentProperties() ) {
+			if ( prop.getName().equalsIgnoreCase( property ) ) {
+				if ( prop.isAssociationType() ) {
+					return false;
+				}
+				String type = prop.getORMType() == null || prop.getORMType().isBlank() ? "string"
+				    : ortus.boxlang.modules.orm.mapping.MappingXMLWriter.toHibernateType( prop.getORMType() );
+				return type.equals( "string" ) || type.equals( "text" ) || type.equals( "character" );
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -771,15 +822,8 @@ public class ORMApp {
 	 * @param options Struct of options, including maxResults, offset, etc.
 	 */
 	public List<?> executeFilterQuery( Query<?> query, IStruct options ) {
-		if ( options.containsKey( ORMKeys.cacheable ) ) {
-			query.setCacheable( BooleanCaster.cast( options.get( ORMKeys.cacheable ) ) );
-		}
-		if ( options.containsKey( Key.timeout ) ) {
-			Integer timeout = options.getAsInteger( Key.timeout );
-			if ( timeout != null ) {
-				query.setTimeout( timeout );
-			}
-		}
+		// cacheable, cachename (the second-level cache region) and timeout, the same way ormExecuteQuery applies them.
+		HQLQuery.applyCacheAndTimeout( query, options );
 		if ( options.containsKey( ORMKeys.maxResults ) ) {
 			Integer maxResults = options.getAsInteger( ORMKeys.maxResults );
 			if ( maxResults != null ) {

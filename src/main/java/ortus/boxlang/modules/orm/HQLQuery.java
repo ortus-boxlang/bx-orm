@@ -392,6 +392,7 @@ public class HQLQuery {
 		if ( this.options.containsKey( ORMKeys.readOnly ) ) {
 			hqlQuery.setReadOnly( BooleanCaster.cast( this.options.get( ORMKeys.readOnly ) ) );
 		}
+		applyCacheAndTimeout( hqlQuery, this.options );
 
 		if ( this.parameters != null ) {
 			// Map each 1-based positional parameter to the entity name it targets, when it targets an association.
@@ -474,5 +475,38 @@ public class HQLQuery {
 		return hql.replaceAll( EQUALS_TRUE, TRUE )
 		    .replaceAll( EQUALS_FALSE, FALSE );
 
+	}
+
+	/**
+	 * Apply the {@code cacheable}, {@code cacheName} (alias {@code cacheRegion}) and {@code timeout} query options. A
+	 * cache region implies {@code cacheable} unless {@code cacheable} is given explicitly. Caching only takes effect when the second-level query cache is
+	 * enabled
+	 * ({@code secondaryCacheEnabled}); otherwise Hibernate ignores it.
+	 *
+	 * @param query   The query to configure.
+	 * @param options The query options struct.
+	 */
+	static void applyCacheAndTimeout( org.hibernate.query.Query<?> query, IStruct options ) {
+		String region = null;
+		if ( options.get( ORMKeys.cacheName ) instanceof String name && !name.isBlank() ) {
+			region = name;
+		} else if ( options.get( Key.of( "cacheRegion" ) ) instanceof String name && !name.isBlank() ) {
+			region = name;
+		}
+		Object cacheable = options.get( ORMKeys.cacheable );
+		if ( cacheable != null ) {
+			query.setCacheable( BooleanCaster.cast( cacheable ) );
+		} else if ( region != null ) {
+			query.setCacheable( true );
+		}
+		if ( region != null ) {
+			query.setCacheRegion( region );
+		}
+		if ( options.get( Key.timeout ) != null ) {
+			Integer timeout = ortus.boxlang.runtime.dynamic.casters.IntegerCaster.cast( options.get( Key.timeout ) );
+			if ( timeout != null && timeout > 0 ) {
+				query.setTimeout( timeout.intValue() );
+			}
+		}
 	}
 }

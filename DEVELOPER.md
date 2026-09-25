@@ -398,6 +398,7 @@ whose `type` starts with `orm`. BoxLang matches `catch` types on a dotted prefix
 | Names and values | `orm.entity.notFound`, `orm.property.unknown`, `orm.property.type`, `orm.argument` |
 | Queries | `orm.query.syntax`, `orm.query.semantic`, `orm.query.parameter`, `orm.query.nonUnique` |
 | Session and state | `orm.lazy.noSession`, `orm.transient`, `orm.id.missing`, `orm.session.duplicate`, `orm.stale` |
+| Events | `orm.event.veto` |
 | Database | `orm.constraint` (`.unique`, `.notNull`, `.foreignKey`, `.check`), `orm.sql` |
 
 **Message shape.** `message` says what went wrong using BoxLang entity and property names; `detail`
@@ -465,6 +466,82 @@ common mistakes asserting type and message), `errors/BootErrorsTest` (broken sta
 **Adding a new error.** Add the type to `ORMErrorType`, map it in `ORMErrors.map` (or throw an
 `ORMException` directly where bx-orm detects the problem), add a unit case to `ORMErrorsTest`, a
 live case to `ORMErrorMessagesTest`, and a row to the docs error catalog.
+
+---
+
+## 10b. Inspection BIFs, event veto and query options
+
+**Inspection BIFs.** Eight read-only BIFs answer "what is this entity and what changed" without
+touching Hibernate directly. All of them live in `bifs/` and delegate to one utility class,
+`EntityInspector`, so the rules are in one place.
+
+| BIF | Takes | Returns |
+| --- | --- | --- |
+| `entityGetName( entity )` | instance or name | The declared entity name (proxies answer without loading). |
+| `entityGetDatasource( entity )` | instance or name | The datasource name. |
+| `entityGetId( entity )` | instance | The id; a struct for composite ids; null when unsaved. A lazy proxy answers without loading. |
+| `entityGetMetadata( entity )` | instance or name | Table, ids, version, discriminator, properties, associations. |
+| `entityIsDirty( entity )` | instance | True when a persistent property differs from the database. |
+| `entityGetDirtyProperties( entity )` | instance | The names of those properties. |
+| `ormIsSessionDirty( [datasource] )` | datasource | True when a flush would write something. |
+| `ormGetSessionStatistics( [datasource] )` | datasource | `entityCount`, `collectionCount`, `entityKeys`, `collectionKeys`. |
+
+`EntityInspector.resolve` turns the argument into an `EntityRecord`: a string is looked up by name
+(with "Did you mean"), an instance by its class, a proxy by its lazy initializer. Anything else, such
+as a struct, is an `orm.argument` error. The BIFs that need state (`entityGetId`, `entityIsDirty`,
+`entityGetDirtyProperties`) reject a name with `orm.argument`.
+
+**Metadata is cached.** `ORMApp.getEntityMetadata` builds the struct once per entity and keeps it for
+the life of the ORM application; `ormReload()` builds a new application and so a fresh cache. Each
+call returns a deep copy, so callers may change it. Keys: `entityName`, `className`, `datasource`,
+`tableName`, `schema`, `catalog`, `parent`, `readOnly`, `discriminator{column, value}`,
+`idProperties`, `idType` (`composite` for more than one), `version`, `properties[]` (name, column,
+ormtype, fieldtype, nullable, unique, length, precision, scale, formula, insertable, updatable),
+`associations[]` (name, kind, target, cascade, lazy, inverse, fkcolumn, mappedBy, linkTable,
+orderBy) and `propertyNames`.
+
+**Dirty checking uses Hibernate's own SPI**, the same code Hibernate runs at flush:
+
+- Managed entity: the entry's loaded state (`EntityEntry.getLoadedState`) against the current values
+  with `EntityPersister.findDirty`. No SQL.
+- Detached entity: one `select` (`EntityPersister.getDatabaseSnapshot`) and `findModified`.
+- Never saved (no id), or an uninitialized proxy: not dirty (cborm parity).
+
+Indexes map back to names through `persister.getPropertyNames()`, so collections and associations
+are reported by their property name.
+
+**Event veto.** `preInsert`, `preUpdate` and `preDelete` handlers (the entity's own method or the
+global `eventHandler`) cancel the operation by returning `false` (also the strings `"false"` or
+`"no"`). Returning nothing or anything else lets it continue, so existing `void` handlers are not
+affected. `EventListener.announceVetoable` always calls both handlers, then returns `true` to
+Hibernate when either vetoed (`ORMEventDispatcher.isVeto`). Hibernate's semantics are kept:
+
+- A vetoed insert writes no row, but the entity stays in the session. Remove it
+  (`ormGetSession().evict( entity )` or `ormClearSession()`) before changing it, or the next flush
+  tries to update a row that does not exist (`orm.stale`).
+- A vetoed update writes nothing and keeps its changes: the entity stays dirty and the update, and
+  the `preUpdate` call, repeat on every flush. Call `entityReload( entity )` to discard the change.
+- A vetoed delete keeps the row; the entity is removed from the session.
+- An entity whose id comes from the database (`generator="identity"`) cannot skip its insert:
+  Hibernate needs the `INSERT` to get the id. A veto there is an `orm.event.veto` error that says
+  so, instead of Hibernate's bare `null identifier` assertion.
+
+**Query options** are applied in one place, `HQLQuery.applyCacheAndTimeout`, for both
+`ormExecuteQuery()` and `entityLoad()`:
+
+- `cacheable`: cache the result in the second-level query cache (needs `secondaryCacheEnabled`).
+- `cacheName` (alias `cacheRegion`): the cache region; implies `cacheable` unless `cacheable` is
+  given explicitly. Previously ignored.
+- `timeout`: seconds; `0` means none. Previously ignored by `ormExecuteQuery()`.
+- `entityLoad()` `ignorecase` now wraps only text properties in `lower()` for the sort; numbers and
+  dates are sorted as-is (`lower()` on them fails on some databases).
+
+**`ormFlush( datasource )`** now flushes that datasource's session. It used to flush the default
+one and ignore the argument.
+
+**Tests.** `bifs/EntityInspectionBIFsTest` (46, live), `config/EventVetoTest` (17, live, fixtures
+`VetoThing` and `VetoIdentityThing`, global veto in `events/EventHandler.bx`),
+`HQLQueryOptionsTest` (unit, Mockito), `bifs/QueryOptionsTest` (live).
 
 ---
 

@@ -17,6 +17,8 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import java.util.Set;
+
 import org.hibernate.Session;
 
 import ortus.boxlang.modules.orm.ORMContext;
@@ -25,38 +27,40 @@ import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.validation.Validator;
 
+/**
+ * {@code ormIsSessionDirty()}: Whether the ORM session for a datasource has changes that are not flushed to the database yet.
+ */
 @BoxBIF
-public class ORMFlush extends BaseORMBIF {
+public class ORMIsSessionDirty extends BaseORMBIF {
 
 	/**
-	 * Constructor
+	 * Declare the BIF's arguments.
 	 */
-	public ORMFlush() {
+	public ORMIsSessionDirty() {
 		super();
 		declaredArguments = new Argument[] {
-		    new Argument( false, "String", ORMKeys.datasource )
+		    new Argument( false, "String", ORMKeys.datasource, Set.of( Validator.NON_EMPTY ) )
 		};
 	}
 
 	/**
-	 * Flush the Hibernate session - synchronizing the in-memory state with the database.
+	 * Whether the ORM session for a datasource has changes that are not flushed to the database yet.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
-	 * 
-	 * @argument.datasource The datasource on which to flush the current session. If not provided, the default datasource will be used.
+	 *
+	 * @argument.datasource The datasource whose session to inspect. Defaults to the application's default datasource.
+	 *
+	 * @return True when a flush would write something.
 	 */
-	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
-		ORMContext	ormContext		= ORMContext.getForContext( jdbcBoxContext );
-		String		datasource		= arguments.getAsString( ORMKeys.datasource );
-		Session		session			= datasource == null || datasource.isBlank() ? ormContext.getSession()
-		    : ormContext.getSession( ortus.boxlang.runtime.scopes.Key.of( datasource ) );
-		ORMContext.flush( session, "ormFlush" );
-		// @TODO: Announce 'onFlush' event
-		return null;
+	public Boolean _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		ORMContext	ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		String		datasource	= arguments.getAsString( ORMKeys.datasource );
+		Session		session		= datasource == null || datasource.isBlank() ? ormContext.getSession() : ormContext.getSession( Key.of( datasource ) );
+		return session.isDirty();
 	}
-
 }
