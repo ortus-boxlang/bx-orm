@@ -432,6 +432,10 @@ public class CriteriaConditionsTest extends CriteriaTestSupport {
 		    .isEqualTo( 2 );
 		assertThat( number( "result = entityCriteria( 'Vehicle' ).disjunction( ( c ) => c.isEq( 'model', 'Civic' ).isEq( 'model', 'Fusion' ) ).count();" ) )
 		    .isEqualTo( 2 );
+		assertThat( number( "result = entityCriteria( 'Vehicle' ).or( ( c ) => c.isEq( 'model', 'Civic' ).isEq( 'model', 'Fusion' ) ).count();" ) )
+		    .isEqualTo( 2 );
+		assertThat( number( "result = entityCriteria( 'Vehicle' ).and( ( c ) => c.isEq( 'make', 'Honda' ).isEq( 'model', 'Civic' ) ).count();" ) )
+		    .isEqualTo( 1 );
 	}
 
 	/**
