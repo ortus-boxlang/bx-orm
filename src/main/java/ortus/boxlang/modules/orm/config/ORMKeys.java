@@ -141,6 +141,15 @@ public class ORMKeys {
 	public static final Key	scale						= Key.of( "scale" );
 	public static final Key	unique						= Key.of( "unique" );
 	public static final Key	uniqueFirst					= Key.of( "uniqueFirst" );
+	public static final Key	comment						= Key.of( "comment" );
+	public static final Key	hints						= Key.of( "hints" );
+	public static final Key	EVENT_BEFORE_CRITERIA_LIST	= Key.of( "beforeCriteriaBuilderList" );
+	public static final Key	EVENT_AFTER_CRITERIA_LIST	= Key.of( "afterCriteriaBuilderList" );
+	public static final Key	EVENT_BEFORE_CRITERIA_COUNT	= Key.of( "beforeCriteriaBuilderCount" );
+	public static final Key	EVENT_AFTER_CRITERIA_COUNT	= Key.of( "afterCriteriaBuilderCount" );
+	public static final Key	EVENT_BEFORE_CRITERIA_GET	= Key.of( "beforeCriteriaBuilderGet" );
+	public static final Key	EVENT_AFTER_CRITERIA_GET	= Key.of( "afterCriteriaBuilderGet" );
+	public static final Key	EVENT_CRITERIA_ADDITION		= Key.of( "onCriteriaBuilderAddition" );
 	public static final Key	uniqueKey					= Key.of( "uniqueKey" );
 	public static final Key	insert						= Key.of( "insert" );
 	public static final Key	update						= Key.of( "update" );

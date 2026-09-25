@@ -108,7 +108,14 @@ public class ORMService extends BaseService {
 	 */
 	private static final Key[]			ORM_INTERCEPTION_POINTS	= List.of(
 	    ORMKeys.EVENT_POST_NEW,
-	    ORMKeys.EVENT_POST_LOAD ).toArray( new Key[ 0 ] );
+	    ORMKeys.EVENT_POST_LOAD,
+	    ORMKeys.EVENT_BEFORE_CRITERIA_LIST,
+	    ORMKeys.EVENT_AFTER_CRITERIA_LIST,
+	    ORMKeys.EVENT_BEFORE_CRITERIA_COUNT,
+	    ORMKeys.EVENT_AFTER_CRITERIA_COUNT,
+	    ORMKeys.EVENT_BEFORE_CRITERIA_GET,
+	    ORMKeys.EVENT_AFTER_CRITERIA_GET,
+	    ORMKeys.EVENT_CRITERIA_ADDITION ).toArray( new Key[ 0 ] );
 
 	/**
 	 * --------------------------------------------------------------------------

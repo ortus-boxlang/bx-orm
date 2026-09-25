@@ -191,6 +191,11 @@ public class SessionFactoryBuilder {
 		properties.put( AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, "thread" );
 		properties.put( AvailableSettings.CLASSLOADERS, classLoaders );
 		properties.put( AvailableSettings.GLOBALLY_QUOTED_IDENTIFIERS, StringCaster.cast( ormConfig.quoteIdentifiers ) );
+		// entityCriteria().getSQL() reads the SQL of a query through this inspector without running it. It returns every
+		// statement unchanged otherwise, and an inspector configured by the application wins.
+		if ( configuration.getProperties().get( AvailableSettings.STATEMENT_INSPECTOR ) == null ) {
+			properties.put( AvailableSettings.STATEMENT_INSPECTOR, ortus.boxlang.modules.orm.criteria.SqlCapture.INSTANCE );
+		}
 
 		Map<String, EntityRecord> entityMap = this.entities
 		    .stream()

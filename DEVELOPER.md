@@ -399,6 +399,7 @@ whose `type` starts with `orm`. BoxLang matches `catch` types on a dotted prefix
 | Queries | `orm.query.syntax`, `orm.query.semantic`, `orm.query.parameter`, `orm.query.nonUnique` |
 | Session and state | `orm.lazy.noSession`, `orm.transient`, `orm.id.missing`, `orm.session.duplicate`, `orm.stale` |
 | Events | `orm.event.veto` |
+| Results | `orm.notFound` (`getOrFail()`, `firstOrFail()`) |
 | Database | `orm.constraint` (`.unique`, `.notNull`, `.foreignKey`, `.check`), `orm.sql` |
 
 **Message shape.** `message` says what went wrong using BoxLang entity and property names; `detail`
@@ -542,6 +543,83 @@ one and ignore the argument.
 **Tests.** `bifs/EntityInspectionBIFsTest` (46, live), `config/EventVetoTest` (17, live, fixtures
 `VetoThing` and `VetoIdentityThing`, global veto in `events/EventHandler.bx`),
 `HQLQueryOptionsTest` (unit, Mockito), `bifs/QueryOptionsTest` (live).
+
+---
+
+## 10c. `entityCriteria()`: the fluent query builder
+
+`entityCriteria( "Vehicle" )` returns a `criteria/CriteriaBuilder`. It records conditions, joins, projections,
+ordering and options, and compiles them to **one HQL query** when a terminal method runs. The HQL then runs through the
+same `HQLQuery` path as `ormExecuteQuery()`, so association parameters, read-your-writes, facade unwrapping and error
+translation behave the same.
+
+```js
+users = entityCriteria( "User" )
+    .isEq( "active", true )
+    .anyOf( ( c ) => c.like( "lastName", "Sm%" ).isEq( "role.name", "admin" ) )
+    .order( "lastName" )
+    .paginate( page = 2, maxRows = 25 );
+```
+
+```mermaid
+flowchart LR
+    B["BoxLang call<br/>c.isEq( ... )"] --> M["CriteriaMethods<br/>(names, aliases, named args)"]
+    M --> C["CriteriaBuilder<br/>resolve path, record node"]
+    C --> T["terminal: list / count / get / ..."]
+    T --> H["compile() → HQL + values"]
+    H --> Q["HQLQuery.ofNumbered().prepare()"]
+    Q --> R["rows → entities / structs / query"]
+```
+
+**Recorder semantics.** Building methods change the builder and return it. Terminals (`list`, `count`, `exists`,
+`get`, `getOrFail`, `first`, `firstOrFail`, `paginate`, `simplePaginate`, `pluck`, `sum`/`avg`/`min`/`max`, `each`,
+`chunk`) compile from the current state and never change it, so one builder can run several queries. `copy()`
+branches it.
+
+**How BoxLang calls reach it.** The builder implements `IReferenceable`, so every call goes through
+`CriteriaMethods.invoke`: a table of method names and aliases, each with its argument names (positional or named, e.g.
+`property` or `propertyName`). Two prefixes are dynamic: `not<Condition>()` negates any condition, and
+`with<Association>()` joins an association and makes it the start of unqualified paths. Unknown methods fail with
+"Did you mean". A few Java methods (`getClass`, `hashCode`, ...) fall through to reflection so `writeDump()` works.
+
+**Paths and joins** (`resolve`). Each path is checked against Hibernate's metamodel (`EntityModel`) when the
+condition is added: the casing is fixed (HQL is case-sensitive) and an unknown name is an `orm.property.unknown`
+error with a suggestion. A dotted path joins its associations. A condition uses an inner join, except inside `anyOf()`
+or `not()`, where an inner join would drop rows that match another branch, so a left join is used. Ordering and
+projections use left joins. A path is joined once and reused. `assoc.id` reads the foreign key without a join. The root
+alias is `this`; HQL aliases are internal (`bx_this`, `bx_jN`, `bx_sN`).
+
+**Values** are always bound, never concatenated. Hibernate coerces them to the property type (`"42"` for an integer
+works), and an association accepts an id or an entity. `ORMApp.referenceFor` now unwraps a lazy proxy that
+`session.get()` can return when the session already holds one; this also fixes `ormExecuteQuery()`.
+
+**Results.** Entity rows by default; projections return values (one column), arrays (several) or structs
+(`asStruct()`); `asQuery()` returns a query; `asStream()` a Java stream. A referenced to-many join makes entity rows
+`distinct` and `count()` count distinct roots.
+
+**`sql( fragment, params )`** embeds native SQL through Hibernate's `sql()` HQL function: `{alias}.column` and
+`{property}` become typed arguments, `?` takes the params.
+
+**`getSQL()`** compiles, prepares the query with flushing off, and runs it while `SqlCapture` (the session factory's
+`StatementInspector`, a public SPI) records the first statement and stops it before a connection is used. Nothing
+reaches the database. `getSQL( true )` puts the values in; paging is left out. If the application configured its own
+statement inspector, `getSQL()` explains that instead of guessing.
+
+**`toString()`** (and so `writeDump()`) lists the recorded calls, indented inside closures, then the HQL, the params
+and, when the request is still live, the SQL.
+
+**`chunk( size, fn )` / `each( fn )`** read rows in batches: by id (keyset) when there is no ordering, else by offset
+with the id as a tie-breaker. After each batch the session is flushed (so changes in the callback are saved) and
+cleared (so memory stays flat).
+
+**Events.** cborm's interception points are announced as BoxLang events: `beforeCriteriaBuilderList`,
+`afterCriteriaBuilderList`, `beforeCriteriaBuilderCount`, `afterCriteriaBuilderCount`, `beforeCriteriaBuilderGet`,
+`afterCriteriaBuilderGet`, `onCriteriaBuilderAddition`. Each gets `criteriaBuilder` (and `results`, `count` or
+`result` after the query).
+
+**Tests.** `src/test/java/ortus/boxlang/modules/orm/criteria/`: `CriteriaConditionsTest`, `CriteriaJoinsTest`,
+`CriteriaShapeTest`, `CriteriaTerminalsTest`, `CriteriaSubqueryTest`, `CriteriaDeveloperTest` (live, about 145 tests).
+See the `bx-orm-criteria` custom skill for the class map.
 
 ---
 

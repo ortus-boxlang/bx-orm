@@ -82,6 +82,46 @@ public class HQLQuery {
 		this.parameters		= processBindings( bindings );
 	}
 
+	/**
+	 * Create a query from HQL whose parameters are already numbered {@code ?1..?n} in order, one scalar value per
+	 * placeholder (lists already expanded). Used by {@code entityCriteria()}, which builds its own HQL: nothing is parsed
+	 * or rewritten, and every value is bound as-is.
+	 *
+	 * @param context The context the query runs in.
+	 * @param hql     HQL using {@code ?1..?n} positional parameters.
+	 * @param values  One value per placeholder, in order.
+	 * @param options Query options (datasource, maxResults, offset, cacheable, cacheName, timeout, readOnly, fetchSize,
+	 *                comment, hints).
+	 *
+	 * @return The query, ready to {@link #prepare(boolean)} or {@link #execute()}.
+	 */
+	public static HQLQuery ofNumbered( IBoxContext context, String hql, List<Object> values, IStruct options ) {
+		HQLQuery query = new HQLQuery( context, hql, null, options );
+		for ( Object value : values ) {
+			// Wrapped so QueryParameter keeps the value untouched (a struct or entity is never read as queryparam options).
+			query.parameters.add( QueryParameter.fromAny( Struct.of( Key.value, value ) ) );
+		}
+		return query;
+	}
+
+	/**
+	 * The HQL this query runs (after named/positional parameters were rewritten to {@code ?1..?n}).
+	 *
+	 * @return The HQL.
+	 */
+	public String getHQL() {
+		return this.hql;
+	}
+
+	/**
+	 * The Hibernate session this query runs in.
+	 *
+	 * @return The session.
+	 */
+	public Session getSession() {
+		return this.session;
+	}
+
 	private List<QueryParameter> processBindings( Object bindings ) {
 		if ( bindings == null ) {
 			return new ArrayList<>();
@@ -364,12 +404,38 @@ public class HQLQuery {
 		return params;
 	}
 
+	/**
+	 * Run the query: an update/delete returns the affected row count; a select returns its rows, with entity facades
+	 * unwrapped to their BoxLang instances.
+	 *
+	 * @return The row count or the list of results.
+	 */
 	public Object execute() {
-		boolean isUpdate = this.hql.trim().toUpperCase().startsWith( UPDATE_PREFIX )
+		boolean							isUpdate	= this.hql.trim().toUpperCase().startsWith( UPDATE_PREFIX )
 		    || this.hql.trim().toUpperCase().startsWith( DELETE_PREFIX );
+		org.hibernate.query.Query<?>	hqlQuery	= prepare( !isUpdate );
+		if ( isUpdate ) {
+			return hqlQuery.executeUpdate();
+		} else {
+			// Hibernate returns POJO facades for entity results; unwrap each to its BoxLang instance so callers only ever
+			// see IClassRunnables. Scalars/projections pass through untouched.
+			return hqlQuery.list()
+			    .stream()
+			    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
+			    .collect( java.util.stream.Collectors.toList() );
+		}
+	}
 
-		// Read-your-writes: flush pending ORM writes when inside a BoxLang transaction so this query sees them.
-		if ( !isUpdate ) {
+	/**
+	 * Create the Hibernate query with every option applied and every parameter bound, without running it.
+	 *
+	 * @param readYourWrites True to flush pending ORM writes first when inside a BoxLang transaction, so a select sees
+	 *                       them.
+	 *
+	 * @return The prepared query.
+	 */
+	public org.hibernate.query.Query<?> prepare( boolean readYourWrites ) {
+		if ( readYourWrites ) {
 			ormContext.flushForQuery( session );
 		}
 
@@ -393,6 +459,15 @@ public class HQLQuery {
 			hqlQuery.setReadOnly( BooleanCaster.cast( this.options.get( ORMKeys.readOnly ) ) );
 		}
 		applyCacheAndTimeout( hqlQuery, this.options );
+		if ( this.options.get( Key.fetchSize ) != null ) {
+			hqlQuery.setFetchSize( ortus.boxlang.runtime.dynamic.casters.IntegerCaster.cast( this.options.get( Key.fetchSize ) ) );
+		}
+		if ( this.options.get( ORMKeys.comment ) instanceof String comment && !comment.isBlank() ) {
+			hqlQuery.setComment( comment );
+		}
+		if ( this.options.get( ORMKeys.hints ) instanceof IStruct hints ) {
+			hints.forEach( ( name, value ) -> hqlQuery.setHint( name.getName(), value ) );
+		}
 
 		if ( this.parameters != null ) {
 			// Map each 1-based positional parameter to the entity name it targets, when it targets an association.
@@ -428,17 +503,7 @@ public class HQLQuery {
 				}
 			}
 		}
-		if ( isUpdate ) {
-			return hqlQuery.executeUpdate();
-		} else {
-			// Hibernate returns POJO facades for entity results; unwrap each to its BoxLang instance so callers only ever
-			// see IClassRunnables. Scalars/projections pass through untouched.
-			return hqlQuery.list()
-			    .stream()
-			    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
-			    .collect( java.util.stream.Collectors.toList() );
-		}
-
+		return hqlQuery;
 	}
 
 	/**

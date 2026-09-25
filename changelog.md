@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Startup validation: duplicate entity names on one datasource are reported with both classes; unknown `ormtype` values are warned about and named if Hibernate fails to start; broken startups (bad entity path, fieldtype, cfc or datasource) raise one `orm.config` error, and the last failure is remembered for later ORM calls and `ormDiagnostics()`.
 - `uniqueFirst` option for `ormExecuteQuery()` and `entityLoad()`: take the first row of a multi-row result.
 - Entity inspection BIFs: `entityGetName()`, `entityGetDatasource()`, `entityGetId()`, `entityGetMetadata()` (cached per ORM application), `entityIsDirty()` and `entityGetDirtyProperties()` (Hibernate's own dirty check; no SQL for managed entities), `ormIsSessionDirty()` and `ormGetSessionStatistics()`.
+- `entityCriteria( entityName )`: a fluent query builder. Conditions (cborm names and aliases, `not*` negation, `anyOf`/`allOf` groups, `where()` shorthands, native `sql()` with bound params), automatic joins for dotted paths, aliases and `with{Association}()`, fetch joins, subqueries (`exists`, `isIn`, cborm `property*`/`sub*`), projections (`project()`, cborm `withProjections()`), struct/query/stream results, ordering, paging and query options. Terminals: `list`, `count`, `exists`, `get`, `getOrFail`, `first`, `firstOrFail`, `paginate`, `simplePaginate`, `pluck`, `sum`/`avg`/`min`/`max`, `each`, `chunk`. Property names are checked while building ("Did you mean"), `getSQL()`/`peekSQL()`/`logSQL()` show the SQL without running it, `writeDump()` shows the calls, HQL, params and SQL, and cborm's criteria interception points are announced.
+- `orm.notFound` error type for `getOrFail()` / `firstOrFail()`.
 - Event veto: a `preInsert`, `preUpdate` or `preDelete` handler (on the entity or the global `eventHandler`) that returns `false` cancels the operation. Vetoing the insert of a database-identity entity raises `orm.event.veto`, since Hibernate cannot skip that insert.
 
 - POJO-facade entity representation (now the only representation): each entity maps to a generated Java facade whose accessors delegate to the BoxLang instance, unlocking `uuid` (and other) id generators, composite ids, `byte[]`, and full metamodel access.
@@ -83,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ormExecuteQuery()` now applies the `cacheable`, `cacheName` and `timeout` options (they were ignored), and `entityLoad()` applies `cacheName` as the query cache region.
 - `entityLoad()` with `ignorecase` no longer wraps numeric or date sort properties in `lower()`.
 - `ormFlush( datasource )` flushes that datasource's session instead of the default one.
+- An association parameter given as an id (`ormExecuteQuery()`, `entityLoad()`) no longer fails with "cannot be used as ...Facade" when the session already holds a lazy proxy for that row.
 - A failed flush at the end of a request still closes the request's ORM sessions.
 - The `uniquekey` and `index` property annotations create their unique constraints and indexes again (lost in the move to `mapping.xml`). Properties sharing a name form one multi-column constraint or index; both accept a comma-separated list, and both work on `many-to-one` foreign keys.
 

@@ -744,7 +744,7 @@ public class ORMApp {
 	 *
 	 * @return True for a text property; false for other types or an unknown property.
 	 */
-	private static boolean isTextProperty( EntityRecord record, String property ) {
+	public static boolean isTextProperty( EntityRecord record, String property ) {
 		if ( record.getEntityMeta() == null ) {
 			return false;
 		}
@@ -942,7 +942,13 @@ public class ORMApp {
 	 * @return A managed reference assignable to the entity's mapped representation.
 	 */
 	private Object referenceFor( Session session, String entityName, Object id ) {
-		return session.get( hibernateEntityName( session, entityName ), id );
+		Object reference = session.get( hibernateEntityName( session, entityName ), id );
+		// When the session already holds a lazy proxy for this row (e.g. read through an association), get() returns that
+		// proxy, which is not assignable to the facade class a query parameter needs. Use the entity behind it.
+		if ( reference instanceof org.hibernate.proxy.HibernateProxy proxy ) {
+			return proxy.getHibernateLazyInitializer().getImplementation();
+		}
+		return reference;
 	}
 
 	/**

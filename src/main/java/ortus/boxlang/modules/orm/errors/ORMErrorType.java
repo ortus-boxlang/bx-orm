@@ -54,6 +54,8 @@ public enum ORMErrorType {
 	QUERY_PARAMETER( "orm.query.parameter" ),
 	/** A unique query that returned more than one row. */
 	QUERY_NON_UNIQUE( "orm.query.nonUnique" ),
+	/** A query that must return a row (getOrFail, firstOrFail) found none. */
+	NOT_FOUND( "orm.notFound" ),
 
 	/** A lazy association read after its ORM session was closed or cleared. */
 	LAZY_NO_SESSION( "orm.lazy.noSession" ),
