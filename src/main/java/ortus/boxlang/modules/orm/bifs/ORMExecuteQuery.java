@@ -89,6 +89,11 @@ public class ORMExecuteQuery extends BaseORMBIF {
 	 * <li><strong><code>offset</code></strong> - Specifies the position from which to retrieve the objects. Default is 0.</li>
 	 * <li><strong><code>maxresults</code></strong> - Specifies the maximum number of objects to be retrieved. Default is no limit.</li>
 	 * <li><strong><code>readonly</code></strong> - If true, the query will be read-only. Default is false.</li>
+	 * <li><strong><code>cacheable</code></strong> - Cache the result in the second-level query cache (needs <code>secondaryCacheEnabled</code>). Default
+	 * is false.</li>
+	 * <li><strong><code>cacheName</code></strong> - The query cache region to use (alias <code>cacheRegion</code>). Implies <code>cacheable</code> unless
+	 * <code>cacheable</code> is given.</li>
+	 * <li><strong><code>timeout</code></strong> - The query timeout in seconds. Default is no timeout.</li>
 	 * </ul>
 	 *
 	 * @param context   The context in which the BIF is being invoked.

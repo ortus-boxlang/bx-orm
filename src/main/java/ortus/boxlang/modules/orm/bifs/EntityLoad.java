@@ -85,12 +85,15 @@ public class EntityLoad extends BaseORMBIF {
 	 * entity matches the filter, an <code>orm.query.nonUnique</code> error is raised.</li>
 	 * <li><strong><code>uniqueFirst</code></strong> - Boolean. Return the first match even when several entities match (implies <code>unique</code>).
 	 * Default is `false`.</li>
-	 * <li><strong><code>ignorecase</code></strong> - Boolean. Ignores the case of sort order when set to true. Use only if you specify the sortorder
+	 * <li><strong><code>ignorecase</code></strong> - Boolean. Sorts text properties without regard to case. Number and date properties are sorted as-is.
+	 * Use only if you specify the sortorder
 	 * parameter. Defaults to `false`.</li>
 	 * <li><strong><code>offset</code></strong> - Number. Specifies the pagination offset. Defaults to 0.</li>
 	 * <li><strong><code>maxresults</code></strong> - Number. Specifies the maximum number of objects to be retrieved.</li>
-	 * <li><strong><code>cacheable</code></strong> - Boolean. Whether the result has to be cached in the secondary cache. Default is `false`.</li>
-	 * <li><strong><code>cachename</code></strong> - String. Name of the cache in secondary cache.</li>
+	 * <li><strong><code>cacheable</code></strong> - Boolean. Whether the result has to be cached in the second-level query cache (needs
+	 * <code>secondaryCacheEnabled</code>). Default is `false`.</li>
+	 * <li><strong><code>cachename</code></strong> - String. The query cache region to use. Implies <code>cacheable</code> unless <code>cacheable</code>
+	 * is given.</li>
 	 * <li><strong><code>timeout</code></strong> - Number. Specifies the timeout value (in seconds) for the query. No timeout by default.</li>
 	 * </ul>
 	 *

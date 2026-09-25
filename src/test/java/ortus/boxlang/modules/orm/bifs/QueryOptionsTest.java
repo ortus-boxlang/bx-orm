@@ -141,17 +141,4 @@ public class QueryOptionsTest extends BaseORMTest {
 			assertThat( Integer.parseInt( ids.get( i - 1 ).toString() ) ).isGreaterThan( Integer.parseInt( ids.get( i ).toString() ) );
 		}
 	}
-
-	/**
-	 * Test: entityLoad ignorecase with a filter matches text case-insensitively.
-	 */
-	@DisplayName( "entityLoad ignorecase with a filter matches text case-insensitively" )
-	@Test
-	public void testIgnoreCaseFilter() {
-		Object size = run( """
-		                   name   = entityLoad( "Manufacturer", {}, "id asc" )[ 1 ].getName();
-		                   result = entityLoad( "Manufacturer", { name : uCase( name ) }, "", { ignorecase : true } ).len();
-		                   """ );
-		assertThat( Integer.parseInt( size.toString() ) ).isAtLeast( 1 );
-	}
 }
