@@ -68,14 +68,9 @@ public class EntityNew extends BaseORMBIF {
 	 * @argument.ignoreExtras If false, an error will be thrown if properties are provided that do not exist on the entity. Not implemented.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		ORMContext	ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-		ORMApp		ormApp		= ormContext.getORMApp();
-		String		entityName	= arguments.getAsString( ORMKeys.entityName );
-
-		// If the ORM application is not initialized, we cannot create an entity.
-		if ( ormApp == null ) {
-			throw new BoxRuntimeException( "ORM application is not initialized." );
-		}
+		ORMContext					ormContext			= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMApp						ormApp				= ormContext.requireORMApp();
+		String						entityName			= arguments.getAsString( ORMKeys.entityName );
 
 		EntityRecord				entityRecord		= ormApp.lookupEntity( entityName, true );
 		IStruct						properties			= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;

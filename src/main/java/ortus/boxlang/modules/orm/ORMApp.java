@@ -165,6 +165,8 @@ public class ORMApp {
 		// normally (and, in `auto` mode, rewrites the manifest so it stays current).
 		long discoverStart = System.currentTimeMillis();
 		this.entityMap = resolveEntityMap( context );
+		// Catch mistakes Hibernate would only report with internal names (or not at all) before it starts.
+		validateEntities();
 		if ( logger.isDebugEnabled() ) {
 			logger.debug( "Discovered entities on [{}] datasources", this.entityMap.size() );
 			logger.debug( "ORM startup metric - total entity discovery, parsing and meta collection: {}ms", System.currentTimeMillis() - discoverStart,
@@ -180,7 +182,7 @@ public class ORMApp {
 
 			this.datasources.add( datasource );
 			long			sfBuildStart	= System.currentTimeMillis();
-			SessionFactory	factory			= buildSessionFactoryForDatasource( datasource, jdbcContext );
+			SessionFactory	factory			= buildSessionFactoryWithHints( datasource, jdbcContext );
 			logger.debug( "ORM startup metric - Hibernate SessionFactory build time [{}]: {}ms", datasource, System.currentTimeMillis() - sfBuildStart );
 			this.sessionFactories.put( datasource, factory );
 
@@ -196,7 +198,7 @@ public class ORMApp {
 		// function at all. It will just be an empty session factory with no mapped entities.
 		if ( this.defaultSessionFactory == null ) {
 			long sfBuildStart = System.currentTimeMillis();
-			this.defaultSessionFactory = buildSessionFactoryForDatasource( this.defaultDataSource, jdbcContext );
+			this.defaultSessionFactory = buildSessionFactoryWithHints( this.defaultDataSource, jdbcContext );
 			logger.debug( "ORM startup metric - Hibernate SessionFactory build time [{}]: {}ms", this.defaultDataSource,
 			    System.currentTimeMillis() - sfBuildStart );
 			this.sessionFactories.put( this.defaultDataSource, this.defaultSessionFactory );
@@ -305,6 +307,34 @@ public class ORMApp {
 	}
 
 	/**
+	 * Build a datasource's session factory; if Hibernate fails and an ormtype looked wrong, say so in the error (the raw
+	 * Hibernate message is usually about SQL type codes, not the property that caused it).
+	 *
+	 * @param datasource  The datasource to build the session factory for.
+	 * @param jdbcContext The JDBC-capable context used to build it.
+	 *
+	 * @return The session factory.
+	 *
+	 * @throws ortus.boxlang.modules.orm.errors.ORMException ({@code orm.config}) naming the unknown ormtypes, when there are any.
+	 */
+	private SessionFactory buildSessionFactoryWithHints( Key datasource, IJDBCCapableContext jdbcContext ) {
+		try {
+			return buildSessionFactoryForDatasource( datasource, jdbcContext );
+		} catch ( RuntimeException e ) {
+			if ( this.unknownOrmTypes.isEmpty() ) {
+				throw e;
+			}
+			RuntimeException translated = ortus.boxlang.modules.orm.errors.ORMErrors.translate( e,
+			    ortus.boxlang.modules.orm.errors.ORMErrors.Context.of( "ORM startup" ) );
+			throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.CONFIG,
+			    "The ORM could not start. Likely cause: " + String.join( " ", this.unknownOrmTypes ),
+			    "Use a valid ormtype such as string, integer, long, boolean, timestamp, text or bigdecimal. Hibernate said: "
+			        + translated.getMessage(),
+			    null, e );
+		}
+	}
+
+	/**
 	 * Build a session factory for the given datasource using the provided JDBC context.
 	 *
 	 * @param datasource The datasource for which to build the session factory.
@@ -340,6 +370,71 @@ public class ORMApp {
 	}
 
 	/**
+	 * Every ormtype value Hibernate resolves once normalized by {@link MappingXMLWriter#toHibernateType(String)}. An
+	 * ormtype outside this set is reported as a warning (it may still be a valid Hibernate or Java type name), and named in
+	 * the startup error if Hibernate then fails to start.
+	 */
+	private static final java.util.Set<String>	KNOWN_ORM_TYPES	= java.util.Set.of( "string", "character", "integer", "long", "short",
+	    "byte", "float", "double", "boolean", "yes_no", "true_false", "bigdecimal", "biginteger", "timestamp", "time", "text", "binary",
+	    "uuid", "serializable", "locale", "timezone", "currency", "class", "url", "duration", "instant", "zoneddatetime", "offsetdatetime",
+	    "localdate", "localdatetime", "localtime", "calendar", "calendar_date", "calendar_time", "object", "any", "json" );
+
+	/** ormtype values not in {@link #KNOWN_ORM_TYPES}, as "Entity.property has ormtype=..." sentences. */
+	private final List<String>					unknownOrmTypes	= new ArrayList<>();
+
+	/**
+	 * Validate the discovered entities before Hibernate starts: duplicate entity names on one datasource are an error
+	 * (Hibernate would fail with an internal "Duplicate key" message); unknown ormtype values are logged as warnings and
+	 * remembered, so a later Hibernate startup failure can name them.
+	 *
+	 * @throws ortus.boxlang.modules.orm.errors.ORMException ({@code orm.config}) listing every duplicate entity name.
+	 */
+	private void validateEntities() {
+		List<String> problems = new ArrayList<>();
+		this.entityMap.forEach( ( datasource, records ) -> {
+			Map<String, List<EntityRecord>> byName = new java.util.LinkedHashMap<>();
+			for ( EntityRecord record : records ) {
+				byName.computeIfAbsent( record.getEntityName().toLowerCase(), k -> new ArrayList<>() ).add( record );
+			}
+			byName.values().stream().filter( list -> list.size() > 1 ).forEach( list -> problems.add( String.format(
+			    "%d entities are named [%s] on datasource [%s]: %s. Give each a unique entityName.", list.size(),
+			    list.get( 0 ).getEntityName(), datasource.getName(),
+			    list.stream().map( EntityRecord::getClassFQN ).collect( Collectors.joining( ", " ) ) ) ) );
+		} );
+		for ( EntityRecord record : getEntityRecords() ) {
+			if ( record.getEntityMeta() == null ) {
+				continue;
+			}
+			for ( var prop : record.getEntityMeta().getAllPersistentProperties() ) {
+				String ormType = prop.getORMType();
+				if ( ormType == null || ormType.isBlank() ) {
+					continue;
+				}
+				String normalized = ortus.boxlang.modules.orm.mapping.MappingXMLWriter.toHibernateType( ormType );
+				if ( !KNOWN_ORM_TYPES.contains( normalized ) && !ormType.contains( "." ) ) {
+					String sentence = String.format( "%s.%s has ormtype=\"%s\", which is not a known type.%s", record.getEntityName(),
+					    prop.getName(), ormType, ortus.boxlang.modules.orm.errors.ORMErrors.suggestion( normalized, KNOWN_ORM_TYPES ) );
+					this.unknownOrmTypes.add( sentence );
+					logger.warn( "ORM: {}", sentence );
+				}
+			}
+		}
+		if ( !problems.isEmpty() ) {
+			throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.CONFIG,
+			    "The ORM could not start: " + String.join( " ", problems ), "Each entity name must be unique per datasource." );
+		}
+	}
+
+	/**
+	 * Unknown ormtype warnings found at startup (see {@link #validateEntities()}).
+	 *
+	 * @return One sentence per unknown ormtype; empty when all ormtypes are known.
+	 */
+	public List<String> getOrmTypeWarnings() {
+		return List.copyOf( this.unknownOrmTypes );
+	}
+
+	/**
 	 * Get ALL discovered entities/entity meta info for this ORM application.
 	 */
 	public List<EntityRecord> getEntityRecords() {
@@ -361,36 +456,86 @@ public class ORMApp {
 	}
 
 	/**
-	 * Lookup the BoxLang EntityRecord object containing known entity information for a given entity name.
+	 * Lookup the BoxLang EntityRecord object containing known entity information for a given entity name. The default
+	 * datasource is searched first, then every other datasource; datasources without entities are skipped.
 	 *
-	 * @param entityName The entity name to look up
+	 * @param entityName The entity name to look up (case-insensitive).
 	 * @param fail       Whether to throw an exception if the entity is not found.
+	 *
+	 * @return The entity record, or null when not found and {@code fail} is false.
+	 *
+	 * @throws ortus.boxlang.modules.orm.errors.ORMException ({@code orm.entity.notFound}, with a suggestion) when not found
+	 *                                                       and {@code fail} is true.
 	 */
 	public EntityRecord lookupEntity( String entityName, Boolean fail ) {
-		var entityFromDefault = getEntityRecords( this.defaultDataSource ).stream()
+		// The default datasource first, then the others. A datasource with no entities (including a default datasource when
+		// every entity names another datasource) is simply skipped.
+		java.util.function.Function<Key, java.util.Optional<EntityRecord>>	find				= datasourceName -> this.entityMap
+		    .getOrDefault( datasourceName, List.of() )
+		    .stream()
 		    .filter( ( entity ) -> entity.getEntityName().equalsIgnoreCase( entityName ) )
 		    .findFirst();
 
+		var																	entityFromDefault	= this.defaultDataSource == null
+		    ? java.util.Optional.<EntityRecord>empty()
+		    : find.apply( this.defaultDataSource );
 		if ( entityFromDefault.isPresent() ) {
 			return entityFromDefault.get();
 		}
-
-		for ( Key datasourceName : this.datasources ) {
-			if ( !datasourceName.equals( this.defaultDataSource ) ) {
-				var entityFromDatasource = getEntityRecords( datasourceName ).stream()
-				    .filter( ( entity ) -> entity.getEntityName().equalsIgnoreCase( entityName ) )
-				    .findFirst();
-
-				if ( entityFromDatasource.isPresent() ) {
-					return entityFromDatasource.get();
-				}
+		for ( Key datasourceName : this.entityMap.keySet() ) {
+			var entityFromDatasource = find.apply( datasourceName );
+			if ( entityFromDatasource.isPresent() ) {
+				return entityFromDatasource.get();
 			}
 		}
 		if ( fail ) {
-			String entityNames = getEntityRecords().stream().map( er -> er.getEntityName() ).collect( Collectors.joining( ", " ) );
-			throw new BoxRuntimeException( "Entity not found: " + entityName + "; configured entities are [" + entityNames + "]" );
+			throw ortus.boxlang.modules.orm.errors.ORMErrors.entityNotFound( entityName, getEntityNames(), null );
 		}
 		return null;
+	}
+
+	/**
+	 * Every entity name in this ORM application, sorted case-insensitively.
+	 *
+	 * @return The entity names.
+	 */
+	public List<String> getEntityNames() {
+		return getEntityRecords().stream().map( EntityRecord::getEntityName ).sorted( String.CASE_INSENSITIVE_ORDER ).toList();
+	}
+
+	/**
+	 * Every property name of an entity (ids, version, columns and associations). Used for "did you mean" suggestions.
+	 *
+	 * @param entityName The entity name.
+	 *
+	 * @return The property names, or an empty list when the entity or its metadata is unknown.
+	 */
+	public List<String> getPropertyNames( String entityName ) {
+		EntityRecord record = lookupEntity( entityName, false );
+		if ( record == null || record.getEntityMeta() == null ) {
+			return List.of();
+		}
+		var				meta	= record.getEntityMeta();
+		List<String>	names	= new ArrayList<>();
+		meta.getIdProperties().forEach( p -> names.add( p.getName() ) );
+		if ( meta.getVersionProperty() != null ) {
+			names.add( meta.getVersionProperty().getName() );
+		}
+		meta.getProperties().forEach( p -> names.add( p.getName() ) );
+		meta.getAssociations().forEach( p -> names.add( p.getName() ) );
+		return names.stream().distinct().toList();
+	}
+
+	/**
+	 * An error context for {@link ortus.boxlang.modules.orm.errors.ORMErrors#translate} that knows this application's
+	 * entity and property names (for "did you mean" suggestions).
+	 *
+	 * @param operation The BIF or operation name.
+	 *
+	 * @return The error context.
+	 */
+	public ortus.boxlang.modules.orm.errors.ORMErrors.Context errorContext( String operation ) {
+		return ortus.boxlang.modules.orm.errors.ORMErrors.Context.of( operation ).withNames( getEntityNames(), this::getPropertyNames );
 	}
 
 	/**
@@ -448,7 +593,20 @@ public class ORMApp {
 			}
 			id = compositeId;
 		} else {
-			id = GenericCaster.cast( context, keyValue, keyClass.getSimpleName() );
+			try {
+				id = GenericCaster.cast( context, keyValue, keyClass.getSimpleName() );
+			} catch ( ortus.boxlang.runtime.types.exceptions.BoxCastException e ) {
+				IStruct info = new ortus.boxlang.runtime.types.Struct();
+				info.put( Key.of( "entityName" ), entityRecord.getEntityName() );
+				if ( keyValue != null ) {
+					info.put( Key.of( "id" ), keyValue );
+				}
+				String given = keyValue instanceof String str && str.isEmpty() ? "an empty string" : "[" + keyValue + "]";
+				throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.ARGUMENT,
+				    String.format( "%s is not a valid id for %s, whose id is of type %s.", given, entityRecord.getEntityName(),
+				        keyClass.getSimpleName() ),
+				    "Pass the entity's primary key value.", info, e );
+			}
 		}
 		var entity = session.get( hibernateEntityName( session, entityRecord.getEntityName() ), id );
 		if ( entity instanceof BoxProxy castProxy ) {
@@ -485,8 +643,8 @@ public class ORMApp {
 			    .filter( key -> !properties.contains( key ) )
 			    .findFirst()
 			    .ifPresent( key -> {
-				    throw new BoxRuntimeException(
-				        "No persistent filter property found with the name of '" + key.getName() + "' in entity '" + entityName + "'" );
+				    throw ortus.boxlang.modules.orm.errors.ORMErrors.propertyNotFound( entityRecord.getEntityName(), key.getName(),
+				        getPropertyNames( entityRecord.getEntityName() ), "entityLoad" );
 			    } );
 
 			hql.append( " where" );
@@ -517,9 +675,8 @@ public class ORMApp {
 				// injection. Validate + canonicalize it against the entity's persistent properties, same as filter keys.
 				int		orderPropIndex	= properties.indexOf( Key.of( order.getAsString( ORMKeys.property ) ) );
 				if ( orderPropIndex < 0 ) {
-					throw new BoxRuntimeException(
-					    "No persistent order-by property found with the name of '" + order.getAsString( ORMKeys.property )
-					        + "' in entity '" + entityName + "'" );
+					throw ortus.boxlang.modules.orm.errors.ORMErrors.propertyNotFound( entityRecord.getEntityName(),
+					    order.getAsString( ORMKeys.property ), getPropertyNames( entityRecord.getEntityName() ), "entityLoad (sort order)" );
 				}
 				String orderProp = KeyCaster.cast( properties.get( orderPropIndex ) ).getName();
 				orderClauses.add( "e." + orderProp + ( order.getAsBoolean( ORMKeys.ascending ) ? " asc" : " desc" ) );
@@ -534,9 +691,15 @@ public class ORMApp {
 		// Hibernate 7 rejects a raw scalar for an entity-typed parameter, so resolve those to a managed
 		// reference first - the same conversion HQLQuery applies to ORM queries - keeping the Hibernate 5 behavior.
 		Map<String, String>	entityParams	= entityParameterTargets( query );
-		params.forEach( ( name, value ) -> query.setParameter(
-		    name,
-		    entityParams.containsKey( name ) ? resolveEntityReference( session, entityParams.get( name ), value ) : value ) );
+		params.forEach( ( name, value ) -> {
+			try {
+				query.setParameter(
+				    name,
+				    entityParams.containsKey( name ) ? resolveEntityReference( session, entityParams.get( name ), value ) : value );
+			} catch ( org.hibernate.query.QueryArgumentException e ) {
+				throw filterValueError( entityRecord.getEntityName(), filterPropertyFor( filter, properties, name ), value, e );
+			}
+		} );
 
 		return Array.of(
 		    executeFilterQuery( query, options )
@@ -545,6 +708,60 @@ public class ORMApp {
 		        .map( entity -> ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity ) )
 		        .toArray()
 		);
+	}
+
+	/**
+	 * The filter property bound to a generated parameter name ({@code p0}, {@code p1}, ...). Parameter indexes count every
+	 * filter key, including null values (which become {@code is null} and bind no parameter).
+	 *
+	 * @param filter     The entityLoad filter struct.
+	 * @param properties The entity's property names (canonical casing).
+	 * @param paramName  The generated parameter name.
+	 *
+	 * @return The property name, or the parameter name when it cannot be matched.
+	 */
+	private static String filterPropertyFor( IStruct filter, Array properties, String paramName ) {
+		int	index	= Integer.parseInt( paramName.substring( 1 ) );
+		int	i		= 0;
+		for ( Key entryKey : filter.keySet() ) {
+			if ( filter.get( entryKey ) != null ) {
+				if ( i == index ) {
+					int propertyIndex = properties.indexOf( KeyCaster.cast( entryKey ) );
+					return KeyCaster.cast( properties.get( propertyIndex ) ).getName();
+				}
+			}
+			i++;
+		}
+		return paramName;
+	}
+
+	/**
+	 * A clear error for a filter value that cannot be used for its property's type.
+	 *
+	 * @param entityName The entity name.
+	 * @param property   The filter property.
+	 * @param value      The value that was passed.
+	 * @param cause      Hibernate's argument exception (gives the expected type).
+	 *
+	 * @return An {@code orm.query.parameter} error to throw.
+	 */
+	private static ortus.boxlang.modules.orm.errors.ORMException filterValueError( String entityName, String property, Object value,
+	    org.hibernate.query.QueryArgumentException cause ) {
+		IStruct info = new ortus.boxlang.runtime.types.Struct();
+		info.put( Key.of( "entityName" ), entityName );
+		info.put( Key.of( "property" ), property );
+		if ( value != null ) {
+			info.put( Key.of( "argument" ), value );
+		}
+		String type = cause.getParameterType() == null ? "its type" : cause.getParameterType().getSimpleName();
+		if ( value instanceof String str && str.isEmpty() ) {
+			return new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+			    String.format( "The filter for %s.%s is an empty string, which cannot be used as %s.", entityName, property, type ),
+			    "Pass null to match rows with no value, or leave the property out of the filter.", info, cause );
+		}
+		return new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+		    String.format( "The filter value [%s] for %s.%s cannot be used as %s.", value, entityName, property, type ),
+		    "Check the value you pass for this property.", info, cause );
 	}
 
 	/**
@@ -640,7 +857,7 @@ public class ORMApp {
 	 * </ul>
 	 *
 	 * @param session    A Hibernate session bound to the entity's datasource.
-	 * @param entityName The Hibernate entity name the association targets.
+	 * @param entityName The entity the association targets: its BoxLang name or its Hibernate (facade class) name.
 	 * @param value      The caller-supplied value: a primary key or an entity instance.
 	 *
 	 * @return The managed entity/reference to bind, or the original value when it cannot be resolved to one.
@@ -648,6 +865,12 @@ public class ORMApp {
 	public Object resolveEntityReference( Session session, String entityName, Object value ) {
 		if ( value == null ) {
 			return null;
+		}
+		// Query parameter metadata names the association target by its Hibernate entity name, which is the generated facade
+		// class name. Everything below works with BoxLang entity names, so translate it back first.
+		String boxName = ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.entityNameForFacade( entityName );
+		if ( boxName != null ) {
+			entityName = boxName;
 		}
 		// Already an entity instance (live or detached); BoxProxy implements IClassRunnable too.
 		if ( value instanceof IClassRunnable runnable ) {

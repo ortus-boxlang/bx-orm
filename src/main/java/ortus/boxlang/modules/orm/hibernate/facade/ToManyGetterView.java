@@ -46,8 +46,13 @@ public final class ToManyGetterView extends AbstractList<Object> {
 	 */
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public ToManyGetterView( List<?> live ) {
-		this.live		= ( List ) live;
-		this.snapshot	= new ArrayList<>( live );
+		this.live = ( List ) live;
+		try {
+			this.snapshot = new ArrayList<>( live );
+		} catch ( org.hibernate.LazyInitializationException e ) {
+			throw ortus.boxlang.modules.orm.errors.ORMErrors.translate( e,
+			    ortus.boxlang.modules.orm.errors.ORMErrors.Context.of( "lazy collection load" ) );
+		}
 	}
 
 	@Override

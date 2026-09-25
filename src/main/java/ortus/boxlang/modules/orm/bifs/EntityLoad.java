@@ -81,7 +81,10 @@ public class EntityLoad extends BaseORMBIF {
 	 * <h2>Options</h2>
 	 * 
 	 * <ul>
-	 * <li><strong><code>unique</code></strong> - Boolean. Specifies whether to retrieve a single, unique item. Default is `false`.</li>
+	 * <li><strong><code>unique</code></strong> - Boolean. Specifies whether to retrieve a single, unique item. Default is `false`. If more than one
+	 * entity matches the filter, an <code>orm.query.nonUnique</code> error is raised.</li>
+	 * <li><strong><code>uniqueFirst</code></strong> - Boolean. Return the first match even when several entities match (implies <code>unique</code>).
+	 * Default is `false`.</li>
 	 * <li><strong><code>ignorecase</code></strong> - Boolean. Ignores the case of sort order when set to true. Use only if you specify the sortorder
 	 * parameter. Defaults to `false`.</li>
 	 * <li><strong><code>offset</code></strong> - Number. Specifies the pagination offset. Defaults to 0.</li>
@@ -131,10 +134,10 @@ public class EntityLoad extends BaseORMBIF {
 	 */
 	private Object loadEntityById( IBoxContext context, ArgumentsScope arguments ) {
 		if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
-			return ormService.getORMAppByContext( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
+			return ormService.requireORMApp( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
 			    arguments.get( ORMKeys.idOrFilter ) );
 		}
-		var entity = ormService.getORMAppByContext( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
+		var entity = ormService.requireORMApp( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
 		    arguments.get( ORMKeys.idOrFilter ) );
 		return entity == null ? Array.EMPTY : Array.of( entity );
 	}
@@ -146,12 +149,22 @@ public class EntityLoad extends BaseORMBIF {
 	 * @param arguments Arguments scope of the BIF.
 	 */
 	private Object loadEntitiesByFilter( IBoxContext context, ArgumentsScope arguments ) {
-		IStruct	options	= buildCriteriaOptions( arguments );
-		IStruct	filter	= arguments.getAsStruct( ORMKeys.idOrFilter );
+		IStruct	options		= buildCriteriaOptions( arguments );
+		IStruct	filter		= arguments.getAsStruct( ORMKeys.idOrFilter );
 
-		Array	results	= ormService.getORMAppByContext( context ).loadEntitiesByFilter( context,
+		// uniqueFirst: take the first match (the pre-2.0 behavior); otherwise a unique load matching several rows is an error.
+		boolean	uniqueFirst	= BooleanCaster.cast( options.getOrDefault( ORMKeys.uniqueFirst, false ) );
+		boolean	unique		= uniqueFirst || BooleanCaster.cast( options.getOrDefault( ORMKeys.unique, false ) );
+		if ( unique ) {
+			options.put( ORMKeys.unique, true );
+			options.put( ORMKeys.maxResults, uniqueFirst ? 1 : 2 );
+		}
+		Array results = ormService.requireORMApp( context ).loadEntitiesByFilter( context,
 		    arguments.getAsString( ORMKeys.entityName ), filter, options );
-		if ( options.getAsBoolean( ORMKeys.unique ) ) {
+		if ( unique ) {
+			if ( results.size() > 1 ) {
+				throw ortus.boxlang.modules.orm.errors.ORMErrors.nonUniqueResult( 0, "entityLoad", null );
+			}
 			return results.isEmpty() ? null : results.getFirst();
 		}
 		return results;

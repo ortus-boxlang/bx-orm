@@ -41,7 +41,6 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
-import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 
 /**
  * HQL Query representation
@@ -74,8 +73,8 @@ public class HQLQuery {
 		this.context		= context.getParentOfType( IJDBCCapableContext.class );
 		this.hql			= hql;
 
-		this.ormApp			= ormService.getORMAppByContext( this.context );
 		this.ormContext		= ORMContext.getForContext( this.context );
+		this.ormApp			= ormContext.requireORMApp();
 		this.datasource		= options.containsKey( Key.datasource ) ? Key.of( options.getAsString( Key.datasource ) ) : null;
 		this.session		= ormContext.getSession( datasource );
 
@@ -111,7 +110,9 @@ public class HQLQuery {
 			if ( foundNames == castedArray.size() ) {
 				return buildParameterList( null, possibleStruct );
 			} else if ( foundNames > 0 ) {
-				throw new DatabaseException( "Invalid query params passed as array of structs. Some structs have a name, some do not." );
+				throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+				    "The query params array mixes named structs ({ name, value }) and unnamed values.",
+				    "Give every struct a name (named parameters) or none of them (positional parameters)." );
 			}
 			// No structs with names were found, or possbly no structs were found at all!
 			return buildParameterList( castedArray, null );
@@ -123,7 +124,10 @@ public class HQLQuery {
 
 		// We always have bindings, since we exit early if there are none
 		String className = bindings.getClass().getName();
-		throw new DatabaseException( "Invalid type for query params. Expected array or struct. Received: " + className );
+		throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+		    "Query params must be a struct (named :params) or an array (positional ? params), but received a "
+		        + bindings.getClass().getSimpleName() + ".",
+		    "Example: ormExecuteQuery( \"from User where id = :id\", { id : 1 } )." );
 	}
 
 	/**
@@ -179,8 +183,11 @@ public class HQLQuery {
 												HQLWithParamToken.setLength( 0 );
 												Key finalParamName = Key.of( paramName.toString() );
 												if ( isPositional ) {
-													throw new DatabaseException(
-													    "Named parameter [:" + finalParamName.getName() + "] found in query with positional parameters." );
+													throw new ortus.boxlang.modules.orm.errors.ORMException(
+													    ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+													    "The HQL uses the named parameter [:" + finalParamName.getName()
+													        + "] but the params are positional (an array).",
+													    "Use a struct for named parameters, e.g. { " + finalParamName.getName() + " : value }." );
 												} else {
 													if ( namedParameters.containsKey( finalParamName ) ) {
 														QueryParameter newParam = QueryParameter.fromAny( namedParameters.get( finalParamName ) );
@@ -198,16 +205,21 @@ public class HQLQuery {
 															newHQL.append( "?" + ( ++this.parameterCount ) );
 														}
 													} else {
-														throw new DatabaseException(
-														    "Named parameter [:" + finalParamName.getName() + "] not provided to query." );
+														throw new ortus.boxlang.modules.orm.errors.ORMException(
+														    ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+														    "The HQL parameter [:" + finalParamName.getName() + "] has no value.",
+														    "Pass it in the params struct, e.g. { " + finalParamName.getName() + " : value }." );
 													}
 												}
 											};
 		// Pop this into a lambda so we can re-use it for the last positional parameter
 		Runnable		processPositional	= () -> {
 												if ( paramsEncountered[ 0 ] > positionalParameters.size() ) {
-													throw new DatabaseException( "Too few positional parameters [" + positionalParameters.size()
-													    + "] provided for query having at least [" + paramsEncountered[ 0 ] + "] '?' char(s)." );
+													throw new ortus.boxlang.modules.orm.errors.ORMException(
+													    ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+													    "The HQL has at least " + paramsEncountered[ 0 ] + " positional (?) parameters but only "
+													        + positionalParameters.size() + " value(s) were passed.",
+													    "Pass one value per ? in the params array, in order." );
 												}
 												HQLWithParamTokens.add( HQLWithParamToken.toString() );
 												HQLWithParamToken.setLength( 0 );
@@ -245,7 +257,9 @@ public class HQLQuery {
 						// We've encountered a positional parameter
 						paramsEncountered[ 0 ]++;
 						if ( !isPositional ) {
-							throw new DatabaseException( "Positional parameter [?] found in query with named parameters." );
+							throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+							    "The HQL uses a positional parameter (?) but the params are named (a struct).",
+							    "Use named parameters (:name) in the HQL, or pass an array of values." );
 						}
 
 						state = 5;
@@ -338,6 +352,15 @@ public class HQLQuery {
 
 		HQLWithParamTokens.add( HQLWithParamToken.toString() );
 		this.hql = newHQL.toString();
+		// Extra named params are ignored (Hibernate never sees them), which usually means a typo in the HQL or the struct.
+		if ( namedParameters != null ) {
+			for ( Key given : namedParameters.keySet() ) {
+				if ( !foundNamedParams.contains( given ) ) {
+					ormService.getLogger().warn(
+					    "ormExecuteQuery: the param [{}] is not used by the HQL and was ignored. Is there a typo? HQL: {}", given.getName(), HQL );
+				}
+			}
+		}
 		return params;
 	}
 

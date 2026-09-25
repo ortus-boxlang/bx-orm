@@ -36,6 +36,11 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
+            <basic name="code">
+                <column length="20" name="code" nullable="false"/>
+                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
+                <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
+            </basic>
         </attributes>
     </entity>
 </entity-mappings>

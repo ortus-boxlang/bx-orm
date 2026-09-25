@@ -60,13 +60,10 @@ public class EntityDelete extends BaseORMBIF {
 	 * @argument.entity The entity instance to delete.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IClassRunnable	entity		= ( IClassRunnable ) arguments.get( ORMKeys.entity );
-		String			entityName	= getEntityName( entity );
-		ORMContext		ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-		ORMApp			ormApp		= ormContext.getORMApp();
-		if ( ormApp == null ) {
-			throw new BoxRuntimeException( "ORM application is not initialized." );
-		}
+		IClassRunnable	entity			= requireEntity( arguments.get( ORMKeys.entity ), "entity", "entityDelete" );
+		String			entityName		= getEntityName( entity );
+		ORMContext		ormContext		= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		ORMApp			ormApp			= ormContext.requireORMApp();
 
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );

@@ -134,7 +134,9 @@ public class ORMContext {
 		final IStruct		appSettings			= ( IStruct ) finalJDBCContext.getConfigItem( Key.applicationSettings );
 
 		if ( !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
-			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
+			throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.NOT_ENABLED,
+			    "This application is not ORM-enabled (this.ormEnabled is false or not set).",
+			    "Set this.ormEnabled = true (and this.ormSettings) in Application.bx." );
 		}
 
 		return jdbcCapableContext.computeAttachmentIfAbsent( ORMKeys.ORMContext, key -> {
@@ -158,7 +160,7 @@ public class ORMContext {
 		this.context	= context;
 		this.config		= config;
 		this.ormService	= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
-		this.ormApp		= this.ormService.getORMAppByContext( context );
+		this.ormApp		= safeLookup( this.ormService, context );
 		this.logger		= this.ormService.getLogger();
 		this.logger.debug( "Initializing ORM context on context type: {}", context.getClass().getSimpleName() );
 	}
@@ -179,9 +181,44 @@ public class ORMContext {
 	 */
 	public ORMApp getORMApp() {
 		if ( !hasORMApp() ) {
-			this.ormApp = this.ormService.getORMAppByContext( this.context );
+			this.ormApp = safeLookup( this.ormService, this.context );
 		}
 		return this.ormApp;
+	}
+
+	/**
+	 * The ORM application for a context, or null when there is none (including when the context has no application).
+	 * Callers that need one use {@link #requireORMApp()}, which explains why it is missing.
+	 *
+	 * @param service The ORM service.
+	 * @param context The context to look the application up for.
+	 *
+	 * @return The ORM application, or null.
+	 */
+	private static ORMApp safeLookup( ORMService service, IBoxContext context ) {
+		try {
+			return service.getORMAppByContext( context );
+		} catch ( ortus.boxlang.modules.orm.errors.ORMException e ) {
+			throw e;
+		} catch ( BoxRuntimeException e ) {
+			return null;
+		}
+	}
+
+	/**
+	 * The running ORM application, or a clear {@code orm.notReady} error (with the startup failure, if any) when there is
+	 * none. Use this instead of {@link #getORMApp()} plus a null check.
+	 *
+	 * @return The running ORM application.
+	 *
+	 * @throws ortus.boxlang.modules.orm.errors.ORMException When there is no running ORM application.
+	 */
+	public ORMApp requireORMApp() {
+		ORMApp app = getORMApp();
+		if ( app == null ) {
+			throw this.ormService.notReadyError( this.context );
+		}
+		return app;
 	}
 
 	/**
@@ -223,7 +260,7 @@ public class ORMContext {
 		return this.sessions.computeIfAbsent( sessionKey, ( key ) -> {
 			logger.debug( "opening NEW session for key: {}", sessionKey.getName() );
 
-			SessionFactory	sessionFactory	= this.ormApp.getSessionFactoryOrThrow( datasource );
+			SessionFactory	sessionFactory	= requireORMApp().getSessionFactoryOrThrow( datasource );
 			Session			session			= sessionFactory.openSession();
 			if ( !config.autoManageSession ) {
 				session.setHibernateFlushMode( org.hibernate.FlushMode.MANUAL );
@@ -245,7 +282,7 @@ public class ORMContext {
 	 */
 	public void flushForQuery( Session session ) {
 		if ( session != null && session.isOpen() && getConnectionManager().isInTransaction() ) {
-			session.flush();
+			flush( session, "flush before query" );
 		}
 	}
 
@@ -293,7 +330,14 @@ public class ORMContext {
 		// Should we move this to an onRequestEnd() method in case ORMContext.shutdown is called mid-request?
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
 			this.logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
-			this.sessions.forEach( ( key, session ) -> session.flush() );
+			try {
+				this.sessions.forEach( ( key, session ) -> flush( session, "flush at request end" ) );
+			} finally {
+				// A failed flush must still close every session, or their connections leak.
+				this.logger.debug( "onRequestEnd - closing ORM sessions" );
+				this.closeAllSessions();
+			}
+			return this;
 		}
 
 		// Close all ORM sessions
@@ -301,6 +345,22 @@ public class ORMContext {
 		this.closeAllSessions();
 
 		return this;
+	}
+
+	/**
+	 * Flush a session, translating any failure into a clear {@code orm.*} error.
+	 *
+	 * @param session   The session to flush.
+	 * @param operation What triggered the flush, for the error context (e.g. "transaction commit").
+	 *
+	 * @throws ortus.boxlang.modules.orm.errors.ORMException When the flush fails for an ORM reason.
+	 */
+	public static void flush( Session session, String operation ) {
+		try {
+			session.flush();
+		} catch ( RuntimeException e ) {
+			throw ortus.boxlang.modules.orm.errors.ORMErrors.translate( e, ortus.boxlang.modules.orm.errors.ORMErrors.Context.of( operation ) );
+		}
 	}
 
 	/**

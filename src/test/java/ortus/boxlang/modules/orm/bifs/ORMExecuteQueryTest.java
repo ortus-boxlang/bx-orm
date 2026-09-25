@@ -58,12 +58,15 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( a.size() ).isEqualTo( 2 );
 	}
 
-	@DisplayName( "It can run an HQL query with hql, unique, and options" )
+	/**
+	 * Test: It can run an HQL query with hql, unique, and options (uniqueFirst takes the first of several rows).
+	 */
+	@DisplayName( "It can run an HQL query with hql, unique, and options (uniqueFirst takes the first of several rows)" )
 	@Test
 	public void testUniqueAndOptions() {
 		// @formatter:off
 		instance.executeSource( """
-		result = ormExecuteQuery( "FROM Vehicle ORDER BY model ASC", true, { readOnly: true, offset: 1, maxResults: 5 } );
+		result = ormExecuteQuery( "FROM Vehicle ORDER BY model ASC", true, { readOnly: true, offset: 1, maxResults: 5, uniqueFirst: true } );
 		""", context );
 		// @formatter:on
 		Object item = variables.get( result );
@@ -94,7 +97,7 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 	public void testHQLParamsAndUnique() {
 		// @formatter:off
 		instance.executeSource( """
-		result = ormExecuteQuery( "FROM Vehicle WHERE id=?1 OR make=?2", ['1HGCM82633A123456','Honda'], true );
+		result = ormExecuteQuery( "FROM Vehicle WHERE id=?1 OR make=?2", ['1HGCM82633A123456','Honda'], true, { uniqueFirst: true } );
 		""", context );
 		// @formatter:on
 		Object item = variables.get( result );
@@ -108,7 +111,7 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 	public void testHQLPositionalParams() {
 		// @formatter:off
 		instance.executeSource( """
-		result = ormExecuteQuery( "FROM Vehicle WHERE id=? OR make=?", ['1HGCM82633A123456','Honda'], true );
+		result = ormExecuteQuery( "FROM Vehicle WHERE id=? OR make=?", ['1HGCM82633A123456','Honda'], true, { uniqueFirst: true } );
 		""", context );
 		// @formatter:on
 		Object item = variables.get( result );

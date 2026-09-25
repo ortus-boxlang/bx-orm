@@ -55,7 +55,7 @@ public class ORMGetSessionFactory extends BaseORMBIF {
 	 */
 	public SessionFactory _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String								datasourceName	= StringCaster.attempt( arguments.get( ORMKeys.datasource ) ).getOrDefault( "" );
-		ortus.boxlang.modules.orm.ORMApp	ormApp			= this.ormService.getORMAppByContext( context );
+		ortus.boxlang.modules.orm.ORMApp	ormApp			= this.ormService.requireORMApp( context );
 		SessionFactory						factory			= datasourceName.isBlank()
 		    ? ormApp.getDefaultSessionFactoryOrThrow()
 		    : ormApp.getSessionFactoryOrThrow( Key.of( datasourceName ), context );

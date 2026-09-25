@@ -48,8 +48,12 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( this.fieldType == null ) {
 			this.fieldType = FIELDTYPE.fromString( annotations.getAsString( ORMKeys.fieldtype ) );
 			if ( this.fieldType == null ) {
-				throw new BoxRuntimeException( String.format( "Unknown field type '%s' for property '%s' on entity '%s'",
-				    annotations.getAsString( ORMKeys.fieldtype ), this.name, this.entityName ) );
+				java.util.List<String> valid = java.util.List.of( "column", "id", "version", "timestamp", "one-to-one", "one-to-many",
+				    "many-to-one", "many-to-many", "collection" );
+				throw new BoxRuntimeException( String.format( "Unknown fieldtype '%s' for property '%s' on entity '%s'.%s Valid field types: %s.",
+				    annotations.getAsString( ORMKeys.fieldtype ), this.name, this.entityName,
+				    ortus.boxlang.modules.orm.errors.ORMErrors.suggestion( annotations.getAsString( ORMKeys.fieldtype ), valid ),
+				    String.join( ", ", valid ) ) );
 			}
 		}
 		if ( this.getFieldType() == FIELDTYPE.VERSION ) {

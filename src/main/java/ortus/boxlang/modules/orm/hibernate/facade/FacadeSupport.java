@@ -118,6 +118,24 @@ public final class FacadeSupport {
 	 */
 	public static void register( String namespace, String entityName, Class<?> facadeClass ) {
 		REGISTRY.put( key( namespace, entityName ), facadeClass );
+		ENTITY_NAMES.put( facadeClass.getName(), entityName );
+	}
+
+	/**
+	 * Facade class name to BoxLang entity name (original casing), so error messages can show {@code User} instead of the
+	 * generated {@code ortus.boxlang.modules.orm.hibernate.facade.generated.app.UserFacade}.
+	 */
+	private static final Map<String, String> ENTITY_NAMES = new ConcurrentHashMap<>();
+
+	/**
+	 * The BoxLang entity name for a generated facade class name.
+	 *
+	 * @param facadeClassName The fully-qualified facade class name (the Hibernate entity-name).
+	 *
+	 * @return The BoxLang entity name, or null when the name is not a registered facade.
+	 */
+	public static String entityNameForFacade( String facadeClassName ) {
+		return facadeClassName == null ? null : ENTITY_NAMES.get( facadeClassName );
 	}
 
 	/**

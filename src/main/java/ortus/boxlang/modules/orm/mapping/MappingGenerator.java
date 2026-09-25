@@ -328,7 +328,9 @@ public class MappingGenerator {
 					    e.printStackTrace();
 					    logger.error( "Failed to walk path: [{}]", path.toString(), e );
 				    } else {
-					    throw new BoxRuntimeException( String.format( "Failed to walk path: [%s]", path ), e );
+					    throw new BoxRuntimeException( String.format(
+					        "The entity folder [%s] does not exist or cannot be read. Check this.ormSettings.entityPaths (cfclocation) in Application.bx.",
+					        path ), e );
 				    }
 			    }
 			    return null;

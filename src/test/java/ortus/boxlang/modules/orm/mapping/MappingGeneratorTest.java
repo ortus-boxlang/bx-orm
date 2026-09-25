@@ -77,11 +77,14 @@ public class MappingGeneratorTest {
 		context.getApplicationListener().onRequestStart( context, null );
 		variables	= context.getScopeNearby( VariablesScope.name );
 		// We don't need an actual datasource for this test so we'll add one to prevent the error
+		// Scope discovery to the test app's own models: with no entityPaths the generator scans every test app, including
+		// the deliberately broken startup fixtures in bootErrorApp.
 		ormConfig	= new ORMConfig(
 		    Struct.of(
 		        "ignoreParseErrors", "true",
 		        "generateMappings", "true",
-		        "saveMapping", "true"
+		        "saveMapping", "true",
+		        "entityPaths", Array.of( "/root/models" )
 		    ),
 		    context.getRequestContext()
 		);
@@ -570,6 +573,9 @@ public class MappingGeneratorTest {
 		assertThat( childElement( o2m, "join-column" ).getAttribute( "name" ) ).isEqualTo( "shelfId" );
 	}
 
+	/**
+	 * Test: Regression: uniquekey groups columns into one named unique-constraint on the table.
+	 */
 	@DisplayName( "Regression: uniquekey groups columns into one named unique-constraint on the table" )
 	@Test
 	public void testWriterUniqueKeyGroupsColumns() {
@@ -593,6 +599,9 @@ public class MappingGeneratorTest {
 		assertThat( email.getElementsByTagName( "column-name" ).item( 0 ).getTextContent() ).isEqualTo( "email" );
 	}
 
+	/**
+	 * Test: Regression: index creates a named table index, grouping properties that share a name.
+	 */
 	@DisplayName( "Regression: index creates a named table index, grouping properties that share a name" )
 	@Test
 	public void testWriterIndexGroupsColumns() {
@@ -611,6 +620,9 @@ public class MappingGeneratorTest {
 		assertThat( byName( doc, "index", "idx_region_date" ).getAttribute( "column-list" ) ).isEqualTo( "region_code, placed_on" );
 	}
 
+	/**
+	 * Test: Regression: many-to-one index and uniquekey apply to the foreign key column.
+	 */
 	@DisplayName( "Regression: many-to-one index and uniquekey apply to the foreign key column" )
 	@Test
 	public void testWriterManyToOneIndexAndUniqueKey() {
@@ -622,6 +634,9 @@ public class MappingGeneratorTest {
 		    .isEqualTo( "owner_id" );
 	}
 
+	/**
+	 * Test: Regression: a comma-separated index list puts one column in several indexes.
+	 */
 	@DisplayName( "Regression: a comma-separated index list puts one column in several indexes" )
 	@Test
 	public void testWriterIndexList() {
@@ -636,6 +651,9 @@ public class MappingGeneratorTest {
 		assertThat( byName( doc, "index", "idx_sku_color" ).getAttribute( "column-list" ) ).isEqualTo( "sku, color" );
 	}
 
+	/**
+	 * Test: Regression: no uniquekey or index annotations means no table constraints.
+	 */
 	@DisplayName( "Regression: no uniquekey or index annotations means no table constraints" )
 	@Test
 	public void testWriterNoTableConstraints() {

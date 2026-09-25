@@ -74,6 +74,6 @@ public class EntityLoadByPK extends BaseORMBIF {
 		Object		keyValue		= arguments.get( Key.id );
 
 		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
-		return ormService.getORMAppByContext( context ).loadEntityById( jdbcBoxContext, entityName, keyValue );
+		return ormService.requireORMApp( context ).loadEntityById( jdbcBoxContext, entityName, keyValue );
 	}
 }

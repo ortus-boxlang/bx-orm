@@ -51,6 +51,19 @@ public abstract class BaseORMBIF extends BIF {
 }
 ```
 
+`BaseORMBIF` also owns error handling:
+
+- `invoke()` wraps every BIF and sends any Hibernate / JPA / JDBC failure through `ORMErrors.translate`,
+  producing an `ORMException` with an `orm.*` type, BoxLang entity names and a fix in `detail`. The
+  error context (`errorContext`) adds the BIF name, the HQL and params, and the app's entity and
+  property names for "Did you mean" suggestions. Non-ORM errors (e.g. from a developer's event
+  handler) pass through unchanged.
+- `requireEntity( value, argumentName, bifName )` returns the argument as an `IClassRunnable` or
+  throws a clear `orm.argument` error naming what was passed. Use it instead of casting.
+- Get the ORM application with `ormService.requireORMApp( context )` or
+  `ormContext.requireORMApp()`, never `getORMApp()` plus a null check: they raise
+  `orm.notEnabled` / `orm.notReady` with the reason (including the last startup failure).
+
 ## BIF Structure Pattern
 
 Every ORM BIF follows this pattern:
@@ -429,7 +442,8 @@ ortus.boxlang.modules.orm.bifs.EntitySave
 
 1. **Always extend `BaseORMBIF`** — never extend `BIF` directly for ORM functions; `BaseORMBIF` provides shared ORM service access and entity name resolution.
 2. **Resolve ORM context explicitly** — use `context.getParentOfType( IJDBCCapableContext.class )` to find the JDBC-capable context, then get the ORM context from it.
-3. **Guard against null `ORMApp`** — throw a descriptive `BoxRuntimeException` if no ORM application is configured, rather than letting a NullPointerException surface.
+3. **Use `requireORMApp()`, never a null check** — it throws `orm.notEnabled` / `orm.notReady` with the reason instead of a NullPointerException.
+3a. **Throw `ORMException`, not `BoxRuntimeException`** — pick an `ORMErrorType`, name the entity and property in the message, put the fix in `detail`, and use `ORMErrors.entityNotFound` / `propertyNotFound` / `suggestion` for "Did you mean". Add a case to `errors/ORMErrorMessagesTest`.
 4. **Use `ORMKeys` for argument names** — all argument names should reference `ORMKeys` constants.
 5. **Support both positional and named HQL parameters** — in `ORMExecuteQuery` and similar BIFs, detect whether `params` is an `Array` (positional) or `IStruct` (named).
 6. **Return BoxLang-native types** — return `IClassRunnable`, `Array`, `IStruct`, `Boolean`, or `Number`; never raw Hibernate objects.

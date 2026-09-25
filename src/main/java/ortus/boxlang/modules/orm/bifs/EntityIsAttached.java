@@ -57,7 +57,7 @@ public class EntityIsAttached extends BaseORMBIF {
 	 * @return True when the entity is attached to its datasource's current session.
 	 */
 	public Boolean _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IClassRunnable	theEntity	= ( IClassRunnable ) arguments.get( ORMKeys.entity );
+		IClassRunnable	theEntity	= requireEntity( arguments.get( ORMKeys.entity ), "entity", "entityIsAttached" );
 		String			entityName	= getEntityName( theEntity );
 		ORMContext		ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 		ORMApp			ormApp		= ormContext.getORMApp();

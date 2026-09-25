@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ⚡ Changed
 
+- `unique=true` on `ormExecuteQuery()` and `entityLoad()` (filter form) is strict: more than one matching row raises `orm.query.nonUnique` instead of silently returning the first. Pass `{ uniqueFirst : true }` for the old behavior. `unique` given inside the options struct is now honored.
+- ORM errors are `orm.*` exceptions instead of raw Hibernate/JPA exceptions. Code catching Hibernate class names should catch `"orm"` instead.
+- Unused named HQL parameters are logged as a warning.
+
 - Upgraded the ORM engine from Hibernate 5.6.15 to 7.4.8. BoxLang-facing BIF behavior is preserved.
 - Build and test against BoxLang 1.17.0 (was 1.11.0); the module's minimum BoxLang version is now 1.17.0 due to several updates we required in the new approach.
 - Legacy dialect aliases (e.g. `MySQL57`, `Oracle10g`, `DerbyTenSeven`) now map to their Hibernate 7 equivalents with a one-time deprecation warning; community-dialect databases (SQLite, Derby, Firebird, …) resolve automatically.
@@ -23,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ORM operations inside a BoxLang `transaction{}` now ride the transaction's JDBC connection instead of the ORM running its own separate Hibernate transaction. BoxLang owns the real commit/rollback, so ORM writes are governed by the same demarcation as native `queryExecute` calls (rolled back together, committed together). The `TransactionManager` interceptor now only flushes the session on commit/end and clears it on rollback, and in-transaction ORM queries flush first so they observe their own pending writes (read-your-writes).
 
 ### 🚀 Added
+
+- Clear ORM errors: every error bx-orm raises is an `orm.*` typed exception (catch all with `catch( "orm" e )`, or a family such as `"orm.query"`). Messages use BoxLang entity and property names (never generated facade class names), say how to fix the problem in `detail`, carry the context (entity, property, HQL, params, SQL, constraint) in `extendedInfo`, and suggest the right name for misspelled entities, properties, field types and ormtypes ("Did you mean [name]?"). Covers HQL syntax and unknown names, missing or mistyped query parameters, lazy loads after the session closed, unsaved associations, missing assigned ids, not-null and unique/foreign-key violations, stale (optimistic lock) updates, and wrong arguments to entity BIFs.
+- `ormDiagnostics()`: the ORM's state for the current application (status, last startup error, entities per datasource, warnings, key settings, this request's open sessions). Never throws.
+- Startup validation: duplicate entity names on one datasource are reported with both classes; unknown `ormtype` values are warned about and named if Hibernate fails to start; broken startups (bad entity path, fieldtype, cfc or datasource) raise one `orm.config` error, and the last failure is remembered for later ORM calls and `ormDiagnostics()`.
+- `uniqueFirst` option for `ormExecuteQuery()` and `entityLoad()`: take the first row of a multi-row result.
 
 - POJO-facade entity representation (now the only representation): each entity maps to a generated Java facade whose accessors delegate to the BoxLang instance, unlocking `uuid` (and other) id generators, composite ids, `byte[]`, and full metamodel access.
 - Facades are namespaced per ORM application, so same-named entities in different apps do not collide.
@@ -66,6 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A `fieldtype="timestamp"` version property boots and is stamped on save.
 - Hibernate isolated work (e.g. sequence/table id allocation) inside a `transaction{}` runs on its own pooled connection, so it can no longer commit or roll back the surrounding BoxLang transaction mid-flight.
 - `duplicate()` of an ORM entity produces an independent copy that saves its own state instead of sharing the original's Hibernate facade.
+- ORM BIFs no longer fail with a `NullPointerException` when the application is not ORM-enabled or the ORM failed to start; they raise `orm.notEnabled` / `orm.notReady` with the reason.
+- Entity lookup no longer fails with "No entities found for datasource" when every entity lives on a non-default datasource.
+- A detached entity bound as an `ormExecuteQuery()` or `entityLoad()` filter parameter resolves correctly (the generated facade name no longer leaks into the lookup).
+- A failed flush at the end of a request still closes the request's ORM sessions.
 - The `uniquekey` and `index` property annotations create their unique constraints and indexes again (lost in the move to `mapping.xml`). Properties sharing a name form one multi-column constraint or index; both accept a comma-separated list, and both work on `many-to-one` foreign keys.
 
 ## [1.7.0] - 2026-09-14

@@ -76,6 +76,21 @@ public class ORMService extends BaseService {
 	private Map<Key, ORMApp>			ormApps					= new ConcurrentHashMap<>();
 
 	/**
+	 * The last startup failure per application (cleared on a successful start). Lets every later ORM call explain why the
+	 * ORM is not available instead of failing with a null pointer.
+	 */
+	private final Map<Key, BootFailure>	bootFailures			= new ConcurrentHashMap<>();
+
+	/**
+	 * A recorded ORM startup failure.
+	 *
+	 * @param at    When the startup failed.
+	 * @param error The (translated) startup error.
+	 */
+	public record BootFailure( java.time.Instant at, RuntimeException error ) {
+	}
+
+	/**
 	 * Auto-mode entity watchers, keyed by ORM application name. Owned here (not by {@link ORMApp}) so a single watcher
 	 * survives reloads - a reload swaps the {@link ORMApp} but the entity paths do not change - and is stopped only on a
 	 * real application shutdown.
@@ -288,9 +303,112 @@ public class ORMService extends BaseService {
 		// Derive the key the same way getORMAppByContext() does so lookups always hit.
 		Key appName = ORMService.getAppNameFromContext( context );
 		// Atomically create or get the ORMApp for the given context.
-		return this.ormApps.computeIfAbsent(
-		    appName,
-		    key -> new ORMApp( config, appName ).startup( context ) );
+		try {
+			ORMApp app = this.ormApps.computeIfAbsent(
+			    appName,
+			    key -> new ORMApp( config, appName ).startup( context ) );
+			this.bootFailures.remove( appName );
+			return app;
+		} catch ( Throwable e ) {
+			throw recordBootFailure( appName, e );
+		}
+	}
+
+	/**
+	 * Translate a startup error, remember it for later ORM calls and {@code ormDiagnostics()}, log it, and return it for
+	 * throwing. A failure that is not an ORM exception becomes {@code orm.config} with its original message.
+	 *
+	 * @param appName The application whose ORM failed to start.
+	 * @param error   The startup error.
+	 *
+	 * @return The translated error to throw.
+	 */
+	private RuntimeException recordBootFailure( Key appName, Throwable error ) {
+		RuntimeException translated = ortus.boxlang.modules.orm.errors.ORMErrors.translate( error,
+		    ortus.boxlang.modules.orm.errors.ORMErrors.Context.of( "ORM startup" ) );
+		if ( ! ( translated instanceof ortus.boxlang.modules.orm.errors.ORMException ) ) {
+			// Anything else that stops the ORM from starting (a bad entity path, field type or datasource, found by bx-orm or
+			// BoxLang) is a configuration problem: keep its message, give it the orm.config type.
+			String message = String.valueOf( translated.getMessage() );
+			translated = new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.CONFIG,
+			    "The ORM could not start: " + message,
+			    "Check this.ormSettings in Application.bx and the entity files named above.", null, error );
+		}
+		this.bootFailures.put( appName, new BootFailure( java.time.Instant.now(), translated ) );
+		logger.error( "ORM application [{}] failed to start: {}", appName.getName(), translated.getMessage(), error );
+		return translated;
+	}
+
+	/**
+	 * The last startup failure for an application.
+	 *
+	 * @param appName The application name.
+	 *
+	 * @return The failure, or null when the last startup succeeded (or none failed).
+	 */
+	public BootFailure getBootFailure( Key appName ) {
+		return this.bootFailures.get( appName );
+	}
+
+	/**
+	 * The ORM application for a context, or a clear {@code orm.notEnabled} / {@code orm.notReady} error explaining why
+	 * there is none. Every BIF uses this instead of a null check.
+	 *
+	 * @param context The current context.
+	 *
+	 * @return The running ORM application.
+	 */
+	public ORMApp requireORMApp( IBoxContext context ) {
+		ORMApp app = null;
+		try {
+			app = getORMAppByContext( context );
+		} catch ( ortus.boxlang.modules.orm.errors.ORMException e ) {
+			throw e;
+		} catch ( BoxRuntimeException e ) {
+			// No application context at all: the code is not running inside an ORM-enabled application.
+			throw notReadyError( context );
+		}
+		if ( app == null ) {
+			throw notReadyError( context );
+		}
+		return app;
+	}
+
+	/**
+	 * Explain why there is no ORM application for a context: ORM not enabled, startup failed (with the original reason),
+	 * or not started yet.
+	 *
+	 * @param context The current context (may be null).
+	 *
+	 * @return An {@code orm.notEnabled} or {@code orm.notReady} error to throw.
+	 */
+	public ortus.boxlang.modules.orm.errors.ORMException notReadyError( IBoxContext context ) {
+		ApplicationBoxContext appContext = context == null ? null : context.getApplicationContext();
+		if ( appContext == null ) {
+			return new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.NOT_ENABLED,
+			    "No ORM application is available here: this code is not running inside an application, or its application failed to start.",
+			    "Run it from an app whose Application.bx sets this.ormEnabled = true. If the app failed to start, fix the startup error first." );
+		}
+		Key appName = appContext.getApplication().getName();
+		if ( ORMConfig.loadFromContext( context ) == null ) {
+			return new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.NOT_ENABLED,
+			    String.format( "The application [%s] is not ORM-enabled.", appName.getName() ),
+			    "Set this.ormEnabled = true (and this.ormSettings) in Application.bx." );
+		}
+		BootFailure failure = this.bootFailures.get( appName );
+		if ( failure != null ) {
+			IStruct info = new ortus.boxlang.runtime.types.Struct();
+			info.put( Key.of( "failedAt" ), failure.at().toString() );
+			info.put( Key.of( "startupError" ), String.valueOf( failure.error().getMessage() ) );
+			return new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.NOT_READY,
+			    String.format( "The ORM for application [%s] failed to start at %s: %s", appName.getName(), failure.at(),
+			        failure.error().getMessage() ),
+			    "Fix the startup error, then call ormReload() or restart the application. ormDiagnostics() shows the details.",
+			    info, failure.error() );
+		}
+		return new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.NOT_READY,
+		    String.format( "The ORM for application [%s] has not started.", appName.getName() ),
+		    "It starts with the application (onApplicationStart). Call ormReload() to start it now." );
 	}
 
 	/**
@@ -483,11 +601,17 @@ public class ORMService extends BaseService {
 		// window where getORMAppByContext() returns null (which breaks concurrent
 		// callers such as cborm module activation running in a parallel thread).
 		Key		appName	= ORMService.getAppNameFromContext( requestContext );
-		ORMApp	newApp	= new ORMApp( ORMConfig.loadFromContext( requestContext ), appName ).startup( context );
+		ORMApp	newApp;
+		try {
+			newApp = new ORMApp( ORMConfig.loadFromContext( requestContext ), appName ).startup( context );
+			this.bootFailures.remove( appName );
+		} catch ( Throwable e ) {
+			throw recordBootFailure( appName, e );
+		}
 
 		// Step 3: Atomically swap — put the new app into the map and retrieve the old
 		// one.
-		ORMApp	oldApp	= this.ormApps.put( appName, newApp );
+		ORMApp oldApp = this.ormApps.put( appName, newApp );
 
 		// Step 4: Shut down the old app's session factories AFTER the new one is live,
 		// minimising the disruption window for any requests still using the old

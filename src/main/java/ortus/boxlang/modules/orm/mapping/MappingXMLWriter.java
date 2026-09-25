@@ -454,6 +454,8 @@ public class MappingXMLWriter {
 	 * {@code uniquekey} and {@code index} property annotations. Properties that share a name are grouped into one
 	 * multi-column constraint or index (e.g. two properties with {@code uniquekey="uk_name"}). Both annotations also
 	 * accept a comma-separated list of names. Columns mapped to another table (secondary/join tables) are skipped.
+	 *
+	 * @param tableEl The {@code <table>} element to append to.
 	 */
 	private void appendTableConstraints( Element tableEl ) {
 		java.util.Map<String, java.util.List<String>>	uniqueKeys	= new java.util.LinkedHashMap<>();
@@ -511,7 +513,11 @@ public class MappingXMLWriter {
 	}
 
 	/**
-	 * Split a comma-separated list of names, trimming blanks. Returns an empty list for null or blank input.
+	 * Split a comma-separated list of names, trimming blanks.
+	 *
+	 * @param value The list; may be null or blank.
+	 *
+	 * @return The names; empty for null or blank input.
 	 */
 	private static java.util.List<String> splitNames( String value ) {
 		if ( value == null || value.isBlank() ) {
@@ -520,6 +526,14 @@ public class MappingXMLWriter {
 		return java.util.Arrays.stream( value.split( "," ) ).map( String::trim ).filter( s -> !s.isEmpty() ).toList();
 	}
 
+	/**
+	 * The first of two strings that is not null or blank.
+	 *
+	 * @param a The preferred value.
+	 * @param b The fallback.
+	 *
+	 * @return {@code a} when it has text, otherwise {@code b}.
+	 */
 	private static String firstNonBlank( String a, String b ) {
 		return a != null && !a.isBlank() ? a : b;
 	}

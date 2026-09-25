@@ -14,6 +14,9 @@ import tools.BaseORMTest;
  */
 public class TableConstraintsTest extends BaseORMTest {
 
+	/**
+	 * Test: Uniquekey creates one multi-column unique index.
+	 */
 	@DisplayName( "uniquekey creates one multi-column unique index" )
 	@Test
 	public void testUniqueKeyInSchema() {
@@ -35,6 +38,9 @@ public class TableConstraintsTest extends BaseORMTest {
 		assertThat( variables.get( Key.of( "nonUnique" ) ).toString() ).isEqualTo( "0" );
 	}
 
+	/**
+	 * Test: Index creates a named non-unique index.
+	 */
 	@DisplayName( "index creates a named non-unique index" )
 	@Test
 	public void testIndexInSchema() {
@@ -55,6 +61,9 @@ public class TableConstraintsTest extends BaseORMTest {
 		assertThat( variables.get( Key.of( "nonUnique" ) ).toString() ).isEqualTo( "1" );
 	}
 
+	/**
+	 * Test: Index on an existing fixture entity (TimeOff.status) reaches the schema.
+	 */
 	@DisplayName( "index on an existing fixture entity (TimeOff.status) reaches the schema" )
 	@Test
 	public void testExistingFixtureIndex() {
@@ -71,6 +80,9 @@ public class TableConstraintsTest extends BaseORMTest {
 		assertThat( variables.get( result ) ).isEqualTo( 1 );
 	}
 
+	/**
+	 * Test: The unique key is enforced: a duplicate (firstName, lastName) pair fails on flush.
+	 */
 	@DisplayName( "the unique key is enforced: a duplicate (firstName, lastName) pair fails on flush" )
 	@Test
 	public void testUniqueKeyEnforced() {
@@ -81,8 +93,8 @@ public class TableConstraintsTest extends BaseORMTest {
 		    try {
 		        transaction {
 		            try {
-		                entitySave( entityNew( "ConstrainedThing", { firstName : "Ada", lastName : "Lovelace", status : "new" } ) );
-		                entitySave( entityNew( "ConstrainedThing", { firstName : "Ada", lastName : "Lovelace", status : "new" } ) );
+		                entitySave( entityNew( "ConstrainedThing", { firstName : "Ada", lastName : "Lovelace", status : "new", code : "c" } ) );
+		                entitySave( entityNew( "ConstrainedThing", { firstName : "Ada", lastName : "Lovelace", status : "new", code : "c" } ) );
 		                ormFlush();
 		            } finally {
 		                transactionRollback();
@@ -99,6 +111,9 @@ public class TableConstraintsTest extends BaseORMTest {
 		assertThat( variables.get( result ) ).isEqualTo( true );
 	}
 
+	/**
+	 * Test: The same first name with different last names is allowed (the key spans both columns).
+	 */
 	@DisplayName( "the same first name with different last names is allowed (the key spans both columns)" )
 	@Test
 	public void testUniqueKeyIsComposite() {
@@ -107,8 +122,8 @@ public class TableConstraintsTest extends BaseORMTest {
 		    """
 		    transaction {
 		        try {
-		            entitySave( entityNew( "ConstrainedThing", { firstName : "Ada", lastName : "Lovelace", status : "new" } ) );
-		            entitySave( entityNew( "ConstrainedThing", { firstName : "Ada", lastName : "Byron", status : "new" } ) );
+		            entitySave( entityNew( "ConstrainedThing", { firstName : "Ada", lastName : "Lovelace", status : "new", code : "c" } ) );
+		            entitySave( entityNew( "ConstrainedThing", { firstName : "Ada", lastName : "Byron", status : "new", code : "c" } ) );
 		            ormFlush();
 		            result = queryExecute( "select count(*) as c from constrained_things where first_name = 'Ada'" ).c;
 		        } finally {

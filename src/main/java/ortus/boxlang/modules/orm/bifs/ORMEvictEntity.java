@@ -62,14 +62,11 @@ public class ORMEvictEntity extends BaseORMBIF {
 	 *                      will be evicted.
 	 */
 	public String _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		String		entityName		= arguments.getAsString( ORMKeys.entityName );
-		String		primaryKey		= arguments.getAsString( ORMKeys.primaryKey );
-		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
-		ORMContext	ormContext		= ORMContext.getForContext( jdbcBoxContext );
-		ORMApp		ormApp			= ormContext.getORMApp();
-		if ( ormApp == null ) {
-			throw new BoxRuntimeException( "ORM application is not initialized." );
-		}
+		String			entityName		= arguments.getAsString( ORMKeys.entityName );
+		String			primaryKey		= arguments.getAsString( ORMKeys.primaryKey );
+		IBoxContext		jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext		ormContext		= ORMContext.getForContext( jdbcBoxContext );
+		ORMApp			ormApp			= ormContext.requireORMApp();
 
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );

@@ -65,9 +65,16 @@ public class EntityReload extends BaseORMBIF {
 		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
 		Object		entity			= arguments.get( ORMKeys.entity );
 		if ( entity instanceof String variableName ) {
-			ScopeSearchResult entityLookup = context.scopeFindNearby( Key.of( ( String ) variableName ), null, true );
+			ScopeSearchResult entityLookup;
+			try {
+				entityLookup = context.scopeFindNearby( Key.of( ( String ) variableName ), null, true );
+			} catch ( ortus.boxlang.runtime.types.exceptions.KeyNotFoundException e ) {
+				entityLookup = null;
+			}
 			if ( entityLookup == null ) {
-				throw new IllegalArgumentException( "Entity variable not found: " + variableName );
+				throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.ARGUMENT,
+				    String.format( "entityReload() was given the variable name [%s], but no such variable exists.", variableName ),
+				    "Pass the entity itself, or the name of a variable that holds it." );
 			}
 			entity = entityLookup.value();
 		}
@@ -76,7 +83,7 @@ public class EntityReload extends BaseORMBIF {
 			ormContext.getSession().refresh( entity );
 			return entity;
 		}
-		ORMApp	ormApp		= ormContext.getORMApp();
+		ORMApp	ormApp		= ormContext.requireORMApp();
 		String	entityName	= getEntityName( runnable );
 		String	namespace	= ormContext.getFacadeNamespace();
 		Session	session		= ormContext.getSession( ormApp.lookupEntity( entityName, true ).getDatasource() );

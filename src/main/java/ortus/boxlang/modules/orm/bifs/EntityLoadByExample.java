@@ -86,17 +86,13 @@ public class EntityLoadByExample extends BaseORMBIF {
 
 	@SuppressWarnings( { "deprecation", "unchecked" } )
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
-		ORMContext	ormContext		= ORMContext.getForContext( jdbcBoxContext );
-		ORMApp		ormApp			= ormContext.getORMApp();
-		Object		sampleEntity	= arguments.get( ORMKeys.sampleEntity );
-		Boolean		unique			= arguments.getAsBoolean( ORMKeys.unique );
+		IBoxContext			jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		ORMContext			ormContext		= ORMContext.getForContext( jdbcBoxContext );
+		ORMApp				ormApp			= ormContext.requireORMApp();
+		Object				sampleEntity	= arguments.get( ORMKeys.sampleEntity );
+		Boolean				unique			= arguments.getAsBoolean( ORMKeys.unique );
 
-		if ( ! ( sampleEntity instanceof IClassRunnable ) ) {
-			throw new BoxRuntimeException( "Sample entity must be a valid entity" );
-		}
-
-		IClassRunnable		workingEntity	= ( IClassRunnable ) sampleEntity;
+		IClassRunnable		workingEntity	= requireEntity( sampleEntity, "sampleEntity", "entityLoadByExample" );
 		String				entityName		= getEntityName( workingEntity );
 		EntityRecord		entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session				session			= ormContext.getSession( entityRecord.getDatasource() );

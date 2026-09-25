@@ -208,6 +208,11 @@ writer states them explicitly to keep existing apps behaving the same:
   `map-key-column`/`map-key-formula`. Both follow the XSD element order (order-by, map-key,
   batch-size, sql-restriction, join).
 - A `fieldtype="timestamp"` version is typed `java.time.Instant`.
+- `uniquekey` and `index` property annotations become table-level `<unique-constraint>` and
+  `<index>` children of `<table>` (JPA has no column-level form). Properties that share a name are
+  grouped into one multi-column constraint or index, both annotations accept a comma-separated list,
+  both work on a `many-to-one` foreign key, and an entity without `table=` still gets a nameless
+  `<table>` just to carry them.
 
 ---
 
@@ -340,6 +345,8 @@ when the runtime enables that experimental flag.
 | Single `ORMEventDispatcher` for all events | One resolution/invocation path for Hibernate events and the bx-orm-native `postNew`. |
 | ORM rides the BoxLang transaction connection (no own Hibernate tx) | One demarcation unit for ORM + native queries; BoxLang owns commit/rollback, so its transaction model governs ORM writes. |
 | Per-statement connection release (`RELEASE_AFTER_STATEMENT` + aggressive release) | Lets each statement re-read the current transaction connection and avoids a stale reference after BoxLang closes it at transaction end. |
+| One `orm.*` exception family, translated at the BIF boundary | Developers catch and read one kind of error in BoxLang terms; Hibernate's internal names and messages stay out of their way. |
+| Strict `unique` with a `uniqueFirst` opt-out | Silently dropping rows hid bugs; the strict meaning matches Hibernate and the CFML engines. |
 
 ---
 
@@ -356,6 +363,8 @@ when the runtime enables that experimental flag.
   that artifact automatically.
 - **Removed the `entityFacades` and `ormXmlMapping` settings** — the facade + modern-mapping
   paths are now the only paths.
+- **Errors** are `orm.*` `ORMException`s instead of raw Hibernate exceptions (see §10a). Code that
+  caught Hibernate class names should catch `"orm"` (or a narrower `orm.*` type) instead.
 
 ### Testing notes
 
@@ -370,6 +379,92 @@ when the runtime enables that experimental flag.
 - **Transaction tests** use a unique row value per test (`uniqueName(...)`) and check commits from a
   separate pooled connection (`committedCount(...)`), so they never depend on test order and never
   pass without asserting anything.
+
+---
+
+## 10a. Errors and diagnostics
+
+Hibernate's exceptions talk about generated facade classes, SQL type codes and internal state. bx-orm
+translates every one of them into a single exception family a BoxLang developer can act on.
+
+**One family, dotted types.** Every error bx-orm raises is an `ORMException` (a `BoxRuntimeException`)
+whose `type` starts with `orm`. BoxLang matches `catch` types on a dotted prefix, so
+`catch( "orm" e )` catches everything and `catch( "orm.query" e )` one family. The full list is in
+`errors/ORMErrorType` (and in the docs error catalog):
+
+| Family | Types |
+| --- | --- |
+| Setup | `orm.notEnabled`, `orm.notReady`, `orm.config`, `orm.boot` |
+| Names and values | `orm.entity.notFound`, `orm.property.unknown`, `orm.property.type`, `orm.argument` |
+| Queries | `orm.query.syntax`, `orm.query.semantic`, `orm.query.parameter`, `orm.query.nonUnique` |
+| Session and state | `orm.lazy.noSession`, `orm.transient`, `orm.id.missing`, `orm.session.duplicate`, `orm.stale` |
+| Database | `orm.constraint` (`.unique`, `.notNull`, `.foreignKey`, `.check`), `orm.sql` |
+
+**Message shape.** `message` says what went wrong using BoxLang entity and property names; `detail`
+says how to fix it; `extendedInfo` is a struct with the context (`entityName`, `property`, `hql`,
+`params`, `sql`, `constraint`, `originalMessage`, `hibernateException`, …). Generated facade class
+names never appear: `ORMErrors.rewriteNames` maps them back through a registry filled when facades are
+registered (`FacadeSupport.entityNameForFacade`). Names that do not exist get a "Did you mean" from
+an edit distance that counts a swapped pair of letters as one step (`nmae` → `name`).
+
+```mermaid
+flowchart LR
+    B["BIF call<br/>(BaseORMBIF.invoke)"] --> T["ORMErrors.translate"]
+    F["Flushes: request end,<br/>transaction commit, read-your-writes"] --> T
+    L["Lazy loads: BoxProxy,<br/>to-many getter snapshot"] --> T
+    S["ORM startup / ormReload<br/>(ORMService.recordBootFailure)"] --> T
+    T --> E["ORMException<br/>type orm.*"]
+```
+
+**Where translation happens.**
+
+- `BaseORMBIF.invoke` wraps every BIF. Its error context carries the BIF name, the HQL and params,
+  and the app's entity and property names for suggestions (`ORMApp.errorContext`).
+- `ORMContext.flush( session, operation )` is used for the request-end flush, the transaction
+  commit flush (`TransactionManager`) and the read-your-writes flush. A failed request-end flush still
+  closes every session.
+- `BoxProxy.getRunnable` and the `ToManyGetterView` snapshot translate lazy-load failures.
+- `ORMService.startupApp` / `reloadApp` translate startup failures and remember the last one per
+  application (`getBootFailure`). A failure that is not a Hibernate exception (bad entity path,
+  fieldtype, cfc, datasource) becomes `orm.config` with its original message.
+- Errors that are not ORM-related, for example one thrown by the developer's own event handler,
+  pass through unchanged. `ormGetSession()` / `ormGetSessionFactory()` stay raw on purpose.
+
+**Validation before Hibernate starts** (`ORMApp.validateEntities`): duplicate entity names on one
+datasource are an `orm.config` error naming both classes; an `ormtype` outside the known set is logged
+as a warning and, if Hibernate then fails to start, named as the likely cause with a suggestion.
+
+**Readiness.** Every BIF gets its ORM application through `ORMService.requireORMApp` /
+`ORMContext.requireORMApp`, never `getORMApp()` plus a null check. A missing application is an
+`orm.notEnabled` or `orm.notReady` error that repeats the last startup failure, instead of a
+`NullPointerException`.
+
+**Behavior changes that came with this work.**
+
+- `unique=true` (`ormExecuteQuery`, `entityLoad` with a filter) is strict: more than one match is an
+  `orm.query.nonUnique` error, as in Hibernate and the CFML engines. The new `uniqueFirst` option
+  (`{ uniqueFirst : true }`) keeps the old take-the-first-row behavior. bx-orm fetches at most two
+  rows to check.
+- `unique` passed inside the options struct is now honored.
+- Extra named HQL parameters that the query does not use are logged as a warning.
+- `ORMApp.lookupEntity` skips datasources without entities, so an app whose entities all live on a
+  non-default datasource no longer fails every lookup with "No entities found for datasource".
+- A detached entity bound as an HQL or filter parameter resolves by its BoxLang name (the query
+  metadata names the facade class).
+
+**`ormDiagnostics()`** returns the ORM's state for the current application and never throws:
+`status` (`running`, `failed`, `notStarted`, `notEnabled`), `startupError`, entities per datasource,
+`warnings`, the settings that most often explain surprises, and this request's open sessions (entity
+count, dirty flag). It reads only; it never opens a session.
+
+**Tests.** `errors/ORMErrorsTest` (unit, every mapping), `errors/ORMErrorMessagesTest` (live, 30+
+common mistakes asserting type and message), `errors/BootErrorsTest` (broken startups in
+`src/test/resources/bootErrorApp`, one in-memory Derby DB per scenario, including a failed
+`ormReload()`), `bifs/ORMDiagnosticsTest`.
+
+**Adding a new error.** Add the type to `ORMErrorType`, map it in `ORMErrors.map` (or throw an
+`ORMException` directly where bx-orm detects the problem), add a unit case to `ORMErrorsTest`, a
+live case to `ORMErrorMessagesTest`, and a row to the docs error catalog.
 
 ---
 
@@ -636,8 +731,10 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
 
 ## 12. Where we go next
 
-- **cborm-compatible path** — produce a facade/representation that cborm can adopt; cborm keeps
-  working as-is until a new path is proven.
+- **cborm-compatible path** — the V2 plan: new BIFs (Phase 2), the fluent `entityCriteria()` (Phase 3),
+  GORM-inspired additions, dynamic finders, cborm calling bx-orm BIFs, a live cborm test run, and
+  opt-in static class helpers. Casting is not a phase: bx-orm casts ids itself and Hibernate 7 coerces
+  query parameters, so cborm's `idCast()`/`autoCast()` just return their value.
 
 ---
 
@@ -649,6 +746,7 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
 | Config, events, dialects, naming | `ortus.boxlang.modules.orm.config` |
 | Facade bridge (representation, proxies, wrap/unwrap) | `ortus.boxlang.modules.orm.hibernate` and `…/hibernate/facade` |
 | Mapping generation & the modern writer | `ortus.boxlang.modules.orm.mapping` |
+| Errors and diagnostics | `ortus.boxlang.modules.orm.errors` (`ORMException`, `ORMErrorType`, `ORMErrors`), `bifs/ORMDiagnostics` |
 | ORM manifest boot cache (`.bxorm/`) | `ortus.boxlang.modules.orm.mapping.manifest` |
 | Session lifecycle | `ORMService` → `ORMApp` → `ORMContext`, `SessionFactoryBuilder` |
 | Subsystem deep-dives | `.agents/skills-custom/` |

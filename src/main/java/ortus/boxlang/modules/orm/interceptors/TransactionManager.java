@@ -95,7 +95,7 @@ public class TransactionManager extends BaseInterceptor {
 			Session ormSession = ormContext.getSession( datasource );
 			// Flush any pending pre-transaction work before the transaction boundary (Lucee compat).
 			if ( ormSession.isOpen() ) {
-				ormSession.flush();
+				ORMContext.flush( ormSession, "transaction commit" );
 			}
 		} );
 	}
@@ -126,7 +126,7 @@ public class TransactionManager extends BaseInterceptor {
 				);
 			}
 			if ( ormSession.isOpen() ) {
-				ormSession.flush();
+				ORMContext.flush( ormSession, "transaction commit" );
 			}
 		} );
 	}
@@ -155,7 +155,7 @@ public class TransactionManager extends BaseInterceptor {
 			// commit; in a single-unit nested transaction a child commit is a no-op governed by the
 			// outermost block.
 			if ( ormSession.isOpen() ) {
-				ormSession.flush();
+				ORMContext.flush( ormSession, "transaction commit" );
 			}
 		} );
 	}
@@ -214,7 +214,7 @@ public class TransactionManager extends BaseInterceptor {
 			// emitted before BoxLang commits at the end of the demarcation unit. If the transaction was
 			// already rolled back, the session was cleared and this is a no-op.
 			if ( ormSession.isOpen() ) {
-				ormSession.flush();
+				ORMContext.flush( ormSession, "transaction commit" );
 			}
 		} );
 	}

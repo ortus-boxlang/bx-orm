@@ -11,4 +11,6 @@ class persistent="true" table="constrained_things" {
 
 	property name="status" ormType="string" length="20" index="idx_ct_status";
 
+	property name="code" ormType="string" length="20" notnull="true";
+
 }

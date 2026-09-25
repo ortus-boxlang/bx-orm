@@ -140,6 +140,7 @@ public class ORMKeys {
 	public static final Key	precision					= Key.of( "precision" );
 	public static final Key	scale						= Key.of( "scale" );
 	public static final Key	unique						= Key.of( "unique" );
+	public static final Key	uniqueFirst					= Key.of( "uniqueFirst" );
 	public static final Key	uniqueKey					= Key.of( "uniqueKey" );
 	public static final Key	insert						= Key.of( "insert" );
 	public static final Key	update						= Key.of( "update" );
