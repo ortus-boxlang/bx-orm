@@ -8,6 +8,61 @@
 
 ---
 
+## New features
+
+Every feature V2 adds, in one place. Each entry says what it does, shows the shape, and points to the section
+with the design details. Keep this list current: when a feature lands, add it here, to `changelog.md` and to the
+end-user docs.
+
+### Engine and boot
+
+| Feature | What it does | Details |
+| --- | --- | --- |
+| Hibernate 7.4 | Replaces Hibernate 5.6. BoxLang-facing BIF behavior is preserved. | [§2](#2-the-core-problem-the-migration-had-to-solve), [§10](#10-migration-notes-56--74) |
+| Generated entity facades | Each entity maps to a generated Java class, unlocking `uuid` and other id generators, composite ids, `byte[]` and full metamodel access. Facades are namespaced per ORM application. | [§5](#5-the-facade-concretely) |
+| Modern `mapping.xml` | Hibernate 7 mapping format, fed to Hibernate in memory. | [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
+| Composite ids, inheritance, value collections | Composite primary keys, single-table and joined inheritance, `fieldtype="collection"` (array and struct). | [§5](#5-the-facade-concretely), [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
+| Boot cache (`.bxorm/`) | `ormManifest="auto"` writes the resolved boot model and facade bytecode; `trust` boots straight from it. `ormManifestLocation` moves it. In `auto`, editing an entity reloads the ORM on the next request. | [§11](#11-the-orm-manifest-boot-cache-bxorm) |
+| `bxorm` CLI | `boxlang module:orm <verb>` inspects the boot cache: `info`, `validate`, `entities`, `entity`, `mappings`, `clear`. | [§11](#the-bxorm-cli) |
+| Transactions ride BoxLang | ORM work inside `transaction{}` uses the same JDBC connection as `queryExecute()`; BoxLang owns commit and rollback. Queries inside a transaction see pending ORM writes. | [§8](#8-transactions-riding-the-boxlang-connection) |
+| `uniquekey` / `index` | Property annotations become unique constraints and indexes, including multi-column ones. | [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
+
+### Errors and diagnostics
+
+| Feature | What it does | Details |
+| --- | --- | --- |
+| `orm.*` errors | Every error is an `ORMException` with a dotted type (`catch( "orm" e )`, `catch( "orm.query" e )`), a message in BoxLang terms, a fix in `detail`, context in `extendedInfo`, and "Did you mean" for misspelled names. | [§10a](#10a-errors-and-diagnostics) |
+| Startup validation | Duplicate entity names, unknown `ormtype` values and broken startups are reported clearly; the last startup failure is remembered. | [§10a](#10a-errors-and-diagnostics) |
+| `ormDiagnostics()` | The ORM's state for the current application. Never throws. | [§10a](#10a-errors-and-diagnostics) |
+| Strict `unique` | `unique=true` with several matches is an `orm.query.nonUnique` error; `uniqueFirst` keeps the old behavior. | [§10a](#10a-errors-and-diagnostics) |
+
+### BIFs and events
+
+| Feature | What it does | Details |
+| --- | --- | --- |
+| Inspection BIFs | `entityGetName()`, `entityGetDatasource()`, `entityGetId()`, `entityGetMetadata()`, `entityIsDirty()`, `entityGetDirtyProperties()`, `ormIsSessionDirty()`, `ormGetSessionStatistics()`. | [§10b](#10b-inspection-bifs-event-veto-and-query-options) |
+| Event veto | `preInsert`, `preUpdate` or `preDelete` returning `false` cancels the operation. | [§10b](#10b-inspection-bifs-event-veto-and-query-options) |
+| `postNew` event | Fired by `entityNew()` on the entity and the global event handler. | [§7](#7-events) |
+| Query options | `ormExecuteQuery()` and `entityLoad()` honor `cacheable`, `cacheName` and `timeout`. | [§10b](#10b-inspection-bifs-event-veto-and-query-options) |
+
+### Queries
+
+| Feature | What it does | Details |
+| --- | --- | --- |
+| `entityCriteria()` | Fluent query builder: conditions, groups, automatic joins, subqueries, projections, paging, `paginate`, `each`/`chunk`, `getSQL()`, readable `writeDump()`, cborm method names and interception points. | [§10c](#10c-entitycriteria-the-fluent-query-builder) |
+
+### Planned: Phase 3B, Hibernate-native features
+
+Features Hibernate 7.4 already implements, exposed through entity and property annotations. `mapping.xml` has no
+element for them, so the generated facade class carries the Hibernate annotation.
+
+| Feature | Shape | Hibernate feature |
+| --- | --- | --- |
+| Soft delete | `softDelete="true"` (boolean `deleted` column), `softDelete="active"` (inverted `active` column), `softDelete="timestamp"` (`deleted` date column); `softDeleteColumn` renames the column. `entityDelete()` becomes an UPDATE, and every load, query and association skips deleted rows. | `@SoftDelete` |
+| Automatic timestamps | `autoTimestamp="create"` sets the property once on insert; `autoTimestamp="update"` sets it on insert and on every update that changes the row. | `@CreationTimestamp`, `@UpdateTimestamp` |
+
+---
+
 ## 1. What bx-orm is
 
 `bx-orm` is the middleware that lets the dynamic **BoxLang** JVM language use **Hibernate ORM**
@@ -887,8 +942,9 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
 ## 12. Where we go next
 
 - **cborm-compatible path** — the V2 plan: new BIFs (Phase 2), the fluent `entityCriteria()` (Phase 3),
-  GORM-inspired additions, dynamic finders, cborm calling bx-orm BIFs, a live cborm test run, and
-  opt-in static class helpers. Casting is not a phase: bx-orm casts ids itself and Hibernate 7 coerces
+  Hibernate-native features such as soft delete and automatic timestamps (Phase 3B), GORM-inspired
+  additions, dynamic finders, cborm calling bx-orm BIFs, a live cborm test run, and opt-in static class
+  helpers. Casting is not a phase: bx-orm casts ids itself and Hibernate 7 coerces
   query parameters, so cborm's `idCast()`/`autoCast()` just return their value.
 
 ---
