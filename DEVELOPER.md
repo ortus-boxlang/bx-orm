@@ -801,7 +801,8 @@ properties of a root entity with no id. No foreign keys. A missing table is skip
 
 **Entities as structs.** `memento/MementoSpec` merges the caller's options with mementifier's `this.memento`
 (profiles replace the base settings they define; `neverInclude` always wins; no `defaultIncludes` means the id and plain
-properties, with the caller's includes added). `memento/EntityMemento` walks the entities through their getters, writes
+properties, with the caller's includes added). `memento/EntityMemento` walks the entities through their getters (implicit or hand-written, so an override shapes the output; the variables
+scope only when there is no getter), writes
 associations as nested structs or arrays, ends cycles with the id (an identity set of the entities on the current
 branch), turns nulls into the `defaults` entry or `""`, dates into ISO 8601 (`memento/IsoDates`), and runs mappers last
 on the keys present. Unlike mementifier, an unknown include is `orm.property.unknown` instead of being skipped.
@@ -812,7 +813,8 @@ are left joins in the same row, and a null id marks a null association. Each to-
 rooted at the same entity, `where root.id in ( ids just read )` (chunks of 500), selecting the parent's id first; rows are
 grouped back into their parents, in child id order, and nested collections repeat the step. Mappers run last, innermost
 first. `this.memento` comes from `ORMApp.prototype()`, one instance per entity made through the instantiator. Getters
-need an entity: one from `this.memento` is skipped, one the caller asks for is `orm.argument`. `entityLoadAsStruct()` is
+need an entity: one from `this.memento` is skipped, one the caller asks for is `orm.argument`, and an overridden
+property getter is bypassed (the column value is returned). `entityLoadAsStruct()` is
 `criteria/StructLoads` (id or filter conditions, then the projection). Entities with a composite id are
 `orm.argument`: grouping rows back into parents needs a single id. Plain `asStruct()` (no includes) is
 unchanged except for ISO 8601 dates.

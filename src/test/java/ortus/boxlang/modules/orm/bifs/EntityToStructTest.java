@@ -42,7 +42,7 @@ public class EntityToStructTest extends BaseORMTest {
 	public void addRows() {
 		instance.executeSource(
 		    """
-		    queryExecute( "INSERT INTO memo_authors ( id, firstName, lastName, passwordHash, joined ) VALUES ( 901, 'Ann', 'Baker', 'secret', '2024-03-05 10:20:30' )" );
+		    queryExecute( "INSERT INTO memo_authors ( id, firstName, lastName, passwordHash, joined, email ) VALUES ( 901, 'Ann', 'Baker', 'secret', '2024-03-05 10:20:30', 'ANN@EXAMPLE.COM' )" );
 		    queryExecute( "INSERT INTO memo_posts ( id, title, author_id ) VALUES ( 901, 'First', 901 ), ( 902, 'Second', 901 )" );
 		    """,
 		    context );
@@ -160,5 +160,15 @@ public class EntityToStructTest extends BaseORMTest {
 		    "try { entityToStruct( entityLoadByPK( 'Manufacturer', 1 ), { includes : 'nmae' } ); result = 'NO ERROR'; } catch ( any e ) { result = e.type; }" ) )
 		    .isEqualTo( "orm.property.unknown" );
 		assertThat( run( "try { entityToStruct( { a : 1 } ); result = 'NO ERROR'; } catch ( any e ) { result = e.type; }" ) ).isEqualTo( "orm.argument" );
+	}
+
+	/**
+	 * Values come from the entity's getters (implicit or written by hand), so an overridden getter shapes the output.
+	 */
+	@DisplayName( "Values come from getters, so an overridden getter shapes the output" )
+	@Test
+	public void testOverriddenGetter() {
+		IStruct s = ( IStruct ) run( "result = entityToStruct( entityLoadByPK( 'MemoAuthor', 901 ), { includes : 'email' } );" );
+		assertThat( s.getAsString( Key.of( "email" ) ) ).isEqualTo( "ann@example.com" );
 	}
 }

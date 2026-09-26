@@ -15,6 +15,8 @@ class persistent="true" table="memo_authors" {
 
 	property name="joined" ormType="timestamp";
 
+	property name="email" ormType="string" length="100";
+
 	property name="posts" fieldtype="one-to-many" cfc="MemoPost" fkcolumn="author_id" inverse="true" orderby="id";
 
 	this.memento = {
@@ -29,6 +31,13 @@ class persistent="true" table="memo_authors" {
 			export : { defaultIncludes : [ "id", "lastName" ], mappers : {} }
 		}
 	};
+
+	/**
+	 * Overrides the implicit getter: entityToStruct() must call it, so the struct holds the lower-cased value.
+	 */
+	function getEmail() {
+		return lcase( variables.email ?: "" );
+	}
 
 	/**
 	 * A computed value, included by name.

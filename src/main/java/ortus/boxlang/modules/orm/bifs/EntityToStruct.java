@@ -48,7 +48,8 @@ public class EntityToStruct extends BaseORMBIF {
 	/**
 	 * Turn an entity, or an array of entities, into a struct (or an array of structs), for JSON APIs and views.
 	 * <p>
-	 * By default the struct holds the id and the plain properties. Options:
+	 * Each value is read through the entity's getter when it has one (the implicit accessor, or one you wrote to shape the
+	 * output), else from the variables scope. By default the struct holds the id and the plain properties. Options:
 	 * <ul>
 	 * <li><code>includes</code>: properties, getters (without <code>get</code>) or dotted association paths to add, as a list
 	 * or array: <code>"id,name,role.name,orders"</code>. An association with no path below it uses the associated
