@@ -1,0 +1,16 @@
+/**
+ * A legacy table mapped without ormtypes or an id: useDBForMapping reads them from the database.
+ */
+class accessors="true" persistent="true" table="legacy_people" {
+
+	property name="personId" column="person_id";
+
+	property name="fullName" column="full_name";
+
+	property name="born";
+
+	property name="salary";
+
+	property name="active";
+
+}

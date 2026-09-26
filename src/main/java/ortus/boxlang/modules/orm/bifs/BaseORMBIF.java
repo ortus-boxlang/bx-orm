@@ -156,6 +156,29 @@ public abstract class BaseORMBIF extends BIF {
 	}
 
 	/**
+	 * One entity or an array of entities, as a list.
+	 *
+	 * @param value An entity, or an array of entities.
+	 *
+	 * @return The items (not yet checked to be entities).
+	 */
+	protected static java.util.List<Object> entities( Object value ) {
+		return value instanceof ortus.boxlang.runtime.types.Array array ? array : java.util.Collections.singletonList( value );
+	}
+
+	/**
+	 * Whether an options struct asks for a flush ({@code { flush : true }}).
+	 *
+	 * @param options The options argument (may be null or not a struct).
+	 *
+	 * @return True when {@code flush} is true.
+	 */
+	protected static boolean flushRequested( Object options ) {
+		return options instanceof ortus.boxlang.runtime.types.IStruct struct
+		    && ortus.boxlang.runtime.dynamic.casters.BooleanCaster.cast( struct.getOrDefault( ORMKeys.flush, false ) );
+	}
+
+	/**
 	 * Pull the entity name from a BoxLang class.
 	 *
 	 * @param entity The entity instance.

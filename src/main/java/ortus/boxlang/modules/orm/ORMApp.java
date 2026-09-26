@@ -384,8 +384,9 @@ public class ORMApp {
 	private final List<String>					unknownOrmTypes	= new ArrayList<>();
 
 	/**
-	 * Validate the discovered entities before Hibernate starts: duplicate entity names on one datasource are an error
-	 * (Hibernate would fail with an internal "Duplicate key" message); unknown ormtype values are logged as warnings and
+	 * Validate the discovered entities before Hibernate starts: duplicate entity names on one datasource and a bad
+	 * {@code defaultSort} are errors (Hibernate would fail with an internal "Duplicate key" message for the first); unknown
+	 * ormtype values are logged as warnings and
 	 * remembered, so a later Hibernate startup failure can name them.
 	 *
 	 * @throws ortus.boxlang.modules.orm.errors.ORMException ({@code orm.config}) listing every duplicate entity name.
@@ -406,6 +407,12 @@ public class ORMApp {
 			if ( record.getEntityMeta() == null ) {
 				continue;
 			}
+			// A bad defaultSort fails the boot, not the first load.
+			try {
+				defaultSort( record );
+			} catch ( ortus.boxlang.modules.orm.errors.ORMException e ) {
+				problems.add( e.getMessage() );
+			}
 			for ( var prop : record.getEntityMeta().getAllPersistentProperties() ) {
 				String ormType = prop.getORMType();
 				if ( ormType == null || ormType.isBlank() ) {
@@ -422,7 +429,8 @@ public class ORMApp {
 		}
 		if ( !problems.isEmpty() ) {
 			throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.CONFIG,
-			    "The ORM could not start: " + String.join( " ", problems ), "Each entity name must be unique per datasource." );
+			    "The ORM could not start: " + String.join( " ", problems ),
+			    "Each entity name must be unique per datasource, and defaultSort must name the entity's properties." );
 		}
 	}
 
@@ -590,19 +598,8 @@ public class ORMApp {
 		Session									session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
 		Object									id				= toIdentifier( context, session, entityRecord, keyValue );
 		String									hbName			= hibernateEntityName( session, entityRecord.getEntityName() );
-
-		List<jakarta.persistence.FindOption>	findOptions		= new ArrayList<>();
-		if ( options != null && options.get( ORMKeys.lock ) != null && !options.get( ORMKeys.lock ).toString().isBlank() ) {
-			org.hibernate.LockMode mode = EntityLocking.mode( options.get( ORMKeys.lock ), "entityLoadByPK" );
-			EntityLocking.requireTransaction( ORMContext.getForContext( context ), "entityLoadByPK" );
-			EntityLocking.checkForce( mode, getEntityPersister( session, entityRecord.getEntityName() ), entityRecord.getEntityName(),
-			    "entityLoadByPK" );
-			findOptions.addAll( EntityLocking.findOptions( mode, options ) );
-		}
-		if ( options != null && BooleanCaster.cast( options.getOrDefault( ORMKeys.readOnly, false ) ) ) {
-			findOptions.add( org.hibernate.ReadOnlyMode.READ_ONLY );
-		}
-		var entity = findOptions.isEmpty()
+		List<jakarta.persistence.FindOption>	findOptions		= findOptions( context, session, entityRecord, options );
+		var										entity			= findOptions.isEmpty()
 		    ? session.get( hbName, id )
 		    : session.find( hbName, id, findOptions.toArray( new jakarta.persistence.FindOption[ 0 ] ) );
 		if ( entity instanceof BoxProxy castProxy ) {
@@ -611,6 +608,154 @@ public class ORMApp {
 			// Hibernate returns a POJO facade; unwrap it to the BoxLang instance.
 			return ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity );
 		}
+	}
+
+	/**
+	 * Load several entities by primary key in one batched query.
+	 *
+	 * @param context    Boxlang JDBC context
+	 * @param entityName The name of the entity.
+	 * @param ids        The primary key values (structs for composite keys).
+	 * @param options    Load options, as for {@link #loadEntityById(IBoxContext, String, Object, IStruct)}; may be null.
+	 *
+	 * @return The entities in the order of {@code ids}, with null where no row has that id.
+	 */
+	public Array loadEntitiesByIds( IBoxContext context, String entityName, Array ids, IStruct options ) {
+		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
+		Session			session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+		List<Object>	keys			= new ArrayList<>( ids.size() );
+		for ( Object id : ids ) {
+			keys.add( toIdentifier( context, session, entityRecord, id ) );
+		}
+		Class<?>	mappedClass	= getEntityPersister( session, entityRecord.getEntityName() ).getMappedClass();
+		List<?>		found		= session.findMultiple( mappedClass, keys,
+		    findOptions( context, session, entityRecord, options ).toArray( new jakarta.persistence.FindOption[ 0 ] ) );
+		Array		result		= new Array();
+		for ( Object entity : found ) {
+			result.add( entity instanceof BoxProxy proxy ? proxy.getRunnable()
+			    : ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity ) );
+		}
+		return result;
+	}
+
+	/**
+	 * The Hibernate find options for a load by id: a lock ({@code lock}, {@code timeout}, {@code skipLocked}) and
+	 * read-only mode ({@code readOnly}).
+	 *
+	 * @param context      Boxlang JDBC context
+	 * @param session      The entity's session.
+	 * @param entityRecord The entity.
+	 * @param options      The load options; may be null.
+	 *
+	 * @return The find options (empty when none apply).
+	 */
+	private List<jakarta.persistence.FindOption> findOptions( IBoxContext context, Session session, EntityRecord entityRecord, IStruct options ) {
+		List<jakarta.persistence.FindOption> findOptions = new ArrayList<>();
+		if ( options == null ) {
+			return findOptions;
+		}
+		if ( options.get( ORMKeys.lock ) != null && !options.get( ORMKeys.lock ).toString().isBlank() ) {
+			org.hibernate.LockMode mode = EntityLocking.mode( options.get( ORMKeys.lock ), "entityLoadByPK" );
+			EntityLocking.requireTransaction( ORMContext.getForContext( context ), "entityLoadByPK" );
+			EntityLocking.checkForce( mode, getEntityPersister( session, entityRecord.getEntityName() ), entityRecord.getEntityName(),
+			    "entityLoadByPK" );
+			findOptions.addAll( EntityLocking.findOptions( mode, options ) );
+		}
+		if ( BooleanCaster.cast( options.getOrDefault( ORMKeys.readOnly, false ) ) ) {
+			findOptions.add( org.hibernate.ReadOnlyMode.READ_ONLY );
+		}
+		return findOptions;
+	}
+
+	/**
+	 * One entry of an entity's {@code defaultSort} annotation.
+	 *
+	 * @param property  The property name, in its declared casing.
+	 * @param ascending True for ascending order.
+	 */
+	public record SortSpec( String property, boolean ascending ) {
+	}
+
+	/**
+	 * The entity's {@code defaultSort} annotation (e.g. {@code "lastName, firstName desc"}), or the one it inherits from its
+	 * parent entity: the order {@code entityLoad()} and criteria use when the caller gives none.
+	 *
+	 * @param entityRecord The entity.
+	 *
+	 * @return The orderings; empty when the entity declares none.
+	 *
+	 * @throws ortus.boxlang.modules.orm.errors.ORMException {@code orm.property.unknown} for a name that is not a property,
+	 *                                                       {@code orm.config} for a bad direction.
+	 */
+	public List<SortSpec> defaultSort( EntityRecord entityRecord ) {
+		if ( entityRecord.getEntityMeta() == null ) {
+			return List.of();
+		}
+		Object value = annotation( entityRecord.getEntityMeta().getMeta(), ORMKeys.defaultSort );
+		if ( value == null || value.toString().isBlank() ) {
+			value = annotation( entityRecord.getEntityMeta().getParentMeta(), ORMKeys.defaultSort );
+		}
+		if ( value == null || value.toString().isBlank() ) {
+			return List.of();
+		}
+		Array			properties	= entityRecord.getEntityMeta().getPropertyNamesArray();
+		List<SortSpec>	result		= new ArrayList<>();
+		for ( String entry : value.toString().split( "," ) ) {
+			if ( entry.isBlank() ) {
+				continue;
+			}
+			String[]	words	= entry.trim().split( "\\s+" );
+			int			index	= properties.indexOf( Key.of( words[ 0 ] ) );
+			if ( index < 0 ) {
+				throw ortus.boxlang.modules.orm.errors.ORMErrors.propertyNotFound( entityRecord.getEntityName(), words[ 0 ],
+				    getPropertyNames( entityRecord.getEntityName() ), "defaultSort" );
+			}
+			String direction = words.length > 1 ? words[ 1 ].toLowerCase() : "asc";
+			if ( !direction.equals( "asc" ) && !direction.equals( "desc" ) ) {
+				throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.CONFIG,
+				    "[" + entityRecord.getEntityName() + "] has defaultSort=\"" + value + "\" with the unknown direction [" + words[ 1 ] + "].",
+				    "Use asc or desc, e.g. defaultSort=\"lastName, firstName desc\"." );
+			}
+			result.add( new SortSpec( KeyCaster.cast( properties.get( index ) ).getName(), direction.equals( "asc" ) ) );
+		}
+		return result;
+	}
+
+	/**
+	 * One annotation from a class metadata struct.
+	 *
+	 * @param meta The class metadata (may be null or empty).
+	 * @param name The annotation.
+	 *
+	 * @return The value, or null.
+	 */
+	private static Object annotation( IStruct meta, Key name ) {
+		if ( meta == null || ! ( meta.get( Key.annotations ) instanceof IStruct annotations ) ) {
+			return null;
+		}
+		return annotations.get( name );
+	}
+
+	/** One instance per entity, to read what the class sets up (such as {@code this.memento}) without an entity. */
+	private final Map<String, IClassRunnable> prototypes = new ConcurrentHashMap<>();
+
+	/**
+	 * A new, unsaved instance of an entity, made once and kept for this application's life, for reading what the class
+	 * sets up in its body (such as mementifier's {@code this.memento}). No events fire. Do not save or change it.
+	 *
+	 * @param context    The calling context (for the entity's datasource).
+	 * @param entityName The entity name.
+	 *
+	 * @return The instance.
+	 */
+	public IClassRunnable prototype( IBoxContext context, String entityName ) {
+		EntityRecord record = this.lookupEntity( entityName, true );
+		return this.prototypes.computeIfAbsent( record.getEntityName().toLowerCase(), key -> {
+			SessionFactoryImplementor factory = ( SessionFactoryImplementor ) getSessionFactoryOrThrow( record.getDatasource(), context );
+			return ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade(
+			    factory.getMappingMetamodel().getEntityDescriptor( hibernateEntityName( factory, record.getEntityName() ) ).getRepresentationStrategy()
+			        .getInstantiator().instantiate() );
+		} );
 	}
 
 	/**
@@ -668,7 +813,7 @@ public class ORMApp {
 	 *
 	 * @return True for a composite key struct.
 	 */
-	private boolean isCompositeId( String entityName, IStruct value ) {
+	public boolean isCompositeId( String entityName, IStruct value ) {
 		EntityRecord record = this.lookupEntity( entityName, true );
 		if ( record.getEntityMeta() == null || record.getEntityMeta().getIdProperties().size() < 2
 		    || record.getEntityMeta().getIdProperties().size() != value.size() ) {
@@ -801,6 +946,15 @@ public class ORMApp {
 			}
 		}
 
+		if ( !options.containsKey( ORMKeys.orderBy ) ) {
+			// No order given: use the entity's defaultSort, if any.
+			List<SortSpec> defaults = defaultSort( entityRecord );
+			if ( !defaults.isEmpty() ) {
+				Array orderBy = new Array();
+				defaults.forEach( d -> orderBy.add( Struct.of( ORMKeys.property, d.property(), ORMKeys.ascending, d.ascending() ) ) );
+				options.put( ORMKeys.orderBy, orderBy );
+			}
+		}
 		if ( options.containsKey( ORMKeys.orderBy ) ) {
 			List<String> orderClauses = new ArrayList<>();
 			options.getAsArray( ORMKeys.orderBy ).forEach( ( item ) -> {

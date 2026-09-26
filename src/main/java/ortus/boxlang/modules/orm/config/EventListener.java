@@ -210,6 +210,8 @@ public class EventListener
 		);
 		announceGlobalEvent( ORMKeys.postUpdate, event, args );
 		announceEntityEvent( ORMKeys.postUpdate, FacadeSupport.unwrap( event.getEntity() ), args );
+		PostCommitQueue.record( event.getSession(), this.dispatcher, FacadeSupport.unwrap( event.getEntity() ),
+		    ORMErrors.entityName( event.getPersister().getEntityName() ), "update" );
 	}
 
 	@Override
@@ -262,6 +264,8 @@ public class EventListener
 		);
 		announceGlobalEvent( ORMKeys.postDelete, event, args );
 		announceEntityEvent( ORMKeys.postDelete, FacadeSupport.unwrap( event.getEntity() ), args );
+		PostCommitQueue.record( event.getSession(), this.dispatcher, FacadeSupport.unwrap( event.getEntity() ),
+		    ORMErrors.entityName( event.getPersister().getEntityName() ), "delete" );
 	}
 
 	@Override
@@ -282,6 +286,8 @@ public class EventListener
 		);
 		announceGlobalEvent( ORMKeys.postInsert, event, args );
 		announceEntityEvent( ORMKeys.postInsert, FacadeSupport.unwrap( event.getEntity() ), args );
+		PostCommitQueue.record( event.getSession(), this.dispatcher, FacadeSupport.unwrap( event.getEntity() ),
+		    ORMErrors.entityName( event.getPersister().getEntityName() ), "insert" );
 	}
 
 	@Override

@@ -48,6 +48,12 @@ and never change the builder; `copy()` branches it.
   the recorded conditions; with joins, `where bx_u.<id> in (select ...)` (Hibernate wraps it in a derived table for
   MySQL). They flush first and bypass entities (no events, cascades, versions, timestamps). Paging, collections and
   composite ids with joins are `orm.argument`.
+- Function paths: `resolve()` hands `name( args )` to `resolveFunction()`; arguments are paths, nested functions,
+  numbers, `'strings'` or `x as Type`, anything else `orm.argument`. `sqlFunctions` names work the same way.
+- `defaultSort` applies in `compile()` (and `compileColumns()`) when there is no `order()` and no projection.
+- `asStruct( includes, options )` sets a `MementoSpec`; `list`/`get`/`first`/`paginate` then go through
+  `MementoProjection` (root query from `copy()` + `compileColumns()`, one extra query per to-many, rows grouped by parent
+  id). `each`/`chunk` refuse it. Plain `asStruct()` rows get ISO 8601 dates.
 - `lock( mode, { timeout, skipLocked } )` stores `lock` / `lockTimeout` / `skipLocked` options. They apply only to
   `Compiled.lockable()` runs (row selects, not counts or aggregates); `HQLQuery.prepare` applies them and requires
   `transaction{}`, and `HQLQuery.inLockScope` lets the query pass Hibernate's transaction check (see the
@@ -56,4 +62,4 @@ and never change the builder; `copy()` branches it.
 ## Tests
 
 `src/test/java/ortus/boxlang/modules/orm/criteria/` (live, MySQL/MariaDB): Conditions, Joins, Shape, Terminals,
-Subquery, Developer, Bulk (updateAll, deleteAll, lock). Shared helpers in `CriteriaTestSupport`.
+Subquery, Developer, Bulk (updateAll, deleteAll, lock), Functions; `bifs/EntityLoadAsStructTest` covers `asStruct( includes )`. Shared helpers in `CriteriaTestSupport`.

@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unused named HQL parameters are logged as a warning.
 - `eventHandling` is honored: ORM events (entity methods, the global `eventHandler`, `postNew`) only fire when `eventHandling=true`. Before, they always fired. Apps that use events without setting `eventHandling: true` must add it.
 - `entityLoadByPK()`'s third argument is an options struct (`lock`, `timeout`, `skipLocked`, `readOnly`). A boolean third argument (Lucee's `unique`) is accepted and ignored.
+- Criteria `asStruct()` returns date values as ISO 8601 strings, like `entityToStruct()` and `entityLoadAsStruct()`.
+- `useDBForMapping` now works (it was ignored before). It stays off by default.
 
 - Upgraded the ORM engine from Hibernate 5.6.15 to 7.4.8. BoxLang-facing BIF behavior is preserved.
 - Build and test against BoxLang 1.17.0 (was 1.11.0); the module's minimum BoxLang version is now 1.17.0 due to several updates we required in the new approach.
@@ -44,6 +46,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pessimistic locking: `entityLock( entity, mode, options )`, `entityLoadByPK( name, id, { lock } )`, criteria `lock()` and `ormExecuteQuery( ..., { lock } )`, with modes `read`, `write`, `force` and `timeout` / `skipLocked` options. Locks need `transaction{}`.
 - Read-only loading: `ormReadOnly( closure )`, `entityLoadReadOnly()` and a `readOnly` option on `entityLoad()` and `entityLoadByPK()`.
 - Criteria bulk statements: `updateAll( { prop : value } )` and `deleteAll()` run one HQL statement and return the row count (no events or cascades; loaded entities are not refreshed).
+- `entityLoadByPK( name, [ ids ] )`: load several entities in one batched query; the array keeps the asked order, with null for missing ids.
+- `entitySave()` and `entityDelete()` take one entity or an array, and `{ flush : true }` to flush right away.
+- `defaultSort` entity annotation (`defaultSort="lastName, firstName desc"`): the order `entityLoad()` and criteria use when none is given. Checked at boot.
+- Functions in criteria paths: `isEq( "year(createdDate)", 2025 )`, `order( "lower(name)" )`, nested calls, literals and `cast()`.
+- Named SQL functions: `ormSettings.sqlFunctions = { name : "sql(?1)" }` (or `{ sql, returns }`) registers SQL templates for HQL and criteria; `ormGetSQLFunctions()` lists them.
+- `postCommit( entity, action )` event on the entity and the global event handler, fired once a write is committed (never for rolled-back writes).
+- `useDBForMapping=true` (Adobe ColdFusion compatibility): at boot, untyped properties get their `ormtype` from the column type and entities without an id get it from the table's primary key.
+- `entityToStruct( entityOrArray, options )`: entities as structs, mementifier-compatible (`this.memento` defaults, excludes, never-include, mappers, defaults, profiles), with dotted association paths, cycle safety and ISO 8601 dates.
+- `entityLoadAsStruct( name, idOrFilter, includes, options )` and criteria `asStruct( includes )`: the same structs read with projection queries, without loading entities.
 - Event veto: a `preInsert`, `preUpdate` or `preDelete` handler (on the entity or the global `eventHandler`) that returns `false` cancels the operation. Vetoing the insert of a database-identity entity raises `orm.event.veto`, since Hibernate cannot skip that insert.
 
 - POJO-facade entity representation (now the only representation): each entity maps to a generated Java facade whose accessors delegate to the BoxLang instance, unlocking `uuid` (and other) id generators, composite ids, `byte[]`, and full metamodel access.

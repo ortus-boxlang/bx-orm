@@ -25,7 +25,8 @@ class {
 		"badFieldType"  : [ "/root/badFieldType" ],
 		"missingCfc"    : [ "/root/missingCfc" ],
 		"badSoftDelete" : [ "/root/badSoftDelete" ],
-		"badAutoTimestamp" : [ "/root/badAutoTimestamp" ]
+		"badAutoTimestamp" : [ "/root/badAutoTimestamp" ],
+		"badDefaultSort" : [ "/root/badDefaultSort" ]
 	};
 
 	this.ormSettings = {

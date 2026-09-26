@@ -268,55 +268,57 @@ public final class CriteriaBuilder implements IReferenceable {
 	}
 
 	/** The operation name used in error messages. */
-	static final String						OPERATION	= "entityCriteria";
+	static final String										OPERATION	= "entityCriteria";
 
 	/** The ORM application. */
-	private final ORMApp					app;
+	private final ORMApp									app;
 	/** The root entity. */
-	private final EntityRecord				record;
+	private final EntityRecord								record;
 	/** The root entity's datasource name. */
-	private final String					datasource;
+	private final String									datasource;
 	/** The session factory the entity is mapped in. */
-	private final SessionFactoryImplementor	factory;
+	private final SessionFactoryImplementor					factory;
 	/** The enclosing criteria, for a subquery (null otherwise). */
-	private final CriteriaBuilder			outer;
+	private final CriteriaBuilder							outer;
 	/** Alias counter shared by a criteria and its subqueries, so generated aliases never collide. */
-	private final int[]						counter;
+	private final int[]										counter;
 	/** The root alias. */
-	private final Alias						root;
+	private final Alias										root;
 
 	/** User aliases (lower-cased) to their HQL aliases. */
-	private Map<String, Alias>				aliases;
+	private Map<String, Alias>								aliases;
 	/** Joins by {@code parentAlias.attribute}. */
-	private LinkedHashMap<String, Join>		joins;
+	private LinkedHashMap<String, Join>						joins;
 	/** The top-level {@code and} group. */
-	private Group							where;
+	private Group											where;
 	/** The group new conditions go into (top of the stack). */
-	private Deque<Group>					groups;
+	private Deque<Group>									groups;
 	/** How many {@code anyOf()}/{@code not()} groups enclose the current call (paths inside use left joins). */
-	private int								optionalDepth;
+	private int												optionalDepth;
 	/** The alias unqualified paths start from ({@code with{Association}()} changes it). */
-	private Alias							current;
+	private Alias											current;
 	/** Projected columns. */
-	private List<Projection>				projections;
+	private List<Projection>								projections;
 	/** Whether rows are distinct. */
-	private boolean							distinct;
+	private boolean											distinct;
 	/** What {@code list()} returns. */
-	private Shape							shape;
+	private Shape											shape;
 	/** Orderings. */
-	private List<Order>						orders;
+	private List<Order>										orders;
 	/** First row (0-based), or null. */
-	private Integer							firstResult;
+	private Integer											firstResult;
 	/** Maximum rows, or null. */
-	private Integer							maxResults;
+	private Integer											maxResults;
 	/** Query options: cacheable, cacheName, timeout, readOnly, fetchSize, comment, hints. */
-	private IStruct							options;
+	private IStruct											options;
+	/** What {@code asStruct( includes )} puts in each struct, or null for plain rows. */
+	private ortus.boxlang.modules.orm.memento.MementoSpec	memento;
 	/** The recorded calls, for {@code toString()}. */
-	private List<String>					steps;
+	private List<String>									steps;
 	/** The closure nesting of the call being recorded (for indentation). */
-	private int								stepDepth;
+	private int												stepDepth;
 	/** The context of the last call, so {@code toString()} (and so {@code writeDump()}) can show the SQL. */
-	private transient IBoxContext			lastContext;
+	private transient IBoxContext							lastContext;
 
 	/**
 	 * Create a criteria for an entity.
@@ -653,6 +655,10 @@ public final class CriteriaBuilder implements IReferenceable {
 			throw new ORMException( ORMErrorType.ARGUMENT, "entityCriteria needs a property name but received an empty one.",
 			    "Pass the property, e.g. c.isEq( \"name\", value )." );
 		}
+		java.util.regex.Matcher function = FUNCTION_CALL.matcher( path.trim() );
+		if ( function.matches() ) {
+			return resolveFunction( function.group( 1 ), function.group( 2 ), path, defaultKind );
+		}
 		JoinKind	kind		= optionalDepth > 0 && defaultKind == JoinKind.INNER ? JoinKind.LEFT : defaultKind;
 		String[]	segments	= path.trim().split( "\\." );
 		Alias		start		= current;
@@ -708,6 +714,99 @@ public final class CriteriaBuilder implements IReferenceable {
 			}
 		}
 		throw new IllegalStateException( "unreachable" );
+	}
+
+	/** A function call in a path, e.g. {@code year(createdDate)} or {@code coalesce(nickName, firstName)}. */
+	private static final java.util.regex.Pattern	FUNCTION_CALL	= java.util.regex.Pattern.compile( "([A-Za-z_][A-Za-z0-9_]*)\\s*\\((.*)\\)",
+	    java.util.regex.Pattern.DOTALL );
+	/** A number literal argument. */
+	private static final java.util.regex.Pattern	NUMBER			= java.util.regex.Pattern.compile( "-?\\d+(\\.\\d+)?" );
+	/** A quoted string literal argument ({@code ''} escapes a quote). */
+	private static final java.util.regex.Pattern	STRING			= java.util.regex.Pattern.compile( "'([^']|'')*'" );
+	/** A {@code cast( x as Type )} argument. */
+	private static final java.util.regex.Pattern	CAST_ARG		= java.util.regex.Pattern.compile( "(?is)(.+?)\\s+as\\s+([A-Za-z_][A-Za-z0-9_.]*)" );
+
+	/**
+	 * Resolve a function call used as a path: each argument is a property path (joined as usual), a nested function, a
+	 * number or a quoted string, so values are never pasted in from outside. The function itself is an HQL function
+	 * (built-in, dialect or a named {@code sqlFunctions} entry). Hibernate passes an unknown name through to the SQL, so the
+	 * database reports it.
+	 *
+	 * @param name          The function name.
+	 * @param argumentsText The text between the parentheses.
+	 * @param path          The whole path, for errors.
+	 * @param defaultKind   The join type for joins the arguments create.
+	 *
+	 * @return The resolved expression (no attribute).
+	 */
+	private Path resolveFunction( String name, String argumentsText, String path, JoinKind defaultKind ) {
+		List<String> resolved = new ArrayList<>();
+		for ( String argument : splitArguments( argumentsText, path ) ) {
+			resolved.add( resolveArgument( argument, path, defaultKind ) );
+		}
+		return new Path( name + "(" + String.join( ", ", resolved ) + ")", null, current.model() );
+	}
+
+	/**
+	 * Resolve one function argument.
+	 *
+	 * @param argument    The argument text (trimmed).
+	 * @param path        The whole path, for errors.
+	 * @param defaultKind The join type for joins the argument creates.
+	 *
+	 * @return The argument's HQL.
+	 */
+	private String resolveArgument( String argument, String path, JoinKind defaultKind ) {
+		if ( NUMBER.matcher( argument ).matches() || STRING.matcher( argument ).matches() ) {
+			return argument;
+		}
+		java.util.regex.Matcher cast = CAST_ARG.matcher( argument );
+		if ( cast.matches() ) {
+			return resolveArgument( cast.group( 1 ).trim(), path, defaultKind ) + " as " + cast.group( 2 );
+		}
+		if ( argument.contains( "'" ) || argument.contains( ";" ) || argument.contains( "--" ) ) {
+			throw new ORMException( ORMErrorType.ARGUMENT, "The function path [" + path + "] has an argument entityCriteria cannot read: [" + argument + "].",
+			    "Function arguments must be property paths, nested functions, numbers or 'quoted strings'. Pass other values as condition values." );
+		}
+		return resolve( argument, defaultKind ).hql();
+	}
+
+	/**
+	 * Split a function's argument list on its top-level commas (not inside parentheses or quotes).
+	 *
+	 * @param text The text between the parentheses.
+	 * @param path The whole path, for errors.
+	 *
+	 * @return The trimmed arguments (empty for {@code f()}).
+	 */
+	private static List<String> splitArguments( String text, String path ) {
+		List<String> result = new ArrayList<>();
+		if ( text.isBlank() ) {
+			return result;
+		}
+		int				depth	= 0;
+		boolean			quoted	= false;
+		StringBuilder	current	= new StringBuilder();
+		for ( char ch : text.toCharArray() ) {
+			if ( ch == '\'' ) {
+				quoted = !quoted;
+			} else if ( !quoted && ch == '(' ) {
+				depth++;
+			} else if ( !quoted && ch == ')' ) {
+				depth--;
+			} else if ( !quoted && depth == 0 && ch == ',' ) {
+				result.add( current.toString().trim() );
+				current.setLength( 0 );
+				continue;
+			}
+			current.append( ch );
+		}
+		if ( depth != 0 || quoted ) {
+			throw new ORMException( ORMErrorType.ARGUMENT, "The function path [" + path + "] has unbalanced parentheses or quotes.",
+			    "Check the path, e.g. \"year(createdDate)\" or \"coalesce(nickName, firstName)\"." );
+		}
+		result.add( current.toString().trim() );
+		return result;
 	}
 
 	/**
@@ -1376,6 +1475,7 @@ public final class CriteriaBuilder implements IReferenceable {
 		orders.forEach( o -> c.orders.add( new Order( c.retargetText( o.expr(), root ), o.asc() ) ) );
 		c.firstResult	= firstResult;
 		c.maxResults	= maxResults;
+		c.memento		= memento;
 		c.options		= new Struct();
 		c.options.putAll( options );
 		c.steps = new ArrayList<>( steps );
@@ -1537,6 +1637,141 @@ public final class CriteriaBuilder implements IReferenceable {
 	CriteriaBuilder shape( Shape newShape ) {
 		this.shape = newShape;
 		return this;
+	}
+
+	/**
+	 * {@code asStruct( includes [, options] )}: return structs built like {@code entityToStruct()}, but from a projection
+	 * query instead of entities (see {@link MementoProjection}).
+	 *
+	 * @param includes The includes (list or array), or null for plain rows.
+	 * @param options  {@code excludes}, {@code mappers}, {@code defaults}, {@code ignoreDefaults}, {@code profile}; may be
+	 *                 null.
+	 *
+	 * @return This builder.
+	 */
+	CriteriaBuilder asStruct( Object includes, IStruct options ) {
+		this.shape = Shape.STRUCT;
+		if ( includes == null && options == null ) {
+			this.memento = null;
+			return this;
+		}
+		IStruct all = new Struct();
+		if ( options != null ) {
+			all.putAll( options );
+		}
+		if ( includes != null ) {
+			all.put( Key.of( "includes" ), includes );
+		}
+		this.memento = ortus.boxlang.modules.orm.memento.MementoSpec.fromOptions( all, OPERATION + ".asStruct" );
+		return this;
+	}
+
+	/**
+	 * The {@code asStruct( includes )} spec.
+	 *
+	 * @return The spec, or null.
+	 */
+	ortus.boxlang.modules.orm.memento.MementoSpec memento() {
+		return memento;
+	}
+
+	/**
+	 * The ORM application.
+	 *
+	 * @return The application.
+	 */
+	ORMApp app() {
+		return app;
+	}
+
+	/**
+	 * The root entity.
+	 *
+	 * @return The entity record.
+	 */
+	EntityRecord record() {
+		return record;
+	}
+
+	/**
+	 * The root entity's Hibernate model.
+	 *
+	 * @return The model.
+	 */
+	EntityModel rootModel() {
+		return root.model();
+	}
+
+	/**
+	 * A new, empty criteria on the same entity (for {@link MementoProjection}'s collection queries).
+	 *
+	 * @return The criteria.
+	 */
+	CriteriaBuilder fresh() {
+		CriteriaBuilder c = new CriteriaBuilder( app, record, factory );
+		return c;
+	}
+
+	/**
+	 * Resolve a path to HQL, joining as needed.
+	 *
+	 * @param path  The path.
+	 * @param inner True for inner joins, false for left joins.
+	 *
+	 * @return The HQL expression.
+	 */
+	String hqlFor( String path, boolean inner ) {
+		return resolve( path, inner ? JoinKind.INNER : JoinKind.LEFT ).hql();
+	}
+
+	/**
+	 * Compile a select of the given expressions from this criteria's entity, joins and conditions.
+	 *
+	 * @param expressions The HQL select expressions.
+	 * @param orderBy     Extra order clause (HQL, without {@code order by}) used when the criteria has no ordering; may
+	 *                    be null.
+	 *
+	 * @return The compiled query.
+	 */
+	Compiled compileColumns( List<String> expressions, String orderBy ) {
+		RenderContext	ctx	= new RenderContext();
+		StringBuilder	hql	= new StringBuilder( "select " ).append( String.join( ", ", expressions ) );
+		renderFrom( hql, ctx, false );
+		List<Order>		ordering	= orders.isEmpty()
+		    ? app.defaultSort( record ).stream().map( d -> new Order( root.hql() + "." + d.property(), d.ascending() ) ).toList()
+		    : orders;
+		List<String>	clauses		= new ArrayList<>();
+		ordering.forEach( o -> clauses.add( o.expr() + ( o.asc() ? " asc" : " desc" ) ) );
+		if ( clauses.isEmpty() && orderBy != null ) {
+			clauses.add( orderBy );
+		}
+		if ( !clauses.isEmpty() ) {
+			hql.append( " order by " ).append( String.join( ", ", clauses ) );
+		}
+		return new Compiled( hql.toString(), ctx.values, List.of(), false );
+	}
+
+	/**
+	 * Run a compiled query (for {@link MementoProjection}).
+	 *
+	 * @param context The context.
+	 * @param c       The compiled query.
+	 * @param first   The first row, or null.
+	 * @param max     The maximum rows, or null.
+	 *
+	 * @return The rows.
+	 */
+	List<?> runCompiled( IBoxContext context, Compiled c, Integer first, Integer max ) {
+		return run( context, c, first, max );
+	}
+
+	/**
+	 * The paging of this criteria.
+	 *
+	 * @return { first, max } (either may be null).
+	 */
+	Integer[] paging() {
+		return new Integer[] { firstResult, maxResults };
 	}
 
 	/**
@@ -1744,9 +1979,14 @@ public final class CriteriaBuilder implements IReferenceable {
 		if ( mode == Mode.LIST && !groupBy.isEmpty() ) {
 			hql.append( " group by " ).append( String.join( ", ", groupBy ) );
 		}
-		if ( ( mode == Mode.LIST || ( mode == Mode.EXPRESSION && expression.indexOf( '(' ) < 0 ) ) && !orders.isEmpty() ) {
+		// With no order() given, entity rows follow the entity's defaultSort annotation.
+		List<Order> ordering = orders;
+		if ( orders.isEmpty() && mode == Mode.LIST && projections.isEmpty() ) {
+			ordering = app.defaultSort( record ).stream().map( d -> new Order( root.hql() + "." + d.property(), d.ascending() ) ).toList();
+		}
+		if ( ( mode == Mode.LIST || ( mode == Mode.EXPRESSION && expression.indexOf( '(' ) < 0 ) ) && !ordering.isEmpty() ) {
 			List<String> clauses = new ArrayList<>();
-			orders.forEach( o -> clauses.add( o.expr() + ( o.asc() ? " asc" : " desc" ) ) );
+			ordering.forEach( o -> clauses.add( o.expr() + ( o.asc() ? " asc" : " desc" ) ) );
 			hql.append( " order by " ).append( String.join( ", ", clauses ) );
 		}
 		return new Compiled( hql.toString(), ctx.values, columns, mode == Mode.LIST );
@@ -2033,7 +2273,7 @@ public final class CriteriaBuilder implements IReferenceable {
 				Object[]	values	= row instanceof Object[] tuple ? tuple : new Object[] { row };
 				IStruct		struct	= new Struct( IStruct.TYPES.LINKED );
 				for ( int i = 0; i < columns.size(); i++ ) {
-					struct.put( Key.of( columns.get( i ) ), FacadeSupport.unwrapIfFacade( values[ i ] ) );
+					struct.put( Key.of( columns.get( i ) ), ortus.boxlang.modules.orm.memento.IsoDates.convert( FacadeSupport.unwrapIfFacade( values[ i ] ) ) );
 				}
 				result.add( struct );
 			}
@@ -2055,6 +2295,11 @@ public final class CriteriaBuilder implements IReferenceable {
 	public Object list( IBoxContext context ) {
 		requireTopLevel();
 		announce( ORMKeys.EVENT_BEFORE_CRITERIA_LIST, () -> Struct.of( Key.of( "criteriaBuilder" ), this ) );
+		if ( memento != null ) {
+			Array structs = MementoProjection.list( this, context, firstResult, maxResults );
+			announce( ORMKeys.EVENT_AFTER_CRITERIA_LIST, () -> Struct.of( Key.of( "criteriaBuilder" ), this, Key.of( "results" ), structs ) );
+			return structs;
+		}
 		Compiled	c	= compile( Mode.LIST, null );
 		Object		result;
 		if ( shape == Shape.STREAM ) {
@@ -2152,13 +2397,23 @@ public final class CriteriaBuilder implements IReferenceable {
 	public Object get( IBoxContext context, boolean uniqueFirst ) {
 		requireTopLevel();
 		announce( ORMKeys.EVENT_BEFORE_CRITERIA_GET, () -> Struct.of( Key.of( "criteriaBuilder" ), this ) );
-		Compiled	c		= compile( Mode.LIST, null );
-		List<?>		rows	= run( context, c, firstResult, uniqueFirst ? 1 : 2 );
-		if ( rows.size() > 1 ) {
-			throw ORMErrors.nonUniqueResult( 0, OPERATION + ".get", c.hql() );
+		Object result;
+		if ( memento != null ) {
+			Array structs = MementoProjection.list( this, context, firstResult, uniqueFirst ? 1 : 2 );
+			if ( structs.size() > 1 ) {
+				throw ORMErrors.nonUniqueResult( 0, OPERATION + ".get", null );
+			}
+			result = structs.isEmpty() ? null : structs.get( 0 );
+		} else {
+			Compiled	c		= compile( Mode.LIST, null );
+			List<?>		rows	= run( context, c, firstResult, uniqueFirst ? 1 : 2 );
+			if ( rows.size() > 1 ) {
+				throw ORMErrors.nonUniqueResult( 0, OPERATION + ".get", c.hql() );
+			}
+			result = rows.isEmpty() ? null : first( shapeRows( rows, c ) );
 		}
-		Object result = rows.isEmpty() ? null : first( shapeRows( rows, c ) );
-		announce( ORMKeys.EVENT_AFTER_CRITERIA_GET, () -> Struct.of( Key.of( "criteriaBuilder" ), this, Key.of( "result" ), result ) );
+		final Object found = result;
+		announce( ORMKeys.EVENT_AFTER_CRITERIA_GET, () -> Struct.of( Key.of( "criteriaBuilder" ), this, Key.of( "result" ), found ) );
 		return result;
 	}
 
@@ -2185,6 +2440,10 @@ public final class CriteriaBuilder implements IReferenceable {
 	 */
 	public Object first( IBoxContext context ) {
 		requireTopLevel();
+		if ( memento != null ) {
+			Array structs = MementoProjection.list( this, context, firstResult, 1 );
+			return structs.isEmpty() ? null : structs.get( 0 );
+		}
 		Compiled c = compile( Mode.LIST, null );
 		return first( shapeRows( run( context, c, firstResult, 1 ), c ) );
 	}
@@ -2240,12 +2499,17 @@ public final class CriteriaBuilder implements IReferenceable {
 	 * @return {@code { results, pagination : { page, maxRows, totalRecords, totalPages } }}.
 	 */
 	public IStruct paginate( IBoxContext context, Object page, Object maxRows ) {
-		int			p		= positive( page, "page" );
-		int			size	= positive( maxRows, "maxRows" );
-		long		total	= count( context, null );
-		Compiled	c		= compile( Mode.LIST, null );
-		Object		results	= shapeRows( run( context, c, ( p - 1 ) * size, size ), c );
-		IStruct		paging	= Struct.linkedOf( Key.of( "page" ), p, Key.of( "maxRows" ), size, Key.of( "totalRecords" ), total, Key.of( "totalPages" ),
+		int		p		= positive( page, "page" );
+		int		size	= positive( maxRows, "maxRows" );
+		long	total	= count( context, null );
+		Object	results;
+		if ( memento != null ) {
+			results = MementoProjection.list( this, context, ( p - 1 ) * size, size );
+		} else {
+			Compiled c = compile( Mode.LIST, null );
+			results = shapeRows( run( context, c, ( p - 1 ) * size, size ), c );
+		}
+		IStruct paging = Struct.linkedOf( Key.of( "page" ), p, Key.of( "maxRows" ), size, Key.of( "totalRecords" ), total, Key.of( "totalPages" ),
 		    ( long ) Math.ceil( total / ( double ) size ) );
 		return Struct.linkedOf( Key.of( "results" ), results, Key.of( "pagination" ), paging );
 	}
@@ -2377,6 +2641,10 @@ public final class CriteriaBuilder implements IReferenceable {
 	 */
 	private long batches( IBoxContext context, Object size, java.util.function.Consumer<Object> onBatch ) {
 		requireTopLevel();
+		if ( memento != null ) {
+			throw new ORMException( ORMErrorType.ARGUMENT, "asStruct( includes ) works with list(), get(), first() and paginate(), not each() or chunk().",
+			    "Use list() with maxResults()/firstResult() pages, or chunk() without asStruct( includes )." );
+		}
 		int		batch		= positive( size, "size" );
 		String	idName		= root.model().singleIdName();
 		boolean	keyset		= idName != null && orders.isEmpty() && projections.isEmpty() && ( shape == Shape.ENTITY || shape == Shape.STREAM );

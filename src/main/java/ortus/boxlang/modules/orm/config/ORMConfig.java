@@ -278,6 +278,11 @@ public class ORMConfig {
 	public IStruct								hibernateProperties;
 
 	/**
+	 * Named SQL functions ({@code sqlFunctions}) registered with Hibernate so HQL and criteria paths can call them.
+	 */
+	public SqlFunctions							sqlFunctions			= SqlFunctions.empty();
+
+	/**
 	 * If enabled, the ORM will create the Hibernate mapping XML (*.hbmxml) files
 	 * alongside the entities. This is great for debugging your entities and
 	 * relationships.
@@ -318,11 +323,9 @@ public class ORMConfig {
 	public String								sqlScript;
 
 	/**
-	 * Specifies whether the database has to be inspected to identify the missing
-	 * information required to generate the Hibernate mapping.
-	 *
-	 * The database is inspected to get the column data type, primary key and
-	 * foreign key information.
+	 * Adobe ColdFusion compatibility: read the existing tables at boot to fill in what entities leave out, the
+	 * {@code ormtype} of untyped plain properties (from the column type) and the id of entities without one (from the
+	 * primary key). Foreign keys are not inferred. Off by default.
 	 */
 	public boolean								useDBForMapping			= false;
 
@@ -577,6 +580,12 @@ public class ORMConfig {
 			ormConfig = properties.getAsString( ORMKeys.ormConfig );
 		}
 
+		if ( properties.containsKey( ORMKeys.useDBForMapping ) && properties.get( ORMKeys.useDBForMapping ) != null ) {
+			useDBForMapping = BooleanCaster.cast( properties.get( ORMKeys.useDBForMapping ) );
+		}
+		if ( properties.containsKey( ORMKeys.sqlFunctions ) ) {
+			sqlFunctions = SqlFunctions.parse( properties.get( ORMKeys.sqlFunctions ) );
+		}
 		if ( properties.containsKey( ORMKeys.hibernateProperties )
 		    && properties.get( ORMKeys.hibernateProperties ) instanceof IStruct hibernatePropertiesStruct ) {
 			hibernateProperties = hibernatePropertiesStruct;
@@ -781,6 +790,9 @@ public class ORMConfig {
 		// rides that transaction and never begins a Hibernate one). An application can still choose its own coordinator (JTA)
 		// through hibernateProperties, applied below.
 		configuration.getProperties().put( AvailableSettings.TRANSACTION_COORDINATOR_STRATEGY, new BoxTransactionCoordinatorBuilder() );
+		if ( !this.sqlFunctions.isEmpty() ) {
+			configuration.registerFunctionContributor( this.sqlFunctions.contributor() );
+		}
 
 		// Apply raw Hibernate properties from a `hibernate.properties`-formatted file (ormConfig), then from the inline `hibernateProperties`
 		// struct. Both are applied last so application developers can override any of bx-orm's own defaults above, including per-datasource tuning

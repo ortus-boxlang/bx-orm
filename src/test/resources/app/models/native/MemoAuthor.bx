@@ -1,0 +1,40 @@
+/**
+ * Fixture for entityToStruct (Phase 4): an author with a mementifier-style this.memento.
+ */
+class persistent="true" table="memo_authors" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="firstName" ormType="string" length="50";
+
+	property name="lastName" ormType="string" length="50";
+
+	property name="nickName" ormType="string" length="50";
+
+	property name="passwordHash" ormType="string" length="100";
+
+	property name="joined" ormType="timestamp";
+
+	property name="posts" fieldtype="one-to-many" cfc="MemoPost" fkcolumn="author_id" inverse="true" orderby="id";
+
+	this.memento = {
+		defaultIncludes : [ "id", "firstName", "lastName", "nickName", "fullName", "joined", "initials" ],
+		neverInclude    : [ "passwordHash" ],
+		defaults        : { nickName : "none" },
+		mappers         : {
+			lastName : ( value, memento ) => ucase( value ),
+			initials : ( value, memento ) => left( memento.firstName, 1 ) & left( memento.lastName, 1 )
+		},
+		profiles        : {
+			export : { defaultIncludes : [ "id", "lastName" ], mappers : {} }
+		}
+	};
+
+	/**
+	 * A computed value, included by name.
+	 */
+	function getFullName() {
+		return getFirstName() & " " & getLastName();
+	}
+
+}

@@ -261,3 +261,9 @@ src/main/java/ortus/boxlang/modules/orm/config/
 4. **Connection provider is singleton per datasource** — it's created once and reused for all sessions on that datasource; don't hold per-session state.
 5. **`cacheProvider` defaults to `BoxCacheProvider`** — this uses BoxLang's internal cache service; custom providers must implement `ICacheProvider`.
 6. **BootstrapServiceRegistry must be closed on failure** — but not on success; see Session Management skill for details.
+7. **`sqlFunctions`** is parsed by `config/SqlFunctions` and registered with `Configuration.registerFunctionContributor()`;
+   `ormGetSQLFunctions()` and `ormDiagnostics()` read it from the booted app's `ORMConfig`.
+8. **`useDBForMapping`** (default false) runs `mapping/DatabaseMappingInspector` at mapping time: ormtypes and missing ids
+   from JDBC metadata, no foreign keys.
+9. **`hibernate.transaction.coordinator_class`** is set to a per-config `BoxTransactionCoordinatorBuilder` (see the
+   transactions skill) before `hibernateProperties` are applied, so an app can still choose JTA.

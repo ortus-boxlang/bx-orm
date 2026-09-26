@@ -67,6 +67,22 @@ Features Hibernate 7.4 already implements, exposed simply. Design details in [§
 | Read-only | `ormReadOnly( closure )`, `entityLoadReadOnly()`, `{ readOnly : true }` on `entityLoad()` and `entityLoadByPK()`. | [§10d](#10d-hibernate-native-features-phase-3b) |
 | Criteria bulk statements | `updateAll( { prop : value } )` and `deleteAll()` run one HQL statement and return the row count. | [§10d](#10d-hibernate-native-features-phase-3b) |
 
+### GORM-inspired additions (Phase 4)
+
+Convenience features inspired by Grails GORM, cborm and mementifier. Design details in [§10e](#10e-gorm-inspired-additions-phase-4).
+
+| Feature | Shape | Details |
+| --- | --- | --- |
+| Load many by id | `entityLoadByPK( "User", [ 3, 1, 99 ] )` returns `[ user3, user1, null ]` from one batched query. | [§10e](#10e-gorm-inspired-additions-phase-4) |
+| Save and delete arrays | `entitySave( [ a, b ], { flush : true } )`, `entityDelete( list, { flush : true } )`. | [§10e](#10e-gorm-inspired-additions-phase-4) |
+| `defaultSort` | `class defaultSort="lastName, firstName desc"`: the order of `entityLoad()` and criteria when none is given. Checked at boot. | [§10e](#10e-gorm-inspired-additions-phase-4) |
+| Functions in criteria paths | `isEq( "year(createdDate)", 2025 )`, `order( "lower(name)" )`: HQL functions around property paths. | [§10e](#10e-gorm-inspired-additions-phase-4) |
+| Named SQL functions | `ormSettings.sqlFunctions = { nameLen : { sql : "char_length(?1)", returns : "integer" } }`, listed by `ormGetSQLFunctions()`. | [§10e](#10e-gorm-inspired-additions-phase-4) |
+| `postCommit` event | `postCommit( entity, action )` on the entity and the global handler once the write is committed. | [§10e](#10e-gorm-inspired-additions-phase-4) |
+| `useDBForMapping` | Adobe compatibility, off by default: untyped properties and missing ids are read from the existing tables at boot. | [§10e](#10e-gorm-inspired-additions-phase-4) |
+| Entities as structs | `entityToStruct( entityOrArray, { includes, excludes, profile } )`, mementifier-compatible `this.memento`, ISO 8601 dates. | [§10e](#10e-gorm-inspired-additions-phase-4) |
+| Structs without entities | `entityLoadAsStruct( name, idOrFilter, includes )` and criteria `asStruct( includes )`: the same structs from projection queries. | [§10e](#10e-gorm-inspired-additions-phase-4) |
+
 ---
 
 ## 1. What bx-orm is
@@ -743,6 +759,70 @@ properties and composite ids with joins are `orm.argument` errors.
 
 ---
 
+## 10e. GORM-inspired additions (Phase 4)
+
+**Load many by id.** `ORMApp.loadEntitiesByIds()` converts each id like a single load (`toIdentifier()`), then calls
+`Session.findMultiple( mappedClass, ids, FindOption... )` (JPA 3.2): one batched query, results in the asked order
+with null for a missing id. The same find options as `entityLoadByPK` apply (`readOnly`, `lock`).
+
+**Save and delete arrays.** `EntitySave.save()` and the delete loop take each entity in turn and remember the sessions
+they touched; `{ flush : true }` flushes those sessions. `BaseORMBIF.entities()` / `flushRequested()` are shared.
+
+**`defaultSort`.** `ORMApp.defaultSort( record )` parses the annotation (own, else the parent entity's) into
+`SortSpec`s, validated against the entity's properties. `validateEntities()` runs it at boot, so a typo fails the boot
+with a suggestion. `loadEntitiesByFilter()` uses it when no order is given; the criteria `compile()` uses it for
+entity rows (`Mode.LIST`, no projections, no `order()`). Counts ignore it, and `chunk()`/`each()` without an order
+still go by id (keyset).
+
+**Functions in criteria paths.** `CriteriaBuilder.resolve()` recognises `name( args )`. `resolveFunction()` splits the
+arguments on top-level commas and resolves each one: a property path (joined as usual), a nested function, a number, a
+`'quoted string'`, or `x as Type` inside `cast()`. Anything else is an `orm.argument` error, so no value is ever pasted
+into the HQL. The function name is left to Hibernate: built-ins, dialect functions and `sqlFunctions` resolve; an
+unknown one is passed through to the SQL and the database rejects it.
+
+**Named SQL functions.** `config/SqlFunctions` parses `ormSettings.sqlFunctions` (a template string, or
+`{ sql, returns }`), validates names and return types (`orm.config`), and registers them through
+`Configuration.registerFunctionContributor()` with `SqmFunctionRegistry.registerPattern()` (public SPIs).
+`ormGetSQLFunctions()` returns them; `ormDiagnostics()` lists their names.
+
+**`postCommit`.** bx-orm has no Hibernate transaction, so Hibernate's post-commit listeners never fire. Instead
+`config/PostCommitQueue` (one per `ORMContext`, attached to each session as a Hibernate `SessionEventListener`) records
+every insert, update and delete the `EventListener` sees. BoxLang announces `onTransactionCommit` before the JDBC commit
+and `onTransactionEnd` after it, so the `TransactionManager` marks the recorded events committed on commit, drops the
+uncommitted ones on rollback, and fires them on end. Outside a transaction each statement commits on its own: events fire
+when the flush ends (`flushEnd`), or at once for a write outside a flush (an identity insert). The queue finds its
+session's context through a weak session registry. Only registered with `eventHandling=true`, like every event.
+
+**`useDBForMapping`.** `mapping/DatabaseMappingInspector` runs in `MappingGenerator` before the entity metadata is
+built, because building it writes defaults such as `ormtype="string"` back into the raw annotations. It builds a
+throwaway metadata from a copy (table, schema, ids), reads the table with JDBC `DatabaseMetaData` (name as given, then
+upper- and lower-cased), and adds `ormtype` to untyped plain properties and `fieldtype="id"` to the primary key
+properties of a root entity with no id. No foreign keys. A missing table is skipped; unreadable metadata is a warning.
+
+**Entities as structs.** `memento/MementoSpec` merges the caller's options with mementifier's `this.memento`
+(profiles replace the base settings they define; `neverInclude` always wins; no `defaultIncludes` means the id and plain
+properties, with the caller's includes added). `memento/EntityMemento` walks the entities through their getters, writes
+associations as nested structs or arrays, ends cycles with the id (an identity set of the entities on the current
+branch), turns nulls into the `defaults` entry or `""`, dates into ISO 8601 (`memento/IsoDates`), and runs mappers last
+on the keys present. Unlike mementifier, an unknown include is `orm.property.unknown` instead of being skipped.
+
+**Structs without entities.** `criteria/MementoProjection` turns the same spec into a tree of nodes. The root query is
+the criteria itself (`copy()`, then `compileColumns()`), selecting each node's id and plain values; to-one associations
+are left joins in the same row, and a null id marks a null association. Each to-many association is a separate query
+rooted at the same entity, `where root.id in ( ids just read )` (chunks of 500), selecting the parent's id first; rows are
+grouped back into their parents, in child id order, and nested collections repeat the step. Mappers run last, innermost
+first. `this.memento` comes from `ORMApp.prototype()`, one instance per entity made through the instantiator. Getters
+need an entity: one from `this.memento` is skipped, one the caller asks for is `orm.argument`. `entityLoadAsStruct()` is
+`criteria/StructLoads` (id, composite key or filter conditions, then the projection). Plain `asStruct()` (no includes) is
+unchanged except for ISO 8601 dates.
+
+**Tests.** `bifs/GormHelpersTest`, `criteria/CriteriaFunctionsTest`, `config/SqlFunctionsTest`,
+`config/PostCommitTest`, `mapping/DatabaseMappingTest` (Derby, table created before the ORM boots),
+`bifs/EntityToStructTest`, `bifs/EntityLoadAsStructTest` (including a check that its JSON equals `entityToStruct()`'s
+and that no entity was loaded), and a `BootErrorsTest` scenario for `defaultSort`.
+
+---
+
 ## 11. The ORM manifest boot cache (`.bxorm/`)
 
 Boot has three costs: entity **discovery** (walking the tree), **metadata parsing** (per entity,
@@ -1008,7 +1088,7 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
 
 - **cborm-compatible path** — the V2 plan: new BIFs (Phase 2), the fluent `entityCriteria()` (Phase 3),
   Hibernate-native features (Phase 3B, done: [§10d](#10d-hibernate-native-features-phase-3b)), GORM-inspired
-  additions, dynamic finders, cborm calling bx-orm BIFs, a live cborm test run, and opt-in static class
+  additions (Phase 4, done: [§10e](#10e-gorm-inspired-additions-phase-4)), dynamic finders, cborm calling bx-orm BIFs, a live cborm test run, and opt-in static class
   helpers. Casting is not a phase: bx-orm casts ids itself and Hibernate 7 coerces
   query parameters, so cborm's `idCast()`/`autoCast()` just return their value.
 
@@ -1024,6 +1104,10 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
 | Mapping generation & the modern writer | `ortus.boxlang.modules.orm.mapping` |
 | Errors and diagnostics | `ortus.boxlang.modules.orm.errors` (`ORMException`, `ORMErrorType`, `ORMErrors`), `bifs/ORMDiagnostics` |
 | ORM manifest boot cache (`.bxorm/`) | `ortus.boxlang.modules.orm.mapping.manifest` |
+| Criteria (`entityCriteria()`, `asStruct( includes )`) | `ortus.boxlang.modules.orm.criteria` (`CriteriaBuilder`, `CriteriaMethods`, `MementoProjection`, `StructLoads`) |
+| Entities as structs | `ortus.boxlang.modules.orm.memento` (`MementoSpec`, `EntityMemento`, `IsoDates`) |
+| Locking, read-only, post-commit | `EntityLocking`, `ORMContext.readOnly()`, `config/BoxTransactionCoordinatorBuilder`, `config/PostCommitQueue` |
+| Facade Java annotations | `hibernate/facade/FacadeAnnotations` |
 | Session lifecycle | `ORMService` → `ORMApp` → `ORMContext`, `SessionFactoryBuilder` |
 | Subsystem deep-dives | `.agents/skills-custom/` |
 

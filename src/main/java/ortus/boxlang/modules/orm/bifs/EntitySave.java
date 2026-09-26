@@ -48,24 +48,52 @@ public class EntitySave extends BaseORMBIF {
 	public EntitySave() {
 		super();
 		declaredArguments = new Argument[] {
-		    new Argument( true, "Any", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
-		    new Argument( false, "Boolean", ORMKeys.forceinsert )
+		    new Argument( true, "Any", ORMKeys.entity, Set.of( Validator.REQUIRED ) ),
+		    new Argument( false, "Any", ORMKeys.forceinsert ),
+		    new Argument( false, "Struct", ORMKeys.options )
 		};
 	}
 
 	/**
-	 * Save the provided entity to the persistence context
+	 * Save one entity, or an array of entities: a new entity is inserted, a detached one merged, and a managed one needs
+	 * nothing (its changes are written when the session flushes, at the end of the <code>transaction{}</code>). Pass
+	 * <code>{ flush : true }</code> to flush right away.
+	 *
+	 * <pre>
+	 * entitySave( user );
+	 * entitySave( [ order, invoice ], { flush : true } );
+	 * entitySave( user, true, { flush : true } ); // force an insert
+	 * </pre>
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
-	 * 
-	 * @arguments.entity The entity instance to save.
-	 * 
-	 * @arguments.forceinsert If true, will force an insert operation. Otherwise, a saveOrUpdate operation will be performed.
+	 *
+	 * @return null.
+	 *
+	 * @argument.entity The entity to save, or an array of entities.
+	 *
+	 * @argument.forceinsert If true, always insert. May also be the options struct (<code>entitySave( e, { flush : true } )</code>).
+	 *
+	 * @argument.options Options: <code>flush</code> (boolean) flushes the session after the save.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IClassRunnable entity = requireEntity( arguments.get( ORMKeys.entity ), "entity", "entitySave" );
-		save( context, entity, BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) ) );
+		Object	force	= arguments.get( ORMKeys.forceinsert );
+		Object	options	= arguments.get( ORMKeys.options );
+		if ( force instanceof ortus.boxlang.runtime.types.IStruct && options == null ) {
+			// entitySave( entity, { flush : true } )
+			options	= force;
+			force	= null;
+		}
+		boolean					forceInsert	= force != null && BooleanCaster.cast( force );
+		ORMContext				ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		java.util.Set<Session>	touched		= new java.util.LinkedHashSet<>();
+		for ( Object item : entities( arguments.get( ORMKeys.entity ) ) ) {
+			IClassRunnable entity = requireEntity( item, "entity", "entitySave" );
+			touched.add( save( context, entity, forceInsert ) );
+		}
+		if ( flushRequested( options ) ) {
+			touched.forEach( session -> ORMContext.flush( session, "entitySave" ) );
+		}
 		return null;
 	}
 
@@ -76,8 +104,10 @@ public class EntitySave extends BaseORMBIF {
 	 * @param context     The context in which the BIF is being invoked.
 	 * @param entity      The entity to save.
 	 * @param forceInsert Always insert, even when the entity looks persisted.
+	 *
+	 * @return The session the entity was saved in.
 	 */
-	public static void save( IBoxContext context, IClassRunnable entity, boolean forceInsert ) {
+	public static Session save( IBoxContext context, IClassRunnable entity, boolean forceInsert ) {
 		String			entityName		= ortus.boxlang.modules.orm.ORMService.getEntityName( entity );
 		ORMContext		ormContext		= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 		ORMApp			ormApp			= ormContext.requireORMApp();
@@ -111,6 +141,7 @@ public class EntitySave extends BaseORMBIF {
 				entity.getVariablesScope().putAll( managedRunnable.getVariablesScope() );
 			}
 		}
+		return session;
 	}
 
 	/**

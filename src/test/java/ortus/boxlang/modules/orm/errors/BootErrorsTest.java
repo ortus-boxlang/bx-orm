@@ -216,4 +216,16 @@ public class BootErrorsTest {
 		assertThat( e.getType() ).isEqualTo( "orm.config" );
 		assertThat( e.getMessage() ).contains( "autoTimestamp=\"always\"" );
 	}
+
+	/**
+	 * Test: A defaultSort naming an unknown property fails the boot with a suggestion.
+	 */
+	@DisplayName( "A defaultSort naming an unknown property fails the boot with a suggestion" )
+	@Test
+	public void testBadDefaultSort() {
+		BoxLangException e = boot( "badDefaultSort" );
+		assertThat( e.getType() ).isEqualTo( "orm.config" );
+		assertThat( e.getMessage() ).contains( "titel" );
+		assertThat( e.getMessage() ).contains( "title" );
+	}
 }

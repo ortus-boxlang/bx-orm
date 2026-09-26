@@ -158,6 +158,8 @@ public class TransactionManager extends BaseInterceptor {
 				ORMContext.flush( ormSession, "transaction commit" );
 			}
 		} );
+		// The flushed writes are part of this commit: their postCommit events fire when the transaction ends.
+		ormContext.getPostCommits().markCommitted();
 	}
 
 	@InterceptionPoint
@@ -188,6 +190,8 @@ public class TransactionManager extends BaseInterceptor {
 				ormSession.clear();
 			}
 		} );
+		// Rolled-back writes never get a postCommit event.
+		ormContext.getPostCommits().dropUncommitted();
 	}
 
 	@InterceptionPoint
@@ -217,5 +221,7 @@ public class TransactionManager extends BaseInterceptor {
 				ORMContext.flush( ormSession, "transaction commit" );
 			}
 		} );
+		// BoxLang announces the end after the JDBC commit: fire the committed writes' postCommit events.
+		ormContext.getPostCommits().fire();
 	}
 }

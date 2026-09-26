@@ -142,4 +142,18 @@ class {
 		application.postNewFired = true;
 		application.postNewEntityName = arguments.entityName;
 	}
+
+	/**
+	 * postCommit: records the committed writes of CommitNote entities (PostCommitTest).
+	 *
+	 * @entity     The entity.
+	 * @entityName The entity name.
+	 * @action     insert, update or delete.
+	 */
+	public void function postCommit( any entity, string entityName, string action ) {
+		if ( entityName == "CommitNote" ) {
+			request.globalCommitLog = request.globalCommitLog ?: [];
+			request.globalCommitLog.append( action & ":" & entity.getTitle() );
+		}
+	}
 }

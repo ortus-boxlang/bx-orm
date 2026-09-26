@@ -127,6 +127,7 @@ public class ORMDiagnostics extends BaseORMBIF {
 		settings.put( Key.of( "flushAtRequestEnd" ), config.flushAtRequestEnd );
 		settings.put( Key.of( "autoManageSession" ), config.autoManageSession );
 		settings.put( Key.of( "eventHandling" ), config.eventHandling );
+		settings.put( Key.of( "sqlFunctions" ), Array.fromList( new java.util.ArrayList<Object>( config.sqlFunctions.all().keySet() ) ) );
 		settings.put( Key.of( "secondaryCacheEnabled" ), config.secondaryCacheEnabled );
 		settings.put( Key.of( "logSQL" ), config.logSQL );
 		settings.put( Key.of( "ignoreParseErrors" ), config.ignoreParseErrors );

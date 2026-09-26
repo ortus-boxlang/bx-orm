@@ -249,6 +249,16 @@ public class MappingGenerator {
 			    metaParseTime, this.entities.size(), doParallel ? "parallel" : "sequential" );
 		}
 
+		// Phase 3a-: useDBForMapping fills in missing ormtypes and ids from the existing tables (Adobe ColdFusion
+		// compatibility), before the metadata below is built from the annotations.
+		if ( config.useDBForMapping ) {
+			for ( EntityRecord entity : this.entities ) {
+				entity.getMetadata().put( ORMKeys.classFQN, entity.getClassFQN() );
+				entity.getMetadata().computeIfAbsent( Key.datasource, ( key ) -> entity.getDatasource() );
+			}
+			DatabaseMappingInspector.apply( this.entities, this.context );
+		}
+
 		// Phase 3a: Build the normalized entity metadata for EVERY entity first, so that XML generation (which may inspect other entities, e.g. to
 		// determine an inheritance root's strategy or resolve an inverse collection's owning side) always sees a fully-populated entity set.
 		for ( EntityRecord entity : this.entities ) {

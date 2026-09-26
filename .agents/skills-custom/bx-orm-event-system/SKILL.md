@@ -52,6 +52,11 @@ flowchart TB
 > The integrator is registered only when `eventHandling=true` (`ORMConfig.toHibernateConfig()`), and
 > `EntityNew.create()` fires `postNew` only then. With `eventHandling=false` (the default) no ORM event runs.
 
+**`postCommit( entity, action )`**: `onPostInsert/Update/Delete` also record the write in `config/PostCommitQueue`
+(per `ORMContext`, a Hibernate `SessionEventListener` on each session). `TransactionManager` marks them committed on
+`onTransactionCommit` (announced before the JDBC commit), drops uncommitted ones on rollback, and fires them on
+`onTransactionEnd` (after the commit). Outside a transaction they fire at `flushEnd`, or at once outside a flush.
+
 The `EventListener` implements `Integrator` and a dozen Hibernate event listener interfaces, giving it a hook into every phase of the entity lifecycle:
 
 ```java

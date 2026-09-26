@@ -26,6 +26,7 @@ import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.validation.Validator;
 
@@ -39,7 +40,7 @@ public class EntityLoadByPK extends BaseORMBIF {
 		super();
 		declaredArguments = new Argument[] {
 		    new Argument( true, "String", ORMKeys.entity, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
-		    new Argument( true, "Any", Key.id, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
+		    new Argument( true, "Any", Key.id, Set.of( Validator.REQUIRED ) ),
 		    new Argument( false, "Any", ORMKeys.options )
 		};
 	}
@@ -54,6 +55,13 @@ public class EntityLoadByPK extends BaseORMBIF {
 	 * In Lucee, by default, an array of entities is returned and you must pass a third `unique=true` argument to return only a single entity. In BoxLang,
 	 * only a single entity is returned - matching the Adobe ColdFusion behavior. A boolean third argument (Lucee's
 	 * `unique`) is accepted and ignored. To return an array of entities, use the `entityLoad` BIF.
+	 * <p>
+	 * Pass an array of ids to load several entities in one query. The result is an array in the order of the ids, with
+	 * null where no row has that id:
+	 *
+	 * <pre>
+	 * users = entityLoadByPK( "User", [ 3, 1, 99 ] ); // [ user3, user1, null ]
+	 * </pre>
 	 * <p>
 	 * Composite keys are also supported:
 	 *
@@ -75,9 +83,11 @@ public class EntityLoadByPK extends BaseORMBIF {
 	 *
 	 * @argument.entity The name of the entity to load.
 	 *
-	 * @argument.id The primary key value, or a struct of key/value pairs for composite keys.
+	 * @argument.id The primary key value, a struct of key/value pairs for composite keys, or an array of either.
 	 *
 	 * @argument.options A struct of load options: lock, timeout, skipLocked, readOnly.
+	 *
+	 * @return The entity or null; for an array of ids, an array in the same order with null for missing ids.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		String		entityName		= arguments.getAsString( ORMKeys.entity );
@@ -85,6 +95,9 @@ public class EntityLoadByPK extends BaseORMBIF {
 		IStruct		options			= arguments.get( ORMKeys.options ) instanceof IStruct struct ? struct : null;
 
 		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		if ( keyValue instanceof Array ids ) {
+			return ormService.requireORMApp( context ).loadEntitiesByIds( jdbcBoxContext, entityName, ids, options );
+		}
 		return ormService.requireORMApp( context ).loadEntityById( jdbcBoxContext, entityName, keyValue, options );
 	}
 }

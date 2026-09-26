@@ -121,6 +121,9 @@ public class ORMKeys {
 	public static final Key	readOnly					= Key.of( "readOnly" );
 	public static final Key	where						= Key.of( "where" );
 	public static final Key	lock						= Key.of( "lock" );
+	public static final Key	defaultSort					= Key.of( "defaultSort" );
+	public static final Key	sqlFunctions				= Key.of( "sqlFunctions" );
+	public static final Key	flush						= Key.of( "flush" );
 	public static final Key	mode						= Key.of( "mode" );
 	public static final Key	skipLocked					= Key.of( "skipLocked" );
 	public static final Key	lockTimeout					= Key.of( "lockTimeout" );
@@ -242,6 +245,8 @@ public class ORMKeys {
 	public static final Key	postUpdate					= Key.of( "postUpdate" );
 	public static final Key	postInsert					= Key.of( "postInsert" );
 	public static final Key	postNew						= Key.of( "postNew" );
+	public static final Key	postCommit					= Key.of( "postCommit" );
+	public static final Key	action						= Key.of( "action" );
 	public static final Key	oldData						= Key.of( "oldData" );
 
 	/**

@@ -284,7 +284,8 @@ final class CriteriaMethods {
 		} );
 		def( "withProjections", "projections", false, ( c, x, a ) -> c.withProjections( ( IStruct ) a[ 0 ] ) );
 		def( "asDistinct|distinct", "", false, ( c, x, a ) -> c.asDistinct() );
-		def( "asStruct|asStructs", "", false, ( c, x, a ) -> c.shape( Shape.STRUCT ) );
+		def( "asStruct|asStructs", "includes,options", false,
+		    ( c, x, a ) -> c.asStruct( a[ 0 ], a[ 1 ] == null ? null : struct( a[ 1 ], "asStruct" ) ) );
 		def( "asQuery", "", false, ( c, x, a ) -> c.shape( Shape.QUERY ) );
 		def( "asStream", "", false, ( c, x, a ) -> c.shape( Shape.STREAM ) );
 		def( "asEntities|asArray", "", false, ( c, x, a ) -> c.shape( Shape.ENTITY ) );

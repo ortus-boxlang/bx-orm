@@ -1,0 +1,7 @@
+/**
+ * defaultSort names a property the entity does not have.
+ */
+class persistent="true" table="memos" defaultSort="titel desc" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="title" ormType="string";
+}

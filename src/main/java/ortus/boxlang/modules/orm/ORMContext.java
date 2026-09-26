@@ -60,7 +60,7 @@ public class ORMContext {
 	/**
 	 * Static reference to the BoxLang runtime, for accessing services and logging.
 	 */
-	private static final BoxRuntime			runtime				= BoxRuntime.getInstance();
+	private static final BoxRuntime									runtime				= BoxRuntime.getInstance();
 
 	/**
 	 * Shutdown listener
@@ -86,37 +86,43 @@ public class ORMContext {
 	/**
 	 * The logger for the ORM application.
 	 */
-	private BoxLangLogger					logger;
+	private BoxLangLogger											logger;
 
 	/**
 	 * ORM service.
 	 */
-	private ORMService						ormService;
+	private ORMService												ormService;
 
 	/**
 	 * The ORM application for this context.
 	 */
-	private ORMApp							ormApp;
+	private ORMApp													ormApp;
 
 	/**
 	 * The BoxLang context for this ORM context; should be a JDBC-capable context (request or thread).
 	 */
-	private IBoxContext						context;
+	private IBoxContext												context;
 
 	/**
 	 * The ORM configuration for this context.
 	 */
-	private ORMConfig						config;
+	private ORMConfig												config;
 
 	/**
 	 * Map of Hibernate sessions for this request, keyed by datasource name.
 	 */
-	private Map<Key, Session>				sessions			= new ConcurrentHashMap<>();
+	private Map<Key, Session>										sessions			= new ConcurrentHashMap<>();
 
 	/**
 	 * How many {@code ormReadOnly()} blocks are running. While above zero, every session loads entities read-only.
 	 */
-	private int								readOnlyDepth		= 0;
+	private int														readOnlyDepth		= 0;
+
+	/**
+	 * The {@code postCommit} events waiting for their writes to commit (see {@link ortus.boxlang.modules.orm.config.PostCommitQueue}).
+	 */
+	private final ortus.boxlang.modules.orm.config.PostCommitQueue	postCommits			= new ortus.boxlang.modules.orm.config.PostCommitQueue(
+	    this::isInTransaction );
 
 	/**
 	 * Retrieve the ORMContext for the given boxlang context (whatever JDBC-capable context inside which we are currently executing).
@@ -273,6 +279,7 @@ public class ORMContext {
 			if ( this.readOnlyDepth > 0 ) {
 				session.setDefaultReadOnly( true );
 			}
+			this.postCommits.attach( session );
 			return session;
 		} );
 	}
@@ -306,6 +313,15 @@ public class ORMContext {
 				} );
 			}
 		}
+	}
+
+	/**
+	 * The {@code postCommit} events of this context.
+	 *
+	 * @return The queue.
+	 */
+	public ortus.boxlang.modules.orm.config.PostCommitQueue getPostCommits() {
+		return this.postCommits;
 	}
 
 	/**

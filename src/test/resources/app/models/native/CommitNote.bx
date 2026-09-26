@@ -1,0 +1,21 @@
+/**
+ * Fixture for the postCommit event (Phase 4): records every committed write in request.commitLog.
+ */
+class persistent="true" table="commit_notes" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="title" ormType="string" length="100";
+
+	/**
+	 * Called once the write is committed.
+	 *
+	 * @entity The entity.
+	 * @action insert, update or delete.
+	 */
+	function postCommit( entity, action ) {
+		request.commitLog = request.commitLog ?: [];
+		request.commitLog.append( action & ":" & getTitle() );
+	}
+
+}

@@ -24,7 +24,14 @@ ORM BIFs (Built-In Functions) provide the public API for BoxLang developers to i
 | **Cache & Eviction** | `ORMEvictEntity`, `ORMEvictCollection`, `ORMEvictQueries` |
 | **HQL Queries** | `ORMExecuteQuery` |
 | **Inspection** | `EntityGetName`, `EntityGetDatasource`, `EntityGetId`, `EntityGetMetadata`, `EntityIsDirty`, `EntityGetDirtyProperties`, `ORMIsSessionDirty`, `ORMGetSessionStatistics` (all delegate to `EntityInspector`) |
-| **Metadata** | `ORMGetHibernateVersion`, `ORMDiagnostics` |
+| **Metadata** | `ORMGetHibernateVersion`, `ORMDiagnostics`, `ORMGetSQLFunctions` |
+| **Load helpers** | `EntityLoadOrNew`, `EntityLoadOrSave`, `EntityLoadOrFail`, `EntityLoadByPKOrFail` (shared steps in `bifs/LoadOr`), `EntityGetReference`, `EntityLoadReadOnly` |
+| **Session control** | `EntityEvict`, `EntityLock` (`EntityLocking`), `ORMReadOnly` (`ORMContext.readOnly()`) |
+| **Structs** | `EntityToStruct` (`memento/EntityMemento`), `EntityLoadAsStruct` (`criteria/StructLoads` + `MementoProjection`) |
+
+`EntitySave` / `EntityDelete` take one entity or an array plus `{ flush : true }` (`BaseORMBIF.entities()`,
+`flushRequested()`); `EntitySave.save()` and `EntityNew.create()` are the shared static cores other BIFs reuse.
+`EntityLoadByPK` takes an array of ids (`ORMApp.loadEntitiesByIds`, one `findMultiple`) and an options struct.
 
 ## BaseORMBIF — The Parent Class
 

@@ -240,3 +240,7 @@ src/main/java/ortus/boxlang/modules/orm/mapping/
 3. **`entityName` is NOT `classFQN`** — the entity name comes from the `entityname` annotation or simple class name; the FQN is the dot-delimited path.
 4. **Validate early** — catch invalid entity configurations before Hibernate gets them; throw `BoxRuntimeException` with descriptive messages.
 5. **Temp file cleanup** — mapping files in `orm_mappings/` should be cleaned up on ORM shutdown when `saveAlongsideEntity` is `false`.
+6. **Building metadata mutates the raw annotations**: `AbstractPropertyMeta` writes defaults (e.g. `ormtype="string"`) back into the
+   property's annotations. Anything that must see what the developer declared (`DatabaseMappingInspector` for
+   `useDBForMapping`) runs before Phase 3a, on metadata built from a copy.
+7. **`defaultSort`** is parsed by `ORMApp.defaultSort()` and validated at boot in `ORMApp.validateEntities()`.
