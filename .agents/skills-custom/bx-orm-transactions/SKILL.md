@@ -211,6 +211,13 @@ that flag is experimental.
 - Clearing on rollback is **unconditional** (not `autoManageSession`-gated) in the connection-riding
   model — otherwise pending writes survive to `onTransactionEnd` and get committed after BoxLang has
   already rolled back.
+- **Locking queries.** Hibernate refuses a pessimistic-lock *query* ("No active transaction") because no Hibernate
+  transaction is ever active. `config/BoxTransactionCoordinatorBuilder` (set as
+  `hibernate.transaction.coordinator_class` in `ORMConfig`) wraps the JDBC coordinator and reports a transaction as
+  active only inside `lockScope()`. `HQLQuery.inLockScope()` opens it around a locking query (after
+  `EntityLocking.requireTransaction` checked the BoxLang transaction) and then calls `afterOperation()` so Hibernate
+  releases the JDBC resources it kept; skip that and the next transaction gets a closed connection. `session.find`
+  and `session.lock` (used by `entityLoadByPK { lock }` and `entityLock()`) need no scope.
 - `autoManageSession=false` sessions are opened with `FlushMode.MANUAL` (see
   `ORMContext.getSession`), so nothing flushes except explicit `flush()`/`flushForQuery` and the
   interceptor's flushes.

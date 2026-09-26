@@ -1,0 +1,10 @@
+/**
+ * Fixture for soft delete (Phase 3B): entityDelete() marks the row deleted instead of removing it.
+ */
+class persistent="true" table="soft_notes" softDelete="true" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="title" ormType="string" length="100";
+
+}

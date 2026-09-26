@@ -176,6 +176,13 @@ Hibernate manages a generated POJO **facade** per entity, never the `IClassRunna
   snapshot (safe removal while iterating), writes through it reach the live collection. A developer-written
   getter (not a `GeneratedGetter`) is never replaced.
 
+- **Java annotations**: `FacadeAnnotations` turns BoxLang annotations into Hibernate annotations on the
+  facade (entity `softDelete` / `softDeleteColumn` → class `@SoftDelete`; property `autoTimestamp` →
+  getter `@CreationTimestamp` / `@UpdateTimestamp`), for features `mapping.xml` cannot express.
+  `SessionFactoryBuilder` passes them to `EntityFacadeFactory.generate( ..., typeAnnotations )` and
+  `PropertySpec.annotations`. Hibernate merges them with the XML. Add a new Hibernate-native annotation
+  as one more entry in `FacadeAnnotations`.
+
 ## Identifiers and Key normalization
 
 The old tuplizer's `getIdentifier`/`setIdentifier` and its `Key`→`String` normalization are gone. Identifier access now flows through the persister's `identifierMapping`, which uses `BoxPropertyAccess` like any other property. BoxLang scope keys are still `Key` instances, so the getter/setter convert names with `Key.of(...)` at the scope boundary. Composite identifiers arrive as a `java.util.Map` owner and are handled by the getter/setter's map branch.

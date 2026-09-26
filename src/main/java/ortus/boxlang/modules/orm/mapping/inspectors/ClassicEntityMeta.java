@@ -56,6 +56,10 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		if ( this.annotations.containsKey( ORMKeys.catalog ) ) {
 			this.catalogName = this.annotations.getAsString( ORMKeys.catalog );
 		}
+
+		if ( this.annotations.containsKey( ORMKeys.where ) && !this.annotations.getAsString( ORMKeys.where ).isBlank() ) {
+			this.where = this.annotations.getAsString( ORMKeys.where ).trim();
+		}
 		this.isImmutable = this.annotations.containsKey( ORMKeys.readOnly )
 		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.readOnly, "false" ), false );
 

@@ -47,7 +47,8 @@ public class BootErrorsTest {
 	@AfterAll
 	public void tearDown() {
 		System.clearProperty( "bxorm.test.bootScenario" );
-		for ( String scenario : new String[] { "ok", "badOrmType", "duplicates", "badDatasource", "missingPath", "badFieldType", "missingCfc" } ) {
+		for ( String scenario : new String[] { "ok", "badOrmType", "duplicates", "badDatasource", "missingPath", "badFieldType", "missingCfc", "badSoftDelete",
+		    "badAutoTimestamp" } ) {
 			instance.getApplicationService().shutdownApplication( Key.of( "BXORMBootErrors_" + scenario ) );
 		}
 	}
@@ -192,5 +193,27 @@ public class BootErrorsTest {
 		assertThat( e.getType() ).isEqualTo( "orm.config" );
 		assertThat( e.getMessage() ).contains( "Could not find entity 'Customr'" );
 		assertThat( e.getMessage() ).contains( "property 'customer' on entity 'Order'" );
+	}
+
+	/**
+	 * Test: An unknown softDelete value is an orm.config error listing the accepted values.
+	 */
+	@DisplayName( "An unknown softDelete value is an orm.config error listing the accepted values" )
+	@Test
+	public void testBadSoftDelete() {
+		BoxLangException e = boot( "badSoftDelete" );
+		assertThat( e.getType() ).isEqualTo( "orm.config" );
+		assertThat( e.getMessage() ).contains( "sometimes" );
+	}
+
+	/**
+	 * Test: An unknown autoTimestamp value is an orm.config error.
+	 */
+	@DisplayName( "An unknown autoTimestamp value is an orm.config error" )
+	@Test
+	public void testBadAutoTimestamp() {
+		BoxLangException e = boot( "badAutoTimestamp" );
+		assertThat( e.getType() ).isEqualTo( "orm.config" );
+		assertThat( e.getMessage() ).contains( "autoTimestamp=\"always\"" );
 	}
 }

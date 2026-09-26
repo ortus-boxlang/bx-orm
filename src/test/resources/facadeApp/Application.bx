@@ -18,6 +18,7 @@ class {
 		"logSQL"           : "false",
 		"dbcreate"         : "dropcreate",
 		"cacheprovider"    : "ConcurrentHashMap",
+		"eventHandling"    : true,
 		"ignoreParseErrors": true
 	};
 	this.ormEnabled = "true";

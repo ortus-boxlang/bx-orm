@@ -120,6 +120,13 @@ public class ORMKeys {
 	public static final Key	immutable					= Key.of( "immutable" );
 	public static final Key	readOnly					= Key.of( "readOnly" );
 	public static final Key	where						= Key.of( "where" );
+	public static final Key	lock						= Key.of( "lock" );
+	public static final Key	mode						= Key.of( "mode" );
+	public static final Key	skipLocked					= Key.of( "skipLocked" );
+	public static final Key	lockTimeout					= Key.of( "lockTimeout" );
+	public static final Key	softDelete					= Key.of( "softDelete" );
+	public static final Key	softDeleteColumn			= Key.of( "softDeleteColumn" );
+	public static final Key	autoTimestamp				= Key.of( "autoTimestamp" );
 	public static final Key	rowid						= Key.of( "rowid" );
 	public static final Key	optimisticLock				= Key.of( "optimisticLock" );
 	public static final Key	selectBeforeUpdate			= Key.of( "selectBeforeUpdate" );

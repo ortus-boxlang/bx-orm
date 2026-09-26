@@ -28,11 +28,13 @@ import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.services.InterceptorService;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.IStruct;
@@ -68,12 +70,25 @@ public class EntityNew extends BaseORMBIF {
 	 * @argument.ignoreExtras If false, an error will be thrown if properties are provided that do not exist on the entity. Not implemented.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		IStruct properties = arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
+		return create( context, arguments.getAsString( ORMKeys.entityName ), properties );
+	}
+
+	/**
+	 * Instantiate a new, unsaved entity, fill it with properties and fire {@code postNew}. Shared by {@code entityNew()} and
+	 * the {@code entityLoadOrNew()} / {@code entityLoadOrSave()} BIFs.
+	 *
+	 * @param context    The context in which the BIF is being invoked.
+	 * @param entityName The name of the entity to create.
+	 * @param properties Property values to set on the new entity; may be empty.
+	 *
+	 * @return The new entity.
+	 */
+	public static IClassRunnable create( IBoxContext context, String entityName, IStruct properties ) {
 		ORMContext					ormContext			= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 		ORMApp						ormApp				= ormContext.requireORMApp();
-		String						entityName			= arguments.getAsString( ORMKeys.entityName );
 
 		EntityRecord				entityRecord		= ormApp.lookupEntity( entityName, true );
-		IStruct						properties			= arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 
 		SessionFactoryImplementor	sessionFactoryImpl	= ( SessionFactoryImplementor ) ormApp.getSessionFactoryOrThrow(
 		    entityRecord.getDatasource(),
@@ -88,7 +103,6 @@ public class EntityNew extends BaseORMBIF {
 		        .instantiate()
 		);
 
-		// @TODO: Find a more correct location for the entity population logic. Surely we repeat this somewhere else?
 		if ( properties != null && !properties.isEmpty() ) {
 			entity.getVariablesScope().putAll( properties );
 		}
@@ -96,18 +110,22 @@ public class EntityNew extends BaseORMBIF {
 		// Fire the postNew event on the entity itself and on the global event-handler class. Hibernate has no
 		// "instantiate/new" event, so entityNew() is the single place this fires - for developer-initiated creation only,
 		// not for hydration during a load (that is what postLoad is for). Dispatched through the same ORMEventDispatcher
-		// the Hibernate events use, so the global handler resolves identically.
-		IStruct eventArgs = Struct.of(
-		    ORMKeys.entity, entity,
-		    ORMKeys.entityName, entityRecord.getEntityName(),
-		    Key.context, context
-		);
-		ORMEventDispatcher.announceEntity( entity, ORMKeys.postNew, eventArgs );
-		ormApp.getConfig().getEventDispatcher().announceGlobal( ORMKeys.postNew, eventArgs );
+		// the Hibernate events use, so the global handler resolves identically. eventHandling=false turns it off with the
+		// Hibernate events.
+		if ( ormApp.getConfig().eventHandling ) {
+			IStruct eventArgs = Struct.of(
+			    ORMKeys.entity, entity,
+			    ORMKeys.entityName, entityRecord.getEntityName(),
+			    Key.context, context
+			);
+			ORMEventDispatcher.announceEntity( entity, ORMKeys.postNew, eventArgs );
+			ormApp.getConfig().getEventDispatcher().announceGlobal( ORMKeys.postNew, eventArgs );
+		}
 
 		// Also announce the post_new interception point so any registered BoxLang interceptors can observe it.
-		if ( interceptorService.hasState( ORMKeys.EVENT_POST_NEW ) ) {
-			interceptorService.announce(
+		InterceptorService interceptors = BoxRuntime.getInstance().getInterceptorService();
+		if ( interceptors.hasState( ORMKeys.EVENT_POST_NEW ) ) {
+			interceptors.announce(
 			    ORMKeys.EVENT_POST_NEW,
 			    () -> Struct.of(
 			        ORMKeys.entityName, entityRecord.getEntityName(),

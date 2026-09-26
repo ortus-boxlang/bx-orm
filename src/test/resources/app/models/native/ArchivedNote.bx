@@ -1,0 +1,10 @@
+/**
+ * Fixture for soft delete with a timestamp in a custom column (Phase 3B).
+ */
+class persistent="true" table="archived_notes" softDelete="timestamp" softDeleteColumn="archived_at" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="title" ormType="string" length="100";
+
+}

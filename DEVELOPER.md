@@ -51,15 +51,21 @@ end-user docs.
 | --- | --- | --- |
 | `entityCriteria()` | Fluent query builder: conditions, groups, automatic joins, subqueries, projections, paging, `paginate`, `each`/`chunk`, `getSQL()`, readable `writeDump()`, cborm method names and interception points. | [§10c](#10c-entitycriteria-the-fluent-query-builder) |
 
-### Planned: Phase 3B, Hibernate-native features
+### Hibernate-native features (Phase 3B)
 
-Features Hibernate 7.4 already implements, exposed through entity and property annotations. `mapping.xml` has no
-element for them, so the generated facade class carries the Hibernate annotation.
+Features Hibernate 7.4 already implements, exposed simply. Design details in [§10d](#10d-hibernate-native-features-phase-3b).
 
-| Feature | Shape | Hibernate feature |
+| Feature | Shape | Details |
 | --- | --- | --- |
-| Soft delete | `softDelete="true"` (boolean `deleted` column), `softDelete="active"` (inverted `active` column), `softDelete="timestamp"` (`deleted` date column); `softDeleteColumn` renames the column. `entityDelete()` becomes an UPDATE, and every load, query and association skips deleted rows. | `@SoftDelete` |
-| Automatic timestamps | `autoTimestamp="create"` sets the property once on insert; `autoTimestamp="update"` sets it on insert and on every update that changes the row. | `@CreationTimestamp`, `@UpdateTimestamp` |
+| Soft delete | `softDelete="true"` (boolean `deleted` column), `"active"` (inverted `active` column), `"timestamp"` (deletion date); `softDeleteColumn` renames the column. `entityDelete()` becomes an UPDATE; every load, query and association skips deleted rows. Hibernate `@SoftDelete`. | [§10d](#10d-hibernate-native-features-phase-3b) |
+| Automatic timestamps | Property `autoTimestamp="create"` (set once on insert) or `"update"` (insert and every update). Hibernate `@CreationTimestamp` / `@UpdateTimestamp`. | [§10d](#10d-hibernate-native-features-phase-3b) |
+| Entity `where` | `class where="is_active = 1"` restricts every load and query, including loads by id (it was silently ignored before). | [§10d](#10d-hibernate-native-features-phase-3b) |
+| `eventHandling=false` works | No entity, global or `postNew` events fire unless `eventHandling=true` (they always fired before). | [§10d](#10d-hibernate-native-features-phase-3b) |
+| Load helpers | `entityLoadOrNew()`, `entityLoadOrSave()`, `entityLoadOrFail()`, `entityLoadByPKOrFail()`. | [§10d](#10d-hibernate-native-features-phase-3b) |
+| Session helpers | `entityEvict( entityOrArray )`, `entityGetReference( name, id )` (no SELECT). | [§10d](#10d-hibernate-native-features-phase-3b) |
+| Locking | `entityLock( entity, mode, options )`, `entityLoadByPK( name, id, { lock } )`, criteria `lock()`, `ormExecuteQuery` `{ lock }`. Modes `read`, `write`, `force`; `timeout`, `skipLocked`. Inside `transaction{}`. | [§10d](#10d-hibernate-native-features-phase-3b) |
+| Read-only | `ormReadOnly( closure )`, `entityLoadReadOnly()`, `{ readOnly : true }` on `entityLoad()` and `entityLoadByPK()`. | [§10d](#10d-hibernate-native-features-phase-3b) |
+| Criteria bulk statements | `updateAll( { prop : value } )` and `deleteAll()` run one HQL statement and return the row count. | [§10d](#10d-hibernate-native-features-phase-3b) |
 
 ---
 
@@ -678,6 +684,65 @@ See the `bx-orm-criteria` custom skill for the class map.
 
 ---
 
+## 10d. Hibernate-native features (Phase 3B)
+
+Rule for this phase: only what Hibernate 7.4 already implements, exposed simply.
+
+**Facade annotations.** `mapping.xml` has no element for soft delete or creation/update timestamps, but Hibernate reads
+Java annotations on the mapped class alongside the XML (bx-orm never sets `metadata-complete`). So the ByteBuddy facade
+carries them: `hibernate/facade/FacadeAnnotations` maps BoxLang annotations to Java annotations
+(`softDelete` → `@SoftDelete` on the class, `autoTimestamp` → `@CreationTimestamp` / `@UpdateTimestamp` on the getter),
+and `EntityFacadeFactory.generate()` applies them with `annotateType()` / `annotateMethod()`. A future
+Hibernate-native annotation is one more entry there. Bad values and `softDelete` on a subclass are `orm.config` boot
+errors. The timestamps work on the `Object`-typed, converter-backed accessors. Because the annotations live in the
+facade bytecode, the `.bxorm/facades.jar` boot cache carries them too.
+
+**Entity `where`.** `ClassicEntityMeta` now reads the class `where` annotation (the mapping writer already emitted
+`<sql-restriction>` for it, but the value was never parsed). Hibernate applies it to loads by id as well.
+
+**`eventHandling`.** `ORMConfig.toHibernateConfig()` registers the `EventListener` integrator only when
+`eventHandling=true`, and `EntityNew.create()` fires `postNew` only then. The test apps set `eventHandling: true`;
+`noEventsApp` proves nothing fires when it is false.
+
+**Load helpers** share `bifs/LoadOr`: `ORMApp.loadOne()` loads by id, composite key struct or filter (a filter
+matching several rows is `orm.query.nonUnique`). The new entity for `entityLoadOrNew()` / `entityLoadOrSave()` comes
+from `EntityNew.create()` (so `postNew` fires), filled with the filter, or the id when the id is assigned, then
+`properties`. `entityLoadOrSave()` saves through `EntitySave.save()`. The `*OrFail` forms raise `orm.notFound`.
+
+**Locking.** `EntityLocking` turns `read` / `write` / `force` into `PESSIMISTIC_READ` / `PESSIMISTIC_WRITE` /
+`PESSIMISTIC_FORCE_INCREMENT` and `timeout` / `skipLocked` into a JPA `Timeout`. `force` on an unversioned entity and
+any lock outside `transaction{}` are `orm.argument` errors. `entityLoadByPK` locks through `session.find( ...,
+FindOption... )` and `entityLock()` through `session.lock()`; neither needs more. Lock *queries* (criteria `lock()`,
+`ormExecuteQuery` `{ lock }`) do: Hibernate refuses a pessimistic-lock query unless its own transaction is active, and
+bx-orm rides the BoxLang transaction without one ([§8](#8-transactions-riding-the-boxlang-connection)).
+`config/BoxTransactionCoordinatorBuilder` (registered as `hibernate.transaction.coordinator_class`, a public SPI) wraps
+Hibernate's JDBC coordinator, looked up by its `jdbc` short name through `StrategySelector`, and reports a transaction
+as active only inside `lockScope()`, which `HQLQuery.inLockScope()` opens around a locking query after checking that a
+BoxLang transaction is active. On leaving the scope it calls `afterOperation()` so Hibernate releases the JDBC
+resources it kept for "the rest of the transaction"; without that, the next transaction found a closed connection.
+An application can still configure its own coordinator (JTA) through `hibernateProperties`.
+
+Note: the test app uses `MySQLDialect`, whose `for update of <alias>` MariaDB rejects. The lock tests pass on MySQL 8
+(CI) and on MariaDB with `MariaDBDialect`.
+
+**Read-only.** `ormReadOnly()` calls `ORMContext.readOnly()`, which sets `setDefaultReadOnly( true )` on the open
+sessions and on sessions opened inside the block, and restores them when the outermost block ends.
+`entityLoadReadOnly()` is `entityLoad()` with `readOnly` forced on; the option maps to `Query.setReadOnly()` and, for a
+load by id, `ReadOnlyMode.READ_ONLY`.
+
+**Criteria bulk statements.** `CriteriaBuilder.compileBulk()` renders `update Entity bx_this set ... where ...` or
+`delete from Entity bx_this where ...` from the recorded conditions. With joins it selects the matching ids in a
+subquery (`where bx_u.id in (select ...)`); Hibernate's MySQL translator wraps that subquery in a derived table, since
+MySQL refuses to read the table it is changing. Pending changes are flushed first. Bulk statements bypass entities: no
+events, cascades, version increments or timestamps, and loaded entities keep their old values. Paging, collection
+properties and composite ids with joins are `orm.argument` errors.
+
+**Tests.** `hibernate/NativeFeaturesTest` (soft delete variants, timestamps, `where`), `config/EventHandlingDisabledTest`
+(`noEventsApp`), `bifs/EntityLoadOrTest`, `bifs/SessionControlBIFsTest` (evict, reference, locks with a real
+`skipLocked` contention check, read-only), `criteria/CriteriaBulkTest`, and two `BootErrorsTest` scenarios.
+
+---
+
 ## 11. The ORM manifest boot cache (`.bxorm/`)
 
 Boot has three costs: entity **discovery** (walking the tree), **metadata parsing** (per entity,
@@ -942,7 +1007,7 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
 ## 12. Where we go next
 
 - **cborm-compatible path** — the V2 plan: new BIFs (Phase 2), the fluent `entityCriteria()` (Phase 3),
-  Hibernate-native features such as soft delete and automatic timestamps (Phase 3B), GORM-inspired
+  Hibernate-native features (Phase 3B, done: [§10d](#10d-hibernate-native-features-phase-3b)), GORM-inspired
   additions, dynamic finders, cborm calling bx-orm BIFs, a live cborm test run, and opt-in static class
   helpers. Casting is not a phase: bx-orm casts ids itself and Hibernate 7 coerces
   query parameters, so cborm's `idCast()`/`autoCast()` just return their value.

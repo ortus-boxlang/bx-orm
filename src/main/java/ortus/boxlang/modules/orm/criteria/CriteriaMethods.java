@@ -151,6 +151,25 @@ final class CriteriaMethods {
 		return value == null || value.toString().isBlank() ? def : BooleanCaster.cast( value );
 	}
 
+	/**
+	 * A struct argument.
+	 *
+	 * @param value  The argument.
+	 * @param method The criteria method, for the error.
+	 *
+	 * @return The struct.
+	 *
+	 * @throws ORMException {@code orm.argument} when the value is not a struct.
+	 */
+	private static IStruct struct( Object value, String method ) {
+		if ( value instanceof IStruct struct ) {
+			return struct;
+		}
+		throw new ORMException( ORMErrorType.ARGUMENT,
+		    "entityCriteria." + method + "() expected a struct but received " + ( value == null ? "nothing" : value.getClass().getSimpleName() ) + ".",
+		    "Pass a struct, e.g. " + ( method.equals( "lock" ) ? "lock( \"write\", { timeout : 5 } )" : "updateAll( { status : \"archived\" } )" ) + "." );
+	}
+
 	static {
 		/* ------------------------------------------------------------------------------------------------------- */
 		/* Conditions */
@@ -292,6 +311,7 @@ final class CriteriaMethods {
 		} );
 		def( "readOnly", "readOnly", false, ( c, x, a ) -> c.option( ORMKeys.readOnly, bool( a[ 0 ], true ) ) );
 		def( "timeout", "timeout|seconds", false, ( c, x, a ) -> c.option( Key.timeout, IntegerCaster.cast( a[ 0 ] ) ) );
+		def( "lock", "mode,options", false, ( c, x, a ) -> c.lock( a[ 0 ], a[ 1 ] == null ? null : struct( a[ 1 ], "lock" ) ) );
 		def( "fetchSize", "fetchSize|size", false, ( c, x, a ) -> c.option( Key.fetchSize, IntegerCaster.cast( a[ 0 ] ) ) );
 		def( "comment", "comment|text", false, ( c, x, a ) -> c.option( ORMKeys.comment, str( a[ 0 ] ) ) );
 		def( "queryHint|hint", "name|hint,value", false, ( c, x, a ) -> c.hint( str( a[ 0 ] ), a[ 1 ] ) );
@@ -319,6 +339,8 @@ final class CriteriaMethods {
 		/* ------------------------------------------------------------------------------------------------------- */
 		def( "list", "max,offset,timeout,sortOrder,ignoreCase,asQuery", false, ( c, x, a ) -> c.list( x, a[ 0 ], a[ 1 ], a[ 2 ], a[ 3 ], a[ 4 ], a[ 5 ] ) );
 		def( "count", P, false, ( c, x, a ) -> c.count( x, str( a[ 0 ] ) ) );
+		def( "updateAll", "values", false, ( c, x, a ) -> c.updateAll( x, struct( a[ 0 ], "updateAll" ) ) );
+		def( "deleteAll", "", false, ( c, x, a ) -> c.deleteAll( x ) );
 		def( "get", "uniqueFirst", false, ( c, x, a ) -> c.get( x, bool( a[ 0 ], false ) ) );
 		def( "getOrFail", "uniqueFirst", false, ( c, x, a ) -> c.getOrFail( x, bool( a[ 0 ], false ) ) );
 		def( "first", "", false, ( c, x, a ) -> c.first( x ) );

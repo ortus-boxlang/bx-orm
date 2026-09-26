@@ -419,10 +419,76 @@ public class HQLQuery {
 		} else {
 			// Hibernate returns POJO facades for entity results; unwrap each to its BoxLang instance so callers only ever
 			// see IClassRunnables. Scalars/projections pass through untouched.
-			return hqlQuery.list()
+			return inLockScope( hqlQuery::list )
 			    .stream()
 			    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
 			    .collect( java.util.stream.Collectors.toList() );
+		}
+	}
+
+	/**
+	 * Whether this query takes a database lock (the {@code lock} option).
+	 *
+	 * @return True when the query locks the rows it reads.
+	 */
+	public boolean isLocking() {
+		return this.options.get( ORMKeys.lock ) != null && !this.options.get( ORMKeys.lock ).toString().isBlank();
+	}
+
+	/**
+	 * Run part of this query's execution so that, when the query locks, Hibernate accepts the BoxLang transaction as its
+	 * transaction (see {@code BoxTransactionCoordinatorBuilder}).
+	 *
+	 * @param work The execution step, e.g. {@code query::list}.
+	 * @param <T>  Its result type.
+	 *
+	 * @return What the step returned.
+	 */
+	public <T> T inLockScope( java.util.function.Supplier<T> work ) {
+		if ( !isLocking() ) {
+			return work.get();
+		}
+		try {
+			return ortus.boxlang.modules.orm.config.BoxTransactionCoordinatorBuilder.lockScope( work );
+		} finally {
+			// Inside the scope Hibernate believed a transaction was active, so it kept the JDBC resources for "the rest of the
+			// transaction". Outside it that is no longer true: let Hibernate release them now, as after any other operation.
+			if ( session instanceof org.hibernate.engine.spi.SharedSessionContractImplementor implementor && implementor.isOpen() ) {
+				implementor.afterOperation( true );
+			}
+		}
+	}
+
+	/**
+	 * Start a query stream so that, when the query locks, Hibernate accepts the BoxLang transaction as its transaction. The
+	 * stream's JDBC resources are released when it is closed, as usual.
+	 *
+	 * @param work Starts the stream, e.g. {@code query::getResultStream}.
+	 * @param <T>  The stream type.
+	 *
+	 * @return The stream.
+	 */
+	public <T> T inLockScopeStreaming( java.util.function.Supplier<T> work ) {
+		return isLocking() ? ortus.boxlang.modules.orm.config.BoxTransactionCoordinatorBuilder.lockScope( work ) : work.get();
+	}
+
+	/**
+	 * Apply the {@code lock} option (read, write or force) and its {@code lockTimeout} (seconds) and {@code skipLocked}
+	 * settings: the rows the query returns are locked until the transaction ends.
+	 *
+	 * @param query   The query.
+	 * @param options The query options.
+	 */
+	static void applyLock( org.hibernate.query.Query<?> query, IStruct options ) {
+		Object mode = options.get( ORMKeys.lock );
+		if ( mode == null || mode.toString().isBlank() ) {
+			return;
+		}
+		query.setHibernateLockMode( ortus.boxlang.modules.orm.EntityLocking.mode( mode, "lock" ) );
+		jakarta.persistence.Timeout timeout = ortus.boxlang.modules.orm.EntityLocking.timeout( options.get( ORMKeys.lockTimeout ),
+		    BooleanCaster.cast( options.getOrDefault( ORMKeys.skipLocked, false ) ) );
+		if ( timeout != null ) {
+			query.setHint( org.hibernate.jpa.SpecHints.HINT_SPEC_LOCK_TIMEOUT, timeout.milliseconds() );
 		}
 	}
 
@@ -459,6 +525,10 @@ public class HQLQuery {
 			hqlQuery.setReadOnly( BooleanCaster.cast( this.options.get( ORMKeys.readOnly ) ) );
 		}
 		applyCacheAndTimeout( hqlQuery, this.options );
+		if ( isLocking() ) {
+			ortus.boxlang.modules.orm.EntityLocking.requireTransaction( ormContext, "lock" );
+			applyLock( hqlQuery, this.options );
+		}
 		if ( this.options.get( Key.fetchSize ) != null ) {
 			hqlQuery.setFetchSize( ortus.boxlang.runtime.dynamic.casters.IntegerCaster.cast( this.options.get( Key.fetchSize ) ) );
 		}

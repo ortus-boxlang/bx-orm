@@ -44,8 +44,16 @@ and never change the builder; `copy()` branches it.
 - `chunk`/`each` read in batches (keyset by id when there is no order, else offset), flush + clear after each batch.
 - `getSQL` refuses when the app configured its own statement inspector.
 - Events: `beforeCriteriaBuilderList/Count/Get`, `after...`, `onCriteriaBuilderAddition` (registered in `ORMService`).
+- Bulk terminals `updateAll( struct )` / `deleteAll()` compile through `compileBulk`: one HQL `update`/`delete` from
+  the recorded conditions; with joins, `where bx_u.<id> in (select ...)` (Hibernate wraps it in a derived table for
+  MySQL). They flush first and bypass entities (no events, cascades, versions, timestamps). Paging, collections and
+  composite ids with joins are `orm.argument`.
+- `lock( mode, { timeout, skipLocked } )` stores `lock` / `lockTimeout` / `skipLocked` options. They apply only to
+  `Compiled.lockable()` runs (row selects, not counts or aggregates); `HQLQuery.prepare` applies them and requires
+  `transaction{}`, and `HQLQuery.inLockScope` lets the query pass Hibernate's transaction check (see the
+  `bx-orm-transactions` skill).
 
 ## Tests
 
 `src/test/java/ortus/boxlang/modules/orm/criteria/` (live, MySQL/MariaDB): Conditions, Joins, Shape, Terminals,
-Subquery, Developer. Shared helpers in `CriteriaTestSupport`.
+Subquery, Developer, Bulk (updateAll, deleteAll, lock). Shared helpers in `CriteriaTestSupport`.

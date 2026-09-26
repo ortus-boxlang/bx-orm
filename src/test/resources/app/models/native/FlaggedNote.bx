@@ -1,0 +1,12 @@
+/**
+ * Fixture for entity-level where (Phase 3B): only active rows are visible to the ORM.
+ */
+class persistent="true" table="flagged_notes" where="is_active = 1" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="title" ormType="string" length="100";
+
+	property name="isActive" column="is_active" ormType="boolean";
+
+}

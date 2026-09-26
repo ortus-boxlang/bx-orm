@@ -49,6 +49,9 @@ flowchart TB
 
 ## EventListener — Hibernate Integrator
 
+> The integrator is registered only when `eventHandling=true` (`ORMConfig.toHibernateConfig()`), and
+> `EntityNew.create()` fires `postNew` only then. With `eventHandling=false` (the default) no ORM event runs.
+
 The `EventListener` implements `Integrator` and a dozen Hibernate event listener interfaces, giving it a hook into every phase of the entity lifecycle:
 
 ```java

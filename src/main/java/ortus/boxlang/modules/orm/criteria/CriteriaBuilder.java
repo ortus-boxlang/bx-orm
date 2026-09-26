@@ -245,11 +245,12 @@ public final class CriteriaBuilder implements IReferenceable {
 	/**
 	 * A compiled query.
 	 *
-	 * @param hql     The HQL.
-	 * @param values  The bound values, one per {@code ?n}.
-	 * @param columns The column names of struct/query results (empty for entity results).
+	 * @param hql      The HQL.
+	 * @param values   The bound values, one per {@code ?n}.
+	 * @param columns  The column names of struct/query results (empty for entity results).
+	 * @param lockable Whether a {@code lock()} applies (row selects only, not counts or aggregates).
 	 */
-	record Compiled( String hql, List<Object> values, List<String> columns ) {
+	record Compiled( String hql, List<Object> values, List<String> columns, boolean lockable ) {
 	}
 
 	/**
@@ -1661,6 +1662,31 @@ public final class CriteriaBuilder implements IReferenceable {
 		return this;
 	}
 
+	/**
+	 * Lock the rows {@code list()}, {@code get()} and {@code first()} return, until the transaction ends.
+	 *
+	 * @param mode        {@code read}, {@code write} (default) or {@code force}.
+	 * @param lockOptions {@code timeout} (seconds to wait; 0 means do not wait) and {@code skipLocked}; may be null.
+	 *
+	 * @return This builder.
+	 */
+	CriteriaBuilder lock( Object mode, IStruct lockOptions ) {
+		// validate now, so a bad mode fails where it is written
+		ortus.boxlang.modules.orm.EntityLocking.mode( mode, OPERATION + ".lock" );
+		options.put( ORMKeys.lock, mode == null || mode.toString().isBlank() ? "write" : mode.toString().trim() );
+		options.remove( ORMKeys.lockTimeout );
+		options.remove( ORMKeys.skipLocked );
+		if ( lockOptions != null ) {
+			if ( lockOptions.get( Key.timeout ) != null ) {
+				options.put( ORMKeys.lockTimeout, lockOptions.get( Key.timeout ) );
+			}
+			if ( lockOptions.get( ORMKeys.skipLocked ) != null ) {
+				options.put( ORMKeys.skipLocked, BooleanCaster.cast( lockOptions.get( ORMKeys.skipLocked ) ) );
+			}
+		}
+		return this;
+	}
+
 	/* ============================================================================================================= */
 	/* Compile */
 	/* ============================================================================================================= */
@@ -1723,7 +1749,7 @@ public final class CriteriaBuilder implements IReferenceable {
 			orders.forEach( o -> clauses.add( o.expr() + ( o.asc() ? " asc" : " desc" ) ) );
 			hql.append( " order by " ).append( String.join( ", ", clauses ) );
 		}
-		return new Compiled( hql.toString(), ctx.values, columns );
+		return new Compiled( hql.toString(), ctx.values, columns, mode == Mode.LIST );
 	}
 
 	/**
@@ -1772,6 +1798,132 @@ public final class CriteriaBuilder implements IReferenceable {
 		return hql.toString();
 	}
 
+	/**
+	 * Compile an HQL {@code update} (values given) or {@code delete} (values null) of the matching root entities.
+	 * <p>
+	 * Without joins the conditions go straight into the statement's {@code where}. With joins (association paths) the
+	 * matching ids come from a subquery; on databases that refuse to select from the table being changed (MySQL),
+	 * Hibernate wraps that subquery in a derived table.
+	 *
+	 * @param values    Property values to set, or null for a delete.
+	 * @param operation The terminal name, for errors.
+	 *
+	 * @return The HQL and its values.
+	 */
+	Compiled compileBulk( IStruct values, String operation ) {
+		if ( firstResult != null || maxResults != null ) {
+			throw new ORMException( ORMErrorType.ARGUMENT,
+			    operation + "() changes every matching row, so it cannot be combined with maxResults() or firstResult().",
+			    "Remove the paging, or narrow the conditions instead." );
+		}
+		boolean			joined	= joins.values().stream().anyMatch( j -> !j.fetch || j.referenced );
+		String			target	= joined ? "bx_u" : root.hql();
+		RenderContext	ctx		= new RenderContext();
+		StringBuilder	hql		= new StringBuilder( values == null ? "delete from " : "update " );
+		hql.append( getEntityName() ).append( ' ' ).append( target );
+		if ( values != null ) {
+			if ( values.isEmpty() ) {
+				throw new ORMException( ORMErrorType.ARGUMENT, operation + "() needs at least one property to set.",
+				    "Pass a struct of property values, e.g. updateAll( { status : \"archived\" } )." );
+			}
+			List<String> sets = new ArrayList<>();
+			for ( Key key : values.keySet() ) {
+				EntityModel.Attr attr = root.model().find( key.getName() );
+				if ( attr == null ) {
+					throw ORMErrors.propertyNotFound( root.model().name(), key.getName(), root.model().attributeNames(), operation );
+				}
+				if ( attr.kind() != EntityModel.Kind.BASIC && attr.kind() != EntityModel.Kind.TO_ONE ) {
+					throw new ORMException( ORMErrorType.ARGUMENT,
+					    operation + "() cannot set [" + attr.name() + "]: only plain properties and to-one associations can be set in bulk.",
+					    "Change collections by loading the entities and saving them." );
+				}
+				Object value = values.get( key );
+				sets.add( target + "." + attr.name() + " = " + ( value == null ? "null" : ctx.bind( value ) ) );
+			}
+			hql.append( " set " ).append( String.join( ", ", sets ) );
+		}
+		if ( !joined ) {
+			if ( !where.isEmpty() ) {
+				hql.append( " where " );
+				where.render( hql, ctx );
+			}
+		} else {
+			String id = root.model().singleIdName();
+			if ( id == null ) {
+				throw new ORMException( ORMErrorType.ARGUMENT,
+				    operation + "() with association conditions needs an entity with a single id, but [" + getEntityName() + "] has a composite id.",
+				    "Use conditions on the entity's own properties only, or load the entities and change them one by one." );
+			}
+			StringBuilder inner = new StringBuilder( "select " ).append( root.hql() ).append( '.' ).append( id );
+			renderFrom( inner, ctx, false );
+			hql.append( " where " ).append( target ).append( '.' ).append( id ).append( " in (" ).append( inner ).append( ')' );
+		}
+		return new Compiled( hql.toString(), ctx.values, List.of(), false );
+	}
+
+	/**
+	 * Run a bulk statement and return the number of rows it changed.
+	 *
+	 * @param context   The context.
+	 * @param c         The compiled statement.
+	 * @param operation The terminal name, for errors.
+	 *
+	 * @return The row count.
+	 */
+	private long runBulk( IBoxContext context, Compiled c, String operation ) {
+		try {
+			IStruct opts = new Struct();
+			if ( datasource != null ) {
+				opts.put( Key.datasource, datasource );
+			}
+			if ( options.get( Key.timeout ) != null ) {
+				opts.put( Key.timeout, options.get( Key.timeout ) );
+			}
+			if ( options.get( ORMKeys.comment ) != null ) {
+				opts.put( ORMKeys.comment, options.get( ORMKeys.comment ) );
+			}
+			// flush first, so pending changes are in the database before the statement runs
+			return HQLQuery.ofNumbered( context, c.hql(), c.values(), opts ).prepare( true ).executeUpdate();
+		} catch ( ORMException e ) {
+			throw e;
+		} catch ( RuntimeException e ) {
+			throw ORMErrors.translate( e, app.errorContext( OPERATION + "." + operation ).withEntity( getEntityName() )
+			    .withQuery( c.hql(), Array.fromList( c.values() ) ) );
+		}
+	}
+
+	/**
+	 * Set properties on every matching entity with one HQL {@code update} statement (terminal).
+	 * <p>
+	 * Runs in the database only: no entity events, no cascades, no version or {@code autoTimestamp} changes, and entities
+	 * already loaded in the session keep their old values (reload or clear the session to see the new ones).
+	 *
+	 * @param context The context.
+	 * @param values  Property values to set (plain properties and to-one associations).
+	 *
+	 * @return The number of rows updated.
+	 */
+	public long updateAll( IBoxContext context, IStruct values ) {
+		requireTopLevel();
+		return runBulk( context, compileBulk( values, "updateAll" ), "updateAll" );
+	}
+
+	/**
+	 * Delete every matching entity with one HQL {@code delete} statement (terminal).
+	 * <p>
+	 * Runs in the database only: no entity events and no cascades (child rows are not deleted, so foreign keys can reject
+	 * it), and entities already loaded in the session are not removed from it. A {@code softDelete} entity is marked
+	 * deleted instead.
+	 *
+	 * @param context The context.
+	 *
+	 * @return The number of rows deleted.
+	 */
+	public long deleteAll( IBoxContext context ) {
+		requireTopLevel();
+		return runBulk( context, compileBulk( null, "deleteAll" ), "deleteAll" );
+	}
+
 	/* ============================================================================================================= */
 	/* Run */
 	/* ============================================================================================================= */
@@ -1789,14 +1941,18 @@ public final class CriteriaBuilder implements IReferenceable {
 	/**
 	 * The query options for one run.
 	 *
-	 * @param first The first row, or null.
-	 * @param max   The maximum rows, or null.
+	 * @param first    The first row, or null.
+	 * @param max      The maximum rows, or null.
+	 * @param lockable Whether the query may take the criteria's {@code lock()}.
 	 *
 	 * @return The options struct for {@link HQLQuery}.
 	 */
-	private IStruct runOptions( Integer first, Integer max ) {
+	private IStruct runOptions( Integer first, Integer max, boolean lockable ) {
 		IStruct opts = new Struct();
 		opts.putAll( options );
+		if ( !lockable ) {
+			opts.remove( ORMKeys.lock );
+		}
 		if ( datasource != null ) {
 			opts.put( Key.datasource, datasource );
 		}
@@ -1821,7 +1977,8 @@ public final class CriteriaBuilder implements IReferenceable {
 	 */
 	private List<?> run( IBoxContext context, Compiled c, Integer first, Integer max ) {
 		try {
-			return HQLQuery.ofNumbered( context, c.hql(), c.values(), runOptions( first, max ) ).prepare( true ).list();
+			HQLQuery query = HQLQuery.ofNumbered( context, c.hql(), c.values(), runOptions( first, max, c.lockable() ) );
+			return query.inLockScope( () -> query.prepare( true ).list() );
 		} catch ( ORMException e ) {
 			throw e;
 		} catch ( RuntimeException e ) {
@@ -1902,8 +2059,8 @@ public final class CriteriaBuilder implements IReferenceable {
 		Object		result;
 		if ( shape == Shape.STREAM ) {
 			try {
-				result = HQLQuery.ofNumbered( context, c.hql(), c.values(), runOptions( firstResult, maxResults ) ).prepare( true ).getResultStream()
-				    .map( CriteriaBuilder::toBox );
+				HQLQuery query = HQLQuery.ofNumbered( context, c.hql(), c.values(), runOptions( firstResult, maxResults, c.lockable() ) );
+				result = query.inLockScopeStreaming( () -> query.prepare( true ).getResultStream() ).map( CriteriaBuilder::toBox );
 			} catch ( RuntimeException e ) {
 				throw ORMErrors.translate( e, app.errorContext( OPERATION ).withEntity( getEntityName() ).withQuery( c.hql(), Array.fromList( c.values() ) ) );
 			}
@@ -2306,13 +2463,14 @@ public final class CriteriaBuilder implements IReferenceable {
 		Compiled	c	= compile( Mode.LIST, null );
 		String		sql;
 		try {
-			IStruct opts = runOptions( null, null );
+			IStruct opts = runOptions( null, null, c.lockable() );
 			opts.remove( ORMKeys.cacheable );
 			opts.remove( ORMKeys.cacheName );
-			org.hibernate.query.Query<?> query = HQLQuery.ofNumbered( context, c.hql(), c.values(), opts ).prepare( false );
+			HQLQuery						hqlQuery	= HQLQuery.ofNumbered( context, c.hql(), c.values(), opts );
+			org.hibernate.query.Query<?>	query		= hqlQuery.prepare( false );
 			query.setHibernateFlushMode( FlushMode.MANUAL );
 			query.setCacheable( false );
-			sql = SqlCapture.capture( query::list );
+			sql = hqlQuery.inLockScope( () -> SqlCapture.capture( query::list ) );
 		} catch ( ORMException e ) {
 			throw e;
 		} catch ( RuntimeException e ) {

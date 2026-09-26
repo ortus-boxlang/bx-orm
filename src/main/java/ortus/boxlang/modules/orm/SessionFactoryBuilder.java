@@ -35,6 +35,7 @@ import ortus.boxlang.modules.orm.hibernate.BoxPersisterFactory;
 import ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory;
 import ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming;
 import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeAnnotations;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
@@ -392,12 +393,14 @@ public class SessionFactoryBuilder {
 				} else {
 					accessorType = Object.class;
 				}
-				propSpecs.add( new EntityFacadeFactory.PropertySpec( prop.getName(), accessorType, facadeAssocKind( prop ) ) );
+				propSpecs.add( new EntityFacadeFactory.PropertySpec( prop.getName(), accessorType, facadeAssocKind( prop ),
+				    FacadeAnnotations.forProperty( prop ) ) );
 			}
 
 			// Use the IEntityMeta entity name so the FQN matches, byte-for-byte, the <class name=...> the mapping writer emits.
 			String		facadeFQN	= EntityFacadeNaming.facadeClassName( ormConfig.facadeNamespace, meta.getEntityName() );
-			Class<?>	facadeClass	= EntityFacadeFactory.generate( facadeFQN, idSpecs, propSpecs, superClass, loader );
+			Class<?>	facadeClass	= EntityFacadeFactory.generate( facadeFQN, idSpecs, propSpecs, superClass, loader,
+			    FacadeAnnotations.forEntity( meta ) );
 			FacadeSupport.register( ormConfig.facadeNamespace, meta.getEntityName(), facadeClass );
 			FacadeSupport.register( ormConfig.facadeNamespace, entity.getEntityName(), facadeClass );
 			logger.trace( "Generated entity facade [{}] for entity [{}]", facadeFQN, meta.getEntityName() );

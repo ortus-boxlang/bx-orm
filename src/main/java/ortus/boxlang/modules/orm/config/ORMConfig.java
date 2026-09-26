@@ -661,8 +661,11 @@ public class ORMConfig {
 		// event-handler class may be null when none is configured). This registry will be closed by
 		// SessionFactoryBuilder if session factory construction fails to prevent leaks; on success it remains open as the root of the Hibernate service
 		// hierarchy and is closed transitively via SessionFactory.close().
-		BootstrapServiceRegistryBuilder registryBuilder = new BootstrapServiceRegistryBuilder()
-		    .applyIntegrator( new EventListener( getEventDispatcher() ) );
+		// With eventHandling=false no listener is registered, so neither entity event methods nor the global eventHandler run.
+		BootstrapServiceRegistryBuilder registryBuilder = new BootstrapServiceRegistryBuilder();
+		if ( this.eventHandling ) {
+			registryBuilder.applyIntegrator( new EventListener( getEventDispatcher() ) );
+		}
 		// Hibernate resolves the mapped <entity class="..."> names through the bootstrap registry's ClassLoaderService. This
 		// build's generated entity facades live in its own facade classloader (see FacadeClassLoader), so register it here -
 		// applied loaders are consulted before the thread context loader, so a reload always resolves its own facades.
@@ -774,6 +777,10 @@ public class ORMConfig {
 		configuration.setProperty( AvailableSettings.FLUSH_BEFORE_COMPLETION, "false" )
 		    .setProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION, "true" )
 		    .setProperty( AvailableSettings.AUTO_CLOSE_SESSION, "false" );
+		// Hibernate's JDBC transaction coordinator, extended so locking queries run inside a BoxLang transaction{} (bx-orm
+		// rides that transaction and never begins a Hibernate one). An application can still choose its own coordinator (JTA)
+		// through hibernateProperties, applied below.
+		configuration.getProperties().put( AvailableSettings.TRANSACTION_COORDINATOR_STRATEGY, new BoxTransactionCoordinatorBuilder() );
 
 		// Apply raw Hibernate properties from a `hibernate.properties`-formatted file (ormConfig), then from the inline `hibernateProperties`
 		// struct. Both are applied last so application developers can override any of bx-orm's own defaults above, including per-datasource tuning

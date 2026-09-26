@@ -64,14 +64,26 @@ public class EntitySave extends BaseORMBIF {
 	 * @arguments.forceinsert If true, will force an insert operation. Otherwise, a saveOrUpdate operation will be performed.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IClassRunnable	entity			= requireEntity( arguments.get( ORMKeys.entity ), "entity", "entitySave" );
-		String			entityName		= getEntityName( entity );
+		IClassRunnable entity = requireEntity( arguments.get( ORMKeys.entity ), "entity", "entitySave" );
+		save( context, entity, BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) ) );
+		return null;
+	}
+
+	/**
+	 * Save an entity: persist a new one, merge a detached one, nothing for a managed one. Shared by {@code entitySave()}
+	 * and {@code entityLoadOrSave()}.
+	 *
+	 * @param context     The context in which the BIF is being invoked.
+	 * @param entity      The entity to save.
+	 * @param forceInsert Always insert, even when the entity looks persisted.
+	 */
+	public static void save( IBoxContext context, IClassRunnable entity, boolean forceInsert ) {
+		String			entityName		= ortus.boxlang.modules.orm.ORMService.getEntityName( entity );
 		ORMContext		ormContext		= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 		ORMApp			ormApp			= ormContext.requireORMApp();
 
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
-		Boolean			forceInsert		= BooleanCaster.cast( arguments.getOrDefault( ORMKeys.forceinsert, false ) );
 		// The Hibernate entity-name a by-name Session call needs: the BoxLang name for hbm/MAP, the facade class for the
 		// modern mapping.xml facade representation. See ORMApp.hibernateEntityName.
 		String			hbName			= ORMApp.hibernateEntityName( session, entityName );
@@ -99,15 +111,19 @@ public class EntitySave extends BaseORMBIF {
 				entity.getVariablesScope().putAll( managedRunnable.getVariablesScope() );
 			}
 		}
-
-		return null;
 	}
 
 	/**
 	 * Determine whether an entity has never been persisted, using the same unsaved-value/version/snapshot rules Hibernate's
 	 * former <code>saveOrUpdate()</code> used to decide between an insert and a re-attach.
+	 *
+	 * @param session    The session.
+	 * @param entityName The Hibernate entity name.
+	 * @param entity     The entity's facade.
+	 *
+	 * @return True when the entity is new.
 	 */
-	private boolean isTransient( Session session, String entityName, Object entity ) {
+	private static boolean isTransient( Session session, String entityName, Object entity ) {
 		return ForeignKeys.isTransient(
 		    entityName,
 		    entity,

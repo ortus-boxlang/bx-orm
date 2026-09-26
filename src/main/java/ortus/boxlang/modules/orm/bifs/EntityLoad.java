@@ -95,6 +95,8 @@ public class EntityLoad extends BaseORMBIF {
 	 * <li><strong><code>cachename</code></strong> - String. The query cache region to use. Implies <code>cacheable</code> unless <code>cacheable</code>
 	 * is given.</li>
 	 * <li><strong><code>timeout</code></strong> - Number. Specifies the timeout value (in seconds) for the query. No timeout by default.</li>
+	 * <li><strong><code>readOnly</code></strong> - Boolean. Load the entities read-only: they are not dirty-checked and changes to them are
+	 * never saved. Default is `false`. See also <code>entityLoadReadOnly()</code>.</li>
 	 * </ul>
 	 *
 	 * @param context   The context in which the BIF is being invoked.
@@ -134,14 +136,18 @@ public class EntityLoad extends BaseORMBIF {
 	 *
 	 * @param context   JDBC context in which the BIF was invoked.
 	 * @param arguments Arguments scope of the BIF.
+	 *
+	 * @return The entity (or null) for a unique load, else an array of zero or one entity.
 	 */
 	private Object loadEntityById( IBoxContext context, ArgumentsScope arguments ) {
+		// Only readOnly applies to a load by id; the other options are for filtered loads.
+		IStruct	options	= arguments.get( ORMKeys.options ) instanceof IStruct given
+		    && BooleanCaster.cast( given.getOrDefault( ORMKeys.readOnly, false ) ) ? Struct.of( ORMKeys.readOnly, true ) : null;
+		var		entity	= ormService.requireORMApp( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
+		    arguments.get( ORMKeys.idOrFilter ), options );
 		if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
-			return ormService.requireORMApp( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
-			    arguments.get( ORMKeys.idOrFilter ) );
+			return entity;
 		}
-		var entity = ormService.requireORMApp( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
-		    arguments.get( ORMKeys.idOrFilter ) );
 		return entity == null ? Array.EMPTY : Array.of( entity );
 	}
 
@@ -150,6 +156,8 @@ public class EntityLoad extends BaseORMBIF {
 	 *
 	 * @param context   JDBC context in which the BIF was invoked.
 	 * @param arguments Arguments scope of the BIF.
+	 *
+	 * @return The entity (or null) for a unique load, else an array of entities.
 	 */
 	private Object loadEntitiesByFilter( IBoxContext context, ArgumentsScope arguments ) {
 		IStruct	options		= buildCriteriaOptions( arguments );
@@ -173,6 +181,13 @@ public class EntityLoad extends BaseORMBIF {
 		return results;
 	}
 
+	/**
+	 * Merge the default options, the options argument and a boolean or sort-order uniqueOrOrder into one options struct.
+	 *
+	 * @param arguments Arguments scope of the BIF.
+	 *
+	 * @return The options.
+	 */
 	private IStruct buildCriteriaOptions( ArgumentsScope arguments ) {
 		IStruct options = Struct.of();
 		options.putAll( DEFAULT_OPTIONS );

@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `unique=true` on `ormExecuteQuery()` and `entityLoad()` (filter form) is strict: more than one matching row raises `orm.query.nonUnique` instead of silently returning the first. Pass `{ uniqueFirst : true }` for the old behavior. `unique` given inside the options struct is now honored.
 - ORM errors are `orm.*` exceptions instead of raw Hibernate/JPA exceptions. Code catching Hibernate class names should catch `"orm"` instead.
 - Unused named HQL parameters are logged as a warning.
+- `eventHandling` is honored: ORM events (entity methods, the global `eventHandler`, `postNew`) only fire when `eventHandling=true`. Before, they always fired. Apps that use events without setting `eventHandling: true` must add it.
+- `entityLoadByPK()`'s third argument is an options struct (`lock`, `timeout`, `skipLocked`, `readOnly`). A boolean third argument (Lucee's `unique`) is accepted and ignored.
 
 - Upgraded the ORM engine from Hibernate 5.6.15 to 7.4.8. BoxLang-facing BIF behavior is preserved.
 - Build and test against BoxLang 1.17.0 (was 1.11.0); the module's minimum BoxLang version is now 1.17.0 due to several updates we required in the new approach.
@@ -35,6 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Entity inspection BIFs: `entityGetName()`, `entityGetDatasource()`, `entityGetId()`, `entityGetMetadata()` (cached per ORM application), `entityIsDirty()` and `entityGetDirtyProperties()` (Hibernate's own dirty check; no SQL for managed entities), `ormIsSessionDirty()` and `ormGetSessionStatistics()`.
 - `entityCriteria( entityName )`: a fluent query builder. Conditions (cborm names and aliases, `not*` negation, `anyOf`/`allOf` groups, `where()` shorthands, native `sql()` with bound params), automatic joins for dotted paths, aliases and `with{Association}()`, fetch joins, subqueries (`exists`, `isIn`, cborm `property*`/`sub*`), projections (`project()`, cborm `withProjections()`), struct/query/stream results, ordering, paging and query options. Terminals: `list`, `count`, `exists`, `get`, `getOrFail`, `first`, `firstOrFail`, `paginate`, `simplePaginate`, `pluck`, `sum`/`avg`/`min`/`max`, `each`, `chunk`. Property names are checked while building ("Did you mean"), `getSQL()`/`peekSQL()`/`logSQL()` show the SQL without running it, `writeDump()` shows the calls, HQL, params and SQL, and cborm's criteria interception points are announced.
 - `orm.notFound` error type for `getOrFail()` / `firstOrFail()`.
+- Soft delete: entity `softDelete="true"` (boolean `deleted` column), `"active"` (inverted `active` column) or `"timestamp"` (deletion date), with `softDeleteColumn` to rename the column. `entityDelete()` marks the row, and every load, query and association skips deleted rows (Hibernate `@SoftDelete`, carried by the generated facade).
+- Automatic timestamps: property `autoTimestamp="create"` (set on insert) or `"update"` (set on insert and every update), via Hibernate `@CreationTimestamp` / `@UpdateTimestamp`.
+- `entityLoadOrNew()`, `entityLoadOrSave()`, `entityLoadOrFail()` and `entityLoadByPKOrFail()`: load by id or filter, or return a new unsaved entity, save a new one, or raise `orm.notFound`.
+- `entityEvict( entityOrArray )`: remove entities from the session. `entityGetReference( name, id )`: a reference without a SELECT.
+- Pessimistic locking: `entityLock( entity, mode, options )`, `entityLoadByPK( name, id, { lock } )`, criteria `lock()` and `ormExecuteQuery( ..., { lock } )`, with modes `read`, `write`, `force` and `timeout` / `skipLocked` options. Locks need `transaction{}`.
+- Read-only loading: `ormReadOnly( closure )`, `entityLoadReadOnly()` and a `readOnly` option on `entityLoad()` and `entityLoadByPK()`.
+- Criteria bulk statements: `updateAll( { prop : value } )` and `deleteAll()` run one HQL statement and return the row count (no events or cascades; loaded entities are not refreshed).
 - Event veto: a `preInsert`, `preUpdate` or `preDelete` handler (on the entity or the global `eventHandler`) that returns `false` cancels the operation. Vetoing the insert of a database-identity entity raises `orm.event.veto`, since Hibernate cannot skip that insert.
 
 - POJO-facade entity representation (now the only representation): each entity maps to a generated Java facade whose accessors delegate to the BoxLang instance, unlocking `uuid` (and other) id generators, composite ids, `byte[]`, and full metamodel access.
@@ -55,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 
+- The entity-level `where` annotation was never read, so it had no effect; it now restricts every load and query of the entity.
 - Optimistic-locking `<version>` columns now work end-to-end.
 - `text`/`clob` properties map to `TEXT`/`LONGTEXT` (via `<lob/>`) instead of an in-row `varchar`, avoiding MySQL row-size failures.
 - An inverse one-to-many with no explicit `fkcolumn` is emitted as a `mapped-by` collection instead of synthesizing a join table.

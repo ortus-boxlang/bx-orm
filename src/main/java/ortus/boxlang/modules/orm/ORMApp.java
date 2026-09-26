@@ -51,6 +51,7 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
 /**
@@ -566,15 +567,133 @@ public class ORMApp {
 	 * @param entityName The name of the entity to load
 	 * @param keyValue   The primary key value to load the entity by. This can be a single value such as a string or integer, or a struct for composite
 	 *                   keys.
+	 *
+	 * @return The entity, or null when no row has that id.
 	 */
 	public IClassRunnable loadEntityById( IBoxContext context, String entityName, Object keyValue ) {
+		return loadEntityById( context, entityName, keyValue, null );
+	}
+
+	/**
+	 * Load an entity by its primary key, optionally locked or read-only.
+	 *
+	 * @param context    Boxlang JDBC context
+	 * @param entityName The name of the entity to load
+	 * @param keyValue   The primary key value, or a struct for composite keys.
+	 * @param options    Load options, may be null: {@code lock} (read, write or force), {@code timeout} (lock wait in seconds),
+	 *                   {@code skipLocked}, {@code readOnly}.
+	 *
+	 * @return The entity, or null when no row has that id.
+	 */
+	public IClassRunnable loadEntityById( IBoxContext context, String entityName, Object keyValue, IStruct options ) {
+		EntityRecord							entityRecord	= this.lookupEntity( entityName, true );
+		Session									session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+		Object									id				= toIdentifier( context, session, entityRecord, keyValue );
+		String									hbName			= hibernateEntityName( session, entityRecord.getEntityName() );
+
+		List<jakarta.persistence.FindOption>	findOptions		= new ArrayList<>();
+		if ( options != null && options.get( ORMKeys.lock ) != null && !options.get( ORMKeys.lock ).toString().isBlank() ) {
+			org.hibernate.LockMode mode = EntityLocking.mode( options.get( ORMKeys.lock ), "entityLoadByPK" );
+			EntityLocking.requireTransaction( ORMContext.getForContext( context ), "entityLoadByPK" );
+			EntityLocking.checkForce( mode, getEntityPersister( session, entityRecord.getEntityName() ), entityRecord.getEntityName(),
+			    "entityLoadByPK" );
+			findOptions.addAll( EntityLocking.findOptions( mode, options ) );
+		}
+		if ( options != null && BooleanCaster.cast( options.getOrDefault( ORMKeys.readOnly, false ) ) ) {
+			findOptions.add( org.hibernate.ReadOnlyMode.READ_ONLY );
+		}
+		var entity = findOptions.isEmpty()
+		    ? session.get( hbName, id )
+		    : session.find( hbName, id, findOptions.toArray( new jakarta.persistence.FindOption[ 0 ] ) );
+		if ( entity instanceof BoxProxy castProxy ) {
+			return castProxy.getRunnable();
+		} else {
+			// Hibernate returns a POJO facade; unwrap it to the BoxLang instance.
+			return ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity );
+		}
+	}
+
+	/**
+	 * A reference to an entity by id, without loading it. The reference is a lazy proxy: nothing is read from the database
+	 * until one of its properties or methods is used, which then loads the row (and fails with {@code orm.notFound}-style
+	 * Hibernate errors if it does not exist).
+	 *
+	 * @param context    Boxlang JDBC context
+	 * @param entityName The name of the entity.
+	 * @param keyValue   The primary key value, or a struct for composite keys.
+	 *
+	 * @return The reference (an uninitialized proxy, or the managed entity when the session already holds it).
+	 */
+	public IClassRunnable getEntityReference( IBoxContext context, String entityName, Object keyValue ) {
 		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
 		Session			session			= ORMContext.getForContext( context ).getSession( entityRecord.getDatasource() );
+		Object			id				= toIdentifier( context, session, entityRecord, keyValue );
+		Object			reference		= session.getReference( hibernateEntityName( session, entityRecord.getEntityName() ), id );
+		if ( reference instanceof IClassRunnable runnable ) {
+			// An uninitialized BoxProxy: return it as is so nothing loads.
+			return runnable;
+		}
+		return ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( reference );
+	}
 
-		Class<?>		keyClass		= getKeyJavaType( session, entityName );
-		Object			id;
+	/**
+	 * Load at most one entity by id or by a filter struct.
+	 *
+	 * @param context    Boxlang JDBC context
+	 * @param entityName The name of the entity.
+	 * @param idOrFilter A primary key value, or a struct of property values to match.
+	 * @param operation  The BIF name, for the error when a filter matches several rows.
+	 *
+	 * @return The entity, or null when none matched.
+	 *
+	 * @throws ortus.boxlang.modules.orm.errors.ORMException {@code orm.query.nonUnique} when a filter matches several rows.
+	 */
+	public IClassRunnable loadOne( IBoxContext context, String entityName, Object idOrFilter, String operation ) {
+		if ( idOrFilter instanceof IStruct filter && !isCompositeId( entityName, filter ) ) {
+			Array results = loadEntitiesByFilter( context, entityName, filter, Struct.of( ORMKeys.maxResults, 2 ) );
+			if ( results.size() > 1 ) {
+				throw ortus.boxlang.modules.orm.errors.ORMErrors.nonUniqueResult( 0, operation, null );
+			}
+			return results.isEmpty() ? null : ( IClassRunnable ) results.getFirst();
+		}
+		return loadEntityById( context, entityName, idOrFilter );
+	}
 
-		boolean			isCompositeKey	= entityRecord.getEntityMeta() != null && entityRecord.getEntityMeta().getIdProperties().size() > 1;
+	/**
+	 * Whether a struct is exactly an entity's composite key (every key property and nothing else), so it is loaded by id
+	 * rather than used as a filter.
+	 *
+	 * @param entityName The entity name.
+	 * @param value      The struct.
+	 *
+	 * @return True for a composite key struct.
+	 */
+	private boolean isCompositeId( String entityName, IStruct value ) {
+		EntityRecord record = this.lookupEntity( entityName, true );
+		if ( record.getEntityMeta() == null || record.getEntityMeta().getIdProperties().size() < 2
+		    || record.getEntityMeta().getIdProperties().size() != value.size() ) {
+			return false;
+		}
+		return record.getEntityMeta().getIdProperties().stream().allMatch( p -> value.containsKey( Key.of( p.getName() ) ) );
+	}
+
+	/**
+	 * Convert a BoxLang id value to the identifier Hibernate expects for an entity: the key's Java type for a simple key, a
+	 * map or an id facade for a composite key.
+	 *
+	 * @param context      Boxlang context, for casting.
+	 * @param session      The entity's session.
+	 * @param entityRecord The entity.
+	 * @param keyValue     The id value, or a struct of key property values for a composite key.
+	 *
+	 * @return The Hibernate identifier.
+	 */
+	private Object toIdentifier( IBoxContext context, Session session, EntityRecord entityRecord, Object keyValue ) {
+		String		entityName		= entityRecord.getEntityName();
+		Class<?>	keyClass		= getKeyJavaType( session, entityName );
+		Object		id;
+
+		boolean		isCompositeKey	= entityRecord.getEntityMeta() != null && entityRecord.getEntityMeta().getIdProperties().size() > 1;
 
 		if ( isCompositeKey && !java.util.Map.class.isAssignableFrom( keyClass ) ) {
 			// Facade (POJO) mode composite key: the entity uses an embedded (non-aggregated) composite id, so its id
@@ -629,13 +748,7 @@ public class ORMApp {
 				    "Pass the entity's primary key value.", info, e );
 			}
 		}
-		var entity = session.get( hibernateEntityName( session, entityRecord.getEntityName() ), id );
-		if ( entity instanceof BoxProxy castProxy ) {
-			return castProxy.getRunnable();
-		} else {
-			// Hibernate returns a POJO facade; unwrap it to the BoxLang instance.
-			return ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity );
-		}
+		return id;
 	}
 
 	/**
@@ -824,6 +937,9 @@ public class ORMApp {
 	public List<?> executeFilterQuery( Query<?> query, IStruct options ) {
 		// cacheable, cachename (the second-level cache region) and timeout, the same way ormExecuteQuery applies them.
 		HQLQuery.applyCacheAndTimeout( query, options );
+		if ( BooleanCaster.cast( options.getOrDefault( ORMKeys.readOnly, false ) ) ) {
+			query.setReadOnly( true );
+		}
 		if ( options.containsKey( ORMKeys.maxResults ) ) {
 			Integer maxResults = options.getAsInteger( ORMKeys.maxResults );
 			if ( maxResults != null ) {

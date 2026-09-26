@@ -1,0 +1,26 @@
+/**
+ * An app with eventHandling=false: neither entity event methods nor the global eventHandler may run.
+ */
+class {
+	this.name = "BXORMNoEventsTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"NoEventsDB": {
+			"connectionString": "jdbc:derby:memory:ormNoEventsTest;create=true"
+		}
+	};
+	this.datasource = "NoEventsDB";
+
+	this.ormSettings = {
+		"datasource"       : "NoEventsDB",
+		"dialect"          : "Derby",
+		"entityPaths"      : [ "/root/models" ],
+		"dbcreate"         : "dropcreate",
+		"eventHandling"    : false,
+		"eventHandler"     : "root.models.GlobalHandler",
+		"ignoreParseErrors": false
+	};
+	this.ormEnabled = "true";
+}

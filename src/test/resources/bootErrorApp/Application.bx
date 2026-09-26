@@ -23,7 +23,9 @@ class {
 		"badDatasource" : [ "/root/ok" ],
 		"missingPath"   : [ "/root/doesNotExist" ],
 		"badFieldType"  : [ "/root/badFieldType" ],
-		"missingCfc"    : [ "/root/missingCfc" ]
+		"missingCfc"    : [ "/root/missingCfc" ],
+		"badSoftDelete" : [ "/root/badSoftDelete" ],
+		"badAutoTimestamp" : [ "/root/badAutoTimestamp" ]
 	};
 
 	this.ormSettings = {

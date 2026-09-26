@@ -114,6 +114,11 @@ public class ORMContext {
 	private Map<Key, Session>				sessions			= new ConcurrentHashMap<>();
 
 	/**
+	 * How many {@code ormReadOnly()} blocks are running. While above zero, every session loads entities read-only.
+	 */
+	private int								readOnlyDepth		= 0;
+
+	/**
 	 * Retrieve the ORMContext for the given boxlang context (whatever JDBC-capable context inside which we are currently executing).
 	 *
 	 * @param context The context for which to retrieve the ORMContext.
@@ -265,8 +270,60 @@ public class ORMContext {
 			if ( !config.autoManageSession ) {
 				session.setHibernateFlushMode( org.hibernate.FlushMode.MANUAL );
 			}
+			if ( this.readOnlyDepth > 0 ) {
+				session.setDefaultReadOnly( true );
+			}
 			return session;
 		} );
+	}
+
+	/**
+	 * Run work with every session of this context loading entities read-only: entities loaded inside are not dirty-checked
+	 * and their changes are never written. Entities already in the session keep their state, and new entities can still be
+	 * saved. Blocks can nest; the sessions go back to their previous setting when the outermost block ends.
+	 *
+	 * @param work The work to run.
+	 * @param <T>  The work's result type.
+	 *
+	 * @return What the work returned.
+	 */
+	public <T> T readOnly( java.util.function.Supplier<T> work ) {
+		Map<Key, Boolean> previous = new java.util.HashMap<>();
+		this.sessions.forEach( ( name, session ) -> {
+			previous.put( name, session.isDefaultReadOnly() );
+			session.setDefaultReadOnly( true );
+		} );
+		this.readOnlyDepth++;
+		try {
+			return work.get();
+		} finally {
+			this.readOnlyDepth--;
+			if ( this.readOnlyDepth == 0 ) {
+				this.sessions.forEach( ( name, session ) -> {
+					if ( session.isOpen() ) {
+						session.setDefaultReadOnly( previous.getOrDefault( name, false ) );
+					}
+				} );
+			}
+		}
+	}
+
+	/**
+	 * Whether a BoxLang {@code transaction{}} is active on this context.
+	 *
+	 * @return True inside a transaction.
+	 */
+	public boolean isInTransaction() {
+		return getConnectionManager().isInTransaction();
+	}
+
+	/**
+	 * Whether an {@code ormReadOnly()} block is running in this context.
+	 *
+	 * @return True inside {@code ormReadOnly()}.
+	 */
+	public boolean isReadOnly() {
+		return this.readOnlyDepth > 0;
 	}
 
 	/**

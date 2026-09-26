@@ -38,6 +38,7 @@ class {
 		"dbcreate"             : "dropcreate",
 		"cacheprovider"        : "ConcurrentHashMap",
 		"secondarycacheenabled": true,
+		"eventHandling"        : true,
 		"eventHandler"         : "root.models.events.EventHandler",
 		"ignoreParseErrors"    : true
 	};

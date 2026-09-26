@@ -79,21 +79,34 @@ public final class EntityFacadeFactory {
 	/**
 	 * A mapped property to expose on the facade.
 	 *
-	 * @param name     The BoxLang property name (also the getter/setter suffix, e.g. {@code name} -> {@code getName}).
-	 * @param javaType The Java type of the accessor. Use a concrete type for the id (e.g. {@code String} for uuid) so
-	 *                 Hibernate's generator resolution has a real typed member; property accessors may use {@code Object}.
-	 * @param assoc    How the accessor translates at the Hibernate/BoxLang boundary (see {@link AssocKind}).
+	 * @param name        The BoxLang property name (also the getter/setter suffix, e.g. {@code name} -> {@code getName}).
+	 * @param javaType    The Java type of the accessor. Use a concrete type for the id (e.g. {@code String} for uuid) so
+	 *                    Hibernate's generator resolution has a real typed member; property accessors may use {@code Object}.
+	 * @param assoc       How the accessor translates at the Hibernate/BoxLang boundary (see {@link AssocKind}).
+	 * @param annotations Java annotations for the getter (e.g. Hibernate's {@code @CreationTimestamp}).
 	 */
-	public record PropertySpec( String name, Class<?> javaType, AssocKind assoc ) {
+	public record PropertySpec( String name, Class<?> javaType, AssocKind assoc,
+	    List<net.bytebuddy.description.annotation.AnnotationDescription> annotations ) {
 
 		/**
-		 * Convenience for a non-association (plain column/id) property.
+		 * A property accessor with no Java annotations.
 		 *
 		 * @param name     The property name.
-		 * @param javaType The accessor Java type.
+		 * @param javaType The accessor's Java type.
+		 * @param assoc    The association kind.
+		 */
+		public PropertySpec( String name, Class<?> javaType, AssocKind assoc ) {
+			this( name, javaType, assoc, List.of() );
+		}
+
+		/**
+		 * A plain (non-association) property accessor with no Java annotations.
+		 *
+		 * @param name     The property name.
+		 * @param javaType The accessor's Java type.
 		 */
 		public PropertySpec( String name, Class<?> javaType ) {
-			this( name, javaType, AssocKind.NONE );
+			this( name, javaType, AssocKind.NONE, List.of() );
 		}
 	}
 
@@ -145,17 +158,51 @@ public final class EntityFacadeFactory {
 	 * @return The generated facade {@link Class}, implementing {@link BoxEntityFacade}.
 	 */
 	public static Class<?> generate( String className, List<PropertySpec> ids, List<PropertySpec> properties, Class<?> superClass, ClassLoader loader ) {
+		return generate( className, ids, properties, superClass, loader, List.of() );
+	}
+
+	/**
+	 * Generate (or reuse) the facade class for an entity, carrying Java annotations on the class (e.g. Hibernate's
+	 * {@code @SoftDelete}). Hibernate reads these annotations alongside the {@code mapping.xml} mapping.
+	 *
+	 * @param className       The facade class name.
+	 * @param ids             The id accessors (empty for a subclass).
+	 * @param properties      The property accessors.
+	 * @param superClass      The parent facade, or {@code Object.class} for a root.
+	 * @param loader          The class loader to define the facade in.
+	 * @param typeAnnotations Java annotations for the facade class.
+	 *
+	 * @return The facade class.
+	 */
+	public static Class<?> generate( String className, List<PropertySpec> ids, List<PropertySpec> properties, Class<?> superClass, ClassLoader loader,
+	    List<net.bytebuddy.description.annotation.AnnotationDescription> typeAnnotations ) {
 		// An ORM application build generates into its own FacadeClassLoader (one per startup/reload), whose cache is scoped
 		// to that build - so a reload with a changed entity defines a fresh class instead of reusing the previous one.
 		if ( loader instanceof FacadeClassLoader facadeLoader ) {
-			return facadeLoader.facades().computeIfAbsent( className, name -> build( name, ids, properties, superClass, loader ) );
+			return facadeLoader.facades().computeIfAbsent( className, name -> build( name, ids, properties, superClass, loader, typeAnnotations ) );
 		}
-		return CACHE.computeIfAbsent( className, name -> build( name, ids, properties, superClass, loader ) );
+		return CACHE.computeIfAbsent( className, name -> build( name, ids, properties, superClass, loader, typeAnnotations ) );
 	}
 
-	private static Class<?> build( String className, List<PropertySpec> ids, List<PropertySpec> properties, Class<?> superClass, ClassLoader loader ) {
+	/**
+	 * Generate and load one facade class with ByteBuddy.
+	 *
+	 * @param className       The facade's fully qualified class name.
+	 * @param ids             The id properties (root facades only).
+	 * @param properties      The other persistent properties.
+	 * @param superClass      The parent facade, or null/Object for a hierarchy root.
+	 * @param loader          The classloader to define the class in.
+	 * @param typeAnnotations Java annotations for the class (e.g. {@code @SoftDelete}); may be empty.
+	 *
+	 * @return The loaded facade class.
+	 */
+	private static Class<?> build( String className, List<PropertySpec> ids, List<PropertySpec> properties, Class<?> superClass, ClassLoader loader,
+	    List<net.bytebuddy.description.annotation.AnnotationDescription> typeAnnotations ) {
 		boolean					root	= superClass == null || superClass == Object.class;
 		DynamicType.Builder<?>	builder	= new ByteBuddy().subclass( root ? Object.class : superClass ).name( className );
+		if ( typeAnnotations != null && !typeAnnotations.isEmpty() ) {
+			builder = builder.annotateType( typeAnnotations );
+		}
 
 		if ( root ) {
 			// The hierarchy root owns the backing-state field, the BoxEntityFacade contract, and the concretely-typed id
@@ -301,6 +348,12 @@ public final class EntityFacadeFactory {
 			return builder
 			    .defineMethod( "get" + cap, MAP_OF_OBJECT, Visibility.PUBLIC ).intercept( getter( prop ) )
 			    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( MAP_OF_OBJECT ).intercept( setter( prop ) );
+		}
+		if ( prop.annotations() != null && !prop.annotations().isEmpty() ) {
+			// Property-level Java annotations go on the getter (Hibernate uses property access for facades).
+			return builder
+			    .defineMethod( "get" + cap, prop.javaType(), Visibility.PUBLIC ).intercept( getter( prop ) ).annotateMethod( prop.annotations() )
+			    .defineMethod( "set" + cap, void.class, Visibility.PUBLIC ).withParameters( prop.javaType() ).intercept( setter( prop ) );
 		}
 		return builder
 		    .defineMethod( "get" + cap, prop.javaType(), Visibility.PUBLIC ).intercept( getter( prop ) )
