@@ -62,7 +62,8 @@ public class EntityLoadAsStruct extends BaseORMBIF {
 	 * </pre>
 	 * <p>
 	 * Getter includes need a loaded entity, so they are an error here; use <code>entityToStruct()</code> or a mapper.
-	 * Collections come back in id order.
+	 * Collections come back in id order. Entities with a composite id are not supported (<code>orm.argument</code>); use
+	 * <code>entityToStruct()</code> on the loaded entities.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
@@ -71,7 +72,7 @@ public class EntityLoadAsStruct extends BaseORMBIF {
 	 *
 	 * @argument.entityName The name of the entity.
 	 *
-	 * @argument.idOrFilter The primary key value, a composite key struct, or a struct of property values to match.
+	 * @argument.idOrFilter The primary key value, or a struct of property values to match.
 	 *
 	 * @argument.includes Properties and dotted association paths to add to the entity's defaults, as a list or array.
 	 *

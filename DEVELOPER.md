@@ -813,7 +813,8 @@ rooted at the same entity, `where root.id in ( ids just read )` (chunks of 500),
 grouped back into their parents, in child id order, and nested collections repeat the step. Mappers run last, innermost
 first. `this.memento` comes from `ORMApp.prototype()`, one instance per entity made through the instantiator. Getters
 need an entity: one from `this.memento` is skipped, one the caller asks for is `orm.argument`. `entityLoadAsStruct()` is
-`criteria/StructLoads` (id, composite key or filter conditions, then the projection). Plain `asStruct()` (no includes) is
+`criteria/StructLoads` (id or filter conditions, then the projection). Entities with a composite id are
+`orm.argument`: grouping rows back into parents needs a single id. Plain `asStruct()` (no includes) is
 unchanged except for ISO 8601 dates.
 
 **Tests.** `bifs/GormHelpersTest`, `criteria/CriteriaFunctionsTest`, `config/SqlFunctionsTest`,

@@ -51,7 +51,7 @@ public final class StructLoads {
 	 * @param app        The ORM application.
 	 * @param context    The context.
 	 * @param entityName The entity name.
-	 * @param idOrFilter An id, a composite key struct, or a struct of property values to match.
+	 * @param idOrFilter An id or a struct of property values to match (the projection needs entities with a single id).
 	 * @param includes   The includes (list or array), or null for the entity's defaults.
 	 * @param options    {@code sortOrder}, {@code maxResults}, {@code offset}, {@code unique}, and the struct options
 	 *                   {@code excludes}, {@code mappers}, {@code defaults}, {@code ignoreDefaults}, {@code profile}; may
