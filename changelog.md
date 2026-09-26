@@ -9,6 +9,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ❌ Removed
+
+- Removed the class-less (MAP) entity representation and the `entityFacades` setting; the generated POJO facade is now the only representation. No application change needed.
+- Removed the legacy `hbm.xml` writer (`HibernateXMLWriter`) and the `ormXmlMapping` setting; the module always emits the modern Hibernate 7 `mapping.xml`.
+
+### ⚡ Changed
+
+- `unique=true` on `ormExecuteQuery()` and `entityLoad()` (filter form) is strict: more than one matching row raises `orm.query.nonUnique` instead of silently returning the first. Pass `{ uniqueFirst : true }` for the old behavior. `unique` given inside the options struct is now honored.
+- ORM errors are `orm.*` exceptions instead of raw Hibernate/JPA exceptions. Code catching Hibernate class names should catch `"orm"` instead.
+- Unused named HQL parameters are logged as a warning.
+- `eventHandling` is honored: ORM events (entity methods, the global `eventHandler`, `postNew`) only fire when `eventHandling=true`. Before, they always fired. Apps that use events without setting `eventHandling: true` must add it.
+- `entityLoadByPK()`'s third argument is an options struct (`lock`, `timeout`, `skipLocked`, `readOnly`). A boolean third argument (Lucee's `unique`) is accepted and ignored.
+- Criteria `asStruct()` returns date values as ISO 8601 strings, like `entityToStruct()` and `entityLoadAsStruct()`.
+- `useDBForMapping` now works (it was ignored before). It stays off by default.
+
+- Upgraded the ORM engine from Hibernate 5.6.15 to 7.4.8. BoxLang-facing BIF behavior is preserved.
+- Build and test against BoxLang 1.17.0 (was 1.11.0); the module's minimum BoxLang version is now 1.17.0 due to several updates we required in the new approach.
+- Legacy dialect aliases (e.g. `MySQL57`, `Oracle10g`, `DerbyTenSeven`) now map to their Hibernate 7 equivalents with a one-time deprecation warning; community-dialect databases (SQLite, Derby, Firebird, …) resolve automatically.
+- `ormGetSession()` / `ormGetSessionFactory()` return facade-aware wrappers so a BoxLang entity name or instance works against the raw Hibernate API.
+- ORM operations inside a BoxLang `transaction{}` now ride the transaction's JDBC connection instead of the ORM running its own separate Hibernate transaction. BoxLang owns the real commit/rollback, so ORM writes are governed by the same demarcation as native `queryExecute` calls (rolled back together, committed together). The `TransactionManager` interceptor now only flushes the session on commit/end and clears it on rollback, and in-transaction ORM queries flush first so they observe their own pending writes (read-your-writes).
+
+### 🚀 Added
+
+- Clear ORM errors: every error bx-orm raises is an `orm.*` typed exception (catch all with `catch( "orm" e )`, or a family such as `"orm.query"`). Messages use BoxLang entity and property names (never generated facade class names), say how to fix the problem in `detail`, carry the context (entity, property, HQL, params, SQL, constraint) in `extendedInfo`, and suggest the right name for misspelled entities, properties, field types and ormtypes ("Did you mean [name]?"). Covers HQL syntax and unknown names, missing or mistyped query parameters, lazy loads after the session closed, unsaved associations, missing assigned ids, not-null and unique/foreign-key violations, stale (optimistic lock) updates, and wrong arguments to entity BIFs.
+- `ormDiagnostics()`: the ORM's state for the current application (status, last startup error, entities per datasource, warnings, key settings, this request's open sessions). Never throws.
+- Startup validation: duplicate entity names on one datasource are reported with both classes; unknown `ormtype` values are warned about and named if Hibernate fails to start; broken startups (bad entity path, fieldtype, cfc or datasource) raise one `orm.config` error, and the last failure is remembered for later ORM calls and `ormDiagnostics()`.
+- `uniqueFirst` option for `ormExecuteQuery()` and `entityLoad()`: take the first row of a multi-row result.
+- Entity inspection BIFs: `entityGetName()`, `entityGetDatasource()`, `entityGetId()`, `entityGetMetadata()` (cached per ORM application), `entityIsDirty()` and `entityGetDirtyProperties()` (Hibernate's own dirty check; no SQL for managed entities), `ormIsSessionDirty()` and `ormGetSessionStatistics()`.
+- `entityCriteria( entityName )`: a fluent query builder. Conditions (cborm names and aliases, `not*` negation, `anyOf`/`allOf` groups, `where()` shorthands, native `sql()` with bound params), automatic joins for dotted paths, aliases and `with{Association}()`, fetch joins, subqueries (`exists`, `isIn`, cborm `property*`/`sub*`), projections (`project()`, cborm `withProjections()`), struct/query/stream results, ordering, paging and query options. Terminals: `list`, `count`, `exists`, `get`, `getOrFail`, `first`, `firstOrFail`, `paginate`, `simplePaginate`, `pluck`, `sum`/`avg`/`min`/`max`, `each`, `chunk`. Property names are checked while building ("Did you mean"), `getSQL()`/`peekSQL()`/`logSQL()` show the SQL without running it, `writeDump()` shows the calls, HQL, params and SQL, and cborm's criteria interception points are announced.
+- `orm.notFound` error type for `getOrFail()` / `firstOrFail()`.
+- Soft delete: entity `softDelete="true"` (boolean `deleted` column), `"active"` (inverted `active` column) or `"timestamp"` (deletion date), with `softDeleteColumn` to rename the column. `entityDelete()` marks the row, and every load, query and association skips deleted rows (Hibernate `@SoftDelete`, carried by the generated facade).
+- Automatic timestamps: property `autoTimestamp="create"` (set on insert) or `"update"` (set on insert and every update), via Hibernate `@CreationTimestamp` / `@UpdateTimestamp`.
+- `entityLoadOrNew()`, `entityLoadOrSave()`, `entityLoadOrFail()` and `entityLoadByPKOrFail()`: load by id or filter, or return a new unsaved entity, save a new one, or raise `orm.notFound`.
+- `entityEvict( entityOrArray )`: remove entities from the session. `entityGetReference( name, id )`: a reference without a SELECT.
+- Pessimistic locking: `entityLock( entity, mode, options )`, `entityLoadByPK( name, id, { lock } )`, criteria `lock()` and `ormExecuteQuery( ..., { lock } )`, with modes `read`, `write`, `force` and `timeout` / `skipLocked` options. Locks need `transaction{}`.
+- Read-only loading: `ormReadOnly( closure )`, `entityLoadReadOnly()` and a `readOnly` option on `entityLoad()` and `entityLoadByPK()`.
+- Criteria bulk statements: `updateAll( { prop : value } )` and `deleteAll()` run one HQL statement and return the row count (no events or cascades; loaded entities are not refreshed).
+- `entityLoadByPK( name, [ ids ] )`: load several entities in one batched query; the array keeps the asked order, with null for missing ids.
+- `entitySave()` and `entityDelete()` take one entity or an array, and `{ flush : true }` to flush right away.
+- `defaultSort` entity annotation (`defaultSort="lastName, firstName desc"`): the order `entityLoad()` and criteria use when none is given. Checked at boot.
+- Functions in criteria paths: `isEq( "year(createdDate)", 2025 )`, `order( "lower(name)" )`, nested calls, literals and `cast()`.
+- Named SQL functions: `ormSettings.sqlFunctions = { name : "sql(?1)" }` (or `{ sql, returns }`) registers SQL templates for HQL and criteria; `ormGetSQLFunctions()` lists them.
+- `postCommit( entity, action )` event on the entity and the global event handler, fired once a write is committed (never for rolled-back writes).
+- `useDBForMapping=true` (Adobe ColdFusion compatibility): at boot, untyped properties get their `ormtype` from the column type and entities without an id get it from the table's primary key.
+- `entityToStruct( entityOrArray, options )`: entities as structs, mementifier-compatible (`this.memento` defaults, excludes, never-include, mappers, defaults, profiles), with dotted association paths, cycle safety and ISO 8601 dates.
+- `entityLoadAsStruct( name, idOrFilter, includes, options )` and criteria `asStruct( includes )`: the same structs read with projection queries, without loading entities. Getters you write for a property are honored in all three, so they shape the output the same way.
+- Event veto: a `preInsert`, `preUpdate` or `preDelete` handler (on the entity or the global `eventHandler`) that returns `false` cancels the operation. Vetoing the insert of a database-identity entity raises `orm.event.veto`, since Hibernate cannot skip that insert.
+
+- POJO-facade entity representation (now the only representation): each entity maps to a generated Java facade whose accessors delegate to the BoxLang instance, unlocking `uuid` (and other) id generators, composite ids, `byte[]`, and full metamodel access.
+- Facades are namespaced per ORM application, so same-named entities in different apps do not collide.
+- Composite (multi-column) primary keys and entity inheritance (single-table + joined) in the facade representation.
+- Associations and lazy proxies in the facade representation
+- Modern Hibernate 7 `mapping.xml` output via `MappingXMLWriter`
+- Value/element collections (`fieldtype="collection"`) as a JPA `<element-collection>`: array (BAG) and struct/map (MAP).
+- New core `postNew` ORM event, fired by `entityNew()` on the entity's own `postNew( entity, entityName )` and the global `eventHandler`. (Hibernate has no instantiate event; previously only cborm offered `ORMPostNew`.)
+- JMH benchmark suite (`src/jmh`) for entity CRUD, bulk hydration, and cold boot, plus a `jmhCompare` task benchmarking Hibernate 5 vs 7.
+- Standalone boot + CRUD smoke tests for Derby, PostgreSQL, and MariaDB (Postgres/MariaDB gated by env vars).
+- ORM manifest boot cache (`ormManifest` setting: `off`/`auto`/`trust`). In `auto` the resolved boot model (per-entity metadata + mapping) is written to `.bxorm/manifest.json` after each boot; in `trust` the app boots straight from that manifest with zero entity discovery, parsing or mapping generation (integrity-checked, fail-closed). Aimed at cold-start-heavy and large-entity apps. Off by default.
+- The combined Hibernate `mapping.xml` is now fed to Hibernate in-memory (`addInputStream`) instead of via a temp file, removing a write+read on every boot.
+- Pre-generated ByteBuddy facade bytecode is cached to `.bxorm/facades.jar` in `auto` mode and injected in `trust` mode, so production boots skip facade code generation.
+- `bxorm` CLI (`boxlang module:orm <verb>`) to inspect the `.bxorm/` boot cache: `info`, `validate`, `entities`, `entity <name>`, `mappings`, `clear`, `version`, `help`. Reads the manifest only; the manifest is generated by booting once with `ormManifest="auto"`.
+- `ormManifestLocation` ORM setting (`Application.bx` → `this.ormSettings`): choose where the `.bxorm/` boot cache is stored. Blank (default) keeps it at the application root; a relative path resolves against the app root, an absolute path is used as-is. The folder name stays `.bxorm`; only its parent moves. Mirrors the `bxorm` CLI `--dir` flag.
+- `ormManifest="auto"` now starts a source watcher over the entity paths: editing an entity marks the ORM application for reload, and the next request reloads it automatically (no manual `ormReload()`). Generated `*.orm.xml` and the `.bxorm/` cache are ignored so a reload's own writes never loop. The watcher is stopped on shutdown/reload and degrades gracefully when the runtime has no watcher service.
+
+### 🐛 Fixed
+
+- The entity-level `where` annotation was never read, so it had no effect; it now restricts every load and query of the entity.
+- Optimistic-locking `<version>` columns now work end-to-end.
+- `text`/`clob` properties map to `TEXT`/`LONGTEXT` (via `<lob/>`) instead of an in-row `varchar`, avoiding MySQL row-size failures.
+- An inverse one-to-many with no explicit `fkcolumn` is emitted as a `mapped-by` collection instead of synthesizing a join table.
+- `binary`/`byte[]` properties are mapped and persisted (previously silently skipped).
+- A capitalized association property name (e.g. `Client`) no longer breaks boot; `mapped-by` is decapitalized to match the facade accessor.
+- A discriminated single-table subclass with a `<secondary-table>` now persists and deletes its own columns (emits `owned="true"`).
+- A primary-key load (`entityLoadByPK`, `session.get`) of a session-managed entity no longer returns `null`.
+- `removeX()` on a to-many removes by identity/equality, not by the owner's id property names.
+- A to-many association can be structurally modified while iterating its getter
+- Updating an entity with an association/collection no longer double-fires `preUpdate`/`postUpdate`.
+- Hardened `entityLoad()` filter queries against HQL injection (the `order by` property is validated against the entity's properties).
+- `entityLoad()` / `ormExecuteQuery()` accept a primary key or entity instance for a to-one association filter/parameter, resolving to a managed reference before binding.
+- `ormExecuteQuery()` list parameters bound to an association resolve every element, not just the first.
+- `entityLoadByExample()` builds predicates from the inheritance-aware property set and excludes ids, version, and associations.
+- `entitySave()` on a detached entity leaves the passed-in object live and carrying generated ids/event changes (Hibernate 7 removed `saveOrUpdate()`).
+- Date/time properties retain millisecond precision (`DateTimeConverter` maps to `java.sql.Timestamp`).
+- Removed a stale `fieldtype="collection" … not yet supported` warning that logged on every value/element collection even though collections are now supported.
+- Inherited to-many associations now get the stable-snapshot getter, so `parent.getChildren().each( c => parent.removeChild( c ) )` is safe for a collection declared on a persistent parent entity (previously only associations declared directly on the entity were protected).
+- `removeX()` on an unmanaged (transient) collection now prefers an exact identity match, so a distinct-but-equal transient element is not removed by mistake.
+- An owning `one-to-many` without `fkcolumn` reuses the target's back-reference foreign key instead of creating a join table.
+- A struct-typed (`type="struct"`) `one-to-many`/`many-to-many` maps its key (`structKeyColumn`/`structKeyType`) and round-trips by key.
+- A `fieldtype="timestamp"` version property boots and is stamped on save.
+- Hibernate isolated work (e.g. sequence/table id allocation) inside a `transaction{}` runs on its own pooled connection, so it can no longer commit or roll back the surrounding BoxLang transaction mid-flight.
+- `duplicate()` of an ORM entity produces an independent copy that saves its own state instead of sharing the original's Hibernate facade.
+- ORM BIFs no longer fail with a `NullPointerException` when the application is not ORM-enabled or the ORM failed to start; they raise `orm.notEnabled` / `orm.notReady` with the reason.
+- Entity lookup no longer fails with "No entities found for datasource" when every entity lives on a non-default datasource.
+- A detached entity bound as an `ormExecuteQuery()` or `entityLoad()` filter parameter resolves correctly (the generated facade name no longer leaks into the lookup).
+- `ormExecuteQuery()` now applies the `cacheable`, `cacheName` and `timeout` options (they were ignored), and `entityLoad()` applies `cacheName` as the query cache region.
+- `entityLoad()` with `ignorecase` no longer wraps numeric or date sort properties in `lower()`.
+- `ormFlush( datasource )` flushes that datasource's session instead of the default one.
+- An association parameter given as an id (`ormExecuteQuery()`, `entityLoad()`) no longer fails with "cannot be used as ...Facade" when the session already holds a lazy proxy for that row.
+- A failed flush at the end of a request still closes the request's ORM sessions.
+- The `uniquekey` and `index` property annotations create their unique constraints and indexes again (lost in the move to `mapping.xml`). Properties sharing a name form one multi-column constraint or index; both accept a comma-separated list, and both work on `many-to-one` foreign keys.
+
 ## [1.7.0] - 2026-09-14
 
 ### ⭐ Added

@@ -1,0 +1,8 @@
+/**
+ * Exercises the `guid` id generator (a database-style GUID string).
+ */
+class accessors="true" persistent="true" entityname="GuidGen" table="feat_guidgen" {
+
+	property name="id" fieldtype="id" generator="guid" ormType="string" length="36";
+	property name="label" ormType="string" notnull="true";
+}

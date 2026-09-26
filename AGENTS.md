@@ -6,7 +6,9 @@ The `bx-orm` module provides Object-Relational Mapping (ORM) capabilities for th
 
 bx-orm sits as a middleware between the boxlang dynamic JVM language and Hibernate ORM. It abstracts not only database operations, but the verbose Hibernate configuration syntax.
 
-Due to issues with JPA requiring native java classes in entity configuration, bx-orm utilizes Hibernate 5.6.15-FINAL which enables dynamic java classes in place of Java source files. Hence all Hibernate integration code is written against Hibernate 5, not Hibernate 6 or 7.
+bx-orm runs on Hibernate ORM 7.4.x. BoxLang entities are dynamic maps (`IClassRunnable`, which implements `java.util.Map`) rather than native Java classes, so the module plugs a BoxLang-aware representation strategy into Hibernate. Because Hibernate 6+ hard-codes its `ManagedTypeRepresentationResolver`, the strategy is injected through the pluggable `hibernate.persister.factory` service (see `BoxPersisterFactory`), using public Hibernate SPIs. The one exception is `BoxRepresentationResolver`'s embeddable branch (components and composite ids), which delegates to the `internal` `ManagedTypeRepresentationResolverStandard.INSTANCE` because Hibernate exposes no public factory for the default embeddable strategy; that single, guarded delegation is the only internal touch-point, and it is the only thing to revisit if a future Hibernate release relocates it. All Hibernate integration code targets Hibernate 7, not Hibernate 5.
+
+For transactions, the module does not run its own Hibernate transaction: it **rides the BoxLang `transaction{}` connection** (via a transaction-aware `ORMConnectionProvider` plus per-statement connection handling), so BoxLang owns the real JDBC commit/rollback and ORM writes share one demarcation unit with native `queryExecute`. See the `bx-orm-transactions` custom skill.
 
 ## Module Structure and Design
 
@@ -21,7 +23,7 @@ Due to issues with JPA requiring native java classes in entity configuration, bx
 - src/main/test/resources/app/**: Test boxlang files for a test app. Includes ORM models, ORM configuration in Application.bx, and other boxlang test files.
 - src/main/resources/**: Resource files such as configuration, metadata, and licensing.
 - .agents/skills/**: General-purpose agent skills for BoxLang core development, Java, testing, and code quality.
-- .agents/skills-custom/**: Project-specific skills for the BoxLang ↔ Hibernate bridge (entity mapping, tuplizers, session management, configuration, events, BIFs, type conversion, caching, testing).
+- .agents/skills-custom/**: Project-specific skills for the BoxLang ↔ Hibernate bridge (entity mapping, the representation-strategy bridge, session management, configuration, events, BIFs, type conversion, caching, testing).
 - build/**: Build artifacts, generated sources, and documentation.
 - bin/**: Packaged module binaries and metadata for distribution.
 
@@ -44,7 +46,7 @@ Due to issues with JPA requiring native java classes in entity configuration, bx
 ## Tooling
 
 - Gradle is used for building/compiling the java sources, running junit tests, and building the final boxlang module structure into a zip file for uploading to forgebox.io.
-- Hibernate 5.6.15-FINAL serves as the ORM engine under the hood.
+- Hibernate ORM 7.4.x serves as the ORM engine under the hood.
 - Spotless is used for java source formatting.
 - Docker-compose is used to stand up a simple mysql database for integration testing.
 
@@ -86,10 +88,12 @@ Skills in `.agents/skills-custom/` are project-specific ORM/Hibernate bridge ski
 Custom skills in `.agents/skills-custom/` covering the full BoxLang ↔ Hibernate bridge architecture:
 
 - **bx-orm-entity-mapping** — Entity discovery via `MappingGenerator`, `EntityRecord` construction, metadata inspection (`IEntityMeta`, `ClassicEntityMeta`), HBM XML generation via `HibernateXMLWriter`, property metadata, entity file scanning
-- **bx-orm-hibernate-bridge** — Tuplizer architecture (`EntityTuplizer`), `BoxProxy`/`BoxProxyFactory`, `BoxLazyInitializer`, `BoxClassInstantiator`, `BoxPropertyGetter`/`BoxPropertySetter`, `EntityMode.MAP`, Key normalization, `IClassRunnable` integration
+- **bx-orm-hibernate-bridge** — Representation-strategy architecture (`BoxEntityRepresentationStrategy`, `BoxRepresentationResolver`, `BoxPersisterFactory` and the delegating bootstrap/runtime contexts), `BoxProxy`/`BoxProxyFactory`, `BoxLazyInitializer`, `BoxClassInstantiator`, `BoxPropertyGetter`/`BoxPropertySetter`/`BoxPropertyAccess`, `RepresentationMode.MAP`, Key normalization, `IClassRunnable` integration
 - **bx-orm-session-management** — `ORMService` → `ORMApp` → `ORMContext` lifecycle, `SessionFactoryBuilder`, `HQLQuery`, session open/close/flush/eviction, shutdown listeners, request/thread context management
 - **bx-orm-configuration** — `ORMConfig` properties, `ORMConnectionProvider` (BoxLang datasource → Hibernate bridge), naming strategies (`MacroCaseNamingStrategy`, `BoxLangClassNamingStrategy`), `BootstrapServiceRegistry` lifecycle, `ORMKeys` constants
 - **bx-orm-event-system** — `EventListener` (Hibernate `Integrator`), 13 event types (PRE_INSERT, POST_LOAD, etc.), global/entity listeners, `TransactionManager` interceptor, `ApplicationListener`, BoxLang interception points
+- **bx-orm-transactions** — how the ORM rides the BoxLang `transaction{}` connection: transaction-aware `ORMConnectionProvider` (+ skip-close, aggressive release), per-statement `CONNECTION_HANDLING` in `SessionFactoryBuilder`, `TransactionManager` (flush on commit/end, clear on rollback), `ORMContext.flushForQuery` (read-your-writes), BoxLang single-unit / `enableNestedTransactions` model
+- **bx-orm-criteria** — `entityCriteria()` fluent query builder: `CriteriaBuilder` recorder, `CriteriaMethods` method table (aliases, named args, `not*`/`with*`), path/join resolution via `EntityModel`, HQL compile, terminals, subqueries, `getSQL` via `SqlCapture`
 - **bx-orm-bif-development** — Building ORM BIFs (`EntityLoad`, `EntitySave`, `EntityDelete`, `EntityNew`, `ORMExecuteQuery`, etc.), extending `BaseORMBIF`, `@BoxBIF` annotation, argument patterns, entity name resolution, session BIFs
 - **bx-orm-type-conversion** — JPA `AttributeConverter`s (`DateTimeConverter`, `StringConverter`, numeric converters), `@Converter(autoApply=true)`, BoxLang dynamic types → JDBC type mapping, BoxLang caster integration
 - **bx-orm-cache-integration** — `BoxHibernateCache` (JSR-107 `Cache`), `BoxHibernateCacheManager`, `BoxHibernateCachingProvider`, BoxLang `CacheService` bridge, cache strategies (read-only/read-write/nonstrict-read-write), cache regions

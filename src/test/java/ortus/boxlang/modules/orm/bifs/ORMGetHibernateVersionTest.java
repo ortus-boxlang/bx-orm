@@ -17,7 +17,7 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,9 @@ public class ORMGetHibernateVersionTest extends BaseORMTest {
 	@Test
 	public void testORMGetHibernateVersion() {
 		instance.executeSource( "result = ORMgetHibernateVersion()", context );
-		assertEquals( "5.6.15.Final", variables.get( result ) );
+		// Assert on the major version rather than an exact string so a Hibernate patch bump does not break the test.
+		String version = ( String ) variables.get( result );
+		assertTrue( version.startsWith( "7." ), "Expected a Hibernate 7.x version, got: " + version );
 	}
 
 }

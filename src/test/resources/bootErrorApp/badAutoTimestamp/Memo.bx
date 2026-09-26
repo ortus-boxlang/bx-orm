@@ -1,0 +1,7 @@
+/**
+ * autoTimestamp has a value that is not create or update.
+ */
+class persistent="true" table="memos" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="stamp" ormType="timestamp" autoTimestamp="always";
+}

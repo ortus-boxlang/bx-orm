@@ -17,6 +17,9 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import ortus.boxlang.modules.orm.hibernate.facade.BoxEntityFacade;
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
+
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
@@ -79,11 +82,18 @@ public class ORMExecuteQuery extends BaseORMBIF {
 	 *
 	 * The options struct can contain any of the following keys:
 	 * <ul>
-	 * <li><strong><code>unique</code></strong> - Specifies whether to retrieve a single, unique item. Default is false.</li>
+	 * <li><strong><code>unique</code></strong> - Specifies whether to retrieve a single, unique item. Default is false. If more than one row matches, an
+	 * <code>orm.query.nonUnique</code> error is raised.</li>
+	 * <li><strong><code>uniqueFirst</code></strong> - Return the first row even when several match (implies <code>unique</code>). Default is false.</li>
 	 * <li><strong><code>datasource</code></strong> - The datasource to use for the query. If not specified, the default datasource will be used.</li>
 	 * <li><strong><code>offset</code></strong> - Specifies the position from which to retrieve the objects. Default is 0.</li>
 	 * <li><strong><code>maxresults</code></strong> - Specifies the maximum number of objects to be retrieved. Default is no limit.</li>
 	 * <li><strong><code>readonly</code></strong> - If true, the query will be read-only. Default is false.</li>
+	 * <li><strong><code>cacheable</code></strong> - Cache the result in the second-level query cache (needs <code>secondaryCacheEnabled</code>). Default
+	 * is false.</li>
+	 * <li><strong><code>cacheName</code></strong> - The query cache region to use (alias <code>cacheRegion</code>). Implies <code>cacheable</code> unless
+	 * <code>cacheable</code> is given.</li>
+	 * <li><strong><code>timeout</code></strong> - The query timeout in seconds. Default is no timeout.</li>
 	 * </ul>
 	 *
 	 * @param context   The context in which the BIF is being invoked.
@@ -94,7 +104,8 @@ public class ORMExecuteQuery extends BaseORMBIF {
 	 * @argument.params Optional parameters for the HQL query. Can be a struct of named parameters or an array of positional parameters.
 	 *
 	 * @argument.unique Optional boolean indicating whether to return a unique result (true) or a list of results (false). If true, the query will return
-	 *                  a single object or null if no results found.
+	 *                  a single object or null if no results found, and more than one match raises <code>orm.query.nonUnique</code> (use the
+	 *                  <code>uniqueFirst</code> option to take the first row instead).
 	 *
 	 * @argument.options Optional struct of additional query options.
 	 */
@@ -135,12 +146,25 @@ public class ORMExecuteQuery extends BaseORMBIF {
 			}
 		}
 		options.putIfAbsent( ORMKeys.unique, isUnique );
+		// The options struct may carry unique itself (ormExecuteQuery( hql, params, { unique : true } )).
+		isUnique = BooleanCaster.cast( options.getOrDefault( ORMKeys.unique, false ) );
+		// uniqueFirst: take the first row of a multi-row result (the pre-2.0 behavior). Without it a unique query that
+		// matches several rows is an error, as in Hibernate and the CFML engines.
+		boolean uniqueFirst = BooleanCaster.cast( options.getOrDefault( ORMKeys.uniqueFirst, false ) );
+		if ( uniqueFirst ) {
+			isUnique = true;
+			options.put( ORMKeys.unique, true );
+		}
 		if ( isUnique ) {
-			options.put( ORMKeys.maxResults, 1 );
+			options.put( ORMKeys.maxResults, uniqueFirst ? 1 : 2 );
 		}
 		Object results = new HQLQuery( context, arguments.getAsString( ORMKeys.hql ), params, options ).execute();
 		if ( results instanceof List<?> castList ) {
-			if ( options.getAsBoolean( ORMKeys.unique ) ) {
+			if ( isUnique ) {
+				if ( castList.size() > 1 ) {
+					throw ortus.boxlang.modules.orm.errors.ORMErrors.nonUniqueResult( 0, "ormExecuteQuery",
+					    arguments.getAsString( ORMKeys.hql ) );
+				}
 				return castList.isEmpty() ? null : castList.getFirst();
 			}
 			return Array.fromList( castList );
@@ -162,6 +186,9 @@ public class ORMExecuteQuery extends BaseORMBIF {
 			return param;
 		} else if ( param instanceof BoxProxy proxyClass ) {
 			return ORMService.getEntityIdentifier( proxyClass.getRunnable() );
+		} else if ( param instanceof BoxEntityFacade ) {
+			// A facade passed as a query parameter (facade mode): resolve its identifier via the backing BoxLang instance.
+			return ORMService.getEntityIdentifier( FacadeSupport.unwrap( param ) );
 		} else if ( param instanceof IClassRunnable runnable ) {
 			return ORMService.getEntityIdentifier( runnable );
 		} else {

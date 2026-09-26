@@ -1,0 +1,12 @@
+/**
+ * Fixture for collection-level where (Phase 3B): a note that may be pinned in its notebook.
+ */
+class persistent="true" table="pin_notes" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="title" ormType="string" length="100";
+
+	property name="pinned" ormType="boolean";
+
+}

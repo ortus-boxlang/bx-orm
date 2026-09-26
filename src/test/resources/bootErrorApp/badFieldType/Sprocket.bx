@@ -1,0 +1,4 @@
+class persistent="true" table="sprockets" {
+	property name="id" fieldtype="id" generator="increment" ormtype="integer";
+	property name="parts" fieldtype="one-to-mony" cfc="Sprocket";
+}

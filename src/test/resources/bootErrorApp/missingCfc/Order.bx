@@ -1,0 +1,4 @@
+class persistent="true" table="orders" {
+	property name="id" fieldtype="id" generator="increment" ormtype="integer";
+	property name="customer" fieldtype="many-to-one" cfc="Customr" fkcolumn="customerId";
+}

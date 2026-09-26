@@ -43,6 +43,8 @@ public class ORMKeys {
 	public static final Key	ORMSettings					= Key.of( "ormSettings" );
 	public static final Key	autoGenMap					= Key.of( "autoGenMap" );
 	public static final Key	generateMappings			= Key.of( "generateMappings" );
+	public static final Key	ormManifest					= Key.of( "ormManifest" );
+	public static final Key	ormManifestLocation			= Key.of( "ormManifestLocation" );
 	public static final Key	autoManageSession			= Key.of( "autoManageSession" );
 	public static final Key	basePath					= Key.of( "basePath" );
 	public static final Key	cacheConfig					= Key.of( "cacheConfig" );
@@ -118,6 +120,16 @@ public class ORMKeys {
 	public static final Key	immutable					= Key.of( "immutable" );
 	public static final Key	readOnly					= Key.of( "readOnly" );
 	public static final Key	where						= Key.of( "where" );
+	public static final Key	lock						= Key.of( "lock" );
+	public static final Key	defaultSort					= Key.of( "defaultSort" );
+	public static final Key	sqlFunctions				= Key.of( "sqlFunctions" );
+	public static final Key	flush						= Key.of( "flush" );
+	public static final Key	mode						= Key.of( "mode" );
+	public static final Key	skipLocked					= Key.of( "skipLocked" );
+	public static final Key	lockTimeout					= Key.of( "lockTimeout" );
+	public static final Key	softDelete					= Key.of( "softDelete" );
+	public static final Key	softDeleteColumn			= Key.of( "softDeleteColumn" );
+	public static final Key	autoTimestamp				= Key.of( "autoTimestamp" );
 	public static final Key	rowid						= Key.of( "rowid" );
 	public static final Key	optimisticLock				= Key.of( "optimisticLock" );
 	public static final Key	selectBeforeUpdate			= Key.of( "selectBeforeUpdate" );
@@ -138,6 +150,16 @@ public class ORMKeys {
 	public static final Key	precision					= Key.of( "precision" );
 	public static final Key	scale						= Key.of( "scale" );
 	public static final Key	unique						= Key.of( "unique" );
+	public static final Key	uniqueFirst					= Key.of( "uniqueFirst" );
+	public static final Key	comment						= Key.of( "comment" );
+	public static final Key	hints						= Key.of( "hints" );
+	public static final Key	EVENT_BEFORE_CRITERIA_LIST	= Key.of( "beforeCriteriaBuilderList" );
+	public static final Key	EVENT_AFTER_CRITERIA_LIST	= Key.of( "afterCriteriaBuilderList" );
+	public static final Key	EVENT_BEFORE_CRITERIA_COUNT	= Key.of( "beforeCriteriaBuilderCount" );
+	public static final Key	EVENT_AFTER_CRITERIA_COUNT	= Key.of( "afterCriteriaBuilderCount" );
+	public static final Key	EVENT_BEFORE_CRITERIA_GET	= Key.of( "beforeCriteriaBuilderGet" );
+	public static final Key	EVENT_AFTER_CRITERIA_GET	= Key.of( "afterCriteriaBuilderGet" );
+	public static final Key	EVENT_CRITERIA_ADDITION		= Key.of( "onCriteriaBuilderAddition" );
 	public static final Key	uniqueKey					= Key.of( "uniqueKey" );
 	public static final Key	insert						= Key.of( "insert" );
 	public static final Key	update						= Key.of( "update" );
@@ -222,6 +244,9 @@ public class ORMKeys {
 	public static final Key	preDelete					= Key.of( "preDelete" );
 	public static final Key	postUpdate					= Key.of( "postUpdate" );
 	public static final Key	postInsert					= Key.of( "postInsert" );
+	public static final Key	postNew						= Key.of( "postNew" );
+	public static final Key	postCommit					= Key.of( "postCommit" );
+	public static final Key	action						= Key.of( "action" );
 	public static final Key	oldData						= Key.of( "oldData" );
 
 	/**

@@ -58,12 +58,15 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( a.size() ).isEqualTo( 2 );
 	}
 
-	@DisplayName( "It can run an HQL query with hql, unique, and options" )
+	/**
+	 * Test: It can run an HQL query with hql, unique, and options (uniqueFirst takes the first of several rows).
+	 */
+	@DisplayName( "It can run an HQL query with hql, unique, and options (uniqueFirst takes the first of several rows)" )
 	@Test
 	public void testUniqueAndOptions() {
 		// @formatter:off
 		instance.executeSource( """
-		result = ormExecuteQuery( "FROM Vehicle ORDER BY model ASC", true, { readOnly: true, offset: 1, maxResults: 5 } );
+		result = ormExecuteQuery( "FROM Vehicle ORDER BY model ASC", true, { readOnly: true, offset: 1, maxResults: 5, uniqueFirst: true } );
 		""", context );
 		// @formatter:on
 		Object item = variables.get( result );
@@ -94,7 +97,7 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 	public void testHQLParamsAndUnique() {
 		// @formatter:off
 		instance.executeSource( """
-		result = ormExecuteQuery( "FROM Vehicle WHERE id=?1 OR make=?2", ['1HGCM82633A123456','Honda'], true );
+		result = ormExecuteQuery( "FROM Vehicle WHERE id=?1 OR make=?2", ['1HGCM82633A123456','Honda'], true, { uniqueFirst: true } );
 		""", context );
 		// @formatter:on
 		Object item = variables.get( result );
@@ -108,7 +111,7 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 	public void testHQLPositionalParams() {
 		// @formatter:off
 		instance.executeSource( """
-		result = ormExecuteQuery( "FROM Vehicle WHERE id=? OR make=?", ['1HGCM82633A123456','Honda'], true );
+		result = ormExecuteQuery( "FROM Vehicle WHERE id=? OR make=?", ['1HGCM82633A123456','Honda'], true, { uniqueFirst: true } );
 		""", context );
 		// @formatter:on
 		Object item = variables.get( result );
@@ -527,4 +530,20 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( vehicleType.get( Key.of( "description" ) ) ).isEqualTo( "Compact sedan" );
 	}
 
+	/**
+	 * Test: an association parameter given as an id still binds when the session already holds a lazy proxy for that row
+	 * (session.get() then returns the proxy, which is not the facade type Hibernate's parameter check expects).
+	 */
+	@DisplayName( "An association id parameter binds when the session holds a lazy proxy for it" )
+	@Test
+	public void testAssociationParamWithProxyInSession() {
+		// @formatter:off
+		instance.executeSource( """
+			v = entityLoadByPK( "Vehicle", "2HGCM82633A654321" );
+			proxy = v.getManufacturer();
+			result = ormExecuteQuery( "from Vehicle where manufacturer = ?1", [ 42 ] ).len();
+		""", context );
+		// @formatter:on
+		assertThat( variables.get( result ).toString() ).isEqualTo( "3" );
+	}
 }

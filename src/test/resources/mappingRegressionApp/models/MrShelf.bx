@@ -1,0 +1,5 @@
+class accessors="true" persistent="true" table="mr_shelves" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="name" ormType="string";
+	property name="itemsByCode" fieldtype="one-to-many" cfc="MrItem" fkcolumn="shelfId" type="struct" structKeyColumn="itemCode" structKeyType="string" cascade="all";
+}

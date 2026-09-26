@@ -23,7 +23,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.hibernate.Session;
-import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -31,6 +31,7 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.config.ORMEntityWatcher;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.hibernate.BoxProxy;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
@@ -60,26 +61,61 @@ import ortus.boxlang.runtime.util.EncryptionUtil;
  */
 public class ORMService extends BaseService {
 
-	public static final String	BX_CLASS_SUFFIX			= "$bx";
-	public static final String	CFC_CLASS_SUFFIX		= "$cfc";
-	public static final String	COMPILED_CLASS_PREFIX	= "boxgenerated.class.";
+	public static final String			BX_CLASS_SUFFIX			= "$bx";
+	public static final String			CFC_CLASS_SUFFIX		= "$cfc";
+	public static final String			COMPILED_CLASS_PREFIX	= "boxgenerated.class.";
 
 	/**
 	 * The logger for the ORMEngine.
 	 */
-	private BoxLangLogger		logger;
+	private BoxLangLogger				logger;
 
 	/**
 	 * A map of ORM applications, keyed by the unique name of the ORM application.
 	 */
-	private Map<Key, ORMApp>	ormApps					= new ConcurrentHashMap<>();
+	private Map<Key, ORMApp>			ormApps					= new ConcurrentHashMap<>();
+
+	/**
+	 * The last startup failure per application (cleared on a successful start). Lets every later ORM call explain why the
+	 * ORM is not available instead of failing with a null pointer.
+	 */
+	private final Map<Key, BootFailure>	bootFailures			= new ConcurrentHashMap<>();
+
+	/**
+	 * A recorded ORM startup failure.
+	 *
+	 * @param at    When the startup failed.
+	 * @param error The (translated) startup error.
+	 */
+	public record BootFailure( java.time.Instant at, RuntimeException error ) {
+	}
+
+	/**
+	 * Auto-mode entity watchers, keyed by ORM application name. Owned here (not by {@link ORMApp}) so a single watcher
+	 * survives reloads - a reload swaps the {@link ORMApp} but the entity paths do not change - and is stopped only on a
+	 * real application shutdown.
+	 */
+	private Map<Key, ORMEntityWatcher>	entityWatchers			= new ConcurrentHashMap<>();
+
+	/**
+	 * Auto-mode: application names flagged for reload by their entity watcher. The reload itself happens on the next
+	 * request that resolves the app (which has the request/JDBC context a reload requires); the watcher thread does not.
+	 */
+	private java.util.Set<Key>			dirtyApps				= ConcurrentHashMap.newKeySet();
 
 	/**
 	 * Interception points for the ORM service.
 	 */
-	private static final Key[]	ORM_INTERCEPTION_POINTS	= List.of(
+	private static final Key[]			ORM_INTERCEPTION_POINTS	= List.of(
 	    ORMKeys.EVENT_POST_NEW,
-	    ORMKeys.EVENT_POST_LOAD ).toArray( new Key[ 0 ] );
+	    ORMKeys.EVENT_POST_LOAD,
+	    ORMKeys.EVENT_BEFORE_CRITERIA_LIST,
+	    ORMKeys.EVENT_AFTER_CRITERIA_LIST,
+	    ORMKeys.EVENT_BEFORE_CRITERIA_COUNT,
+	    ORMKeys.EVENT_AFTER_CRITERIA_COUNT,
+	    ORMKeys.EVENT_BEFORE_CRITERIA_GET,
+	    ORMKeys.EVENT_AFTER_CRITERIA_GET,
+	    ORMKeys.EVENT_CRITERIA_ADDITION ).toArray( new Key[ 0 ] );
 
 	/**
 	 * --------------------------------------------------------------------------
@@ -274,9 +310,112 @@ public class ORMService extends BaseService {
 		// Derive the key the same way getORMAppByContext() does so lookups always hit.
 		Key appName = ORMService.getAppNameFromContext( context );
 		// Atomically create or get the ORMApp for the given context.
-		return this.ormApps.computeIfAbsent(
-		    appName,
-		    key -> new ORMApp( config, appName ).startup( context ) );
+		try {
+			ORMApp app = this.ormApps.computeIfAbsent(
+			    appName,
+			    key -> new ORMApp( config, appName ).startup( context ) );
+			this.bootFailures.remove( appName );
+			return app;
+		} catch ( Throwable e ) {
+			throw recordBootFailure( appName, e );
+		}
+	}
+
+	/**
+	 * Translate a startup error, remember it for later ORM calls and {@code ormDiagnostics()}, log it, and return it for
+	 * throwing. A failure that is not an ORM exception becomes {@code orm.config} with its original message.
+	 *
+	 * @param appName The application whose ORM failed to start.
+	 * @param error   The startup error.
+	 *
+	 * @return The translated error to throw.
+	 */
+	private RuntimeException recordBootFailure( Key appName, Throwable error ) {
+		RuntimeException translated = ortus.boxlang.modules.orm.errors.ORMErrors.translate( error,
+		    ortus.boxlang.modules.orm.errors.ORMErrors.Context.of( "ORM startup" ) );
+		if ( ! ( translated instanceof ortus.boxlang.modules.orm.errors.ORMException ) ) {
+			// Anything else that stops the ORM from starting (a bad entity path, field type or datasource, found by bx-orm or
+			// BoxLang) is a configuration problem: keep its message, give it the orm.config type.
+			String message = String.valueOf( translated.getMessage() );
+			translated = new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.CONFIG,
+			    "The ORM could not start: " + message,
+			    "Check this.ormSettings in Application.bx and the entity files named above.", null, error );
+		}
+		this.bootFailures.put( appName, new BootFailure( java.time.Instant.now(), translated ) );
+		logger.error( "ORM application [{}] failed to start: {}", appName.getName(), translated.getMessage(), error );
+		return translated;
+	}
+
+	/**
+	 * The last startup failure for an application.
+	 *
+	 * @param appName The application name.
+	 *
+	 * @return The failure, or null when the last startup succeeded (or none failed).
+	 */
+	public BootFailure getBootFailure( Key appName ) {
+		return this.bootFailures.get( appName );
+	}
+
+	/**
+	 * The ORM application for a context, or a clear {@code orm.notEnabled} / {@code orm.notReady} error explaining why
+	 * there is none. Every BIF uses this instead of a null check.
+	 *
+	 * @param context The current context.
+	 *
+	 * @return The running ORM application.
+	 */
+	public ORMApp requireORMApp( IBoxContext context ) {
+		ORMApp app = null;
+		try {
+			app = getORMAppByContext( context );
+		} catch ( ortus.boxlang.modules.orm.errors.ORMException e ) {
+			throw e;
+		} catch ( BoxRuntimeException e ) {
+			// No application context at all: the code is not running inside an ORM-enabled application.
+			throw notReadyError( context );
+		}
+		if ( app == null ) {
+			throw notReadyError( context );
+		}
+		return app;
+	}
+
+	/**
+	 * Explain why there is no ORM application for a context: ORM not enabled, startup failed (with the original reason),
+	 * or not started yet.
+	 *
+	 * @param context The current context (may be null).
+	 *
+	 * @return An {@code orm.notEnabled} or {@code orm.notReady} error to throw.
+	 */
+	public ortus.boxlang.modules.orm.errors.ORMException notReadyError( IBoxContext context ) {
+		ApplicationBoxContext appContext = context == null ? null : context.getApplicationContext();
+		if ( appContext == null ) {
+			return new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.NOT_ENABLED,
+			    "No ORM application is available here: this code is not running inside an application, or its application failed to start.",
+			    "Run it from an app whose Application.bx sets this.ormEnabled = true. If the app failed to start, fix the startup error first." );
+		}
+		Key appName = appContext.getApplication().getName();
+		if ( ORMConfig.loadFromContext( context ) == null ) {
+			return new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.NOT_ENABLED,
+			    String.format( "The application [%s] is not ORM-enabled.", appName.getName() ),
+			    "Set this.ormEnabled = true (and this.ormSettings) in Application.bx." );
+		}
+		BootFailure failure = this.bootFailures.get( appName );
+		if ( failure != null ) {
+			IStruct info = new ortus.boxlang.runtime.types.Struct();
+			info.put( Key.of( "failedAt" ), failure.at().toString() );
+			info.put( Key.of( "startupError" ), String.valueOf( failure.error().getMessage() ) );
+			return new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.NOT_READY,
+			    String.format( "The ORM for application [%s] failed to start at %s: %s", appName.getName(), failure.at(),
+			        failure.error().getMessage() ),
+			    "Fix the startup error, then call ormReload() or restart the application. ormDiagnostics() shows the details.",
+			    info, failure.error() );
+		}
+		return new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.NOT_READY,
+		    String.format( "The ORM for application [%s] has not started.", appName.getName() ),
+		    "It starts with the application (onApplicationStart). Call ormReload() to start it now." );
 	}
 
 	/**
@@ -289,6 +428,9 @@ public class ORMService extends BaseService {
 	public static String getEntityName( Object entity ) {
 		if ( entity instanceof BoxProxy proxyEntity ) {
 			return proxyEntity.getHibernateLazyInitializer().getEntityName();
+		} else if ( entity instanceof ortus.boxlang.modules.orm.hibernate.facade.BoxEntityFacade ) {
+			// Facade (POJO) mode: resolve the entity name via the backing BoxLang instance.
+			return getEntityName( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrap( entity ) );
 		} else if ( entity instanceof IClassRunnable boxClass ) {
 			return getEntityName( boxClass );
 		} else {
@@ -362,8 +504,7 @@ public class ORMService extends BaseService {
 		String			entityName		= getEntityName( entity );
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
-		ClassMetadata	metadata		= session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
-		return metadata.getIdentifier( entity );
+		return ormApp.getEntityPersister( session, entityName ).getIdentifier( entity, ( SharedSessionContractImplementor ) session );
 	}
 
 	/**
@@ -407,6 +548,9 @@ public class ORMService extends BaseService {
 	 * @param uniqueAppName The unique name of the ORM application to shut down.
 	 */
 	public void shutdownApp( Key uniqueAppName ) {
+		// Stop the auto-mode entity watcher (if any) on a real shutdown; reloads intentionally keep it running.
+		stopEntityWatcher( uniqueAppName );
+
 		// We remove it first to prevent further access to the ORMApp
 		ORMApp app = this.ormApps.remove( uniqueAppName );
 
@@ -464,11 +608,17 @@ public class ORMService extends BaseService {
 		// window where getORMAppByContext() returns null (which breaks concurrent
 		// callers such as cborm module activation running in a parallel thread).
 		Key		appName	= ORMService.getAppNameFromContext( requestContext );
-		ORMApp	newApp	= new ORMApp( ORMConfig.loadFromContext( requestContext ), appName ).startup( context );
+		ORMApp	newApp;
+		try {
+			newApp = new ORMApp( ORMConfig.loadFromContext( requestContext ), appName ).startup( context );
+			this.bootFailures.remove( appName );
+		} catch ( Throwable e ) {
+			throw recordBootFailure( appName, e );
+		}
 
 		// Step 3: Atomically swap — put the new app into the map and retrieve the old
 		// one.
-		ORMApp	oldApp	= this.ormApps.put( appName, newApp );
+		ORMApp oldApp = this.ormApps.put( appName, newApp );
 
 		// Step 4: Shut down the old app's session factories AFTER the new one is live,
 		// minimising the disruption window for any requests still using the old
@@ -513,7 +663,18 @@ public class ORMService extends BaseService {
 		if ( appContext == null ) {
 			throw new BoxRuntimeException( "No application context available to retrieve ORM application." );
 		}
-		return getORMApp( appContext.getApplication().getName() );
+		Key appName = appContext.getApplication().getName();
+		// Auto-mode live reload: if the entity watcher flagged this app, reload now - we are on a request thread with the
+		// context a reload needs. remove() returns true for a single caller under concurrency, so only one reload runs; a
+		// freshly reloaded app is not dirty, so the eager ORMContext init inside reloadApp cannot recurse here.
+		if ( this.dirtyApps.remove( appName ) ) {
+			try {
+				return reloadApp( context );
+			} catch ( Exception e ) {
+				logger.warn( "ORM auto-mode reload failed: {}", e.getMessage(), e );
+			}
+		}
+		return getORMApp( appName );
 	}
 
 	/**
@@ -525,6 +686,46 @@ public class ORMService extends BaseService {
 	 */
 	public ORMApp getORMApp( Key appName ) {
 		return this.ormApps.containsKey( appName ) ? this.ormApps.get( appName ) : null;
+	}
+
+	/**
+	 * Ensure a single auto-mode entity watcher exists for an application (idempotent across reloads). On a source change
+	 * the watcher reloads the application via {@link #reloadApp(IBoxContext)}, run inside a request context obtained with
+	 * {@link RequestBoxContext#runInContext} (the watcher fires on a background thread that has none). Best-effort: a
+	 * runtime without a watcher service just leaves live reload disabled.
+	 *
+	 * @param appName The ORM application name.
+	 * @param config  The ORM configuration (entity paths to watch).
+	 * @param context The boot context, whose application context anchors the reload's request context.
+	 */
+	public void ensureEntityWatcher( Key appName, ORMConfig config, IBoxContext context ) {
+		if ( this.entityWatchers.containsKey( appName ) ) {
+			return;
+		}
+		try {
+			// The watcher runs on a background thread with no request context, so it only flags the app dirty; the reload
+			// runs later on a request thread (see getORMAppByContext) which has the context a reload needs.
+			ORMEntityWatcher watcher = ORMEntityWatcher.startFor( appName, config, context, () -> this.dirtyApps.add( appName ), getLogger() );
+			if ( watcher != null ) {
+				this.entityWatchers.put( appName, watcher );
+			}
+		} catch ( Throwable t ) {
+			getLogger().warn( "ORM auto-mode entity watcher unavailable for [{}], live reload disabled: {}", appName.getName(), t.getMessage() );
+		}
+	}
+
+	/**
+	 * Stop and remove the auto-mode entity watcher for an application, if any. Called on a real application shutdown (not
+	 * on reload, which keeps the watcher running).
+	 *
+	 * @param appName The ORM application name.
+	 */
+	public void stopEntityWatcher( Key appName ) {
+		this.dirtyApps.remove( appName );
+		ORMEntityWatcher watcher = this.entityWatchers.remove( appName );
+		if ( watcher != null ) {
+			watcher.stop();
+		}
 	}
 
 	/**

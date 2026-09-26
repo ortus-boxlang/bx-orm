@@ -1,0 +1,24 @@
+class {
+	this.name = "BXORMFacadeMappedByTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"FacadeMappedByDB": {
+			"connectionString": "jdbc:derby:memory:ormFacadeMappedByTest;create=true"
+		}
+	};
+	this.datasource = "FacadeMappedByDB";
+
+	this.ormSettings = {
+		"datasource"       : "FacadeMappedByDB",
+		"dialect"          : "Derby",
+		"entityPaths"      : [ "/root/models" ],
+		"saveMapping"      : "true",
+		"logSQL"           : "false",
+		"dbcreate"         : "dropcreate",
+		"cacheprovider"    : "ConcurrentHashMap",
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}

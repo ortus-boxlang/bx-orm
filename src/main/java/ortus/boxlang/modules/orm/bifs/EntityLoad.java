@@ -81,14 +81,22 @@ public class EntityLoad extends BaseORMBIF {
 	 * <h2>Options</h2>
 	 * 
 	 * <ul>
-	 * <li><strong><code>unique</code></strong> - Boolean. Specifies whether to retrieve a single, unique item. Default is `false`.</li>
-	 * <li><strong><code>ignorecase</code></strong> - Boolean. Ignores the case of sort order when set to true. Use only if you specify the sortorder
+	 * <li><strong><code>unique</code></strong> - Boolean. Specifies whether to retrieve a single, unique item. Default is `false`. If more than one
+	 * entity matches the filter, an <code>orm.query.nonUnique</code> error is raised.</li>
+	 * <li><strong><code>uniqueFirst</code></strong> - Boolean. Return the first match even when several entities match (implies <code>unique</code>).
+	 * Default is `false`.</li>
+	 * <li><strong><code>ignorecase</code></strong> - Boolean. Sorts text properties without regard to case. Number and date properties are sorted as-is.
+	 * Use only if you specify the sortorder
 	 * parameter. Defaults to `false`.</li>
 	 * <li><strong><code>offset</code></strong> - Number. Specifies the pagination offset. Defaults to 0.</li>
 	 * <li><strong><code>maxresults</code></strong> - Number. Specifies the maximum number of objects to be retrieved.</li>
-	 * <li><strong><code>cacheable</code></strong> - Boolean. Whether the result has to be cached in the secondary cache. Default is `false`.</li>
-	 * <li><strong><code>cachename</code></strong> - String. Name of the cache in secondary cache.</li>
+	 * <li><strong><code>cacheable</code></strong> - Boolean. Whether the result has to be cached in the second-level query cache (needs
+	 * <code>secondaryCacheEnabled</code>). Default is `false`.</li>
+	 * <li><strong><code>cachename</code></strong> - String. The query cache region to use. Implies <code>cacheable</code> unless <code>cacheable</code>
+	 * is given.</li>
 	 * <li><strong><code>timeout</code></strong> - Number. Specifies the timeout value (in seconds) for the query. No timeout by default.</li>
+	 * <li><strong><code>readOnly</code></strong> - Boolean. Load the entities read-only: they are not dirty-checked and changes to them are
+	 * never saved. Default is `false`. See also <code>entityLoadReadOnly()</code>.</li>
 	 * </ul>
 	 *
 	 * @param context   The context in which the BIF is being invoked.
@@ -128,14 +136,18 @@ public class EntityLoad extends BaseORMBIF {
 	 *
 	 * @param context   JDBC context in which the BIF was invoked.
 	 * @param arguments Arguments scope of the BIF.
+	 *
+	 * @return The entity (or null) for a unique load, else an array of zero or one entity.
 	 */
 	private Object loadEntityById( IBoxContext context, ArgumentsScope arguments ) {
+		// Only readOnly applies to a load by id; the other options are for filtered loads.
+		IStruct	options	= arguments.get( ORMKeys.options ) instanceof IStruct given
+		    && BooleanCaster.cast( given.getOrDefault( ORMKeys.readOnly, false ) ) ? Struct.of( ORMKeys.readOnly, true ) : null;
+		var		entity	= ormService.requireORMApp( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
+		    arguments.get( ORMKeys.idOrFilter ), options );
 		if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
-			return ormService.getORMAppByContext( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
-			    arguments.get( ORMKeys.idOrFilter ) );
+			return entity;
 		}
-		var entity = ormService.getORMAppByContext( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
-		    arguments.get( ORMKeys.idOrFilter ) );
 		return entity == null ? Array.EMPTY : Array.of( entity );
 	}
 
@@ -144,19 +156,38 @@ public class EntityLoad extends BaseORMBIF {
 	 *
 	 * @param context   JDBC context in which the BIF was invoked.
 	 * @param arguments Arguments scope of the BIF.
+	 *
+	 * @return The entity (or null) for a unique load, else an array of entities.
 	 */
 	private Object loadEntitiesByFilter( IBoxContext context, ArgumentsScope arguments ) {
-		IStruct	options	= buildCriteriaOptions( arguments );
-		IStruct	filter	= arguments.getAsStruct( ORMKeys.idOrFilter );
+		IStruct	options		= buildCriteriaOptions( arguments );
+		IStruct	filter		= arguments.getAsStruct( ORMKeys.idOrFilter );
 
-		Array	results	= ormService.getORMAppByContext( context ).loadEntitiesByFilter( context,
+		// uniqueFirst: take the first match (the pre-2.0 behavior); otherwise a unique load matching several rows is an error.
+		boolean	uniqueFirst	= BooleanCaster.cast( options.getOrDefault( ORMKeys.uniqueFirst, false ) );
+		boolean	unique		= uniqueFirst || BooleanCaster.cast( options.getOrDefault( ORMKeys.unique, false ) );
+		if ( unique ) {
+			options.put( ORMKeys.unique, true );
+			options.put( ORMKeys.maxResults, uniqueFirst ? 1 : 2 );
+		}
+		Array results = ormService.requireORMApp( context ).loadEntitiesByFilter( context,
 		    arguments.getAsString( ORMKeys.entityName ), filter, options );
-		if ( options.getAsBoolean( ORMKeys.unique ) ) {
+		if ( unique ) {
+			if ( results.size() > 1 ) {
+				throw ortus.boxlang.modules.orm.errors.ORMErrors.nonUniqueResult( 0, "entityLoad", null );
+			}
 			return results.isEmpty() ? null : results.getFirst();
 		}
 		return results;
 	}
 
+	/**
+	 * Merge the default options, the options argument and a boolean or sort-order uniqueOrOrder into one options struct.
+	 *
+	 * @param arguments Arguments scope of the BIF.
+	 *
+	 * @return The options.
+	 */
 	private IStruct buildCriteriaOptions( ArgumentsScope arguments ) {
 		IStruct options = Struct.of();
 		options.putAll( DEFAULT_OPTIONS );

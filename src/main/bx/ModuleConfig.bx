@@ -132,4 +132,42 @@ class {
 	 * that match the approved Runtime Interception Points
 	 */
 	 function afterModuleActivations(){}
+
+	/**
+	 * --------------------------------------------------------------------------
+	 * CLI Entry Point
+	 * --------------------------------------------------------------------------
+	 * Invoked via `boxlang module:orm <verb> [args]`. A thin dispatcher over the
+	 * Java `ManifestCli`, which reads/validates/clears the `.bxorm/` boot cache.
+	 * The `.bxorm/` folder is resolved against the current working directory,
+	 * overridable with `--dir=<path>`.
+	 *
+	 * @args The CLI arguments (verb + its arguments, plus an optional --dir flag).
+	 *
+	 * @return The process exit code (0 on success, non-zero on failure).
+	 */
+	function main( args=[] ){
+		var appRoot		= "";
+		var verbArgs	= [];
+
+		// Separate the --dir=<path> flag from the verb and its arguments.
+		for( var arg in arguments.args ){
+			if( isSimpleValue( arg ) && left( arg, 6 ) == "--dir=" ){
+				appRoot = mid( arg, 7, len( arg ) );
+			} else {
+				verbArgs.append( arg );
+			}
+		}
+		if( !len( appRoot ) ){
+			appRoot = createObject( "java", "java.lang.System" ).getProperty( "user.dir" );
+		}
+
+		var folder	= appRoot & "/.bxorm";
+		var version	= isNull( variables.moduleRecord ) ? "unknown" : variables.moduleRecord.version;
+		var result	= createObject( "java", "ortus.boxlang.modules.orm.mapping.manifest.ManifestCli" )
+			.run( javacast( "string", folder ), javacast( "string", version ), verbArgs );
+
+		systemOutput( result.message() );
+		return result.exitCode();
+	}
 }

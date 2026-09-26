@@ -35,7 +35,7 @@ import ortus.boxlang.runtime.types.util.ListUtil;
  * A "Classic", aka traditional, implementation of the property metadata configuration.
  *
  * i.e. handles translating CFML property annotations like `sqltype="varchar"` into the IPropertyMeta interface for consistent reference by the
- * HibernateXMLWriter.
+ * MappingXMLWriter.
  *
  * @since 1.0.0
  */
@@ -48,8 +48,12 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( this.fieldType == null ) {
 			this.fieldType = FIELDTYPE.fromString( annotations.getAsString( ORMKeys.fieldtype ) );
 			if ( this.fieldType == null ) {
-				throw new BoxRuntimeException( String.format( "Unknown field type '%s' for property '%s' on entity '%s'",
-				    annotations.getAsString( ORMKeys.fieldtype ), this.name, this.entityName ) );
+				java.util.List<String> valid = java.util.List.of( "column", "id", "version", "timestamp", "one-to-one", "one-to-many",
+				    "many-to-one", "many-to-many", "collection" );
+				throw new BoxRuntimeException( String.format( "Unknown fieldtype '%s' for property '%s' on entity '%s'.%s Valid field types: %s.",
+				    annotations.getAsString( ORMKeys.fieldtype ), this.name, this.entityName,
+				    ortus.boxlang.modules.orm.errors.ORMErrors.suggestion( annotations.getAsString( ORMKeys.fieldtype ), valid ),
+				    String.join( ", ", valid ) ) );
 			}
 		}
 		if ( this.getFieldType() == FIELDTYPE.VERSION ) {
@@ -62,9 +66,13 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 					this.ormType = dataType.trim().toLowerCase();
 				}
 			}
-			// Validate
-			if ( !List.of( "int", "long", "short" ).contains( this.ormType ) ) {
-				logger.error( "ORM type '{}' is not a valid type for version property '{}' on entity '{}'.", this.ormType, this.name, this.entityName );
+			// Validate: Hibernate supports a numeric (int/long/short) or a temporal (timestamp) version. Accept the common
+			// ormType spellings (raw and normalized) so a documented `integer` version is not falsely rejected.
+			if ( !List.of( "int", "integer", "long", "biginteger", "big_integer", "bigint", "short", "tinyint", "tinyinteger",
+			    "timestamp", "datetime", "date" ).contains( this.ormType ) ) {
+				logger.error(
+				    "ORM type '{}' is not a valid type for version property '{}' on entity '{}'. Use a numeric (integer/long/short) or timestamp type.",
+				    this.ormType, this.name, this.entityName );
 			}
 		}
 
@@ -81,14 +89,6 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( this.annotations.containsKey( ORMKeys.formula ) ) {
 			this.formula = this.annotations.getAsString( ORMKeys.formula );
 		}
-		if ( this.annotations.containsKey( ORMKeys.fieldtype ) ) {
-			String fieldType = this.annotations.getAsString( ORMKeys.fieldtype );
-			if ( fieldType == "collection" ) {
-				logger.warn( "Property '{}' on entity '{}' has fieldtype=collection, which is not yet supported. Please forward to your local Ortus agency.",
-				    this.name, entityName );
-			}
-		}
-
 		if ( this.annotations.containsKey( ORMKeys.cacheUse ) ) {
 			this.cache = new Struct();
 			this.cache.computeIfAbsent( ORMKeys.strategy, key -> this.annotations.getAsString( ORMKeys.cacheUse ) );
@@ -127,8 +127,8 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
 		final String finalAssociationType = associationType;
 
-		if ( finalAssociationType.endsWith( "-to-many" ) ) {
-			// IS A COLLECTION
+		if ( finalAssociationType.endsWith( "-to-many" ) || finalAssociationType.equalsIgnoreCase( "collection" ) ) {
+			// IS A COLLECTION (an entity to-many, or a value/element collection when fieldtype="collection")
 			association.compute( ORMKeys.collectionType, ( key, object ) -> {
 				String propertyType = annotations.getAsString( Key.type );
 				if ( propertyType == null || propertyType.isBlank() || propertyType.trim().equalsIgnoreCase( "any" )
@@ -242,7 +242,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			 * The possible values are:
 			 * persist, merge, delete, save-update, evict, replicate, lock, refresh, all, none
 			 */
-			association.put( ORMKeys.cascade, annotations.getAsString( ORMKeys.cascade ) );
+			association.put( ORMKeys.cascade, translateCascade( annotations.getAsString( ORMKeys.cascade ) ) );
 		}
 		// Alias 'foreignKeyName' to 'foreignKey'
 		if ( annotations.containsKey( ORMKeys.foreignKeyName ) ) {
@@ -389,4 +389,24 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 
 		return params;
 	}
+
+	/**
+	 * Translate legacy Hibernate 5 cascade style names to their Hibernate 7 equivalents.
+	 * <p>
+	 * Hibernate 7 removed the <code>save-update</code> cascade style (along with <code>Session.saveOrUpdate()</code>). Its closest
+	 * equivalent is cascading both <code>persist</code> and <code>merge</code>. All other styles pass through unchanged.
+	 *
+	 * @param cascade Comma-separated list of cascade styles as declared on the property.
+	 *
+	 * @return The translated, comma-separated cascade list.
+	 */
+	private static String translateCascade( String cascade ) {
+		return java.util.Arrays.stream( cascade.split( "," ) )
+		    .map( String::trim )
+		    .filter( style -> !style.isEmpty() )
+		    .map( style -> style.equalsIgnoreCase( "save-update" ) ? "persist,merge" : style.toLowerCase() )
+		    .distinct()
+		    .collect( java.util.stream.Collectors.joining( "," ) );
+	}
+
 }

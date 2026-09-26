@@ -60,7 +60,7 @@ public class ORMContext {
 	/**
 	 * Static reference to the BoxLang runtime, for accessing services and logging.
 	 */
-	private static final BoxRuntime			runtime				= BoxRuntime.getInstance();
+	private static final BoxRuntime									runtime				= BoxRuntime.getInstance();
 
 	/**
 	 * Shutdown listener
@@ -86,32 +86,43 @@ public class ORMContext {
 	/**
 	 * The logger for the ORM application.
 	 */
-	private BoxLangLogger					logger;
+	private BoxLangLogger											logger;
 
 	/**
 	 * ORM service.
 	 */
-	private ORMService						ormService;
+	private ORMService												ormService;
 
 	/**
 	 * The ORM application for this context.
 	 */
-	private ORMApp							ormApp;
+	private ORMApp													ormApp;
 
 	/**
 	 * The BoxLang context for this ORM context; should be a JDBC-capable context (request or thread).
 	 */
-	private IBoxContext						context;
+	private IBoxContext												context;
 
 	/**
 	 * The ORM configuration for this context.
 	 */
-	private ORMConfig						config;
+	private ORMConfig												config;
 
 	/**
 	 * Map of Hibernate sessions for this request, keyed by datasource name.
 	 */
-	private Map<Key, Session>				sessions			= new ConcurrentHashMap<>();
+	private Map<Key, Session>										sessions			= new ConcurrentHashMap<>();
+
+	/**
+	 * How many {@code ormReadOnly()} blocks are running. While above zero, every session loads entities read-only.
+	 */
+	private int														readOnlyDepth		= 0;
+
+	/**
+	 * The {@code postCommit} events waiting for their writes to commit (see {@link ortus.boxlang.modules.orm.config.PostCommitQueue}).
+	 */
+	private final ortus.boxlang.modules.orm.config.PostCommitQueue	postCommits			= new ortus.boxlang.modules.orm.config.PostCommitQueue(
+	    this::isInTransaction );
 
 	/**
 	 * Retrieve the ORMContext for the given boxlang context (whatever JDBC-capable context inside which we are currently executing).
@@ -134,7 +145,9 @@ public class ORMContext {
 		final IStruct		appSettings			= ( IStruct ) finalJDBCContext.getConfigItem( Key.applicationSettings );
 
 		if ( !BooleanCaster.cast( appSettings.getOrDefault( ORMKeys.ORMEnabled, false ) ) ) {
-			throw new BoxRuntimeException( "Could not acquire ORM context; ORMEnabled is false or not specified. Is this application ORM-enabled?" );
+			throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.NOT_ENABLED,
+			    "This application is not ORM-enabled (this.ormEnabled is false or not set).",
+			    "Set this.ormEnabled = true (and this.ormSettings) in Application.bx." );
 		}
 
 		return jdbcCapableContext.computeAttachmentIfAbsent( ORMKeys.ORMContext, key -> {
@@ -158,7 +171,7 @@ public class ORMContext {
 		this.context	= context;
 		this.config		= config;
 		this.ormService	= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
-		this.ormApp		= this.ormService.getORMAppByContext( context );
+		this.ormApp		= safeLookup( this.ormService, context );
 		this.logger		= this.ormService.getLogger();
 		this.logger.debug( "Initializing ORM context on context type: {}", context.getClass().getSimpleName() );
 	}
@@ -179,9 +192,44 @@ public class ORMContext {
 	 */
 	public ORMApp getORMApp() {
 		if ( !hasORMApp() ) {
-			this.ormApp = this.ormService.getORMAppByContext( this.context );
+			this.ormApp = safeLookup( this.ormService, this.context );
 		}
 		return this.ormApp;
+	}
+
+	/**
+	 * The ORM application for a context, or null when there is none (including when the context has no application).
+	 * Callers that need one use {@link #requireORMApp()}, which explains why it is missing.
+	 *
+	 * @param service The ORM service.
+	 * @param context The context to look the application up for.
+	 *
+	 * @return The ORM application, or null.
+	 */
+	private static ORMApp safeLookup( ORMService service, IBoxContext context ) {
+		try {
+			return service.getORMAppByContext( context );
+		} catch ( ortus.boxlang.modules.orm.errors.ORMException e ) {
+			throw e;
+		} catch ( BoxRuntimeException e ) {
+			return null;
+		}
+	}
+
+	/**
+	 * The running ORM application, or a clear {@code orm.notReady} error (with the startup failure, if any) when there is
+	 * none. Use this instead of {@link #getORMApp()} plus a null check.
+	 *
+	 * @return The running ORM application.
+	 *
+	 * @throws ortus.boxlang.modules.orm.errors.ORMException When there is no running ORM application.
+	 */
+	public ORMApp requireORMApp() {
+		ORMApp app = getORMApp();
+		if ( app == null ) {
+			throw this.ormService.notReadyError( this.context );
+		}
+		return app;
 	}
 
 	/**
@@ -223,18 +271,97 @@ public class ORMContext {
 		return this.sessions.computeIfAbsent( sessionKey, ( key ) -> {
 			logger.debug( "opening NEW session for key: {}", sessionKey.getName() );
 
-			SessionFactory	sessionFactory	= this.ormApp.getSessionFactoryOrThrow( datasource );
+			SessionFactory	sessionFactory	= requireORMApp().getSessionFactoryOrThrow( datasource );
 			Session			session			= sessionFactory.openSession();
 			if ( !config.autoManageSession ) {
 				session.setHibernateFlushMode( org.hibernate.FlushMode.MANUAL );
 			}
+			if ( this.readOnlyDepth > 0 ) {
+				session.setDefaultReadOnly( true );
+			}
+			this.postCommits.attach( session );
 			return session;
 		} );
 	}
 
 	/**
+	 * Run work with every session of this context loading entities read-only: entities loaded inside are not dirty-checked
+	 * and their changes are never written. Entities already in the session keep their state, and new entities can still be
+	 * saved. Blocks can nest; the sessions go back to their previous setting when the outermost block ends.
+	 *
+	 * @param work The work to run.
+	 * @param <T>  The work's result type.
+	 *
+	 * @return What the work returned.
+	 */
+	public <T> T readOnly( java.util.function.Supplier<T> work ) {
+		Map<Key, Boolean> previous = new java.util.HashMap<>();
+		this.sessions.forEach( ( name, session ) -> {
+			previous.put( name, session.isDefaultReadOnly() );
+			session.setDefaultReadOnly( true );
+		} );
+		this.readOnlyDepth++;
+		try {
+			return work.get();
+		} finally {
+			this.readOnlyDepth--;
+			if ( this.readOnlyDepth == 0 ) {
+				this.sessions.forEach( ( name, session ) -> {
+					if ( session.isOpen() ) {
+						session.setDefaultReadOnly( previous.getOrDefault( name, false ) );
+					}
+				} );
+			}
+		}
+	}
+
+	/**
+	 * The {@code postCommit} events of this context.
+	 *
+	 * @return The queue.
+	 */
+	public ortus.boxlang.modules.orm.config.PostCommitQueue getPostCommits() {
+		return this.postCommits;
+	}
+
+	/**
+	 * Whether a BoxLang {@code transaction{}} is active on this context.
+	 *
+	 * @return True inside a transaction.
+	 */
+	public boolean isInTransaction() {
+		return getConnectionManager().isInTransaction();
+	}
+
+	/**
+	 * Whether an {@code ormReadOnly()} block is running in this context.
+	 *
+	 * @return True inside {@code ormReadOnly()}.
+	 */
+	public boolean isReadOnly() {
+		return this.readOnlyDepth > 0;
+	}
+
+	/**
+	 * Flush the given session before an ORM query when a BoxLang transaction is active, so the query
+	 * observes the transaction's own pending writes (read-your-writes).
+	 * <p>
+	 * The ORM rides the BoxLang transaction connection and runs no Hibernate transaction of its own;
+	 * Hibernate therefore suppresses auto-flush-before-query (and sessions are MANUAL when
+	 * {@code autoManageSession} is false), so this explicit flush provides the expected in-transaction
+	 * read consistency. Outside a transaction it is a no-op.
+	 *
+	 * @param session The Hibernate session about to execute a query.
+	 */
+	public void flushForQuery( Session session ) {
+		if ( session != null && session.isOpen() && getConnectionManager().isInTransaction() ) {
+			flush( session, "flush before query" );
+		}
+	}
+
+	/**
 	 * Get the datasource for a given name, falling back to the default datasource if the name is null.
-	 * 
+	 *
 	 * @param datasourceName The name of the datasource to retrieve, or null to retrieve the default datasource.
 	 *
 	 * @throws BoxRuntimeException if neither the named nor a default datasource could be found.
@@ -255,6 +382,18 @@ public class ORMContext {
 	}
 
 	/**
+	 * The facade namespace of this context's ORM application. Read it from the booted application, never from this
+	 * context's own (per-request) {@link ORMConfig}: the namespace is derived at application startup, so the request copy
+	 * always holds the unset default.
+	 *
+	 * @return The owning ORM application's facade namespace.
+	 */
+	public String getFacadeNamespace() {
+		ORMApp ormApp = getORMApp();
+		return ormApp != null ? ormApp.getConfig().facadeNamespace : this.config.facadeNamespace;
+	}
+
+	/**
 	 * Shut down this ORM context.
 	 * <p>
 	 * Will close all Hibernate sessions and unregister the transaction manager.
@@ -264,7 +403,14 @@ public class ORMContext {
 		// Should we move this to an onRequestEnd() method in case ORMContext.shutdown is called mid-request?
 		if ( this.config.flushAtRequestEnd && this.config.autoManageSession ) {
 			this.logger.debug( "'flushAtRequestEnd' is enabled; Flushing all ORM sessions for this request" );
-			this.sessions.forEach( ( key, session ) -> session.flush() );
+			try {
+				this.sessions.forEach( ( key, session ) -> flush( session, "flush at request end" ) );
+			} finally {
+				// A failed flush must still close every session, or their connections leak.
+				this.logger.debug( "onRequestEnd - closing ORM sessions" );
+				this.closeAllSessions();
+			}
+			return this;
 		}
 
 		// Close all ORM sessions
@@ -272,6 +418,22 @@ public class ORMContext {
 		this.closeAllSessions();
 
 		return this;
+	}
+
+	/**
+	 * Flush a session, translating any failure into a clear {@code orm.*} error.
+	 *
+	 * @param session   The session to flush.
+	 * @param operation What triggered the flush, for the error context (e.g. "transaction commit").
+	 *
+	 * @throws ortus.boxlang.modules.orm.errors.ORMException When the flush fails for an ORM reason.
+	 */
+	public static void flush( Session session, String operation ) {
+		try {
+			session.flush();
+		} catch ( RuntimeException e ) {
+			throw ortus.boxlang.modules.orm.errors.ORMErrors.translate( e, ortus.boxlang.modules.orm.errors.ORMErrors.Context.of( operation ) );
+		}
 	}
 
 	/**

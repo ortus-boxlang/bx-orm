@@ -1,0 +1,351 @@
+/**
+ * [BoxLang]
+ *
+ * Copyright [2023] [Ortus Solutions, Corp]
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package ortus.boxlang.modules.orm.mapping.manifest;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
+import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.util.FileSystemUtil;
+
+/**
+ * Reads, writes and validates the ORM {@code .bxorm/} boot cache (manifest.json).
+ * <p>
+ * In {@code auto} mode the manifest is (re)written after every full boot so it always reflects the current entities;
+ * in {@code trust} mode it is loaded as-is, integrity-checked (fail-closed), and used to boot with zero entity
+ * discovery, parsing or mapping generation.
+ *
+ * @since 2.0.0
+ */
+public final class ManifestService {
+
+	/** The cache folder name at the application root. */
+	public static final String	FOLDER_NAME		= ".bxorm";
+	/** The manifest file name inside the folder. */
+	public static final String	MANIFEST_NAME	= "manifest.json";
+	/** The integrity checksum sidecar (sha256 of manifest.json bytes). */
+	public static final String	CHECKSUM_NAME	= "manifest.sha256";
+	/** The pre-generated facade bytecode archive (written in auto, loaded in trust). */
+	public static final String	FACADES_JAR		= "facades.jar";
+
+	private ManifestService() {
+	}
+
+	/**
+	 * Resolve the {@code .bxorm/} folder for an application, at the application root.
+	 *
+	 * @param context The request context (used to expand the application-relative path).
+	 *
+	 * @return The absolute path to the {@code .bxorm/} folder.
+	 */
+	public static Path resolveFolder( IBoxContext context ) {
+		return resolveFolder( context, null );
+	}
+
+	/**
+	 * Resolve the {@code .bxorm/} folder for an application, under the given location.
+	 * <p>
+	 * A blank location resolves to the application root (the default). A relative location is resolved against the
+	 * application root; an absolute location is used as-is. The folder name is always {@code .bxorm}; only its parent
+	 * directory moves. Configured in {@code Application.bx} via the {@code ormManifestLocation} ORM setting.
+	 *
+	 * @param context  The request context (used to expand the application-relative path).
+	 * @param location The directory that holds the {@code .bxorm/} folder, or {@code null}/blank for the application root.
+	 *
+	 * @return The absolute path to the {@code .bxorm/} folder.
+	 */
+	public static Path resolveFolder( IBoxContext context, String location ) {
+		if ( location == null || location.isBlank() ) {
+			return Path.of( FileSystemUtil.expandPath( context, FOLDER_NAME ).absolutePath().toString() );
+		}
+		Path base = Path.of( FileSystemUtil.expandPath( context, location.trim() ).absolutePath().toString() );
+		return base.resolve( FOLDER_NAME );
+	}
+
+	/**
+	 * Build a manifest from a freshly discovered entity map (grouped by datasource).
+	 *
+	 * @param entityMap  The discovered entities, keyed by datasource.
+	 * @param config     The ORM configuration (for the config fingerprint).
+	 * @param ormVersion The current ORM/module version stamp.
+	 *
+	 * @return A populated manifest ready to serialize.
+	 */
+	public static OrmManifest build( Map<Key, List<EntityRecord>> entityMap, ORMConfig config, String ormVersion ) {
+		OrmManifest manifest = new OrmManifest()
+		    .setOrmVersion( ormVersion )
+		    .setConfigFingerprint( configFingerprint( config ) );
+
+		entityMap.forEach( ( datasource, records ) -> {
+			for ( EntityRecord record : records ) {
+				manifest.addEntity( new OrmManifest.Entity(
+				    record.getEntityName(),
+				    record.getClassFQN(),
+				    datasource == null ? null : datasource.getName(),
+				    sourceFingerprint( record ),
+				    record.getMetadata(),
+				    resolveXml( record )
+				) );
+			}
+		} );
+		return manifest;
+	}
+
+	/**
+	 * Rehydrate a manifest's entities into an entity map grouped by datasource, ready for the session factories - with no
+	 * entity discovery, parsing or mapping generation. Each rehydrated record carries its mapping XML in memory.
+	 *
+	 * @param manifest The loaded manifest.
+	 *
+	 * @return The entity map keyed by datasource.
+	 */
+	public static Map<Key, List<EntityRecord>> toEntityMap( OrmManifest manifest ) {
+		Map<Key, List<EntityRecord>>	map		= new LinkedHashMap<>();
+		List<EntityRecord>				records	= manifest.toEntityRecords();
+		int								i		= 0;
+		for ( OrmManifest.Entity entity : manifest.getEntities() ) {
+			EntityRecord record = records.get( i++ );
+			record.setXmlMapping( entity.mappingXml() );
+			Key ds = record.getDatasource();
+			map.computeIfAbsent( ds, k -> new ArrayList<>() ).add( record );
+		}
+		return map;
+	}
+
+	/**
+	 * Write the manifest atomically to the given folder (temp file + move), alongside its integrity checksum.
+	 *
+	 * @param manifest The manifest to write.
+	 * @param folder   The {@code .bxorm/} folder.
+	 */
+	public static void write( OrmManifest manifest, Path folder ) {
+		try {
+			Files.createDirectories( folder );
+			String	json	= manifest.toJSON();
+			byte[]	bytes	= json.getBytes( StandardCharsets.UTF_8 );
+			Path	tmp		= folder.resolve( MANIFEST_NAME + ".tmp" );
+			Files.write( tmp, bytes );
+			Files.move( tmp, folder.resolve( MANIFEST_NAME ), java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+			    java.nio.file.StandardCopyOption.ATOMIC_MOVE );
+			Files.write( folder.resolve( CHECKSUM_NAME ), sha256( bytes ).getBytes( StandardCharsets.UTF_8 ) );
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( "Failed to write the ORM manifest to [" + folder + "]", e );
+		}
+	}
+
+	/**
+	 * Read and integrity-check the manifest from the given folder.
+	 *
+	 * @param folder       The {@code .bxorm/} folder.
+	 * @param failIfAbsent When true (trust mode), a missing manifest is a hard error; when false, returns {@code null}.
+	 *
+	 * @return The loaded manifest, or {@code null} if absent and {@code failIfAbsent} is false.
+	 */
+	public static OrmManifest read( Path folder, boolean failIfAbsent ) {
+		Path manifestFile = folder.resolve( MANIFEST_NAME );
+		if ( !Files.exists( manifestFile ) ) {
+			if ( failIfAbsent ) {
+				throw new BoxRuntimeException(
+				    "ORM manifest mode is [trust] but no manifest was found at [" + manifestFile
+				        + "]. Boot the app once with ormManifest=\"auto\" to generate it, then switch back to [trust]." );
+			}
+			return null;
+		}
+		try {
+			byte[]	bytes	= Files.readAllBytes( manifestFile );
+			// Integrity guard: the recorded checksum must match the manifest bytes (detects corruption / naive tampering).
+			Path	sumFile	= folder.resolve( CHECKSUM_NAME );
+			if ( Files.exists( sumFile ) ) {
+				String recorded = new String( Files.readAllBytes( sumFile ), StandardCharsets.UTF_8 ).trim();
+				if ( !recorded.equals( sha256( bytes ) ) ) {
+					throw new BoxRuntimeException(
+					    "ORM manifest integrity check failed at [" + manifestFile
+					        + "]: checksum mismatch. The manifest is corrupt or was modified; regenerate it." );
+				}
+			}
+			OrmManifest manifest = OrmManifest.fromJSON( new String( bytes, StandardCharsets.UTF_8 ) );
+			if ( manifest.getFormatVersion() != OrmManifest.FORMAT_VERSION ) {
+				throw new BoxRuntimeException( "ORM manifest at [" + manifestFile + "] has format version " + manifest.getFormatVersion()
+				    + " but this module expects " + OrmManifest.FORMAT_VERSION + "; regenerate it." );
+			}
+			return manifest;
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( "Failed to read the ORM manifest from [" + manifestFile + "]", e );
+		}
+	}
+
+	/**
+	 * Check a loaded manifest against the running application before a trust-mode boot, so a stale manifest fails closed
+	 * instead of silently booting old mappings. Compares:
+	 * <ul>
+	 * <li>the ORM settings fingerprint ({@link #configFingerprint(ORMConfig)}), e.g. a changed naming strategy or
+	 * application name (the facade namespace);</li>
+	 * <li>the module version, when both the manifest and the running module carry a real (non-{@code dev}) version;</li>
+	 * <li>each entity's source file, when it still exists at the recorded path: unchanged size + mtime is trusted, anything
+	 * else is re-hashed and compared.</li>
+	 * </ul>
+	 * A source file that is not at its recorded path (e.g. the manifest was generated on a build machine with a different
+	 * checkout path) cannot be checked and is skipped. Newly added entity files are not detected, since trust mode does no
+	 * discovery.
+	 *
+	 * @param manifest   The loaded manifest.
+	 * @param config     The running application's ORM configuration.
+	 * @param ormVersion The running module version.
+	 *
+	 * @return The reasons the manifest is stale; empty when it is current.
+	 */
+	public static List<String> verify( OrmManifest manifest, ORMConfig config, String ormVersion ) {
+		List<String> problems = new ArrayList<>();
+		if ( !configFingerprint( config ).equals( manifest.getConfigFingerprint() ) ) {
+			problems.add( "the ORM settings changed (dialect, datasource, namingStrategy, application name, dbcreate, quoteIdentifiers or entityPaths)" );
+		}
+		if ( isRealVersion( ormVersion ) && isRealVersion( manifest.getOrmVersion() ) && !ormVersion.equals( manifest.getOrmVersion() ) ) {
+			problems.add( "it was generated by bx-orm " + manifest.getOrmVersion() + " but this is bx-orm " + ormVersion );
+		}
+		for ( OrmManifest.Entity entity : manifest.getEntities() ) {
+			String changed = sourceChange( entity.source() );
+			if ( changed != null ) {
+				problems.add( "entity [" + entity.entityName() + "] " + changed );
+			}
+		}
+		return problems;
+	}
+
+	/** Whether a version stamp is a real release/snapshot version (not blank, {@code dev}, or an unreplaced build token). */
+	private static boolean isRealVersion( String version ) {
+		return version != null && !version.isBlank() && !version.equals( "dev" ) && !version.contains( "@" );
+	}
+
+	/**
+	 * Describe how an entity's source file differs from its recorded fingerprint.
+	 *
+	 * @return A short reason, or {@code null} when unchanged or not checkable.
+	 */
+	private static String sourceChange( IStruct source ) {
+		if ( source == null ) {
+			return null;
+		}
+		String	path	= String.valueOf( source.getOrDefault( Key.path, "" ) );
+		String	hash	= String.valueOf( source.getOrDefault( Key.of( "hash" ), "" ) );
+		if ( path.isEmpty() || hash.isEmpty() ) {
+			return null;
+		}
+		Path file = Path.of( path );
+		if ( !Files.exists( file ) ) {
+			return null;
+		}
+		try {
+			long	size	= Files.size( file );
+			long	mtime	= Files.getLastModifiedTime( file ).toMillis();
+			if ( size == toLong( source.get( Key.of( "size" ) ) ) && mtime == toLong( source.get( Key.of( "mtime" ) ) ) ) {
+				return null;
+			}
+			return sha256( Files.readAllBytes( file ) ).equals( hash ) ? null : "source changed: " + path;
+		} catch ( IOException e ) {
+			return "source unreadable: " + path;
+		}
+	}
+
+	private static long toLong( Object value ) {
+		return value instanceof Number n ? n.longValue() : -1L;
+	}
+
+	/**
+	 * Compute a fingerprint of the ORM settings that affect generated output; a change invalidates a manifest in auto mode.
+	 *
+	 * @param config The ORM configuration.
+	 *
+	 * @return A hex sha256 of the relevant settings.
+	 */
+	public static String configFingerprint( ORMConfig config ) {
+		StringBuilder sb = new StringBuilder();
+		sb.append( "dialect=" ).append( config.dialect ).append( '\n' );
+		sb.append( "datasource=" ).append( config.datasource ).append( '\n' );
+		sb.append( "namingStrategy=" ).append( config.namingStrategy ).append( '\n' );
+		sb.append( "facadeNamespace=" ).append( config.facadeNamespace ).append( '\n' );
+		sb.append( "dbcreate=" ).append( config.dbcreate ).append( '\n' );
+		sb.append( "quoteIdentifiers=" ).append( config.quoteIdentifiers ).append( '\n' );
+		if ( config.entityPaths != null ) {
+			sb.append( "entityPaths=" ).append( String.join( ",", config.entityPaths ) ).append( '\n' );
+		}
+		return sha256( sb.toString().getBytes( StandardCharsets.UTF_8 ) );
+	}
+
+	/**
+	 * Build the source-file fingerprint (path, hash, mtime, size) for an entity, from its metadata's source path.
+	 */
+	private static IStruct sourceFingerprint( EntityRecord record ) {
+		Object	pathObj	= record.getMetadata() == null ? null : record.getMetadata().get( Key.path );
+		String	path	= pathObj == null ? "" : pathObj.toString();
+		if ( path.isEmpty() ) {
+			return Struct.of( "path", "", "hash", "", "mtime", 0L, "size", 0L );
+		}
+		try {
+			Path p = Path.of( path );
+			if ( Files.exists( p ) ) {
+				byte[] bytes = Files.readAllBytes( p );
+				return Struct.of( "path", path, "hash", sha256( bytes ), "mtime", Files.getLastModifiedTime( p ).toMillis(), "size", ( long ) bytes.length );
+			}
+		} catch ( IOException e ) {
+			// Best-effort fingerprint; a missing/unreadable source just yields an empty hash.
+		}
+		return Struct.of( "path", path, "hash", "", "mtime", 0L, "size", 0L );
+	}
+
+	/** Resolve an entity's mapping XML: prefer the in-memory string, else read its generated file. */
+	private static String resolveXml( EntityRecord record ) {
+		if ( record.getXmlMapping() != null && !record.getXmlMapping().isEmpty() ) {
+			return record.getXmlMapping();
+		}
+		if ( record.getXmlFilePath() != null ) {
+			try {
+				return new String( Files.readAllBytes( record.getXmlFilePath() ), StandardCharsets.UTF_8 );
+			} catch ( IOException e ) {
+				return "";
+			}
+		}
+		return "";
+	}
+
+	/** Hex sha256 of the given bytes. */
+	public static String sha256( byte[] bytes ) {
+		try {
+			byte[]			digest	= MessageDigest.getInstance( "SHA-256" ).digest( bytes );
+			StringBuilder	sb		= new StringBuilder( digest.length * 2 );
+			for ( byte b : digest ) {
+				sb.append( Character.forDigit( ( b >> 4 ) & 0xF, 16 ) ).append( Character.forDigit( b & 0xF, 16 ) );
+			}
+			return sb.toString();
+		} catch ( java.security.NoSuchAlgorithmException e ) {
+			throw new BoxRuntimeException( "SHA-256 unavailable", e );
+		}
+	}
+}

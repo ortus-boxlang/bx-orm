@@ -1,0 +1,42 @@
+/**
+ * One app, several broken startup scenarios (see BootErrorsTest). The scenario comes from the
+ * bxorm.test.bootScenario system property; each scenario gets its own application name and in-memory Derby DB.
+ */
+class {
+	variables.scenario = getSystemSetting( "bxorm.test.bootScenario", "ok" );
+
+	this.name = "BXORMBootErrors_" & variables.scenario;
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"BootErrorsDB": {
+			"connectionString": "jdbc:derby:memory:ormBootErrors_#variables.scenario#;create=true"
+		}
+	};
+	this.datasource = "BootErrorsDB";
+
+	variables.paths = {
+		"ok"            : [ "/root/ok" ],
+		"badOrmType"    : [ "/root/badOrmType" ],
+		"duplicates"    : [ "/root/duplicates" ],
+		"badDatasource" : [ "/root/ok" ],
+		"missingPath"   : [ "/root/doesNotExist" ],
+		"badFieldType"  : [ "/root/badFieldType" ],
+		"missingCfc"    : [ "/root/missingCfc" ],
+		"badSoftDelete" : [ "/root/badSoftDelete" ],
+		"badAutoTimestamp" : [ "/root/badAutoTimestamp" ],
+		"badDefaultSort" : [ "/root/badDefaultSort" ]
+	};
+
+	this.ormSettings = {
+		"datasource"       : variables.scenario == "badDatasource" ? "NoSuchDatasource" : "BootErrorsDB",
+		"dialect"          : "Derby",
+		// bxorm.test.bootBreak=true breaks the (otherwise valid) app in place, to test a failing ormReload().
+		"entityPaths"      : getSystemSetting( "bxorm.test.bootBreak", "false" ) == "true" ? [ "/root/badFieldType" ] : variables.paths[ variables.scenario ],
+		"saveMapping"      : false,
+		"dbcreate"         : "dropcreate",
+		"ignoreParseErrors": false
+	};
+	this.ormEnabled = true;
+}

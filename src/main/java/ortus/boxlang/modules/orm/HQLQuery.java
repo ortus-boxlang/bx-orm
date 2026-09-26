@@ -18,12 +18,15 @@
 package ortus.boxlang.modules.orm;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.hibernate.Session;
+import org.hibernate.metamodel.model.domain.EntityDomainType;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -38,7 +41,6 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
-import ortus.boxlang.runtime.types.exceptions.DatabaseException;
 
 /**
  * HQL Query representation
@@ -71,13 +73,53 @@ public class HQLQuery {
 		this.context		= context.getParentOfType( IJDBCCapableContext.class );
 		this.hql			= hql;
 
-		this.ormApp			= ormService.getORMAppByContext( this.context );
 		this.ormContext		= ORMContext.getForContext( this.context );
+		this.ormApp			= ormContext.requireORMApp();
 		this.datasource		= options.containsKey( Key.datasource ) ? Key.of( options.getAsString( Key.datasource ) ) : null;
 		this.session		= ormContext.getSession( datasource );
 
 		this.parameterCount	= 0;
 		this.parameters		= processBindings( bindings );
+	}
+
+	/**
+	 * Create a query from HQL whose parameters are already numbered {@code ?1..?n} in order, one scalar value per
+	 * placeholder (lists already expanded). Used by {@code entityCriteria()}, which builds its own HQL: nothing is parsed
+	 * or rewritten, and every value is bound as-is.
+	 *
+	 * @param context The context the query runs in.
+	 * @param hql     HQL using {@code ?1..?n} positional parameters.
+	 * @param values  One value per placeholder, in order.
+	 * @param options Query options (datasource, maxResults, offset, cacheable, cacheName, timeout, readOnly, fetchSize,
+	 *                comment, hints).
+	 *
+	 * @return The query, ready to {@link #prepare(boolean)} or {@link #execute()}.
+	 */
+	public static HQLQuery ofNumbered( IBoxContext context, String hql, List<Object> values, IStruct options ) {
+		HQLQuery query = new HQLQuery( context, hql, null, options );
+		for ( Object value : values ) {
+			// Wrapped so QueryParameter keeps the value untouched (a struct or entity is never read as queryparam options).
+			query.parameters.add( QueryParameter.fromAny( Struct.of( Key.value, value ) ) );
+		}
+		return query;
+	}
+
+	/**
+	 * The HQL this query runs (after named/positional parameters were rewritten to {@code ?1..?n}).
+	 *
+	 * @return The HQL.
+	 */
+	public String getHQL() {
+		return this.hql;
+	}
+
+	/**
+	 * The Hibernate session this query runs in.
+	 *
+	 * @return The session.
+	 */
+	public Session getSession() {
+		return this.session;
 	}
 
 	private List<QueryParameter> processBindings( Object bindings ) {
@@ -108,7 +150,9 @@ public class HQLQuery {
 			if ( foundNames == castedArray.size() ) {
 				return buildParameterList( null, possibleStruct );
 			} else if ( foundNames > 0 ) {
-				throw new DatabaseException( "Invalid query params passed as array of structs. Some structs have a name, some do not." );
+				throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+				    "The query params array mixes named structs ({ name, value }) and unnamed values.",
+				    "Give every struct a name (named parameters) or none of them (positional parameters)." );
 			}
 			// No structs with names were found, or possbly no structs were found at all!
 			return buildParameterList( castedArray, null );
@@ -120,7 +164,10 @@ public class HQLQuery {
 
 		// We always have bindings, since we exit early if there are none
 		String className = bindings.getClass().getName();
-		throw new DatabaseException( "Invalid type for query params. Expected array or struct. Received: " + className );
+		throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+		    "Query params must be a struct (named :params) or an array (positional ? params), but received a "
+		        + bindings.getClass().getSimpleName() + ".",
+		    "Example: ormExecuteQuery( \"from User where id = :id\", { id : 1 } )." );
 	}
 
 	/**
@@ -176,8 +223,11 @@ public class HQLQuery {
 												HQLWithParamToken.setLength( 0 );
 												Key finalParamName = Key.of( paramName.toString() );
 												if ( isPositional ) {
-													throw new DatabaseException(
-													    "Named parameter [:" + finalParamName.getName() + "] found in query with positional parameters." );
+													throw new ortus.boxlang.modules.orm.errors.ORMException(
+													    ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+													    "The HQL uses the named parameter [:" + finalParamName.getName()
+													        + "] but the params are positional (an array).",
+													    "Use a struct for named parameters, e.g. { " + finalParamName.getName() + " : value }." );
 												} else {
 													if ( namedParameters.containsKey( finalParamName ) ) {
 														QueryParameter newParam = QueryParameter.fromAny( namedParameters.get( finalParamName ) );
@@ -195,16 +245,21 @@ public class HQLQuery {
 															newHQL.append( "?" + ( ++this.parameterCount ) );
 														}
 													} else {
-														throw new DatabaseException(
-														    "Named parameter [:" + finalParamName.getName() + "] not provided to query." );
+														throw new ortus.boxlang.modules.orm.errors.ORMException(
+														    ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+														    "The HQL parameter [:" + finalParamName.getName() + "] has no value.",
+														    "Pass it in the params struct, e.g. { " + finalParamName.getName() + " : value }." );
 													}
 												}
 											};
 		// Pop this into a lambda so we can re-use it for the last positional parameter
 		Runnable		processPositional	= () -> {
 												if ( paramsEncountered[ 0 ] > positionalParameters.size() ) {
-													throw new DatabaseException( "Too few positional parameters [" + positionalParameters.size()
-													    + "] provided for query having at least [" + paramsEncountered[ 0 ] + "] '?' char(s)." );
+													throw new ortus.boxlang.modules.orm.errors.ORMException(
+													    ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+													    "The HQL has at least " + paramsEncountered[ 0 ] + " positional (?) parameters but only "
+													        + positionalParameters.size() + " value(s) were passed.",
+													    "Pass one value per ? in the params array, in order." );
 												}
 												HQLWithParamTokens.add( HQLWithParamToken.toString() );
 												HQLWithParamToken.setLength( 0 );
@@ -242,7 +297,9 @@ public class HQLQuery {
 						// We've encountered a positional parameter
 						paramsEncountered[ 0 ]++;
 						if ( !isPositional ) {
-							throw new DatabaseException( "Positional parameter [?] found in query with named parameters." );
+							throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.QUERY_PARAMETER,
+							    "The HQL uses a positional parameter (?) but the params are named (a struct).",
+							    "Use named parameters (:name) in the HQL, or pass an array of values." );
 						}
 
 						state = 5;
@@ -335,14 +392,120 @@ public class HQLQuery {
 
 		HQLWithParamTokens.add( HQLWithParamToken.toString() );
 		this.hql = newHQL.toString();
+		// Extra named params are ignored (Hibernate never sees them), which usually means a typo in the HQL or the struct.
+		if ( namedParameters != null ) {
+			for ( Key given : namedParameters.keySet() ) {
+				if ( !foundNamedParams.contains( given ) ) {
+					ormService.getLogger().warn(
+					    "ormExecuteQuery: the param [{}] is not used by the HQL and was ignored. Is there a typo? HQL: {}", given.getName(), HQL );
+				}
+			}
+		}
 		return params;
 	}
 
+	/**
+	 * Run the query: an update/delete returns the affected row count; a select returns its rows, with entity facades
+	 * unwrapped to their BoxLang instances.
+	 *
+	 * @return The row count or the list of results.
+	 */
 	public Object execute() {
 		boolean							isUpdate	= this.hql.trim().toUpperCase().startsWith( UPDATE_PREFIX )
 		    || this.hql.trim().toUpperCase().startsWith( DELETE_PREFIX );
+		org.hibernate.query.Query<?>	hqlQuery	= prepare( !isUpdate );
+		if ( isUpdate ) {
+			return hqlQuery.executeUpdate();
+		} else {
+			// Hibernate returns POJO facades for entity results; unwrap each to its BoxLang instance so callers only ever
+			// see IClassRunnables. Scalars/projections pass through untouched.
+			return inLockScope( hqlQuery::list )
+			    .stream()
+			    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
+			    .collect( java.util.stream.Collectors.toList() );
+		}
+	}
 
-		org.hibernate.query.Query<?>	hqlQuery	= session.createQuery( this.hql );
+	/**
+	 * Whether this query takes a database lock (the {@code lock} option).
+	 *
+	 * @return True when the query locks the rows it reads.
+	 */
+	public boolean isLocking() {
+		return this.options.get( ORMKeys.lock ) != null && !this.options.get( ORMKeys.lock ).toString().isBlank();
+	}
+
+	/**
+	 * Run part of this query's execution so that, when the query locks, Hibernate accepts the BoxLang transaction as its
+	 * transaction (see {@code BoxTransactionCoordinatorBuilder}).
+	 *
+	 * @param work The execution step, e.g. {@code query::list}.
+	 * @param <T>  Its result type.
+	 *
+	 * @return What the step returned.
+	 */
+	public <T> T inLockScope( java.util.function.Supplier<T> work ) {
+		if ( !isLocking() ) {
+			return work.get();
+		}
+		try {
+			return ortus.boxlang.modules.orm.config.BoxTransactionCoordinatorBuilder.lockScope( work );
+		} finally {
+			// Inside the scope Hibernate believed a transaction was active, so it kept the JDBC resources for "the rest of the
+			// transaction". Outside it that is no longer true: let Hibernate release them now, as after any other operation.
+			if ( session instanceof org.hibernate.engine.spi.SharedSessionContractImplementor implementor && implementor.isOpen() ) {
+				implementor.afterOperation( true );
+			}
+		}
+	}
+
+	/**
+	 * Start a query stream so that, when the query locks, Hibernate accepts the BoxLang transaction as its transaction. The
+	 * stream's JDBC resources are released when it is closed, as usual.
+	 *
+	 * @param work Starts the stream, e.g. {@code query::getResultStream}.
+	 * @param <T>  The stream type.
+	 *
+	 * @return The stream.
+	 */
+	public <T> T inLockScopeStreaming( java.util.function.Supplier<T> work ) {
+		return isLocking() ? ortus.boxlang.modules.orm.config.BoxTransactionCoordinatorBuilder.lockScope( work ) : work.get();
+	}
+
+	/**
+	 * Apply the {@code lock} option (read, write or force) and its {@code lockTimeout} (seconds) and {@code skipLocked}
+	 * settings: the rows the query returns are locked until the transaction ends.
+	 *
+	 * @param query   The query.
+	 * @param options The query options.
+	 */
+	static void applyLock( org.hibernate.query.Query<?> query, IStruct options ) {
+		Object mode = options.get( ORMKeys.lock );
+		if ( mode == null || mode.toString().isBlank() ) {
+			return;
+		}
+		query.setHibernateLockMode( ortus.boxlang.modules.orm.EntityLocking.mode( mode, "lock" ) );
+		jakarta.persistence.Timeout timeout = ortus.boxlang.modules.orm.EntityLocking.timeout( options.get( ORMKeys.lockTimeout ),
+		    BooleanCaster.cast( options.getOrDefault( ORMKeys.skipLocked, false ) ) );
+		if ( timeout != null ) {
+			query.setHint( org.hibernate.jpa.SpecHints.HINT_SPEC_LOCK_TIMEOUT, timeout.milliseconds() );
+		}
+	}
+
+	/**
+	 * Create the Hibernate query with every option applied and every parameter bound, without running it.
+	 *
+	 * @param readYourWrites True to flush pending ORM writes first when inside a BoxLang transaction, so a select sees
+	 *                       them.
+	 *
+	 * @return The prepared query.
+	 */
+	public org.hibernate.query.Query<?> prepare( boolean readYourWrites ) {
+		if ( readYourWrites ) {
+			ormContext.flushForQuery( session );
+		}
+
+		org.hibernate.query.Query<?> hqlQuery = session.createQuery( this.hql );
 
 		if ( !ormContext.getConfig().autoManageSession ) {
 			hqlQuery.setHibernateFlushMode( org.hibernate.FlushMode.MANUAL );
@@ -353,34 +516,82 @@ public class HQLQuery {
 		hqlQuery.setCacheMode( org.hibernate.CacheMode.NORMAL );
 
 		if ( this.options.containsKey( Key.offset ) ) {
-			hqlQuery.getQueryOptions().setFirstRow( this.options.getAsInteger( Key.offset ) );
+			hqlQuery.setFirstResult( this.options.getAsInteger( Key.offset ) );
 		}
 		if ( this.options.containsKey( ORMKeys.maxResults ) ) {
-			hqlQuery.getQueryOptions().setMaxRows( this.options.getAsInteger( ORMKeys.maxResults ) );
+			hqlQuery.setMaxResults( this.options.getAsInteger( ORMKeys.maxResults ) );
 		}
 		if ( this.options.containsKey( ORMKeys.readOnly ) ) {
 			hqlQuery.setReadOnly( BooleanCaster.cast( this.options.get( ORMKeys.readOnly ) ) );
 		}
+		applyCacheAndTimeout( hqlQuery, this.options );
+		if ( isLocking() ) {
+			ortus.boxlang.modules.orm.EntityLocking.requireTransaction( ormContext, "lock" );
+			applyLock( hqlQuery, this.options );
+		}
+		if ( this.options.get( Key.fetchSize ) != null ) {
+			hqlQuery.setFetchSize( ortus.boxlang.runtime.dynamic.casters.IntegerCaster.cast( this.options.get( Key.fetchSize ) ) );
+		}
+		if ( this.options.get( ORMKeys.comment ) instanceof String comment && !comment.isBlank() ) {
+			hqlQuery.setComment( comment );
+		}
+		if ( this.options.get( ORMKeys.hints ) instanceof IStruct hints ) {
+			hints.forEach( ( name, value ) -> hqlQuery.setHint( name.getName(), value ) );
+		}
 
 		if ( this.parameters != null ) {
+			// Map each 1-based positional parameter to the entity name it targets, when it targets an association.
+			// bx-orm is the ORM abstraction: Hibernate 5 let callers pass a primary key or an entity for an association
+			// parameter, so we resolve those to the managed entity Hibernate 7 now requires. Non-association params are
+			// left untouched.
+			Map<Integer, String> entityParams = new HashMap<>();
+			if ( hqlQuery instanceof org.hibernate.query.spi.SqmQuery<?> sqmQuery ) {
+				// The parameter's expected type is only known after semantic analysis, on the SQM tree, not on the query's
+				// pre-binding parameter metadata. A parameter compared against an association path carries that association's
+				// entity domain type as its anticipated type.
+				for ( org.hibernate.query.sqm.tree.expression.SqmParameter<?> sqmParam : sqmQuery.getSqmStatement().getSqmParameters() ) {
+					if ( sqmParam.getPosition() != null && sqmParam.getAnticipatedType() instanceof EntityDomainType<?> entityType ) {
+						entityParams.put( sqmParam.getPosition(), entityType.getHibernateEntityName() );
+					}
+				}
+			}
+
 			int parameterIndex = 1;
 			for ( QueryParameter param : this.parameters ) {
 				if ( param.isListParam() ) {
-					Array list = ( Array ) param.getValue();
+					Array	list		= ( Array ) param.getValue();
+					// An association list (WHERE manufacturer IN (:ids)) records its entity target only at the list's
+					// first position; resolve every expanded element against that target, not just the first element.
+					int		listStart	= parameterIndex;
 					for ( Object value : list ) {
-						hqlQuery.setParameter( parameterIndex++, value );
+						hqlQuery.setParameter( parameterIndex, resolveBindValue( listStart, value, entityParams ) );
+						parameterIndex++;
 					}
 				} else {
-					hqlQuery.setParameter( parameterIndex++, param.getValue() );
+					hqlQuery.setParameter( parameterIndex, resolveBindValue( parameterIndex, param.getValue(), entityParams ) );
+					parameterIndex++;
 				}
 			}
 		}
-		if ( isUpdate ) {
-			return hqlQuery.executeUpdate();
-		} else {
-			return hqlQuery.list();
-		}
+		return hqlQuery;
+	}
 
+	/**
+	 * Resolve a bind value for a positional parameter, converting association parameters from a primary key or entity
+	 * instance into the managed entity Hibernate 7 expects. Non-association parameters are returned unchanged.
+	 *
+	 * @param position     The 1-based positional index of the parameter.
+	 * @param value        The value about to be bound.
+	 * @param entityParams Map of positional index to targeted entity name, for association parameters only.
+	 *
+	 * @return The value to bind.
+	 */
+	private Object resolveBindValue( int position, Object value, Map<Integer, String> entityParams ) {
+		String entityName = entityParams.get( position );
+		if ( entityName == null ) {
+			return value;
+		}
+		return this.ormApp.resolveEntityReference( this.session, entityName, value );
 	}
 
 	/**
@@ -399,5 +610,38 @@ public class HQLQuery {
 		return hql.replaceAll( EQUALS_TRUE, TRUE )
 		    .replaceAll( EQUALS_FALSE, FALSE );
 
+	}
+
+	/**
+	 * Apply the {@code cacheable}, {@code cacheName} (alias {@code cacheRegion}) and {@code timeout} query options. A
+	 * cache region implies {@code cacheable} unless {@code cacheable} is given explicitly. Caching only takes effect when the second-level query cache is
+	 * enabled
+	 * ({@code secondaryCacheEnabled}); otherwise Hibernate ignores it.
+	 *
+	 * @param query   The query to configure.
+	 * @param options The query options struct.
+	 */
+	static void applyCacheAndTimeout( org.hibernate.query.Query<?> query, IStruct options ) {
+		String region = null;
+		if ( options.get( ORMKeys.cacheName ) instanceof String name && !name.isBlank() ) {
+			region = name;
+		} else if ( options.get( Key.of( "cacheRegion" ) ) instanceof String name && !name.isBlank() ) {
+			region = name;
+		}
+		Object cacheable = options.get( ORMKeys.cacheable );
+		if ( cacheable != null ) {
+			query.setCacheable( BooleanCaster.cast( cacheable ) );
+		} else if ( region != null ) {
+			query.setCacheable( true );
+		}
+		if ( region != null ) {
+			query.setCacheRegion( region );
+		}
+		if ( options.get( Key.timeout ) != null ) {
+			Integer timeout = ortus.boxlang.runtime.dynamic.casters.IntegerCaster.cast( options.get( Key.timeout ) );
+			if ( timeout != null && timeout > 0 ) {
+				query.setTimeout( timeout.intValue() );
+			}
+		}
 	}
 }

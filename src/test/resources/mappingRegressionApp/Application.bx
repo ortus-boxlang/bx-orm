@@ -1,0 +1,25 @@
+/**
+ * Test app for the Hibernate 5 -> 7 mapping-regression fixes (see MappingRegressionBootTest). One entity group per
+ * regression: to-one default fetch, root discriminator value, shared-primary-key one-to-one, one-to-many FK borrowed from
+ * the back-reference, collection where, struct (map) collections, and fieldtype="timestamp" versions.
+ */
+class {
+	this.name = "BXORMMappingRegressionTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"MappingRegressionDB" : { "connectionString" : "jdbc:derby:memory:ormMappingRegression;create=true" }
+	};
+	this.datasource = "MappingRegressionDB";
+
+	this.ormSettings = {
+		"datasource"  : "MappingRegressionDB",
+		"dialect"     : "Derby",
+		"entityPaths" : [ "/root/models" ],
+		"logSQL"      : "false",
+		"dbcreate"    : "dropcreate",
+		"saveMapping" : false
+	};
+	this.ormEnabled = "true";
+}
