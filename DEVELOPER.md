@@ -812,9 +812,12 @@ the criteria itself (`copy()`, then `compileColumns()`), selecting each node's i
 are left joins in the same row, and a null id marks a null association. Each to-many association is a separate query
 rooted at the same entity, `where root.id in ( ids just read )` (chunks of 500), selecting the parent's id first; rows are
 grouped back into their parents, in child id order, and nested collections repeat the step. Mappers run last, innermost
-first. `this.memento` comes from `ORMApp.prototype()`, one instance per entity made through the instantiator. Getters
-need an entity: one from `this.memento` is skipped, one the caller asks for is `orm.argument`, and an overridden
-property getter is bypassed (the column value is returned). `entityLoadAsStruct()` is
+first. `this.memento` comes from `ORMApp.prototype()`, one instance per entity made through the instantiator. A plain
+property with a hand-written getter (not BoxLang's `GeneratedGetter`) is read through it: the node then also selects
+all of the entity's plain columns, copies each row into a reusable scratch instance (`ORMApp.newInstance()`, never
+saved) and calls the getter, so the output matches `entityToStruct()`; associations are not loaded on the scratch
+instance. Includes that are only getters need an entity: one from `this.memento` is skipped, one the caller asks for is
+`orm.argument`. `entityLoadAsStruct()` is
 `criteria/StructLoads` (id or filter conditions, then the projection). Entities with a composite id are
 `orm.argument`: grouping rows back into parents needs a single id. Plain `asStruct()` (no includes) is
 unchanged except for ISO 8601 dates.

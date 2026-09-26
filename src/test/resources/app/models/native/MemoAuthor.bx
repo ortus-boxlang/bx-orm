@@ -17,6 +17,8 @@ class persistent="true" table="memo_authors" {
 
 	property name="email" ormType="string" length="100";
 
+	property name="handle" ormType="string" length="50";
+
 	property name="posts" fieldtype="one-to-many" cfc="MemoPost" fkcolumn="author_id" inverse="true" orderby="id";
 
 	this.memento = {
@@ -37,6 +39,13 @@ class persistent="true" table="memo_authors" {
 	 */
 	function getEmail() {
 		return lcase( variables.email ?: "" );
+	}
+
+	/**
+	 * Overrides the implicit getter and reads a sibling property through its own getter.
+	 */
+	function getHandle() {
+		return lcase( getFirstName() ) & "_" & ( variables.handle ?: "" );
 	}
 
 	/**

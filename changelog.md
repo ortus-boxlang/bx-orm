@@ -54,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `postCommit( entity, action )` event on the entity and the global event handler, fired once a write is committed (never for rolled-back writes).
 - `useDBForMapping=true` (Adobe ColdFusion compatibility): at boot, untyped properties get their `ormtype` from the column type and entities without an id get it from the table's primary key.
 - `entityToStruct( entityOrArray, options )`: entities as structs, mementifier-compatible (`this.memento` defaults, excludes, never-include, mappers, defaults, profiles), with dotted association paths, cycle safety and ISO 8601 dates.
-- `entityLoadAsStruct( name, idOrFilter, includes, options )` and criteria `asStruct( includes )`: the same structs read with projection queries, without loading entities.
+- `entityLoadAsStruct( name, idOrFilter, includes, options )` and criteria `asStruct( includes )`: the same structs read with projection queries, without loading entities. Getters you write for a property are honored in all three, so they shape the output the same way.
 - Event veto: a `preInsert`, `preUpdate` or `preDelete` handler (on the entity or the global `eventHandler`) that returns `false` cancels the operation. Vetoing the insert of a database-identity entity raises `orm.event.veto`, since Hibernate cannot skip that insert.
 
 - POJO-facade entity representation (now the only representation): each entity maps to a generated Java facade whose accessors delegate to the BoxLang instance, unlocking `uuid` (and other) id generators, composite ids, `byte[]`, and full metamodel access.

@@ -42,7 +42,7 @@ public class EntityToStructTest extends BaseORMTest {
 	public void addRows() {
 		instance.executeSource(
 		    """
-		    queryExecute( "INSERT INTO memo_authors ( id, firstName, lastName, passwordHash, joined, email ) VALUES ( 901, 'Ann', 'Baker', 'secret', '2024-03-05 10:20:30', 'ANN@EXAMPLE.COM' )" );
+		    queryExecute( "INSERT INTO memo_authors ( id, firstName, lastName, passwordHash, joined, email, handle ) VALUES ( 901, 'Ann', 'Baker', 'secret', '2024-03-05 10:20:30', 'ANN@EXAMPLE.COM', 'x1' )" );
 		    queryExecute( "INSERT INTO memo_posts ( id, title, author_id ) VALUES ( 901, 'First', 901 ), ( 902, 'Second', 901 )" );
 		    """,
 		    context );

@@ -53,7 +53,8 @@ and never change the builder; `copy()` branches it.
 - `defaultSort` applies in `compile()` (and `compileColumns()`) when there is no `order()` and no projection.
 - `asStruct( includes, options )` sets a `MementoSpec`; `list`/`get`/`first`/`paginate` then go through
   `MementoProjection` (root query from `copy()` + `compileColumns()`, one extra query per to-many, rows grouped by parent
-  id). `each`/`chunk` refuse it. Plain `asStruct()` rows get ISO 8601 dates.
+  id). A plain property with a hand-written getter (not a `GeneratedGetter`) is read by copying the row's plain values
+  into a scratch instance and calling the getter. `each`/`chunk` refuse it. Plain `asStruct()` rows get ISO 8601 dates.
 - `lock( mode, { timeout, skipLocked } )` stores `lock` / `lockTimeout` / `skipLocked` options. They apply only to
   `Compiled.lockable()` runs (row selects, not counts or aggregates); `HQLQuery.prepare` applies them and requires
   `transaction{}`, and `HQLQuery.inLockScope` lets the query pass Hibernate's transaction check (see the

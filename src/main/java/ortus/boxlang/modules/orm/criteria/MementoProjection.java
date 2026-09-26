@@ -48,8 +48,9 @@ import ortus.boxlang.runtime.types.Struct;
  * to-many association is one more query, rooted at the same entity and limited to the root ids just read, that selects
  * the parent's id and the collection's values; its rows are grouped back into their parent structs (in id order). Dates
  * are ISO 8601 strings, nulls become the {@code defaults} entry or an empty string, and mappers run last, as in
- * {@code entityToStruct()}. Getters need an entity: one listed in {@code this.memento} is left out, one the caller asks for is
- * an error.
+ * {@code entityToStruct()}. A plain property with a hand-written getter is read through that getter, called on a scratch
+ * instance holding the row's plain values (associations are not loaded there). Computed getters that are not properties
+ * need an entity: one listed in {@code this.memento} is left out, one the caller asks for is an error.
  */
 final class MementoProjection {
 
@@ -87,8 +88,22 @@ final class MementoProjection {
 	 * @param column The select column (PLAIN), else -1.
 	 * @param child  The nested node (TO_ONE, TO_MANY), else null.
 	 * @param group  The collection query (TO_MANY), else null.
+	 * @param getter A hand-written getter to call for the value (PLAIN), else null.
 	 */
-	private record Field( Key key, Kind kind, int column, Node child, Group group ) {
+	private record Field( Key key, Kind kind, int column, Node child, Group group, Key getter ) {
+
+		/**
+		 * A field without a getter.
+		 *
+		 * @param key    The output key.
+		 * @param kind   What it is.
+		 * @param column The select column, or -1.
+		 * @param child  The nested node, or null.
+		 * @param group  The collection query, or null.
+		 */
+		Field( Key key, Kind kind, int column, Node child, Group group ) {
+			this( key, kind, column, child, group, null );
+		}
 	}
 
 	/**
@@ -101,7 +116,15 @@ final class MementoProjection {
 		/** The select column of this entity's id. */
 		int							idColumn;
 		/** The keys, in order. */
-		final List<Field>			fields	= new ArrayList<>();
+		final List<Field>			fields			= new ArrayList<>();
+		/** Every plain property's column, when a hand-written getter needs the whole row; else empty. */
+		final Map<Key, Integer>		scratchColumns	= new LinkedHashMap<>();
+		/** The entity name, for the scratch instance. */
+		String						entityName;
+		/** The ORM application, for the scratch instance. */
+		ORMApp						app;
+		/** A reusable instance the row is copied into before a hand-written getter runs; made on first use. */
+		IClassRunnable				scratch;
 
 		/**
 		 * Create a node.
@@ -282,7 +305,7 @@ final class MementoProjection {
 		IStruct result = new Struct( IStruct.TYPES.LINKED );
 		for ( Field field : node.fields ) {
 			Object value = switch ( field.kind() ) {
-				case PLAIN -> IsoDates.convert( values[ field.column() ] );
+				case PLAIN -> IsoDates.convert( field.getter() == null ? values[ field.column() ] : callGetter( context, node, values, field.getter() ) );
 				case TO_ONE -> values[ field.child().idColumn ] == null ? null : struct( context, field.child(), values, waiting, mappers );
 				case TO_MANY -> {
 					Object parentId = values[ node.idColumn ];
@@ -329,7 +352,9 @@ final class MementoProjection {
 	    List<String> typePath ) {
 		IClassRunnable	prototype	= app.prototype( context, record.getEntityName() );
 		Node			node		= new Node( spec.resolve( prototype ) );
-		String			id			= singleId( record );
+		node.entityName	= record.getEntityName();
+		node.app		= app;
+		String id = singleId( record );
 		if ( id == null ) {
 			throw new ORMException( ORMErrorType.ARGUMENT,
 			    OPERATION + "() needs entities with a single id, but [" + record.getEntityName() + "] has a composite id.",
@@ -366,7 +391,9 @@ final class MementoProjection {
 			}
 			Key key = Key.of( include.outputName( property.getName() ) );
 			if ( EntityMemento.isPlain( property ) ) {
-				node.fields.add( new Field( key, Kind.PLAIN, group.add( prefix + property.getName(), false ), null, null ) );
+				// A getter written by hand shapes the value, as in entityToStruct(): call it on a scratch copy of the row.
+				Key getter = customGetter( prototype, property.getName() );
+				node.fields.add( new Field( key, Kind.PLAIN, group.add( prefix + property.getName(), false ), null, null, getter ) );
 				continue;
 			}
 			if ( !property.isAssociationType() ) {
@@ -397,7 +424,47 @@ final class MementoProjection {
 				    build( context, app, target, targetModel, childSpec, prefix + property.getName() + ".", group, path ), null ) );
 			}
 		}
+		if ( node.fields.stream().anyMatch( f -> f.getter() != null ) ) {
+			// The getter may read the entity's other values, so the row carries all of its plain properties.
+			for ( IPropertyMeta p : record.getEntityMeta().getAllPersistentProperties() ) {
+				if ( EntityMemento.isPlain( p ) ) {
+					node.scratchColumns.put( Key.of( p.getName() ), group.add( prefix + p.getName(), false ) );
+				}
+			}
+		}
 		return node;
+	}
+
+	/**
+	 * A getter the developer wrote for a property (not the one BoxLang generates).
+	 *
+	 * @param prototype An instance of the entity.
+	 * @param property  The property name.
+	 *
+	 * @return The getter's name, or null when the property uses the generated getter.
+	 */
+	private static Key customGetter( IClassRunnable prototype, String property ) {
+		Key		getter	= Key.of( "get" + property );
+		Object	method	= prototype.getThisScope().get( getter );
+		return method instanceof Function && ! ( method instanceof ortus.boxlang.runtime.runnables.accessors.GeneratedGetter ) ? getter : null;
+	}
+
+	/**
+	 * Call a hand-written getter on the node's scratch instance, loaded with the row's plain values.
+	 *
+	 * @param context The context.
+	 * @param node    The node.
+	 * @param values  The row.
+	 * @param getter  The getter.
+	 *
+	 * @return What the getter returned.
+	 */
+	private static Object callGetter( IBoxContext context, Node node, Object[] values, Key getter ) {
+		if ( node.scratch == null ) {
+			node.scratch = node.app.newInstance( context, node.entityName );
+		}
+		node.scratchColumns.forEach( ( name, column ) -> node.scratch.getVariablesScope().put( name, values[ column ] ) );
+		return node.scratch.dereferenceAndInvoke( context, getter, new Object[] {}, false );
 	}
 
 	/**

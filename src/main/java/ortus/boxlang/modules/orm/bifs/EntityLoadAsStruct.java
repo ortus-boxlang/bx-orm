@@ -61,8 +61,10 @@ public class EntityLoadAsStruct extends BaseORMBIF {
 	 * users = entityLoadAsStruct( "User", { active : true }, "", { sortOrder : "name", maxResults : 20, profile : "list" } );
 	 * </pre>
 	 * <p>
-	 * Getter includes need a loaded entity, so they are an error here; use <code>entityToStruct()</code> or a mapper. For
-	 * the same reason a property whose getter you overrode comes back as its column value, not the getter's result.
+	 * A property whose getter you wrote by hand is read through that getter, as in <code>entityToStruct()</code>: the row's
+	 * plain values are copied into a scratch instance and the getter is called on it (associations are not loaded there).
+	 * Includes that are only getters (not properties) need a loaded entity, so they are an error here; use
+	 * <code>entityToStruct()</code> or a mapper.
 	 * Collections come back in id order. Entities with a composite id are not supported (<code>orm.argument</code>); use
 	 * <code>entityToStruct()</code> on the loaded entities.
 	 *

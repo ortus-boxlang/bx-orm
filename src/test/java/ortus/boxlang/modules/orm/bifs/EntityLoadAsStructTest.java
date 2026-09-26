@@ -42,7 +42,7 @@ public class EntityLoadAsStructTest extends BaseORMTest {
 	public void addRows() {
 		instance.executeSource(
 		    """
-		    queryExecute( "INSERT INTO memo_authors ( id, firstName, lastName, passwordHash, joined ) VALUES ( 901, 'Ann', 'Baker', 'secret', '2024-03-05 10:20:30' )" );
+		    queryExecute( "INSERT INTO memo_authors ( id, firstName, lastName, passwordHash, joined, email, handle ) VALUES ( 901, 'Ann', 'Baker', 'secret', '2024-03-05 10:20:30', 'ANN@EXAMPLE.COM', 'x1' )" );
 		    queryExecute( "INSERT INTO memo_posts ( id, title, author_id ) VALUES ( 902, 'Second', 901 ), ( 901, 'First', 901 )" );
 		    """,
 		    context );
@@ -157,5 +157,27 @@ public class EntityLoadAsStructTest extends BaseORMTest {
 		    .isEqualTo( "orm.argument" );
 		assertThat( run( "try { entityLoadAsStruct( 'MemoAuthor', 901, 'nmae' ); result = 'NO ERROR'; } catch ( any e ) { result = e.type; }" ) )
 		    .isEqualTo( "orm.property.unknown" );
+	}
+
+	/**
+	 * Hand-written getters shape the value here too, including one that reads a sibling property, and the output still
+	 * matches entityToStruct().
+	 */
+	@DisplayName( "Hand-written getters shape the value, as in entityToStruct()" )
+	@Test
+	public void testOverriddenGetters() {
+		// @formatter:off
+		instance.executeSource( """
+			projected = entityLoadAsStruct( "MemoAuthor", 901, "email,handle", { excludes : "fullName" } );
+			listed    = entityCriteria( "MemoAuthor" ).isEq( "id", 901 ).asStruct( "email,handle", { excludes : "fullName" } ).list()[ 1 ];
+			loaded    = entityToStruct( entityLoadByPK( "MemoAuthor", 901 ), { includes : "email,handle", excludes : "fullName" } );
+			same      = jsonSerialize( projected ) == jsonSerialize( loaded ) && jsonSerialize( listed ) == jsonSerialize( loaded );
+			loadedNow = ormGetSessionStatistics().entityCount;
+		""", context );
+		// @formatter:on
+		IStruct projected = variables.getAsStruct( Key.of( "projected" ) );
+		assertThat( projected.getAsString( Key.of( "email" ) ) ).isEqualTo( "ann@example.com" );
+		assertThat( projected.getAsString( Key.of( "handle" ) ) ).isEqualTo( "ann_x1" );
+		assertThat( variables.get( Key.of( "same" ) ) ).isEqualTo( true );
 	}
 }

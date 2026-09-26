@@ -750,12 +750,24 @@ public class ORMApp {
 	 */
 	public IClassRunnable prototype( IBoxContext context, String entityName ) {
 		EntityRecord record = this.lookupEntity( entityName, true );
-		return this.prototypes.computeIfAbsent( record.getEntityName().toLowerCase(), key -> {
-			SessionFactoryImplementor factory = ( SessionFactoryImplementor ) getSessionFactoryOrThrow( record.getDatasource(), context );
-			return ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade(
-			    factory.getMappingMetamodel().getEntityDescriptor( hibernateEntityName( factory, record.getEntityName() ) ).getRepresentationStrategy()
-			        .getInstantiator().instantiate() );
-		} );
+		return this.prototypes.computeIfAbsent( record.getEntityName().toLowerCase(), key -> newInstance( context, record.getEntityName() ) );
+	}
+
+	/**
+	 * A new, unsaved instance of an entity, made through Hibernate's instantiator (so it has its facade), with no events
+	 * and no values. Used as scratch space, never saved.
+	 *
+	 * @param context    The calling context (for the entity's datasource).
+	 * @param entityName The entity name.
+	 *
+	 * @return The instance.
+	 */
+	public IClassRunnable newInstance( IBoxContext context, String entityName ) {
+		EntityRecord				record	= this.lookupEntity( entityName, true );
+		SessionFactoryImplementor	factory	= ( SessionFactoryImplementor ) getSessionFactoryOrThrow( record.getDatasource(), context );
+		return ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade(
+		    factory.getMappingMetamodel().getEntityDescriptor( hibernateEntityName( factory, record.getEntityName() ) ).getRepresentationStrategy()
+		        .getInstantiator().instantiate() );
 	}
 
 	/**
