@@ -439,6 +439,36 @@ public class ORMApp {
 		}
 	}
 
+	/** How many corrected HQL strings {@link #rememberCorrectedHQL} keeps; beyond this, corrections are not cached. */
+	private static final int			CORRECTED_HQL_LIMIT	= 1000;
+
+	/** HQL as written, to the same HQL with entity and property names in declared case (see {@link HQLCaseResolver}). */
+	private final Map<String, String>	correctedHQL		= new ConcurrentHashMap<>();
+
+	/**
+	 * The HQL to compile for a query as written: its case-corrected form when one was found before, else the HQL itself.
+	 *
+	 * @param hql The HQL as written.
+	 *
+	 * @return The HQL to compile.
+	 */
+	String correctedHQL( String hql ) {
+		return correctedHQL.getOrDefault( hql, hql );
+	}
+
+	/**
+	 * Remember the case-corrected form of an HQL string, so later runs compile it directly. Kept for this
+	 * application's life (an {@code ormReload()} starts a new application), up to {@value #CORRECTED_HQL_LIMIT} entries.
+	 *
+	 * @param hql       The HQL as written.
+	 * @param corrected The HQL with names in declared case.
+	 */
+	void rememberCorrectedHQL( String hql, String corrected ) {
+		if ( correctedHQL.size() < CORRECTED_HQL_LIMIT ) {
+			correctedHQL.put( hql, corrected );
+		}
+	}
+
 	/** Metadata structs for {@code entityGetMetadata()}, built once per entity and kept for this application's life. */
 	private final Map<String, IStruct> metadataCache = new ConcurrentHashMap<>();
 

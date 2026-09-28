@@ -844,7 +844,7 @@ public final class ORMErrors {
 	 *
 	 * @return The known entities the query names, in order of appearance.
 	 */
-	private static List<String> entitiesIn( String hql, Collection<String> known ) {
+	public static List<String> entitiesIn( String hql, Collection<String> known ) {
 		List<String> found = new ArrayList<>();
 		if ( hql == null ) {
 			return found;

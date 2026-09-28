@@ -51,8 +51,6 @@ import ortus.boxlang.runtime.types.Struct;
  */
 public class HQLQuery {
 
-	private static BoxRuntime		runtime				= BoxRuntime.getInstance();
-	private static ORMService		ormService			= ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService );
 	private Key						datasource;
 	private Session					session;
 	private ORMApp					ormApp;
@@ -396,7 +394,8 @@ public class HQLQuery {
 		if ( namedParameters != null ) {
 			for ( Key given : namedParameters.keySet() ) {
 				if ( !foundNamedParams.contains( given ) ) {
-					ormService.getLogger().warn(
+					// Looked up here, not in a static initializer, so loading this class never depends on the ORM service.
+					( ( ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService ) ).getLogger().warn(
 					    "ormExecuteQuery: the param [{}] is not used by the HQL and was ignored. Is there a typo? HQL: {}", given.getName(), HQL );
 				}
 			}
@@ -505,7 +504,8 @@ public class HQLQuery {
 			ormContext.flushForQuery( session );
 		}
 
-		org.hibernate.query.Query<?> hqlQuery = session.createQuery( this.hql );
+		// HQL names entities and properties in any case, as BoxLang does.
+		org.hibernate.query.Query<?> hqlQuery = HQLCaseResolver.compile( ormApp, session, this.hql, h -> session.createQuery( h ) );
 
 		if ( !ormContext.getConfig().autoManageSession ) {
 			hqlQuery.setHibernateFlushMode( org.hibernate.FlushMode.MANUAL );
