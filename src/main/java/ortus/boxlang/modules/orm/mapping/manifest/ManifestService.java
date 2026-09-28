@@ -34,13 +34,14 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.types.util.StringUtil;
 import ortus.boxlang.runtime.util.FileSystemUtil;
 
 /**
  * Reads, writes and validates the ORM {@code .bxorm/} boot cache.
  * <p>
  * Several ORM applications can share one {@code .bxorm/} folder (sub-applications under the same root), so every file
- * carries the application key (the sanitized application name, the same key the facade package uses):
+ * carries the application key (the slugified application name, see {@link #appKey(String)}):
  * {@code manifest-{app}.json}, {@code manifest-{app}.sha256} and {@code facades-{app}.jar}.
  * <p>
  * In {@code auto} mode the manifest is (re)written after every full boot so it always reflects the current entities;
@@ -99,15 +100,18 @@ public final class ManifestService {
 	}
 
 	/**
-	 * The application key used in the boot cache file names: the sanitized application name, identical to the facade
-	 * package segment ({@code EntityFacadeNaming.sanitizeNamespace}) and to {@code ORMConfig.facadeNamespace}.
+	 * The application key used in the boot cache file names: the application name slugified with BoxLang's own
+	 * {@code slugify()} ({@link StringUtil#slugify(String, int, String)}): lower-cased, accents stripped, and every run of
+	 * characters other than {@code a-z}, {@code 0-9} and {@code -} turned into {@code -}. {@code My Shop} becomes
+	 * {@code my-shop}.
 	 *
-	 * @param appName The application name (raw or already sanitized).
+	 * @param appName The application name ({@code this.name}), or a key already derived from it.
 	 *
-	 * @return The application key, e.g. {@code my_app}; {@code default} for a blank name.
+	 * @return The application key; {@code default} for a blank name.
 	 */
 	public static String appKey( String appName ) {
-		return ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.sanitizeNamespace( appName );
+		String key = appName == null ? "" : StringUtil.slugify( appName, 0, "" );
+		return key.isEmpty() ? "default" : key;
 	}
 
 	/**
@@ -202,7 +206,7 @@ public final class ManifestService {
 	 */
 	public static OrmManifest build( Map<Key, List<EntityRecord>> entityMap, ORMConfig config, String ormVersion ) {
 		OrmManifest manifest = new OrmManifest()
-		    .setAppName( appKey( config.facadeNamespace ) )
+		    .setAppName( appKey( config.appName ) )
 		    .setOrmVersion( ormVersion )
 		    .setConfigFingerprint( configFingerprint( config ) );
 
@@ -331,7 +335,7 @@ public final class ManifestService {
 	 */
 	public static List<String> verify( OrmManifest manifest, ORMConfig config, String ormVersion ) {
 		List<String>	problems	= new ArrayList<>();
-		String			expected	= appKey( config.facadeNamespace );
+		String			expected	= appKey( config.appName );
 		if ( !expected.equals( manifest.getAppName() ) ) {
 			problems.add( "it belongs to application [" + ( manifest.getAppName().isEmpty() ? "unknown" : manifest.getAppName() )
 			    + "], not [" + expected + "]" );

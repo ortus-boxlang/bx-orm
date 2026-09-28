@@ -154,8 +154,8 @@ public class ORMApp {
 		// Derive this application's facade namespace from its (unique) application name, so its generated entity facades
 		// are segregated from any other application's same-named entities sharing this JVM. Set before mapping generation
 		// and facade generation, both of which read it.
-		this.config.facadeNamespace		= ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming
-		    .sanitizeNamespace( ORMService.getAppNameFromContext( context ).getName() );
+		this.config.appName				= ORMService.getAppNameFromContext( context ).getName();
+		this.config.facadeNamespace		= ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.sanitizeNamespace( this.config.appName );
 		// Each build (first boot and every reload) generates its facades into a fresh classloader, so a reload with a
 		// changed entity defines new facade classes instead of reusing the previous build's (a loader can only define a
 		// given class name once). Trust mode replaces this with a loader carrying the pre-generated facades-{app}.jar bytecode.
@@ -211,7 +211,7 @@ public class ORMApp {
 			try {
 				java.nio.file.Path jar = ortus.boxlang.modules.orm.mapping.manifest.ManifestService.facadesJar(
 				    ortus.boxlang.modules.orm.mapping.manifest.ManifestService.resolveFolder( context.getRequestContext(), this.config.manifestLocation ),
-				    this.config.facadeNamespace );
+				    this.config.appName );
 				ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory.writeFacadeJar( jar, this.config.facadeNamespace );
 			} catch ( RuntimeException e ) {
 				logger.warn( "ORM manifest [auto] mode: failed to write the facade jar (continuing normally): {}", e.getMessage() );
@@ -259,14 +259,14 @@ public class ORMApp {
 			java.nio.file.Path										folder		= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
 			    .resolveFolder( context.getRequestContext(), this.config.manifestLocation );
 			ortus.boxlang.modules.orm.mapping.manifest.OrmManifest	manifest	= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
-			    .read( folder, this.config.facadeNamespace, true );
+			    .read( folder, this.config.appName, true );
 			// Fail closed on a stale manifest: booting old mappings against changed entities or settings would silently
 			// persist to the wrong columns/tables. Regenerate it with an auto-mode boot.
 			List<String>											stale		= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
 			    .verify( manifest, this.config, moduleVersion() );
 			if ( !stale.isEmpty() ) {
 				throw new BoxRuntimeException( "ORM manifest mode is [trust] but the manifest at ["
-				    + ortus.boxlang.modules.orm.mapping.manifest.ManifestService.manifestFile( folder, this.config.facadeNamespace ) + "] is stale: "
+				    + ortus.boxlang.modules.orm.mapping.manifest.ManifestService.manifestFile( folder, this.config.appName ) + "] is stale: "
 				    + String.join( "; ", stale )
 				    + ". Regenerate it by booting once with ormManifest=\"auto\", then switch back to [trust]." );
 			}
@@ -274,9 +274,9 @@ public class ORMApp {
 			// classes instead of re-running ByteBuddy. Best-effort: a missing jar just means facades are regenerated.
 			this.config.facadeClassLoader = new ortus.boxlang.modules.orm.hibernate.facade.FacadeClassLoader( moduleClassLoader(),
 			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory
-			        .readFacadeJar( ortus.boxlang.modules.orm.mapping.manifest.ManifestService.facadesJar( folder, this.config.facadeNamespace ) ) );
+			        .readFacadeJar( ortus.boxlang.modules.orm.mapping.manifest.ManifestService.facadesJar( folder, this.config.appName ) ) );
 			logger.info( "ORM manifest [trust] mode: booting application [{}] from [{}] with {} entities; discovery/parsing/generation skipped.",
-			    this.config.facadeNamespace, folder, manifest.getEntities().size() );
+			    this.config.appName, folder, manifest.getEntities().size() );
 			return ortus.boxlang.modules.orm.mapping.manifest.ManifestService.toEntityMap( manifest );
 		}
 

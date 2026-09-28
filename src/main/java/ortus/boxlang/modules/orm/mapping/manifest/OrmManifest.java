@@ -91,8 +91,8 @@ public class OrmManifest {
 	}
 
 	/**
-	 * The application key this manifest belongs to: the sanitized application name, the same key the facade package and
-	 * the manifest file names use (see {@link ManifestService#appKey(String)}).
+	 * The application key this manifest belongs to: the slugified application name, the same key the manifest file names
+	 * use (see {@link ManifestService#appKey(String)}).
 	 *
 	 * @return The application key, or an empty string when not recorded.
 	 */
@@ -103,7 +103,7 @@ public class OrmManifest {
 	/**
 	 * Set the application key this manifest belongs to.
 	 *
-	 * @param appName The application key (sanitized application name).
+	 * @param appName The application key (slugified application name).
 	 *
 	 * @return This manifest.
 	 */

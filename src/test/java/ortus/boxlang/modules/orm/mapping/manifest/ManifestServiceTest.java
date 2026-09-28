@@ -154,15 +154,17 @@ public class ManifestServiceTest {
 		assertThrows( BoxRuntimeException.class, () -> ManifestService.read( folder, "default", true ) );
 	}
 
-	@DisplayName( "file names carry the application key, the same key the facade package uses" )
+	@DisplayName( "file names carry the application key: the application name, slugified like BoxLang's slugify()" )
 	@Test
 	public void testFileNames( @TempDir Path folder ) {
-		assertThat( ManifestService.appKey( "My App-2" ) ).isEqualTo( "my_app_2" );
-		assertThat( ManifestService.appKey( "my_app_2" ) ).isEqualTo( "my_app_2" );
+		assertThat( ManifestService.appKey( "My App 2" ) ).isEqualTo( "my-app-2" );
+		assertThat( ManifestService.appKey( "my-app-2" ) ).isEqualTo( "my-app-2" );
+		assertThat( ManifestService.appKey( "BXORMManifestTest" ) ).isEqualTo( "bxormmanifesttest" );
 		assertThat( ManifestService.appKey( "" ) ).isEqualTo( "default" );
-		assertThat( ManifestService.manifestFile( folder, "My App-2" ) ).isEqualTo( folder.resolve( "manifest-my_app_2.json" ) );
-		assertThat( ManifestService.checksumFile( folder, "My App-2" ) ).isEqualTo( folder.resolve( "manifest-my_app_2.sha256" ) );
-		assertThat( ManifestService.facadesJar( folder, "My App-2" ) ).isEqualTo( folder.resolve( "facades-my_app_2.jar" ) );
+		assertThat( ManifestService.appKey( null ) ).isEqualTo( "default" );
+		assertThat( ManifestService.manifestFile( folder, "My App 2" ) ).isEqualTo( folder.resolve( "manifest-my-app-2.json" ) );
+		assertThat( ManifestService.checksumFile( folder, "My App 2" ) ).isEqualTo( folder.resolve( "manifest-my-app-2.sha256" ) );
+		assertThat( ManifestService.facadesJar( folder, "My App 2" ) ).isEqualTo( folder.resolve( "facades-my-app-2.jar" ) );
 	}
 
 	@DisplayName( "two applications share one .bxorm/ folder without overwriting each other" )
@@ -202,7 +204,8 @@ public class ManifestServiceTest {
 		    Struct.of( "datasource", "myds", "ignoreParseErrors", "true", "generateMappings", "true", "saveMapping", "true" ),
 		    context.getRequestContext()
 		);
-		config.facadeNamespace = ManifestService.appKey( appName );
+		config.appName			= appName;
+		config.facadeNamespace	= ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.sanitizeNamespace( appName );
 		return config;
 	}
 

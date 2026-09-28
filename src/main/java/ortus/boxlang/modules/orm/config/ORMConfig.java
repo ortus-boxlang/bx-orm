@@ -357,6 +357,12 @@ public class ORMConfig {
 	public String								facadeNamespace			= "default";
 
 	/**
+	 * The application name ({@code this.name} in {@code Application.bx}) this ORM application runs under, as given. Set
+	 * once at startup; the {@code .bxorm/} boot cache names its files after it ({@code ManifestService.appKey}).
+	 */
+	public String								appName					= "default";
+
+	/**
 	 * The classloader holding this ORM application build's generated entity facades (a fresh
 	 * {@link ortus.boxlang.modules.orm.hibernate.facade.FacadeClassLoader} per startup/reload, so a reload can define
 	 * changed facades). Set at startup; not a user setting. {@code null} means "generate into the module classloader".

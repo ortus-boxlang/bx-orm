@@ -853,12 +853,12 @@ location)` is the single resolver all boot reads/writes go through.
 
 **Several applications, one folder.** Sub-applications deployed under the same root share one `.bxorm/`
 folder, so every file carries the application key: `manifest-{app}.json`, `manifest-{app}.sha256` and
-`facades-{app}.jar`. The key is `ManifestService.appKey(name)`, the same sanitizer the facade package uses
-(`EntityFacadeNaming.sanitizeNamespace`: lower-cased, unsafe characters become `_`), so it equals
-`ORMConfig.facadeNamespace`. The manifest also records the key (`appName`), and `ManifestService.verify` fails a `trust`
-boot whose manifest belongs to another application (for example one copied or renamed by hand). `ManifestService`
-exposes `manifestFile`, `checksumFile`, `facadesJar`, `listApps` and `clear( folder, app )` so nothing builds these
-names by hand.
+`facades-{app}.jar`. The key is `ManifestService.appKey(name)`: the application name (`ORMConfig.appName`, set at
+startup from `this.name`) run through BoxLang's own `StringUtil.slugify` (what the `slugify()` BIF calls), so `My Shop`
+becomes `my-shop`. It is separate from `ORMConfig.facadeNamespace`, which must stay a Java package segment. The
+manifest also records the key (`appName`), and `ManifestService.verify` fails a `trust` boot whose manifest belongs to
+another application (for example one copied or renamed by hand). `ManifestService` exposes `manifestFile`,
+`checksumFile`, `facadesJar`, `listApps` and `clear( folder, app )` so nothing builds these names by hand.
 
 **Performance (estimated).** These are extrapolations from cold-boot profiling, not a fresh
 benchmark run — replace them with formal `./gradlew jmhCompare` numbers when available. A cold boot
@@ -938,7 +938,7 @@ boxlang module:orm <verb> [args] [--app=<name>] [--dir=<path>]   # or:  bxorm <v
 
 | Option | Meaning |
 | --- | --- |
-| `--app=<name>` | The application to work on (raw name or key; it goes through `ManifestService.appKey`). Optional when the folder holds one application. |
+| `--app=<name>` | The application to work on: its `this.name` or its key (both go through `ManifestService.appKey`). Optional when the folder holds one application. |
 | `--all` | With `clear`: remove every application's cache (the whole folder). |
 | `--dir=<path>` | The folder that holds `.bxorm/`; handled by `ModuleConfig.main()`. |
 
