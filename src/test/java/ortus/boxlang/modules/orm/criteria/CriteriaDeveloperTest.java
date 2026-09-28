@@ -315,6 +315,24 @@ public class CriteriaDeveloperTest extends CriteriaTestSupport {
 	}
 
 	/**
+	 * Test: listeners run in the calling request's context.
+	 */
+	@DisplayName( "Criteria interception points run in the calling request's context (listeners can use the request scope)" )
+	@Test
+	public void testInterceptionPointsUseTheRequestContext() {
+		assertThat( run( """
+		                 spy = new root.CriteriaRequestSpy();
+		                 boxRegisterInterceptor( spy, "onCriteriaBuilderAddition" );
+		                 try {
+		                     entityCriteria( 'Vehicle' ).isEq( 'make', 'Honda' ).like( 'model', '%' );
+		                 } finally {
+		                     boxUnregisterInterceptor( spy, "onCriteriaBuilderAddition" );
+		                 }
+		                 result = request.criteriaSpyTypes.toList();
+		                 """ ) ).isEqualTo( "isEq,like" );
+	}
+
+	/**
 	 * Test: the cborm interception points fire.
 	 */
 	@DisplayName( "before/after list, count and get and onCriteriaBuilderAddition interception points fire" )

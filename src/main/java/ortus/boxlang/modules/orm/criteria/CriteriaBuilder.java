@@ -605,15 +605,20 @@ public final class CriteriaBuilder implements IReferenceable {
 	}
 
 	/**
-	 * Announce a criteria interception point when anyone listens.
+	 * Announce a criteria interception point when anyone listens, in the context of the last call on this builder.
 	 *
 	 * @param point The interception point.
 	 * @param data  Builds the event data.
 	 */
-	private static void announce( Key point, Supplier<IStruct> data ) {
+	private void announce( Key point, Supplier<IStruct> data ) {
 		var interceptors = BoxRuntime.getInstance().getInterceptorService();
 		if ( interceptors.hasState( point ) ) {
-			interceptors.announce( point, data );
+			// Listeners run in the calling request's context, so they can reach its scopes (e.g. ColdBox reads request).
+			if ( lastContext != null ) {
+				interceptors.announce( point, data, lastContext );
+			} else {
+				interceptors.announce( point, data );
+			}
 		}
 	}
 

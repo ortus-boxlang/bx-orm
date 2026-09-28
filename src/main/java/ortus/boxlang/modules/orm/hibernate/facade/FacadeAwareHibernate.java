@@ -190,9 +190,29 @@ public final class FacadeAwareHibernate {
 			try {
 				result = method.invoke( target, translated );
 			} catch ( InvocationTargetException e ) {
-				throw e.getCause();
+				throw hibernate5Compatible( e.getCause() );
 			}
 			return translateResult( result );
+		}
+
+		/**
+		 * Keep the Hibernate 5 exception for calls on an entity the session does not hold. Hibernate 6+ throws
+		 * {@link IllegalArgumentException} ("Given entity is not associated with the persistence context") from methods
+		 * such as {@code getEntityName()}, where Hibernate 5 threw {@link org.hibernate.TransientObjectException}; code
+		 * written for the raw API (e.g. ColdBox's ObjectPopulator) catches the latter to detect a new entity.
+		 *
+		 * @param error The exception the Hibernate call threw.
+		 *
+		 * @return The exception to throw.
+		 */
+		private static Throwable hibernate5Compatible( Throwable error ) {
+			if ( error instanceof IllegalArgumentException && error.getMessage() != null
+			    && error.getMessage().contains( "not associated with the persistence context" ) ) {
+				org.hibernate.TransientObjectException transientError = new org.hibernate.TransientObjectException( error.getMessage() );
+				transientError.initCause( error );
+				return transientError;
+			}
+			return error;
 		}
 
 		/**
