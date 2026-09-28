@@ -40,7 +40,7 @@ flowchart TB
 ## Key Classes
 
 | Class | Implements / Extends | Responsibility |
-|---|---|---|
+| --- | --- | --- |
 | `BoxPersisterFactory` | `PersisterFactory`, `ServiceRegistryAwareService` | Registered as `hibernate.persister.factory`; wraps the creation context and delegates to `PersisterFactoryImpl` |
 | `BoxRuntimeModelCreationContext` | `RuntimeModelCreationContext` | Delegating context; only override is `getBootstrapContext()` |
 | `BoxBootstrapContext` | `BootstrapContext` | Delegating context; only override is `getRepresentationStrategySelector()` |
@@ -155,13 +155,13 @@ Hibernate manages a generated POJO **facade** per entity, never the `IClassRunna
   `MethodCall`s to `EntityFacadeFactory.Accessors.get/set( self, [value,] propertyName, assocKind )` with
   the property name and `AssocKind` as constants. Do **not** switch back to `MethodDelegation.to(instance)`:
   that stores the interceptor in static fields set by a `LoadedTypeInitializer`, so the bytecode is not
-  self-contained and breaks when defined from `facades.jar` (trust mode NPE). Bytecode is only captured
-  for `facades.jar` when no loaded-type initializer is alive.
+  self-contained and breaks when defined from `facades-{app}.jar` (trust mode NPE). Bytecode is only captured
+  for `facades-{app}.jar` when no loaded-type initializer is alive.
 - **Classloading**: each ORM build creates a `FacadeClassLoader` (`ORMConfig.facadeClassLoader`),
   registered via `BootstrapServiceRegistryBuilder.applyClassLoader` (the `CLASSLOADERS` property is
   ignored when a bootstrap registry is supplied). Facade FQNs are stable per app/entity, and a loader can
   define a name only once, so the per-build loader is what lets `ormReload()` pick up a changed entity.
-  In trust mode the loader is seeded with `facades.jar` bytes (`EntityFacadeFactory.readFacadeJar`) and
+  In trust mode the loader is seeded with `facades-{app}.jar` bytes (`ManifestService.facadesJar( folder, app )`) (`EntityFacadeFactory.readFacadeJar`) and
   defines from them, falling back to ByteBuddy.
 - **Wrap/unwrap**: `FacadeSupport.wrap(namespace, entityName, instance)` memoizes the facade on the
   instance. Get the namespace from `ORMContext.getFacadeNamespace()` (the booted `ORMApp`'s config), never

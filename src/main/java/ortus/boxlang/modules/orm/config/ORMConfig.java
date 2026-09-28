@@ -109,7 +109,7 @@ public class ORMConfig {
 	public boolean								generateMappings		= true;
 
 	/**
-	 * ORM manifest mode - controls the {@code .bxorm/} boot cache (manifest.json + facades.jar).
+	 * ORM manifest mode - controls the {@code .bxorm/} boot cache (manifest-{app}.json + facades-{app}.jar).
 	 * <ul>
 	 * <li>{@code off} (default) - no manifest; discover, parse and generate every boot (current behavior).</li>
 	 * <li>{@code auto} - dev mode: use the manifest when fresh (source hashes + config fingerprint + versions all match),

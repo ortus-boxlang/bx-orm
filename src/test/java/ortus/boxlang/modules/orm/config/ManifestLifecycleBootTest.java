@@ -48,8 +48,8 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 /**
  * Live, end-to-end ORM application lifecycle tests against embedded Derby: an {@code auto} boot that writes the
  * {@code .bxorm/} cache to a configured {@code ormManifestLocation}, a {@code trust} boot of the same application that
- * defines its entity facades from the written {@code facades.jar}, and an {@code ormReload()} after an existing entity
- * gains a property.
+ * defines its entity facades from the written {@code facades-{app}.jar}, two applications sharing one cache folder,
+ * and an {@code ormReload()} after an existing entity gains a property.
  * <p>
  * Every boot runs in this JVM against a fresh ORM application build, so each build gets its own facade classloader -
  * which is what lets a trust boot actually define facades from the jar (instead of reusing classes an earlier boot
@@ -66,6 +66,7 @@ public class ManifestLifecycleBootTest {
 	private static final String	PROP_MODELS		= "bxorm.test.lifecycle.models";
 	private static final String	PROP_NAMING		= "bxorm.test.lifecycle.namingStrategy";
 	private static final String	PROP_DB			= "bxorm.test.lifecycle.db";
+	private static final String	PROP_APP		= "bxorm.test.lifecycle.appName";
 	private static final String	AUTO_SAVE		= """
 	                                              o = entityNew( "Owner", { name : "Ada" } );
 	                                              entitySave( o );
@@ -114,6 +115,7 @@ public class ManifestLifecycleBootTest {
 		System.clearProperty( PROP_MODELS );
 		System.clearProperty( PROP_NAMING );
 		System.clearProperty( PROP_DB );
+		System.clearProperty( PROP_APP );
 		try ( var walk = Files.walk( workDir ) ) {
 			walk.sorted( Comparator.reverseOrder() ).forEach( p -> p.toFile().delete() );
 		}
@@ -124,10 +126,10 @@ public class ManifestLifecycleBootTest {
 		RequestBoxContext.removeCurrent();
 	}
 
-	@DisplayName( "auto boot writes the cache to ormManifestLocation; a trust boot defines facades from facades.jar and CRUD works" )
+	@DisplayName( "auto boot writes the cache to ormManifestLocation; a trust boot defines facades from facades-{app}.jar and CRUD works" )
 	@Test
 	public void testAutoThenTrustBootFromFacadesJar() {
-		// 1) auto: discover, write manifest + facades.jar into <ormManifestLocation>/.bxorm, and do real CRUD.
+		// 1) auto: discover, write manifest + facades-{app}.jar into <ormManifestLocation>/.bxorm, and do real CRUD.
 		IScope autoVars = runRequest( "auto", """
 		                                      o = entityNew( "Owner", { name : "Ada" } );
 		                                      p = entityNew( "Pet", { name : "Byte" } );
@@ -141,14 +143,14 @@ public class ManifestLifecycleBootTest {
 		assertThat( autoVars.getAsInteger( Key.of( "autoPets" ) ) ).isEqualTo( 1 );
 
 		Path bxorm = manifestParent.resolve( ManifestService.FOLDER_NAME );
-		assertThat( Files.exists( bxorm.resolve( ManifestService.MANIFEST_NAME ) ) ).isTrue();
-		assertThat( Files.exists( bxorm.resolve( ManifestService.FACADES_JAR ) ) ).isTrue();
+		assertThat( Files.exists( ManifestService.manifestFile( bxorm, APP_NAME.getName() ) ) ).isTrue();
+		assertThat( Files.exists( ManifestService.facadesJar( bxorm, APP_NAME.getName() ) ) ).isTrue();
 		// Nothing was written at the application root: the configured location was honored end to end.
 		assertThat( Files.exists( APP_ROOT.resolve( ManifestService.FOLDER_NAME ) ) ).isFalse();
 
 		instance.getApplicationService().shutdownApplication( APP_NAME );
 
-		// 2) trust: boot straight from the manifest, define the facades from facades.jar, and exercise every accessor kind
+		// 2) trust: boot straight from the manifest, define the facades from facades-{app}.jar, and exercise every accessor kind
 		// (id, plain property, to-one, to-many) through real saves and loads.
 		IScope trustVars = runRequest( "trust", """
 		                                        o = entityNew( "Owner", { name : "Grace" } );
@@ -168,7 +170,7 @@ public class ManifestLifecycleBootTest {
 		assertThat( trustVars.getAsInteger( Key.of( "trustPets" ) ) ).isEqualTo( 1 );
 		assertThat( trustVars.getAsString( Key.of( "petOwner" ) ) ).isEqualTo( "Grace" );
 		assertThat( trustVars.getAsInteger( Key.of( "petIdLength" ) ) ).isGreaterThan( 0 );
-		// Proves the facades really came from facades.jar (both Owner and Pet), not from a fresh ByteBuddy generation.
+		// Proves the facades really came from facades-{app}.jar (both Owner and Pet), not from a fresh ByteBuddy generation.
 		assertThat( trustVars.getAsInteger( Key.of( "jarDefined" ) ) ).isEqualTo( 2 );
 	}
 
@@ -236,7 +238,7 @@ public class ManifestLifecycleBootTest {
 
 		// Rewrite the manifest (and its checksum) as if an older module had generated it.
 		Path		bxorm		= manifestParent.resolve( ManifestService.FOLDER_NAME );
-		OrmManifest	manifest	= ManifestService.read( bxorm, true );
+		OrmManifest	manifest	= ManifestService.read( bxorm, APP_NAME.getName(), true );
 		ManifestService.write( manifest.setOrmVersion( "1.0.0" ), bxorm );
 
 		String message = bootFailure( "trust" );
@@ -260,6 +262,70 @@ public class ManifestLifecycleBootTest {
 		                                   found = entityLoad( "Owner", { name : "Touched" }, true ).getName();
 		                                   """ );
 		assertThat( vars.getAsString( Key.of( "found" ) ) ).isEqualTo( "Touched" );
+	}
+
+	@DisplayName( "two applications sharing one cache folder each write and trust-boot their own manifest and facade jar" )
+	@Test
+	public void testTwoAppsShareOneCacheFolder() {
+		String[] apps = { "BXORMLifecycleShop", "BXORMLifecycleAdmin" };
+		try {
+			// auto: both applications boot against the same ormManifestLocation.
+			for ( String app : apps ) {
+				System.setProperty( PROP_APP, app );
+				System.setProperty( PROP_DB, "ormLifecycle" + app + System.nanoTime() );
+				runRequest( "auto", AUTO_SAVE );
+				instance.getApplicationService().shutdownApplication( Key.of( app ) );
+			}
+
+			// Each application has its own manifest, checksum and facade jar; neither overwrote the other.
+			Path bxorm = manifestParent.resolve( ManifestService.FOLDER_NAME );
+			assertThat( ManifestService.listApps( bxorm ) ).containsExactly( "bxormlifecycleadmin", "bxormlifecycleshop" ).inOrder();
+			for ( String app : apps ) {
+				assertThat( Files.exists( ManifestService.checksumFile( bxorm, app ) ) ).isTrue();
+				assertThat( Files.exists( ManifestService.facadesJar( bxorm, app ) ) ).isTrue();
+				assertThat( ManifestService.read( bxorm, app, true ).getAppName() ).isEqualTo( ManifestService.appKey( app ) );
+			}
+
+			// trust: both applications boot from their own cache and CRUD works.
+			for ( String app : apps ) {
+				System.setProperty( PROP_APP, app );
+				System.setProperty( PROP_DB, "ormLifecycle" + app + System.nanoTime() );
+				IScope vars = runRequest( "trust", """
+				                                   entitySave( entityNew( "Owner", { name : "Trusted" } ) );
+				                                   ormFlush();
+				                                   ormClearSession();
+				                                   found = entityLoad( "Owner", { name : "Trusted" }, true ).getName();
+				                                   """ );
+				assertThat( vars.getAsString( Key.of( "found" ) ) ).isEqualTo( "Trusted" );
+				instance.getApplicationService().shutdownApplication( Key.of( app ) );
+			}
+		} finally {
+			for ( String app : apps ) {
+				instance.getApplicationService().shutdownApplication( Key.of( app ) );
+			}
+		}
+	}
+
+	@DisplayName( "trust mode refuses a manifest copied from another application" )
+	@Test
+	public void testTrustRejectsAnotherAppsManifest() throws IOException {
+		System.setProperty( PROP_APP, "BXORMLifecycleShop" );
+		runRequest( "auto", AUTO_SAVE );
+		instance.getApplicationService().shutdownApplication( Key.of( "BXORMLifecycleShop" ) );
+
+		// Copy the shop manifest (and its checksum) over to the admin application's file names.
+		Path bxorm = manifestParent.resolve( ManifestService.FOLDER_NAME );
+		Files.copy( ManifestService.manifestFile( bxorm, "BXORMLifecycleShop" ), ManifestService.manifestFile( bxorm, "BXORMLifecycleAdmin" ) );
+		Files.copy( ManifestService.checksumFile( bxorm, "BXORMLifecycleShop" ), ManifestService.checksumFile( bxorm, "BXORMLifecycleAdmin" ) );
+
+		System.setProperty( PROP_APP, "BXORMLifecycleAdmin" );
+		try {
+			String message = bootFailure( "trust" );
+			assertThat( message ).contains( "is stale" );
+			assertThat( message ).contains( "it belongs to application [bxormlifecycleshop], not [bxormlifecycleadmin]" );
+		} finally {
+			instance.getApplicationService().shutdownApplication( Key.of( "BXORMLifecycleAdmin" ) );
+		}
 	}
 
 	/**

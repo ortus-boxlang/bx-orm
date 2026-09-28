@@ -51,9 +51,15 @@ public class ManifestCliTest {
 		instance = BoxRuntime.getInstance( false );
 	}
 
-	/** Write a minimal, valid manifest with two entities into {@code folder}. */
+	/** Write a minimal, valid manifest with two entities into {@code folder}, for the application {@code myapp}. */
 	private void writeManifest( Path folder ) {
+		writeManifest( folder, "myapp" );
+	}
+
+	/** Write a minimal, valid manifest with two entities into {@code folder}, for the given application. */
+	private void writeManifest( Path folder, String app ) {
 		OrmManifest manifest = new OrmManifest()
+		    .setAppName( app )
 		    .setOrmVersion( "2.0.0" )
 		    .setConfigFingerprint( "abc123def456789" )
 		    .setCombinedMappingXml( "<hibernate-mapping><class name=\"User\"/></hibernate-mapping>" );
@@ -91,7 +97,7 @@ public class ManifestCliTest {
 		assertThat( ManifestCli.run( folder, "2.0.0", "validate" ).exitCode() ).isEqualTo( 0 );
 
 		// Tamper with the manifest bytes without updating the checksum.
-		Path manifestFile = folder.resolve( ManifestService.MANIFEST_NAME );
+		Path manifestFile = ManifestService.manifestFile( folder, "myapp" );
 		Files.write( manifestFile, ( new String( Files.readAllBytes( manifestFile ), StandardCharsets.UTF_8 ) + " " ).getBytes( StandardCharsets.UTF_8 ) );
 
 		CliResult tampered = ManifestCli.run( folder, "2.0.0", "validate" );
@@ -157,14 +163,80 @@ public class ManifestCliTest {
 		assertThat( result.message() ).contains( "hibernate-mapping" );
 	}
 
-	@DisplayName( "clear deletes the .bxorm/ folder" )
+	@DisplayName( "clear deletes the only application's cache; clear --all deletes the .bxorm/ folder" )
 	@Test
 	public void testClear( @TempDir Path folder ) {
 		writeManifest( folder );
-		assertThat( Files.exists( folder.resolve( ManifestService.MANIFEST_NAME ) ) ).isTrue();
+		assertThat( Files.exists( ManifestService.manifestFile( folder, "myapp" ) ) ).isTrue();
 		CliResult result = ManifestCli.run( folder, "2.0.0", "clear" );
 		assertThat( result.exitCode() ).isEqualTo( 0 );
+		assertThat( result.message() ).contains( "[myapp]" );
+		assertThat( ManifestService.listApps( folder ) ).isEmpty();
+
+		writeManifest( folder );
+		assertThat( ManifestCli.run( folder, "2.0.0", "clear", "--all" ).exitCode() ).isEqualTo( 0 );
 		assertThat( Files.exists( folder ) ).isFalse();
+	}
+
+	@DisplayName( "several applications: info and validate cover all of them, other verbs ask for --app" )
+	@Test
+	public void testSeveralApps( @TempDir Path folder ) {
+		writeManifest( folder, "shop" );
+		writeManifest( folder, "admin" );
+
+		CliResult info = ManifestCli.run( folder, "2.0.0", "info" );
+		assertThat( info.exitCode() ).isEqualTo( 0 );
+		assertThat( info.message() ).contains( "ORM manifest [admin]" );
+		assertThat( info.message() ).contains( "ORM manifest [shop]" );
+
+		CliResult validate = ManifestCli.run( folder, "2.0.0", "validate" );
+		assertThat( validate.exitCode() ).isEqualTo( 0 );
+		assertThat( validate.message() ).contains( "[admin]" );
+		assertThat( validate.message() ).contains( "[shop]" );
+
+		for ( String[] args : new String[][] { { "entities" }, { "entity", "User" }, { "mappings" }, { "clear" } } ) {
+			CliResult result = ManifestCli.run( folder, "2.0.0", args );
+			assertThat( result.exitCode() ).isEqualTo( 1 );
+			assertThat( result.message() ).contains( "several applications: admin, shop" );
+			assertThat( result.message() ).contains( "--app=<name>" );
+		}
+
+		CliResult entities = ManifestCli.run( folder, "2.0.0", "entities", "--app=shop" );
+		assertThat( entities.exitCode() ).isEqualTo( 0 );
+		assertThat( entities.message() ).contains( "ORM manifest [shop]" );
+
+		CliResult entity = ManifestCli.run( folder, "2.0.0", "--app=Admin", "entity", "user" );
+		assertThat( entity.exitCode() ).isEqualTo( 0 );
+		assertThat( entity.message() ).contains( "models.User" );
+
+		// clear --app removes only that application's cache.
+		assertThat( ManifestCli.run( folder, "2.0.0", "clear", "--app=shop" ).exitCode() ).isEqualTo( 0 );
+		assertThat( ManifestService.listApps( folder ) ).containsExactly( "admin" );
+	}
+
+	@DisplayName( "--app naming an application without a manifest reports it" )
+	@Test
+	public void testUnknownApp( @TempDir Path folder ) {
+		writeManifest( folder, "shop" );
+		CliResult info = ManifestCli.run( folder, "2.0.0", "info", "--app=nope" );
+		assertThat( info.exitCode() ).isEqualTo( 0 );
+		assertThat( info.message() ).contains( "No ORM manifest for application [nope]" );
+		assertThat( ManifestCli.run( folder, "2.0.0", "validate", "--app=nope" ).exitCode() ).isEqualTo( 1 );
+		assertThat( ManifestCli.run( folder, "2.0.0", "entities", "--app=nope" ).exitCode() ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "validate fails when any one of several applications is tampered with" )
+	@Test
+	public void testValidateSeveralOneBad( @TempDir Path folder ) throws IOException {
+		writeManifest( folder, "shop" );
+		writeManifest( folder, "admin" );
+		Path manifestFile = ManifestService.manifestFile( folder, "shop" );
+		Files.write( manifestFile, ( new String( Files.readAllBytes( manifestFile ), StandardCharsets.UTF_8 ) + " " ).getBytes( StandardCharsets.UTF_8 ) );
+
+		CliResult result = ManifestCli.run( folder, "2.0.0", "validate" );
+		assertThat( result.exitCode() ).isEqualTo( 1 );
+		assertThat( result.message() ).contains( "✅ ORM manifest [admin]" );
+		assertThat( result.message() ).contains( "❌ ORM manifest [shop] is INVALID" );
 	}
 
 	@DisplayName( "version and help always succeed; unknown verbs exit 1" )

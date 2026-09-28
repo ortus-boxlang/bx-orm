@@ -158,11 +158,11 @@ public class ORMApp {
 		    .sanitizeNamespace( ORMService.getAppNameFromContext( context ).getName() );
 		// Each build (first boot and every reload) generates its facades into a fresh classloader, so a reload with a
 		// changed entity defines new facade classes instead of reusing the previous build's (a loader can only define a
-		// given class name once). Trust mode replaces this with a loader carrying the pre-generated facades.jar bytecode.
+		// given class name once). Trust mode replaces this with a loader carrying the pre-generated facades-{app}.jar bytecode.
 		this.config.facadeClassLoader	= new ortus.boxlang.modules.orm.hibernate.facade.FacadeClassLoader( moduleClassLoader() );
 
 		// Resolve entities for this application and group them by datasource. In `trust` manifest mode this loads a
-		// pre-generated .bxorm/manifest.json with zero discovery/parsing/mapping-generation; otherwise it discovers
+		// pre-generated .bxorm/manifest-{app}.json with zero discovery/parsing/mapping-generation; otherwise it discovers
 		// normally (and, in `auto` mode, rewrites the manifest so it stays current).
 		long discoverStart = System.currentTimeMillis();
 		this.entityMap = resolveEntityMap( context );
@@ -205,16 +205,16 @@ public class ORMApp {
 			this.sessionFactories.put( this.defaultDataSource, this.defaultSessionFactory );
 		}
 
-		// In auto manifest mode, persist the just-generated facade bytecode to .bxorm/facades.jar so a later trust-mode boot
-		// can inject those classes instead of re-running ByteBuddy. Best-effort; a failure never breaks boot.
+		// In auto manifest mode, persist the just-generated facade bytecode to .bxorm/facades-{app}.jar so a later trust-mode
+		// boot can inject those classes instead of re-running ByteBuddy. Best-effort; a failure never breaks boot.
 		if ( "auto".equals( this.config.ormManifest ) ) {
 			try {
-				java.nio.file.Path jar = ortus.boxlang.modules.orm.mapping.manifest.ManifestService
-				    .resolveFolder( context.getRequestContext(), this.config.manifestLocation )
-				    .resolve( ortus.boxlang.modules.orm.mapping.manifest.ManifestService.FACADES_JAR );
+				java.nio.file.Path jar = ortus.boxlang.modules.orm.mapping.manifest.ManifestService.facadesJar(
+				    ortus.boxlang.modules.orm.mapping.manifest.ManifestService.resolveFolder( context.getRequestContext(), this.config.manifestLocation ),
+				    this.config.facadeNamespace );
 				ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory.writeFacadeJar( jar, this.config.facadeNamespace );
 			} catch ( RuntimeException e ) {
-				logger.warn( "ORM manifest [auto] mode: failed to write facades.jar (continuing normally): {}", e.getMessage() );
+				logger.warn( "ORM manifest [auto] mode: failed to write the facade jar (continuing normally): {}", e.getMessage() );
 			}
 
 			// Ensure a single source watcher over the entity paths so edits trigger an automatic ORM reload. Owned by the
@@ -242,7 +242,7 @@ public class ORMApp {
 	/**
 	 * Resolve the entity map for this application, honoring the {@code ormManifest} mode.
 	 * <ul>
-	 * <li>{@code trust} - load {@code .bxorm/manifest.json} (integrity-checked, fail-closed) and rehydrate entities with no
+	 * <li>{@code trust} - load {@code .bxorm/manifest-{app}.json} (integrity-checked, fail-closed) and rehydrate entities with no
 	 * discovery, parsing or mapping generation.</li>
 	 * <li>{@code auto} - discover normally, then (best-effort) rewrite the manifest so it stays current for shipping.</li>
 	 * <li>{@code off} - discover normally (default, unchanged behavior).</li>
@@ -259,23 +259,24 @@ public class ORMApp {
 			java.nio.file.Path										folder		= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
 			    .resolveFolder( context.getRequestContext(), this.config.manifestLocation );
 			ortus.boxlang.modules.orm.mapping.manifest.OrmManifest	manifest	= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
-			    .read( folder, true );
+			    .read( folder, this.config.facadeNamespace, true );
 			// Fail closed on a stale manifest: booting old mappings against changed entities or settings would silently
 			// persist to the wrong columns/tables. Regenerate it with an auto-mode boot.
 			List<String>											stale		= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
 			    .verify( manifest, this.config, moduleVersion() );
 			if ( !stale.isEmpty() ) {
-				throw new BoxRuntimeException( "ORM manifest mode is [trust] but the manifest at [" + folder + "] is stale: "
+				throw new BoxRuntimeException( "ORM manifest mode is [trust] but the manifest at ["
+				    + ortus.boxlang.modules.orm.mapping.manifest.ManifestService.manifestFile( folder, this.config.facadeNamespace ) + "] is stale: "
 				    + String.join( "; ", stale )
 				    + ". Regenerate it by booting once with ormManifest=\"auto\", then switch back to [trust]." );
 			}
-			// Load pre-generated facade bytecode (if a facades.jar was shipped) so the session factory build injects those
+			// Load pre-generated facade bytecode (if a facades-{app}.jar was shipped) so the session factory build injects those
 			// classes instead of re-running ByteBuddy. Best-effort: a missing jar just means facades are regenerated.
 			this.config.facadeClassLoader = new ortus.boxlang.modules.orm.hibernate.facade.FacadeClassLoader( moduleClassLoader(),
 			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory
-			        .readFacadeJar( folder.resolve( ortus.boxlang.modules.orm.mapping.manifest.ManifestService.FACADES_JAR ) ) );
-			logger.info( "ORM manifest [trust] mode: booting from [{}] with {} entities; discovery/parsing/generation skipped.", folder,
-			    manifest.getEntities().size() );
+			        .readFacadeJar( ortus.boxlang.modules.orm.mapping.manifest.ManifestService.facadesJar( folder, this.config.facadeNamespace ) ) );
+			logger.info( "ORM manifest [trust] mode: booting application [{}] from [{}] with {} entities; discovery/parsing/generation skipped.",
+			    this.config.facadeNamespace, folder, manifest.getEntities().size() );
 			return ortus.boxlang.modules.orm.mapping.manifest.ManifestService.toEntityMap( manifest );
 		}
 

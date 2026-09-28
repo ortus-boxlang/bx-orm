@@ -130,7 +130,7 @@ public class ORMEntityWatcherTest {
 			Files.writeString( modelDir.resolve( "Seed.orm.xml" ), "<hibernate-mapping/>", StandardCharsets.UTF_8 );
 			Path bxorm = modelDir.resolve( ".bxorm" );
 			Files.createDirectories( bxorm );
-			Files.writeString( bxorm.resolve( "manifest.json" ), "{}", StandardCharsets.UTF_8 );
+			Files.writeString( bxorm.resolve( "manifest-app.json" ), "{}", StandardCharsets.UTF_8 );
 
 			// Give the watcher ample time to (not) fire, then confirm nothing was reported.
 			Thread.sleep( 2000 );

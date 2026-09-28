@@ -31,7 +31,7 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.types.util.JSONUtil;
 
 /**
- * The resolved boot model for an ORM application, serialized to {@code .bxorm/manifest.json}.
+ * The resolved boot model for an ORM application, serialized to {@code .bxorm/manifest-{app}.json}.
  * <p>
  * A manifest captures everything the ORM needs to boot <em>without</em> re-discovering, re-parsing or re-generating any
  * entity: the normalized per-entity metadata, the combined Hibernate {@code mapping.xml}, and the fingerprints used to
@@ -50,6 +50,7 @@ public class OrmManifest {
 
 	// Struct keys (also the JSON field names).
 	private static final Key	FORMAT_VERSION_KEY		= Key.of( "formatVersion" );
+	private static final Key	APP_NAME_KEY			= Key.of( "appName" );
 	private static final Key	ORM_VERSION_KEY			= Key.of( "ormVersion" );
 	private static final Key	CONFIG_FINGERPRINT_KEY	= Key.of( "configFingerprint" );
 	private static final Key	COMBINED_XML_KEY		= Key.of( "combinedMappingXml" );
@@ -63,6 +64,7 @@ public class OrmManifest {
 	private static final Key	MAPPING_XML_KEY			= Key.of( "mappingXml" );
 
 	private int					formatVersion			= FORMAT_VERSION;
+	private String				appName					= "";
 	private String				ormVersion				= "";
 	private String				configFingerprint		= "";
 	private String				combinedMappingXml		= "";
@@ -86,6 +88,28 @@ public class OrmManifest {
 
 	public int getFormatVersion() {
 		return formatVersion;
+	}
+
+	/**
+	 * The application key this manifest belongs to: the sanitized application name, the same key the facade package and
+	 * the manifest file names use (see {@link ManifestService#appKey(String)}).
+	 *
+	 * @return The application key, or an empty string when not recorded.
+	 */
+	public String getAppName() {
+		return appName;
+	}
+
+	/**
+	 * Set the application key this manifest belongs to.
+	 *
+	 * @param appName The application key (sanitized application name).
+	 *
+	 * @return This manifest.
+	 */
+	public OrmManifest setAppName( String appName ) {
+		this.appName = appName == null ? "" : appName;
+		return this;
 	}
 
 	public String getOrmVersion() {
@@ -170,6 +194,7 @@ public class OrmManifest {
 		}
 		return Struct.of(
 		    FORMAT_VERSION_KEY, formatVersion,
+		    APP_NAME_KEY, appName,
 		    ORM_VERSION_KEY, ormVersion,
 		    CONFIG_FINGERPRINT_KEY, configFingerprint,
 		    COMBINED_XML_KEY, combinedMappingXml,
@@ -188,6 +213,7 @@ public class OrmManifest {
 	public static OrmManifest fromStruct( IStruct struct ) {
 		OrmManifest manifest = new OrmManifest();
 		manifest.formatVersion		= struct.getAsInteger( FORMAT_VERSION_KEY );
+		manifest.appName			= String.valueOf( struct.getOrDefault( APP_NAME_KEY, "" ) );
 		manifest.ormVersion			= String.valueOf( struct.getOrDefault( ORM_VERSION_KEY, "" ) );
 		manifest.configFingerprint	= String.valueOf( struct.getOrDefault( CONFIG_FINGERPRINT_KEY, "" ) );
 		manifest.combinedMappingXml	= String.valueOf( struct.getOrDefault( COMBINED_XML_KEY, "" ) );

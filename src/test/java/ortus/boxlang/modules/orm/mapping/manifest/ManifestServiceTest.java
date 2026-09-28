@@ -116,11 +116,12 @@ public class ManifestServiceTest {
 
 		// build -> write -> read -> rehydrate
 		ManifestService.write( ManifestService.build( map, ormConfig, "test-1.0" ), folder );
-		assertThat( Files.exists( folder.resolve( ManifestService.MANIFEST_NAME ) ) ).isTrue();
-		assertThat( Files.exists( folder.resolve( ManifestService.CHECKSUM_NAME ) ) ).isTrue();
+		assertThat( Files.exists( folder.resolve( "manifest-default.json" ) ) ).isTrue();
+		assertThat( Files.exists( folder.resolve( "manifest-default.sha256" ) ) ).isTrue();
 
-		OrmManifest						loaded	= ManifestService.read( folder, true );
-		Map<Key, List<EntityRecord>>	rebuilt	= ManifestService.toEntityMap( loaded );
+		OrmManifest loaded = ManifestService.read( folder, "default", true );
+		assertThat( loaded.getAppName() ).isEqualTo( "default" );
+		Map<Key, List<EntityRecord>> rebuilt = ManifestService.toEntityMap( loaded );
 
 		assertThat( rebuilt ).containsKey( ds );
 		assertThat( rebuilt.get( ds ) ).hasSize( 2 );
@@ -133,8 +134,8 @@ public class ManifestServiceTest {
 	@DisplayName( "trust-mode read fails closed when the manifest is missing" )
 	@Test
 	public void testFailClosedWhenMissing( @TempDir Path folder ) {
-		assertThrows( BoxRuntimeException.class, () -> ManifestService.read( folder, true ) );
-		assertThat( ManifestService.read( folder, false ) ).isNull();
+		assertThrows( BoxRuntimeException.class, () -> ManifestService.read( folder, "default", true ) );
+		assertThat( ManifestService.read( folder, "default", false ) ).isNull();
 	}
 
 	@DisplayName( "a tampered/corrupt manifest fails the integrity check" )
@@ -147,10 +148,71 @@ public class ManifestServiceTest {
 		ManifestService.write( ManifestService.build( map, ormConfig, "test-1.0" ), folder );
 
 		// Corrupt the manifest without updating the checksum -> integrity check must reject it.
-		Path manifestFile = folder.resolve( ManifestService.MANIFEST_NAME );
+		Path manifestFile = ManifestService.manifestFile( folder, "default" );
 		Files.write( manifestFile, ( new String( Files.readAllBytes( manifestFile ), StandardCharsets.UTF_8 ) + " " ).getBytes( StandardCharsets.UTF_8 ) );
 
-		assertThrows( BoxRuntimeException.class, () -> ManifestService.read( folder, true ) );
+		assertThrows( BoxRuntimeException.class, () -> ManifestService.read( folder, "default", true ) );
+	}
+
+	@DisplayName( "file names carry the application key, the same key the facade package uses" )
+	@Test
+	public void testFileNames( @TempDir Path folder ) {
+		assertThat( ManifestService.appKey( "My App-2" ) ).isEqualTo( "my_app_2" );
+		assertThat( ManifestService.appKey( "my_app_2" ) ).isEqualTo( "my_app_2" );
+		assertThat( ManifestService.appKey( "" ) ).isEqualTo( "default" );
+		assertThat( ManifestService.manifestFile( folder, "My App-2" ) ).isEqualTo( folder.resolve( "manifest-my_app_2.json" ) );
+		assertThat( ManifestService.checksumFile( folder, "My App-2" ) ).isEqualTo( folder.resolve( "manifest-my_app_2.sha256" ) );
+		assertThat( ManifestService.facadesJar( folder, "My App-2" ) ).isEqualTo( folder.resolve( "facades-my_app_2.jar" ) );
+	}
+
+	@DisplayName( "two applications share one .bxorm/ folder without overwriting each other" )
+	@Test
+	public void testTwoAppsShareAFolder( @TempDir Path folder ) throws IOException {
+		ORMConfig	shopConfig	= configFor( "shop" );
+		ORMConfig	adminConfig	= configFor( "admin" );
+		ManifestService.write( ManifestService.build( entityMap( "Product" ), shopConfig, "test-1.0" ), folder );
+		ManifestService.write( ManifestService.build( entityMap( "Operator" ), adminConfig, "test-1.0" ), folder );
+		Files.write( ManifestService.facadesJar( folder, "shop" ), new byte[] { 1 } );
+		Files.write( ManifestService.facadesJar( folder, "admin" ), new byte[] { 2 } );
+
+		assertThat( ManifestService.listApps( folder ) ).containsExactly( "admin", "shop" ).inOrder();
+		assertThat( ManifestService.read( folder, "shop", true ).getEntities().get( 0 ).entityName() ).isEqualTo( "Product" );
+		assertThat( ManifestService.read( folder, "admin", true ).getEntities().get( 0 ).entityName() ).isEqualTo( "Operator" );
+
+		// Clearing one application leaves the other one's manifest, checksum and facade jar.
+		assertThat( ManifestService.clear( folder, "shop" ) ).isEqualTo( 3 );
+		assertThat( ManifestService.listApps( folder ) ).containsExactly( "admin" );
+		assertThat( Files.exists( ManifestService.checksumFile( folder, "admin" ) ) ).isTrue();
+		assertThat( Files.exists( ManifestService.facadesJar( folder, "admin" ) ) ).isTrue();
+	}
+
+	@DisplayName( "verify rejects a manifest written for another application" )
+	@Test
+	public void testVerifyRejectsAnotherApp( @TempDir Path folder ) {
+		OrmManifest		shop		= ManifestService.build( entityMap( "Product" ), configFor( "shop" ), "test-1.0" );
+		ORMConfig		admin		= configFor( "admin" );
+		List<String>	problems	= ManifestService.verify( shop, admin, "test-1.0" );
+		assertThat( String.join( "; ", problems ) ).contains( "it belongs to application [shop], not [admin]" );
+		assertThat( ManifestService.verify( shop, configFor( "shop" ), "test-1.0" ) ).isEmpty();
+	}
+
+	/** An ORM config whose facade namespace (application key) is the given name. */
+	private ORMConfig configFor( String appName ) {
+		ORMConfig config = new ORMConfig(
+		    Struct.of( "datasource", "myds", "ignoreParseErrors", "true", "generateMappings", "true", "saveMapping", "true" ),
+		    context.getRequestContext()
+		);
+		config.facadeNamespace = ManifestService.appKey( appName );
+		return config;
+	}
+
+	/** An entity map holding one simple entity on the {@code myds} datasource. */
+	private Map<Key, List<EntityRecord>> entityMap( String entityName ) {
+		EntityRecord					record	= makeRecord( entityName, "class persistent entityName=\"" + entityName
+		    + "\" table=\"" + entityName.toLowerCase() + "\" { property name=\"id\" fieldtype=\"id\" generator=\"uuid\" ormType=\"string\"; }" );
+		Map<Key, List<EntityRecord>>	map		= new LinkedHashMap<>();
+		map.put( Key.of( "myds" ), new ArrayList<>( List.of( record ) ) );
+		return map;
 	}
 
 	private EntityRecord makeRecord( String name, String code ) {

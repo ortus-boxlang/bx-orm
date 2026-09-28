@@ -119,15 +119,15 @@ public class ManifestBootTest {
 		assertThat( variables.getAsInteger( Key.of( "gadgetCount" ) ) ).isEqualTo( 1 );
 		assertThat( variables.getAsInteger( Key.of( "widgetCount" ) ) ).isEqualTo( 1 );
 
-		// The manifest and the pre-generated facades.jar were written during boot.
-		Path manifestFile = manifestFolder.resolve( ManifestService.MANIFEST_NAME );
+		// The manifest and the pre-generated facade jar were written during boot, named after the application.
+		Path manifestFile = manifestFolder.resolve( "manifest-bxormmanifesttest.json" );
 		assertThat( Files.exists( manifestFile ) ).isTrue();
-		assertThat( Files.exists( manifestFolder.resolve( ManifestService.CHECKSUM_NAME ) ) ).isTrue();
-		assertThat( Files.exists( manifestFolder.resolve( ManifestService.FACADES_JAR ) ) ).isTrue();
+		assertThat( Files.exists( manifestFolder.resolve( "manifest-bxormmanifesttest.sha256" ) ) ).isTrue();
+		assertThat( Files.exists( manifestFolder.resolve( "facades-bxormmanifesttest.jar" ) ) ).isTrue();
 
-		// The facades.jar contains the generated facade classes (so a trust-mode boot can inject them instead of ByteBuddy).
+		// The facade jar contains the generated facade classes (so a trust-mode boot can inject them instead of ByteBuddy).
 		int facadeClasses = 0;
-		try ( var jar = new java.util.jar.JarInputStream( Files.newInputStream( manifestFolder.resolve( ManifestService.FACADES_JAR ) ) ) ) {
+		try ( var jar = new java.util.jar.JarInputStream( Files.newInputStream( manifestFolder.resolve( "facades-bxormmanifesttest.jar" ) ) ) ) {
 			java.util.jar.JarEntry e;
 			while ( ( e = jar.getNextJarEntry() ) != null ) {
 				if ( e.getName().endsWith( "Facade.class" ) ) {
@@ -140,7 +140,8 @@ public class ManifestBootTest {
 		assertThat( facadeClasses ).isAtLeast( 2 );
 
 		// The written manifest is valid, integrity-checks, and rehydrates both entities (the trust-mode load path).
-		OrmManifest manifest = ManifestService.read( manifestFolder, true );
+		OrmManifest manifest = ManifestService.read( manifestFolder, "BXORMManifestTest", true );
+		assertThat( manifest.getAppName() ).isEqualTo( "bxormmanifesttest" );
 		assertThat( manifest.getEntities() ).hasSize( 2 );
 		assertThat( ManifestService.toEntityMap( manifest ).values().stream().mapToInt( java.util.List::size ).sum() ).isEqualTo( 2 );
 	}
@@ -205,13 +206,17 @@ public class ManifestBootTest {
 		// Seed a .bxorm cache under a temp app root, then drive the REAL CLI entry point: ModuleConfig.main().
 		Path bxorm = tmp.resolve( ManifestService.FOLDER_NAME );
 		Files.createDirectories( bxorm );
-		Files.writeString( bxorm.resolve( ManifestService.MANIFEST_NAME ), "{}" );
+		Files.writeString( ManifestService.manifestFile( bxorm, "shop" ), "{}" );
+		Files.writeString( ManifestService.manifestFile( bxorm, "admin" ), "{}" );
 		assertThat( Files.exists( bxorm ) ).isTrue();
 
 		ModuleRecord rec = instance.getModuleService().getRegistry().get( ORMKeys.moduleName );
-		// main() parses --dir, resolves <dir>/.bxorm, and dispatches to the Java ManifestCli 'clear' verb.
-		rec.moduleConfig.main( context, new String[] { "clear", "--dir=" + tmp.toAbsolutePath() } );
+		// main() parses --dir, resolves <dir>/.bxorm, and passes --app through to the Java ManifestCli 'clear' verb.
+		rec.moduleConfig.main( context, new String[] { "clear", "--app=shop", "--dir=" + tmp.toAbsolutePath() } );
+		assertThat( ManifestService.listApps( bxorm ) ).containsExactly( "admin" );
 
+		// clear --all removes the whole folder.
+		rec.moduleConfig.main( context, new String[] { "clear", "--all", "--dir=" + tmp.toAbsolutePath() } );
 		assertThat( Files.exists( bxorm ) ).isFalse();
 	}
 

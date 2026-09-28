@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * garbage collected.
  * <p>
  * In {@code trust} manifest mode the loader also carries the pre-generated facade bytecode read from
- * {@code .bxorm/facades.jar}, scoped to this build only (never shared JVM-wide), so a later non-trust build can never
+ * {@code .bxorm/facades-{app}.jar}, scoped to this build only (never shared JVM-wide), so a later non-trust build can never
  * pick up stale jar bytecode.
  */
 public final class FacadeClassLoader extends ClassLoader {
@@ -63,7 +63,7 @@ public final class FacadeClassLoader extends ClassLoader {
 	 * Create a facade loader carrying pre-generated facade bytecode (trust mode).
 	 *
 	 * @param parent       The ORM module classloader.
-	 * @param pregenerated Facade bytecode read from {@code facades.jar} (FQN to class bytes); may be empty.
+	 * @param pregenerated Facade bytecode read from {@code facades-{app}.jar} (FQN to class bytes); may be empty.
 	 */
 	public FacadeClassLoader( ClassLoader parent, Map<String, byte[]> pregenerated ) {
 		super( "bx-orm-facades", parent );
@@ -105,7 +105,7 @@ public final class FacadeClassLoader extends ClassLoader {
 	}
 
 	/**
-	 * How many facades this build defined from pre-generated ({@code facades.jar}) bytecode instead of generating them.
+	 * How many facades this build defined from pre-generated ({@code facades-{app}.jar}) bytecode instead of generating them.
 	 *
 	 * @return The count of jar-defined facades.
 	 */

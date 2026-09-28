@@ -37,7 +37,11 @@ import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.util.FileSystemUtil;
 
 /**
- * Reads, writes and validates the ORM {@code .bxorm/} boot cache (manifest.json).
+ * Reads, writes and validates the ORM {@code .bxorm/} boot cache.
+ * <p>
+ * Several ORM applications can share one {@code .bxorm/} folder (sub-applications under the same root), so every file
+ * carries the application key (the sanitized application name, the same key the facade package uses):
+ * {@code manifest-{app}.json}, {@code manifest-{app}.sha256} and {@code facades-{app}.jar}.
  * <p>
  * In {@code auto} mode the manifest is (re)written after every full boot so it always reflects the current entities;
  * in {@code trust} mode it is loaded as-is, integrity-checked (fail-closed), and used to boot with zero entity
@@ -49,12 +53,16 @@ public final class ManifestService {
 
 	/** The cache folder name at the application root. */
 	public static final String	FOLDER_NAME		= ".bxorm";
-	/** The manifest file name inside the folder. */
-	public static final String	MANIFEST_NAME	= "manifest.json";
-	/** The integrity checksum sidecar (sha256 of manifest.json bytes). */
-	public static final String	CHECKSUM_NAME	= "manifest.sha256";
-	/** The pre-generated facade bytecode archive (written in auto, loaded in trust). */
-	public static final String	FACADES_JAR		= "facades.jar";
+	/** The manifest file name prefix; the full name is {@code manifest-{app}.json}. */
+	public static final String	MANIFEST_PREFIX	= "manifest-";
+	/** The manifest file extension. */
+	public static final String	MANIFEST_EXT	= ".json";
+	/** The integrity checksum sidecar extension (sha256 of the manifest bytes); the full name is {@code manifest-{app}.sha256}. */
+	public static final String	CHECKSUM_EXT	= ".sha256";
+	/** The facade bytecode archive prefix; the full name is {@code facades-{app}.jar} (written in auto, loaded in trust). */
+	public static final String	FACADES_PREFIX	= "facades-";
+	/** The facade bytecode archive extension. */
+	public static final String	FACADES_EXT		= ".jar";
 
 	private ManifestService() {
 	}
@@ -91,6 +99,99 @@ public final class ManifestService {
 	}
 
 	/**
+	 * The application key used in the boot cache file names: the sanitized application name, identical to the facade
+	 * package segment ({@code EntityFacadeNaming.sanitizeNamespace}) and to {@code ORMConfig.facadeNamespace}.
+	 *
+	 * @param appName The application name (raw or already sanitized).
+	 *
+	 * @return The application key, e.g. {@code my_app}; {@code default} for a blank name.
+	 */
+	public static String appKey( String appName ) {
+		return ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming.sanitizeNamespace( appName );
+	}
+
+	/**
+	 * The manifest file of an application: {@code manifest-{app}.json}.
+	 *
+	 * @param folder  The {@code .bxorm/} folder.
+	 * @param appName The application name or key.
+	 *
+	 * @return The manifest file path.
+	 */
+	public static Path manifestFile( Path folder, String appName ) {
+		return folder.resolve( MANIFEST_PREFIX + appKey( appName ) + MANIFEST_EXT );
+	}
+
+	/**
+	 * The integrity checksum sidecar of an application's manifest: {@code manifest-{app}.sha256}.
+	 *
+	 * @param folder  The {@code .bxorm/} folder.
+	 * @param appName The application name or key.
+	 *
+	 * @return The checksum file path.
+	 */
+	public static Path checksumFile( Path folder, String appName ) {
+		return folder.resolve( MANIFEST_PREFIX + appKey( appName ) + CHECKSUM_EXT );
+	}
+
+	/**
+	 * The facade bytecode archive of an application: {@code facades-{app}.jar}.
+	 *
+	 * @param folder  The {@code .bxorm/} folder.
+	 * @param appName The application name or key.
+	 *
+	 * @return The facade jar path.
+	 */
+	public static Path facadesJar( Path folder, String appName ) {
+		return folder.resolve( FACADES_PREFIX + appKey( appName ) + FACADES_EXT );
+	}
+
+	/**
+	 * The application keys that have a manifest in the folder, found from the {@code manifest-{app}.json} file names.
+	 *
+	 * @param folder The {@code .bxorm/} folder.
+	 *
+	 * @return The application keys, sorted; empty when the folder or no manifest exists.
+	 */
+	public static List<String> listApps( Path folder ) {
+		if ( folder == null || !Files.isDirectory( folder ) ) {
+			return List.of();
+		}
+		try ( var files = Files.list( folder ) ) {
+			return files
+			    .map( p -> p.getFileName().toString() )
+			    .filter( n -> n.startsWith( MANIFEST_PREFIX ) && n.endsWith( MANIFEST_EXT ) && n.length() > MANIFEST_PREFIX.length() + MANIFEST_EXT.length() )
+			    .map( n -> n.substring( MANIFEST_PREFIX.length(), n.length() - MANIFEST_EXT.length() ) )
+			    .sorted()
+			    .toList();
+		} catch ( IOException e ) {
+			throw new BoxRuntimeException( "Failed to list the ORM boot cache at [" + folder + "]", e );
+		}
+	}
+
+	/**
+	 * Delete one application's boot cache files (manifest, checksum and facade jar), leaving other applications' files.
+	 *
+	 * @param folder  The {@code .bxorm/} folder.
+	 * @param appName The application name or key.
+	 *
+	 * @return The number of files deleted.
+	 */
+	public static int clear( Path folder, String appName ) {
+		int deleted = 0;
+		for ( Path file : List.of( manifestFile( folder, appName ), checksumFile( folder, appName ), facadesJar( folder, appName ) ) ) {
+			try {
+				if ( Files.deleteIfExists( file ) ) {
+					deleted++;
+				}
+			} catch ( IOException e ) {
+				throw new BoxRuntimeException( "Failed to delete [" + file + "]", e );
+			}
+		}
+		return deleted;
+	}
+
+	/**
 	 * Build a manifest from a freshly discovered entity map (grouped by datasource).
 	 *
 	 * @param entityMap  The discovered entities, keyed by datasource.
@@ -101,6 +202,7 @@ public final class ManifestService {
 	 */
 	public static OrmManifest build( Map<Key, List<EntityRecord>> entityMap, ORMConfig config, String ormVersion ) {
 		OrmManifest manifest = new OrmManifest()
+		    .setAppName( appKey( config.facadeNamespace ) )
 		    .setOrmVersion( ormVersion )
 		    .setConfigFingerprint( configFingerprint( config ) );
 
@@ -141,40 +243,44 @@ public final class ManifestService {
 	}
 
 	/**
-	 * Write the manifest atomically to the given folder (temp file + move), alongside its integrity checksum.
+	 * Write the manifest atomically to the given folder (temp file + move), alongside its integrity checksum. The file names
+	 * carry the manifest's application key: {@code manifest-{app}.json} and {@code manifest-{app}.sha256}.
 	 *
-	 * @param manifest The manifest to write.
+	 * @param manifest The manifest to write; its {@link OrmManifest#getAppName() application key} names the files.
 	 * @param folder   The {@code .bxorm/} folder.
 	 */
 	public static void write( OrmManifest manifest, Path folder ) {
+		String	app				= manifest.getAppName();
+		Path	manifestFile	= manifestFile( folder, app );
 		try {
 			Files.createDirectories( folder );
 			String	json	= manifest.toJSON();
 			byte[]	bytes	= json.getBytes( StandardCharsets.UTF_8 );
-			Path	tmp		= folder.resolve( MANIFEST_NAME + ".tmp" );
+			Path	tmp		= folder.resolve( manifestFile.getFileName() + ".tmp" );
 			Files.write( tmp, bytes );
-			Files.move( tmp, folder.resolve( MANIFEST_NAME ), java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+			Files.move( tmp, manifestFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING,
 			    java.nio.file.StandardCopyOption.ATOMIC_MOVE );
-			Files.write( folder.resolve( CHECKSUM_NAME ), sha256( bytes ).getBytes( StandardCharsets.UTF_8 ) );
+			Files.write( checksumFile( folder, app ), sha256( bytes ).getBytes( StandardCharsets.UTF_8 ) );
 		} catch ( IOException e ) {
-			throw new BoxRuntimeException( "Failed to write the ORM manifest to [" + folder + "]", e );
+			throw new BoxRuntimeException( "Failed to write the ORM manifest to [" + manifestFile + "]", e );
 		}
 	}
 
 	/**
-	 * Read and integrity-check the manifest from the given folder.
+	 * Read and integrity-check an application's manifest ({@code manifest-{app}.json}) from the given folder.
 	 *
 	 * @param folder       The {@code .bxorm/} folder.
+	 * @param appName      The application name or key whose manifest to read.
 	 * @param failIfAbsent When true (trust mode), a missing manifest is a hard error; when false, returns {@code null}.
 	 *
 	 * @return The loaded manifest, or {@code null} if absent and {@code failIfAbsent} is false.
 	 */
-	public static OrmManifest read( Path folder, boolean failIfAbsent ) {
-		Path manifestFile = folder.resolve( MANIFEST_NAME );
+	public static OrmManifest read( Path folder, String appName, boolean failIfAbsent ) {
+		Path manifestFile = manifestFile( folder, appName );
 		if ( !Files.exists( manifestFile ) ) {
 			if ( failIfAbsent ) {
 				throw new BoxRuntimeException(
-				    "ORM manifest mode is [trust] but no manifest was found at [" + manifestFile
+				    "ORM manifest mode is [trust] but no manifest for application [" + appKey( appName ) + "] was found at [" + manifestFile
 				        + "]. Boot the app once with ormManifest=\"auto\" to generate it, then switch back to [trust]." );
 			}
 			return null;
@@ -182,7 +288,7 @@ public final class ManifestService {
 		try {
 			byte[]	bytes	= Files.readAllBytes( manifestFile );
 			// Integrity guard: the recorded checksum must match the manifest bytes (detects corruption / naive tampering).
-			Path	sumFile	= folder.resolve( CHECKSUM_NAME );
+			Path	sumFile	= checksumFile( folder, appName );
 			if ( Files.exists( sumFile ) ) {
 				String recorded = new String( Files.readAllBytes( sumFile ), StandardCharsets.UTF_8 ).trim();
 				if ( !recorded.equals( sha256( bytes ) ) ) {
@@ -206,6 +312,7 @@ public final class ManifestService {
 	 * Check a loaded manifest against the running application before a trust-mode boot, so a stale manifest fails closed
 	 * instead of silently booting old mappings. Compares:
 	 * <ul>
+	 * <li>the application key the manifest was written for (a manifest copied or renamed from another application);</li>
 	 * <li>the ORM settings fingerprint ({@link #configFingerprint(ORMConfig)}), e.g. a changed naming strategy or
 	 * application name (the facade namespace);</li>
 	 * <li>the module version, when both the manifest and the running module carry a real (non-{@code dev}) version;</li>
@@ -223,7 +330,12 @@ public final class ManifestService {
 	 * @return The reasons the manifest is stale; empty when it is current.
 	 */
 	public static List<String> verify( OrmManifest manifest, ORMConfig config, String ormVersion ) {
-		List<String> problems = new ArrayList<>();
+		List<String>	problems	= new ArrayList<>();
+		String			expected	= appKey( config.facadeNamespace );
+		if ( !expected.equals( manifest.getAppName() ) ) {
+			problems.add( "it belongs to application [" + ( manifest.getAppName().isEmpty() ? "unknown" : manifest.getAppName() )
+			    + "], not [" + expected + "]" );
+		}
 		if ( !configFingerprint( config ).equals( manifest.getConfigFingerprint() ) ) {
 			problems.add( "the ORM settings changed (dialect, datasource, namingStrategy, application name, dbcreate, quoteIdentifiers or entityPaths)" );
 		}

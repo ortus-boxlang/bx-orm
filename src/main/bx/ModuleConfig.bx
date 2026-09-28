@@ -140,9 +140,10 @@ class {
 	 * Invoked via `boxlang module:orm <verb> [args]`. A thin dispatcher over the
 	 * Java `ManifestCli`, which reads/validates/clears the `.bxorm/` boot cache.
 	 * The `.bxorm/` folder is resolved against the current working directory,
-	 * overridable with `--dir=<path>`.
+	 * overridable with `--dir=<path>`. Every other argument, including
+	 * `--app=<name>` and `--all`, is passed through to `ManifestCli`.
 	 *
-	 * @args The CLI arguments (verb + its arguments, plus an optional --dir flag).
+	 * @args The CLI arguments (verb + its arguments and options, plus an optional --dir flag).
 	 *
 	 * @return The process exit code (0 on success, non-zero on failure).
 	 */
