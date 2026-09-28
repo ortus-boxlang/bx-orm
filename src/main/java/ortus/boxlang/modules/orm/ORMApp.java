@@ -328,10 +328,10 @@ public class ORMApp {
 			}
 			RuntimeException translated = ortus.boxlang.modules.orm.errors.ORMErrors.translate( e,
 			    ortus.boxlang.modules.orm.errors.ORMErrors.Context.of( "ORM startup" ) );
+			// Lead with Hibernate's own reason: the unknown ormtypes are suspects, not necessarily the cause.
 			throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.CONFIG,
-			    "The ORM could not start. Likely cause: " + String.join( " ", this.unknownOrmTypes ),
-			    "Use a valid ormtype such as string, integer, long, boolean, timestamp, text or bigdecimal. Hibernate said: "
-			        + translated.getMessage(),
+			    "The ORM could not start: " + translated.getMessage() + " Possible cause: " + String.join( " ", this.unknownOrmTypes ),
+			    "Use a valid ormtype such as string, integer, long, boolean, timestamp, text or bigdecimal.",
 			    null, e );
 		}
 	}
@@ -415,6 +415,10 @@ public class ORMApp {
 				problems.add( e.getMessage() );
 			}
 			for ( var prop : record.getEntityMeta().getAllPersistentProperties() ) {
+				// On a relationship, type is the collection type (array, struct), not an ormtype.
+				if ( prop.isAssociationType() || prop.getFieldType() == ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta.FIELDTYPE.COLLECTION ) {
+					continue;
+				}
 				String ormType = prop.getORMType();
 				if ( ormType == null || ormType.isBlank() ) {
 					continue;

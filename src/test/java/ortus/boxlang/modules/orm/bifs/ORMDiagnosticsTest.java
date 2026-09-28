@@ -37,6 +37,15 @@ public class ORMDiagnosticsTest extends BaseORMTest {
 	/**
 	 * Test: OrmDiagnostics lists this request's open sessions without opening new ones.
 	 */
+	@DisplayName( "ormDiagnostics does not report a relationship's collection type (type=\"array\") as an unknown ormtype" )
+	@Test
+	public void testRelationshipCollectionTypeIsNotAnOrmType() {
+		instance.executeSource( "result = ormDiagnostics().warnings;", context );
+		for ( Object warning : variables.getAsArray( result ) ) {
+			assertThat( String.valueOf( warning ) ).doesNotContain( "ormtype=\"array\"" );
+		}
+	}
+
 	@DisplayName( "ormDiagnostics lists this request's open sessions without opening new ones" )
 	@Test
 	public void testSessions() {
