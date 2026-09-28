@@ -77,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 
+- `entitySave()` of a new entity with a database-generated id (`generator="identity"` or `"native"` on MySQL) sets the id right away again, inside a `transaction{}` too. Hibernate 7 had delayed the insert until the flush, so `getId()` returned null.
 - The entity-level `where` annotation was never read, so it had no effect; it now restricts every load and query of the entity.
 - Optimistic-locking `<version>` columns now work end-to-end.
 - `text`/`clob` properties map to `TEXT`/`LONGTEXT` (via `<lob/>`) instead of an in-row `varchar`, avoiding MySQL row-size failures.

@@ -17,6 +17,7 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import org.hibernate.event.spi.EventSource;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.engine.internal.ForeignKeys;
 import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
@@ -132,6 +133,7 @@ public class EntitySave extends BaseORMBIF {
 			// Already managed: nothing to do; the flush will persist any changes.
 		} else if ( forceInsert || isTransient( session, hbName, facade ) ) {
 			session.persist( hbName, facade );
+			insertIdentityNow( session, hbName, facade );
 		} else {
 			Object			managed			= session.merge( hbName, facade );
 			IClassRunnable	managedRunnable	= FacadeSupport
@@ -142,6 +144,27 @@ public class EntitySave extends BaseORMBIF {
 			}
 		}
 		return session;
+	}
+
+	/**
+	 * Run a just-persisted entity's identity insert now, so its database-generated id is set when entitySave() returns.
+	 * <p>
+	 * Hibernate 7 delays an identity insert until flush when it sees no Hibernate transaction, and bx-orm never begins one:
+	 * it rides the BoxLang <code>transaction{}</code> connection. Hibernate 5's <code>saveOrUpdate()</code> always inserted
+	 * identity rows at once, so <code>transaction { entitySave( e ); id = e.getId(); }</code> worked. Running the queued
+	 * inserts (the public SPI Hibernate itself uses before an early identity insert) keeps that behavior. Entities whose
+	 * id is assigned or generated before the insert are left to the flush.
+	 *
+	 * @param session The session the entity was persisted in.
+	 * @param hbName  The Hibernate entity name.
+	 * @param facade  The persisted facade.
+	 */
+	private static void insertIdentityNow( Session session, String hbName, Object facade ) {
+		SharedSessionContractImplementor	source		= session.unwrap( SharedSessionContractImplementor.class );
+		var									persister	= source.getEntityPersister( hbName, facade );
+		if ( persister.getGenerator().generatedOnExecution( facade, source ) ) {
+			session.unwrap( EventSource.class ).getActionQueue().executeInserts();
+		}
 	}
 
 	/**

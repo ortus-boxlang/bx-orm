@@ -206,4 +206,27 @@ public class EntitySaveTest extends BaseORMTest {
 		assertThat( variables.getAsBoolean( Key.of( "result" ) ) ).isFalse();
 	}
 
+	@DisplayName( "It assigns an identity id at entitySave() inside a transaction, before any flush" )
+	@Test
+	public void testIdentityIdAssignedOnSaveInTransaction() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction {
+				try {
+					e = entityNew( "VetoIdentityThing", { name : "identity-on-save" } );
+					entitySave( e );
+					result = !isNull( e.getId() );
+				} finally {
+					transactionRollback();
+				}
+			}
+			ormClearSession();
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsBoolean( Key.of( "result" ) ) ).isTrue();
+	}
+
 }
