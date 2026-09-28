@@ -220,6 +220,12 @@ final class CriteriaMethods {
 			return c.compare( str( a[ 0 ] ), "=", a[ 1 ] );
 		} );
 		def( "not|isNot", "callback|fn", false, ( c, x, a ) -> c.not( x, a[ 0 ] ) );
+		def( "add", "restrictions...", false, ( c, x, a ) -> {
+			for ( Object restriction : ( Object[] ) a[ 0 ] ) {
+				CriteriaBuilder.call( x, restriction, c );
+			}
+			return c;
+		} );
 		def( "anyOf|$or|or|orWhere|disjunction", "callbacks...", false, ( c, x, a ) -> c.group( x, true, ( Object[] ) a[ 0 ] ) );
 		def( "allOf|$and|and|conjunction", "callbacks...", false, ( c, x, a ) -> c.group( x, false, ( Object[] ) a[ 0 ] ) );
 		def( "exists", "subquery|criteria", true, ( c, x, a ) -> a[ 0 ] == null ? c.exists( x ) : c.exists( CriteriaBuilder.requireSub( a[ 0 ] ), false ) );
@@ -233,6 +239,12 @@ final class CriteriaMethods {
 		def( "propertyLe", PS, true, ( c, x, a ) -> c.compare( str( a[ 0 ] ), "<=", CriteriaBuilder.requireSub( a[ 1 ] ) ) );
 		def( "propertyIn", PS, true, ( c, x, a ) -> c.in( str( a[ 0 ] ), CriteriaBuilder.requireSub( a[ 1 ] ), false ) );
 		def( "propertyNotIn", PS, true, ( c, x, a ) -> c.in( str( a[ 0 ] ), CriteriaBuilder.requireSub( a[ 1 ] ), true ) );
+		// Quantified comparisons with every row (all) or at least one row (some) of a subquery, cborm names.
+		for ( String[] q : new String[][] { { "EqAll", "= all" }, { "GtAll", "> all" }, { "GtSome", "> some" }, { "GeAll", ">= all" },
+		    { "GeSome", ">= some" }, { "LtAll", "< all" }, { "LtSome", "< some" }, { "LeAll", "<= all" }, { "LeSome", "<= some" } } ) {
+			String operator = q[ 1 ];
+			def( "property" + q[ 0 ], PS, true, ( c, x, a ) -> c.compare( str( a[ 0 ] ), operator, CriteriaBuilder.requireSub( a[ 1 ] ) ) );
+		}
 		String VS = V + ",subquery|criteria";
 		def( "subEq", VS, true, ( c, x, a ) -> c.valueVsSubquery( a[ 0 ], "=", CriteriaBuilder.requireSub( a[ 1 ] ) ) );
 		def( "subNe", VS, true, ( c, x, a ) -> c.valueVsSubquery( a[ 0 ], "<>", CriteriaBuilder.requireSub( a[ 1 ] ) ) );
@@ -242,6 +254,11 @@ final class CriteriaMethods {
 		def( "subLe", VS, true, ( c, x, a ) -> c.valueVsSubquery( a[ 0 ], "<=", CriteriaBuilder.requireSub( a[ 1 ] ) ) );
 		def( "subIn", VS, true, ( c, x, a ) -> c.valueVsSubquery( a[ 0 ], "in", CriteriaBuilder.requireSub( a[ 1 ] ) ) );
 		def( "subNotIn", VS, true, ( c, x, a ) -> c.valueVsSubquery( a[ 0 ], "not in", CriteriaBuilder.requireSub( a[ 1 ] ) ) );
+		for ( String[] q : new String[][] { { "EqAll", "= all" }, { "GtAll", "> all" }, { "GtSome", "> some" }, { "GeAll", ">= all" },
+		    { "GeSome", ">= some" }, { "LtAll", "< all" }, { "LtSome", "< some" }, { "LeAll", "<= all" }, { "LeSome", "<= some" } } ) {
+			String operator = q[ 1 ];
+			def( "sub" + q[ 0 ], VS, true, ( c, x, a ) -> c.valueVsSubquery( a[ 0 ], operator, CriteriaBuilder.requireSub( a[ 1 ] ) ) );
+		}
 
 		/* ------------------------------------------------------------------------------------------------------- */
 		/* Joins */
@@ -327,12 +344,14 @@ final class CriteriaMethods {
 			CriteriaBuilder.call( x, a[ 0 ], c.getSQL( x, bool( a[ 1 ], false ), true ) );
 			return c;
 		} );
-		def( "logSQL", "label,executable|returnExecutableSQL", false, ( c, x, a ) -> {
-			String label = a[ 0 ] == null ? "entityCriteria" : str( a[ 0 ] );
-			( ( ortus.boxlang.modules.orm.ORMService ) ortus.boxlang.runtime.BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService ) )
-			    .getLogger().info( "[{}] {}", label, c.getSQL( x, bool( a[ 1 ], true ), true ) );
-			return c;
-		} );
+		def( "logSQL", "label,executable|returnExecutableSQL,format|formatSQL", false,
+		    ( c, x, a ) -> c.logSQL( x, a[ 0 ] == null ? "Criteria" : str( a[ 0 ] ), a[ 1 ] == null ? null : bool( a[ 1 ], true ),
+		        a[ 2 ] == null ? null : bool( a[ 2 ], true ) ) );
+		def( "startSqlLog", "executable|returnExecutableSQL,format|formatSQL", false,
+		    ( c, x, a ) -> c.startSqlLog( bool( a[ 0 ], false ), bool( a[ 1 ], false ) ) );
+		def( "stopSqlLog", "", false, ( c, x, a ) -> c.stopSqlLog() );
+		def( "getSqlLog", "", false, ( c, x, a ) -> c.getSqlLog() );
+		def( "canLogSql|getSqlLoggerActive", "", false, ( c, x, a ) -> c.isSqlLogActive() );
 		def( "toString", "", false, ( c, x, a ) -> c.toString() );
 
 		/* ------------------------------------------------------------------------------------------------------- */
@@ -471,19 +490,74 @@ final class CriteriaMethods {
 	 * @return The suggestion sentence, or empty.
 	 */
 	private static String suggest( String name ) {
-		String close = ORMErrors.suggestion( name, NAMES );
+		return suggest( name, NAMES );
+	}
+
+	/**
+	 * A "Did you mean" hint for a misspelled name among some known names: the closest name by edit distance, or else the
+	 * longest known name the input starts with (or that starts with the input).
+	 *
+	 * @param name       The name that was called.
+	 * @param candidates The known names.
+	 *
+	 * @return The hint, or an empty string when nothing is close.
+	 */
+	private static String suggest( String name, java.util.Collection<String> candidates ) {
+		String close = ORMErrors.suggestion( name, candidates );
 		if ( !close.isEmpty() ) {
 			return close;
 		}
 		String	lower	= name.toLowerCase();
 		String	best	= null;
-		for ( String known : NAMES ) {
+		for ( String known : candidates ) {
 			String k = known.toLowerCase();
 			if ( ( lower.startsWith( k ) || k.startsWith( lower ) ) && k.length() > 2 && ( best == null || known.length() > best.length() ) ) {
 				best = known;
 			}
 		}
 		return best == null ? "" : " Did you mean [" + best + "]?";
+	}
+
+	/** The grouping methods a restriction may call besides condition methods (lower-cased names and aliases). */
+	private static final java.util.Set<String> RESTRICTION_GROUPS = java.util.Set.of( "not", "isnot", "anyof", "$or", "or", "orwhere",
+	    "disjunction", "allof", "$and", "and", "conjunction" );
+
+	/**
+	 * Whether a method name can be used with {@code c.restrictions}: a condition method (or its {@code not...} form) or a
+	 * grouping method ({@code or}, {@code and}, {@code not} and their aliases).
+	 *
+	 * @param name The method name.
+	 *
+	 * @return True when it builds a condition.
+	 */
+	static boolean isRestriction( String name ) {
+		String lower = name.toLowerCase();
+		if ( RESTRICTION_GROUPS.contains( lower ) ) {
+			return true;
+		}
+		Spec spec = METHODS.get( lower );
+		if ( spec != null ) {
+			return spec.condition();
+		}
+		if ( lower.startsWith( "not" ) && lower.length() > 3 ) {
+			Spec inner = METHODS.get( lower.substring( 3 ) );
+			if ( inner == null ) {
+				inner = METHODS.get( "is" + lower.substring( 3 ) );
+			}
+			return inner != null && inner.condition();
+		}
+		return false;
+	}
+
+	/**
+	 * A "Did you mean" among the methods {@code c.restrictions} accepts.
+	 *
+	 * @param name The unknown condition name.
+	 *
+	 * @return The suggestion sentence, or empty.
+	 */
+	static String suggestCondition( String name ) {
+		return suggest( name, NAMES.stream().filter( CriteriaMethods::isRestriction ).toList() );
 	}
 
 	/**

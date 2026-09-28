@@ -3,7 +3,7 @@ name: bx-orm-criteria
 description: "Use when working on entityCriteria(), the fluent query builder: CriteriaBuilder (recorder, path/join resolution, HQL compiler, terminals), CriteriaMethods (the BoxLang method table, aliases, named args, not*/with* prefixes), CriteriaProjections, EntityModel (metamodel paths and did-you-mean), HqlParts (where-clause nodes), SqlCapture (getSQL through a StatementInspector), SqlFormat, and HQLQuery.ofNumbered/prepare."
 version: "1.0.0"
 domain: bx-orm
-triggers: entityCriteria, criteria, CriteriaBuilder, CriteriaMethods, CriteriaProjections, EntityModel, HqlParts, SqlCapture, SqlFormat, getSQL, peekSQL, logSQL, withProjections, project, anyOf, allOf, subquery, paginate, chunk, each, pluck, with{Association}, createCriteria, cborm criteria
+triggers: entityCriteria, criteria, CriteriaBuilder, CriteriaMethods, CriteriaProjections, EntityModel, HqlParts, SqlCapture, SqlFormat, getSQL, peekSQL, logSQL, startSqlLog, getSqlLog, restrictions, Restrictions, subGeAll, propertyGtSome, withProjections, project, anyOf, allOf, subquery, paginate, chunk, each, pluck, with{Association}, createCriteria, cborm criteria
 role: expert
 scope: bx-orm
 related-skills: bx-orm-bif-development, bx-orm-session-management, bx-orm-hibernate-bridge
@@ -26,6 +26,7 @@ and never change the builder; `copy()` branches it.
 | `HqlParts` | Where-clause nodes: `Frag` (text, `Param`, subquery), `Group` (and/or), `Not`; `RenderContext` numbers `?1..?n` |
 | `SqlCapture` | `StatementInspector` registered in `SessionFactoryBuilder`; while capturing it records the first SQL and throws `Captured`, so nothing runs |
 | `SqlFormat` | Line breaks for `getSQL( format = true )` |
+| `Restrictions` / `Restriction` | `c.restrictions`: stateless `IReferenceable` that records a condition call (`Restriction`) instead of adding it; replayed on the target builder via `CriteriaMethods.invoke` |
 
 ## Rules
 
@@ -55,6 +56,16 @@ and never change the builder; `copy()` branches it.
   `MementoProjection` (root query from `copy()` + `compileColumns()`, one extra query per to-many, rows grouped by parent
   id). A plain property with a hand-written getter (not a `GeneratedGetter`) is read by copying the row's plain values
   into a scratch instance and calling the getter. `each`/`chunk` refuse it. Plain `asStruct()` rows get ISO 8601 dates.
+- `c.restrictions.<condition>( ... )` is allowed only when `CriteriaMethods.isRestriction()` (condition, `not...` form, or
+  `or`/`and`/`not` and aliases); it returns a `Restriction`. `CriteriaBuilder.call()` replays a `Restriction` like a
+  closure, so `or`/`and`/`not`/`add( restrictions... )` accept both. Misspellings get did-you-mean via
+  `suggestCondition()`.
+- Quantified subqueries (`sub{Eq,Gt,Ge,Lt,Le}{All,Some}`, `property...`; cborm has `EqAll` but no `EqSome`) reuse
+  `valueVsSubquery()` / `compare()` with operators like `>= all`.
+- SQL log: `logSQL( label = "Criteria", executable, format )` appends `{ type, sql }` and writes the ORM log;
+  `startSqlLog( executable = false, format = false )` sets the flag and later defaults (true/true before it);
+  `stopSqlLog()`, `canLogSql()` / `getSqlLoggerActive()`, `getSqlLog()` (a copy). Nothing auto-logs. `copy()` copies
+  the log.
 - `lock( mode, { timeout, skipLocked } )` stores `lock` / `lockTimeout` / `skipLocked` options. They apply only to
   `Compiled.lockable()` runs (row selects, not counts or aggregates); `HQLQuery.prepare` applies them and requires
   `transaction{}`, and `HQLQuery.inLockScope` lets the query pass Hibernate's transaction check (see the
@@ -63,4 +74,4 @@ and never change the builder; `copy()` branches it.
 ## Tests
 
 `src/test/java/ortus/boxlang/modules/orm/criteria/` (live, MySQL/MariaDB): Conditions, Joins, Shape, Terminals,
-Subquery, Developer, Bulk (updateAll, deleteAll, lock), Functions; `bifs/EntityLoadAsStructTest` covers `asStruct( includes )`. Shared helpers in `CriteriaTestSupport`.
+Subquery (incl. quantified), Restrictions, Developer (incl. SQL log), Bulk (updateAll, deleteAll, lock), Functions; `bifs/EntityLoadAsStructTest` covers `asStruct( includes )`. Shared helpers in `CriteriaTestSupport`.

@@ -156,6 +156,65 @@ public class CriteriaDeveloperTest extends CriteriaTestSupport {
 	}
 
 	/**
+	 * Test: logSQL appends { type, sql } entries to the builder's SQL log.
+	 */
+	@DisplayName( "logSQL( label ) appends { type, sql } to getSqlLog(), in order, default label Criteria" )
+	@Test
+	public void testSqlLogEntries() {
+		assertThat( run( """
+		                 c = entityCriteria( 'Vehicle' ).logSQL();
+		                 c.isEq( 'make', 'Honda' ).logSQL( 'hondas' );
+		                 log = c.getSqlLog();
+		                 result = log.len() & ':' & log[ 1 ].type & ':' & log[ 2 ].type & ':'
+		                     & ( log[ 2 ].sql contains 'Honda' ) & ':' & ( log[ 1 ].sql contains 'where' );
+		                 """ ) ).isEqualTo( "2:Criteria:hondas:true:false" );
+	}
+
+	/**
+	 * Test: startSqlLog / stopSqlLog / canLogSql / getSqlLoggerActive.
+	 */
+	@DisplayName( "startSqlLog / stopSqlLog turn the log on and off; canLogSql and getSqlLoggerActive report it" )
+	@Test
+	public void testSqlLogActive() {
+		assertThat( run( """
+		                 c = entityCriteria( 'Vehicle' );
+		                 before = c.canLogSql();
+		                 c.startSqlLog();
+		                 during = c.canLogSql() & '/' & c.getSQLLoggerActive();
+		                 c.stopSqlLog();
+		                 result = before & ':' & during & ':' & c.canLogSql();
+		                 """ ) ).isEqualTo( "false:true/true:false" );
+	}
+
+	/**
+	 * Test: startSqlLog settings drive how logSQL writes the SQL; explicit arguments win.
+	 */
+	@DisplayName( "startSqlLog( returnExecutableSql, formatSql ) sets how logSQL writes the SQL" )
+	@Test
+	public void testSqlLogSettings() {
+		assertThat( run( """
+		                 c = entityCriteria( 'Vehicle' ).isEq( 'make', 'Honda' ).startSqlLog().logSQL( 'plain' );
+		                 c.startSqlLog( returnExecutableSql = true ).logSQL( 'inlined' ).logSQL( 'bound', false );
+		                 log = c.getSqlLog();
+		                 result = ( log[ 1 ].sql contains '?' ) & ':' & ( log[ 2 ].sql contains 'Honda' ) & ':' & ( log[ 3 ].sql contains '?' );
+		                 """ ) ).isEqualTo( "true:true:true" );
+	}
+
+	/**
+	 * Test: copy() copies the SQL log; changes to either stay separate.
+	 */
+	@DisplayName( "copy() copies the SQL log and its state; getSqlLog() returns a copy" )
+	@Test
+	public void testSqlLogCopy() {
+		assertThat( run( """
+		                 c = entityCriteria( 'Vehicle' ).startSqlLog().logSQL( 'one' );
+		                 d = c.copy().logSQL( 'two' );
+		                 c.getSqlLog().append( { type : 'x', sql : 'y' } );
+		                 result = c.getSqlLog().len() & ':' & d.getSqlLog().len() & ':' & d.canLogSql();
+		                 """ ) ).isEqualTo( "1:2:true" );
+	}
+
+	/**
 	 * Test: when applies on true, and the else branch on false.
 	 */
 	@DisplayName( "when( test, closure, else ) applies one branch" )

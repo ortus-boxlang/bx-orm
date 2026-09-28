@@ -50,6 +50,7 @@ end-user docs.
 | Feature | What it does | Details |
 | --- | --- | --- |
 | `entityCriteria()` | Fluent query builder: conditions, groups, automatic joins, subqueries, projections, paging, `paginate`, `each`/`chunk`, `getSQL()`, readable `writeDump()`, cborm method names and interception points. | [§10c](#10c-entitycriteria-the-fluent-query-builder) |
+| cborm criteria extras | `c.restrictions.*` condition objects for `add()`/`or()`/`and()`/`not()`, quantified subqueries (`subGeAll`, `propertyLtSome`, ...), and the SQL log (`startSqlLog()`, `logSQL()`, `getSqlLog()`). | [§10c](#10c-entitycriteria-the-fluent-query-builder) |
 
 ### Hibernate-native features (Phase 3B)
 
@@ -682,6 +683,22 @@ works), and an association accepts an id or an entity. `ORMApp.referenceFor` now
 reaches the database. `getSQL( true )` puts the values in; paging is left out. If the application configured its own
 statement inspector, `getSQL()` explains that instead of guessing.
 
+**SQL log** (cborm semantics). `logSQL( label = "Criteria" )` appends `{ type : label, sql }` to the builder's log and
+writes the SQL to the ORM log; `getSqlLog()` returns a copy of the entries. `startSqlLog( returnExecutableSql = false,
+formatSql = false )` turns the log on and sets how later `logSQL()` calls write the SQL (before it, they inline values
+and format); `stopSqlLog()` turns it off, and `canLogSql()` / `getSqlLoggerActive()` report it. Nothing logs on its
+own: like cborm 5, the flag is only reported. `copy()` copies the entries and settings.
+
+**Restrictions** (`c.restrictions`). `Restrictions` is a stateless `IReferenceable`; each call is checked against
+`CriteriaMethods.isRestriction()` (a condition, its `not...` form, or a group: `or`, `and`, `not` and their aliases)
+and returns a `Restriction`, a recorded call. It is replayed through `CriteriaMethods.invoke` on the builder it is added
+to, so paths resolve there. `CriteriaBuilder.call()` treats a `Restriction` like a closure, which is how `or()`,
+`and()`, `not()`, the new `add( restrictions... )` and nested `c.restrictions.or( ... )` accept it.
+
+**Quantified subqueries.** `sub{Eq,Gt,Ge,Lt,Le}{All,Some}( value, subquery )` and
+`property{Eq,Gt,Ge,Lt,Le}{All,Some}( property, subquery )` (the cborm set: `EqAll` only, no `EqSome`) reuse
+`valueVsSubquery()` and `compare()` with the operators `>= all`, `< some`, ..., so HQL gets `x >= all (select ...)`.
+
 **`toString()`** (and so `writeDump()`) lists the recorded calls, indented inside closures, then the HQL, the params
 and, when the request is still live, the SQL.
 
@@ -695,7 +712,8 @@ cleared (so memory stays flat).
 `result` after the query).
 
 **Tests.** `src/test/java/ortus/boxlang/modules/orm/criteria/`: `CriteriaConditionsTest`, `CriteriaJoinsTest`,
-`CriteriaShapeTest`, `CriteriaTerminalsTest`, `CriteriaSubqueryTest`, `CriteriaDeveloperTest` (live, about 145 tests).
+`CriteriaShapeTest`, `CriteriaTerminalsTest`, `CriteriaSubqueryTest`, `CriteriaRestrictionsTest`, `CriteriaDeveloperTest`
+(live, about 170 tests).
 See the `bx-orm-criteria` custom skill for the class map.
 
 ---

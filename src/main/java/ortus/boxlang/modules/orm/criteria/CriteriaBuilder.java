@@ -268,7 +268,7 @@ public final class CriteriaBuilder implements IReferenceable {
 	}
 
 	/** The operation name used in error messages. */
-	static final String										OPERATION	= "entityCriteria";
+	static final String										OPERATION			= "entityCriteria";
 
 	/** The ORM application. */
 	private final ORMApp									app;
@@ -319,6 +319,14 @@ public final class CriteriaBuilder implements IReferenceable {
 	private int												stepDepth;
 	/** The context of the last call, so {@code toString()} (and so {@code writeDump()}) can show the SQL. */
 	private transient IBoxContext							lastContext;
+	/** The SQL log entries ({@code { type, sql }}) appended by {@code logSQL()}. */
+	private List<IStruct>									sqlLog				= new ArrayList<>();
+	/** Whether {@code startSqlLog()} turned the SQL log on. */
+	private boolean											sqlLogActive		= false;
+	/** Whether {@code logSQL()} inlines the bound values by default. */
+	private boolean											sqlLogExecutable	= true;
+	/** Whether {@code logSQL()} formats the SQL by default. */
+	private boolean											sqlLogFormat		= true;
 
 	/**
 	 * Create a criteria for an entity.
@@ -372,7 +380,8 @@ public final class CriteriaBuilder implements IReferenceable {
 
 	/**
 	 * Read a property: the cborm join-type constants {@code INNER_JOIN} (0), {@code LEFT_JOIN} (1), {@code RIGHT_JOIN}
-	 * (2) and {@code FULL_JOIN} (4).
+	 * (2) and {@code FULL_JOIN} (4), and {@code restrictions}, the {@link Restrictions} helper that builds conditions to
+	 * pass to {@code add()}, {@code or()}, {@code and()} and {@code not()}.
 	 *
 	 * @param context The context.
 	 * @param name    The property name.
@@ -387,6 +396,7 @@ public final class CriteriaBuilder implements IReferenceable {
 			case "LEFT_JOIN", "LEFT_OUTER_JOIN" -> 1;
 			case "RIGHT_JOIN", "RIGHT_OUTER_JOIN" -> 2;
 			case "FULL_JOIN", "FULL_OUTER_JOIN" -> 4;
+			case "RESTRICTIONS" -> Restrictions.INSTANCE;
 			default -> {
 				if ( Boolean.TRUE.equals( safe ) ) {
 					yield null;
@@ -581,10 +591,15 @@ public final class CriteriaBuilder implements IReferenceable {
 	 * @return What it returned.
 	 */
 	static Object call( IBoxContext context, Object callback, Object... args ) {
+		// A restriction built with c.restrictions stands in for a closure that adds that one condition.
+		if ( callback instanceof Restriction restriction && args.length > 0 && args[ 0 ] instanceof CriteriaBuilder builder ) {
+			restriction.applyTo( builder, context );
+			return null;
+		}
 		if ( ! ( callback instanceof Function ) ) {
 			throw new ORMException( ORMErrorType.ARGUMENT,
 			    "entityCriteria expected a closure but received " + ( callback == null ? "null" : callback.getClass().getSimpleName() ) + ".",
-			    "Pass a closure, e.g. c.anyOf( ( c ) => c.isEq( \"a\", 1 ).isEq( \"b\", 2 ) )." );
+			    "Pass a closure, e.g. c.anyOf( ( c ) => c.isEq( \"a\", 1 ).isEq( \"b\", 2 ) ), or a restriction, e.g. c.restrictions.isEq( \"a\", 1 )." );
 		}
 		return context.invokeFunction( callback, args );
 	}
@@ -1478,7 +1493,12 @@ public final class CriteriaBuilder implements IReferenceable {
 		c.memento		= memento;
 		c.options		= new Struct();
 		c.options.putAll( options );
-		c.steps = new ArrayList<>( steps );
+		c.steps		= new ArrayList<>( steps );
+		c.sqlLog	= new ArrayList<>();
+		sqlLog.forEach( entry -> c.sqlLog.add( new Struct( entry ) ) );
+		c.sqlLogActive		= sqlLogActive;
+		c.sqlLogExecutable	= sqlLogExecutable;
+		c.sqlLogFormat		= sqlLogFormat;
 	}
 
 	/**
@@ -2703,6 +2723,75 @@ public final class CriteriaBuilder implements IReferenceable {
 	/* ============================================================================================================= */
 	/* SQL */
 	/* ============================================================================================================= */
+
+	/**
+	 * Turn the SQL log on (cborm {@code startSqlLog()}), and set how {@code logSQL()} writes the SQL from now on.
+	 *
+	 * @param executable True to put the bound values in the logged SQL; false to keep {@code ?}.
+	 * @param format     True to break the logged SQL into lines.
+	 *
+	 * @return This builder.
+	 */
+	CriteriaBuilder startSqlLog( boolean executable, boolean format ) {
+		this.sqlLogActive		= true;
+		this.sqlLogExecutable	= executable;
+		this.sqlLogFormat		= format;
+		return this;
+	}
+
+	/**
+	 * Turn the SQL log off (cborm {@code stopSqlLog()}). Entries already logged are kept.
+	 *
+	 * @return This builder.
+	 */
+	CriteriaBuilder stopSqlLog() {
+		this.sqlLogActive = false;
+		return this;
+	}
+
+	/**
+	 * Whether {@code startSqlLog()} turned the SQL log on (cborm {@code canLogSql()} / {@code getSqlLoggerActive()}).
+	 *
+	 * @return True while the log is on.
+	 */
+	public boolean isSqlLogActive() {
+		return sqlLogActive;
+	}
+
+	/**
+	 * Log the SQL this criteria would run at this point: append {@code { type : label, sql }} to the builder's SQL log
+	 * and write it to the ORM log.
+	 *
+	 * @param context    The context.
+	 * @param label      The entry type, e.g. {@code "Criteria"}.
+	 * @param executable True to inline the bound values, false to keep {@code ?}, or null for the log's setting
+	 *                   ({@code startSqlLog()}, else true).
+	 * @param format     True to break the SQL into lines, or null for the log's setting ({@code startSqlLog()}, else
+	 *                   true).
+	 *
+	 * @return This builder.
+	 */
+	CriteriaBuilder logSQL( IBoxContext context, String label, Boolean executable, Boolean format ) {
+		String	sql		= getSQL( context, executable == null ? sqlLogExecutable : executable, format == null ? sqlLogFormat : format );
+		IStruct	entry	= new Struct();
+		entry.put( Key.type, label );
+		entry.put( Key.sql, sql );
+		sqlLog.add( entry );
+		( ( ortus.boxlang.modules.orm.ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService ) ).getLogger()
+		    .info( "[{}] {}", label, sql );
+		return this;
+	}
+
+	/**
+	 * The SQL log entries appended by {@code logSQL()}, oldest first (cborm {@code getSQLLog()}).
+	 *
+	 * @return An array of {@code { type, sql }} structs.
+	 */
+	public Array getSqlLog() {
+		Array log = new Array();
+		sqlLog.forEach( entry -> log.add( new Struct( entry ) ) );
+		return log;
+	}
 
 	/**
 	 * The HQL this criteria runs for {@code list()}.

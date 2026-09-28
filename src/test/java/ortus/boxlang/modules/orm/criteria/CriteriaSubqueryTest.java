@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Live tests for {@code entityCriteria()} subqueries: correlated {@code exists}/{@code notExists}, {@code isIn} with a
- * subquery, and the cborm {@code property*}/{@code sub*} forms.
+ * subquery, and the cborm {@code property*}/{@code sub*} forms (including the quantified {@code *All}/{@code *Some} ones).
  */
 public class CriteriaSubqueryTest extends CriteriaTestSupport {
 
@@ -129,6 +129,64 @@ public class CriteriaSubqueryTest extends CriteriaTestSupport {
 		                  counted = c.subquery( 'Vehicle', 'v' ).eqProperty( 'v.manufacturer', 'this' ).project( ( p ) => p.rowCount() );
 		                  result = c.subEq( 0, counted ).list().map( ( m ) => m.getId() );
 		                  """ ) ).containsExactly( 77 );
+	}
+
+	/**
+	 * Test: property*All / property*Some (manufacturer ids are 1, 42 and 77).
+	 */
+	@DisplayName( "property*All / property*Some compare a property with every or some rows of a subquery" )
+	@Test
+	public void testPropertyQuantified() {
+		String ids = "c = entityCriteria( 'Manufacturer' ); ids = c.subquery( 'Manufacturer', 'm2' ).project( ( p ) => p.property( 'id' ) );";
+		assertThat( list( ids + "result = c.propertyGeAll( 'id', ids ).list().map( ( m ) => m.getId() );" ) ).containsExactly( 77 );
+		assertThat( list( ids + "result = c.propertyLeAll( 'id', ids ).list().map( ( m ) => m.getId() );" ) ).containsExactly( 1 );
+		assertThat( number( ids + "result = c.propertyGtSome( 'id', ids ).count();" ) ).isEqualTo( 2 );
+		assertThat( number( ids + "result = c.propertyLtSome( 'id', ids ).count();" ) ).isEqualTo( 2 );
+		assertThat( number( ids + "result = c.propertyGeSome( 'id', ids ).count();" ) ).isEqualTo( 3 );
+		assertThat( number( ids + "result = c.propertyLeSome( 'id', ids ).count();" ) ).isEqualTo( 3 );
+		assertThat( number( ids + "result = c.propertyGtAll( 'id', ids ).count();" ) ).isEqualTo( 0 );
+		assertThat( number( ids + "result = c.propertyLtAll( 'id', ids ).count();" ) ).isEqualTo( 0 );
+		assertThat( list( """
+		                  c = entityCriteria( 'Manufacturer' );
+		                  honda = c.subquery( 'Manufacturer', 'm2' ).isEq( 'id', 42 ).project( ( p ) => p.property( 'id' ) );
+		                  result = c.propertyEqAll( 'id', honda ).list().map( ( m ) => m.getId() );
+		                  """ ) ).containsExactly( 42 );
+	}
+
+	/**
+	 * Test: sub*All / sub*Some (manufacturer ids are 1, 42 and 77).
+	 */
+	@DisplayName( "sub*All / sub*Some compare a value with every or some rows of a subquery" )
+	@Test
+	public void testSubQuantified() {
+		String ids = "c = entityCriteria( 'Manufacturer' ); ids = c.subquery( 'Manufacturer', 'm2' ).project( ( p ) => p.property( 'id' ) );";
+		assertThat( number( ids + "result = c.subGeAll( 77, ids ).count();" ) ).isEqualTo( 3 );
+		assertThat( number( ids + "result = c.subGtAll( 77, ids ).count();" ) ).isEqualTo( 0 );
+		assertThat( number( ids + "result = c.subGtSome( 77, ids ).count();" ) ).isEqualTo( 3 );
+		assertThat( number( ids + "result = c.subGeSome( 1, ids ).count();" ) ).isEqualTo( 3 );
+		assertThat( number( ids + "result = c.subLeAll( 1, ids ).count();" ) ).isEqualTo( 3 );
+		assertThat( number( ids + "result = c.subLeSome( 0, ids ).count();" ) ).isEqualTo( 3 );
+		assertThat( number( ids + "result = c.subLtAll( 1, ids ).count();" ) ).isEqualTo( 0 );
+		assertThat( number( ids + "result = c.subLtSome( 1, ids ).count();" ) ).isEqualTo( 3 );
+		assertThat( number( ids + "result = c.subGeSome( 0, ids ).count();" ) ).isEqualTo( 0 );
+		assertThat( number( """
+		                    c = entityCriteria( 'Manufacturer' );
+		                    honda = c.subquery( 'Manufacturer', 'm2' ).isEq( 'id', 42 ).project( ( p ) => p.property( 'id' ) );
+		                    result = c.subEqAll( 42, honda ).count();
+		                    """ ) ).isEqualTo( 3 );
+	}
+
+	/**
+	 * Test: quantified forms compile to all / some, work as restrictions and take not... forms.
+	 */
+	@DisplayName( "Quantified forms compile to all / some, and work as restrictions and not... forms" )
+	@Test
+	public void testQuantifiedForms() {
+		String ids = "c = entityCriteria( 'Manufacturer' ); ids = c.subquery( 'Manufacturer', 'm2' ).project( ( p ) => p.property( 'id' ) );";
+		assertThat( ( String ) run( ids + "result = c.propertyGeAll( 'id', ids ).getHQL();" ) ).contains( ">= all (" );
+		assertThat( ( String ) run( ids + "result = c.subLtSome( 1, ids ).getHQL();" ) ).contains( "< some (" );
+		assertThat( number( ids + "result = c.add( c.restrictions.propertyGeAll( 'id', ids ) ).count();" ) ).isEqualTo( 1 );
+		assertThat( number( ids + "result = c.notPropertyGeAll( 'id', ids ).count();" ) ).isEqualTo( 2 );
 	}
 
 	/**
