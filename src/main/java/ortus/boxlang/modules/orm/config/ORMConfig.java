@@ -970,9 +970,23 @@ public class ORMConfig {
 	 */
 	private String toFullHibernateDialectName( String dialectName ) {
 		String raw = dialectName.trim();
-		// A fully-qualified class name (contains a dot) is passed through untouched.
 		if ( raw.contains( "." ) ) {
-			return raw;
+			// A class name is used as is, unless it is a Hibernate 5 dialect class that Hibernate 7 removed
+			// (e.g. org.hibernate.dialect.MySQL5InnoDBDialect): those resolve through the alias table by their simple name.
+			if ( !raw.startsWith( "org.hibernate.dialect." ) || isLoadableClass( raw ) ) {
+				return raw;
+			}
+			String	legacyKey		= raw.substring( raw.lastIndexOf( '.' ) + 1 ).toUpperCase().replace( "DIALECT", "" );
+			String	legacyResolved	= DIALECT_ALIASES.get( legacyKey );
+			if ( legacyResolved == null ) {
+				return raw;
+			}
+			if ( WARNED_DIALECTS.add( raw.toUpperCase() ) ) {
+				logger.warn(
+				    "ORM dialect [{}] is a Hibernate 5 class that Hibernate 7 no longer has; it was resolved to [{}]. Configure a current dialect name to silence this warning.",
+				    raw, legacyResolved );
+			}
+			return legacyResolved;
 		}
 		String	key			= raw.toUpperCase().replace( "DIALECT", "" );
 		String	resolved	= DIALECT_ALIASES.get( key );
@@ -988,6 +1002,22 @@ public class ORMConfig {
 			    raw, resolved );
 		}
 		return resolved;
+	}
+
+	/**
+	 * Whether a class can be loaded by the module, without initializing it.
+	 *
+	 * @param className The fully-qualified class name.
+	 *
+	 * @return True when the class exists.
+	 */
+	private static boolean isLoadableClass( String className ) {
+		try {
+			Class.forName( className, false, ORMConfig.class.getClassLoader() );
+			return true;
+		} catch ( ClassNotFoundException | LinkageError e ) {
+			return false;
+		}
 	}
 
 	/**

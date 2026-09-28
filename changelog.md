@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Upgraded the ORM engine from Hibernate 5.6.15 to 7.4.8. BoxLang-facing BIF behavior is preserved.
 - Build and test against BoxLang 1.17.0 (was 1.11.0); the module's minimum BoxLang version is now 1.17.0 due to several updates we required in the new approach.
-- Legacy dialect aliases (e.g. `MySQL57`, `Oracle10g`, `DerbyTenSeven`) now map to their Hibernate 7 equivalents with a one-time deprecation warning; community-dialect databases (SQLite, Derby, Firebird, …) resolve automatically.
+- Legacy dialect aliases (e.g. `MySQL57`, `Oracle10g`, `DerbyTenSeven`) and removed Hibernate 5 dialect classes (e.g. `org.hibernate.dialect.MySQL5InnoDBDialect`) now map to their Hibernate 7 equivalents with a one-time deprecation warning; community-dialect databases (SQLite, Derby, Firebird, …) resolve automatically.
 - `ormGetSession()` / `ormGetSessionFactory()` return facade-aware wrappers so a BoxLang entity name or instance works against the raw Hibernate API.
 - ORM operations inside a BoxLang `transaction{}` now ride the transaction's JDBC connection instead of the ORM running its own separate Hibernate transaction. BoxLang owns the real commit/rollback, so ORM writes are governed by the same demarcation as native `queryExecute` calls (rolled back together, committed together). The `TransactionManager` interceptor now only flushes the session on commit/end and clears it on rollback, and in-transaction ORM queries flush first so they observe their own pending writes (read-your-writes).
 

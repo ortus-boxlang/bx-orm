@@ -51,6 +51,35 @@ public class ORMConfigTest extends BaseORMTest {
 	}
 
 	@Test
+	public void testLegacyDialectClassNames() {
+		// Hibernate 5 dialect classes that Hibernate 7 removed resolve through the alias table
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "org.hibernate.dialect.MySQL5InnoDBDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "org.hibernate.dialect.MySQLDialect", config.getProperty( AvailableSettings.DIALECT ) );
+
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "org.hibernate.dialect.DerbyTenSevenDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "org.hibernate.community.dialect.DerbyDialect", config.getProperty( AvailableSettings.DIALECT ) );
+
+		// Current Hibernate 7 classes and custom dialects are used as is
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "org.hibernate.dialect.MySQLDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "org.hibernate.dialect.MySQLDialect", config.getProperty( AvailableSettings.DIALECT ) );
+
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "com.example.MyDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "com.example.MyDialect", config.getProperty( AvailableSettings.DIALECT ) );
+	}
+
+	@Test
 	public void testMetadataDefaultsEnabledWhenDialectMissing() {
 		Configuration config = new ORMConfig( Struct.of(
 		    ORMKeys.datasource, "TestDB"
