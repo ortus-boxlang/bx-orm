@@ -94,6 +94,8 @@ public class ORMExecuteQuery extends BaseORMBIF {
 	 * <li><strong><code>cacheName</code></strong> - The query cache region to use (alias <code>cacheRegion</code>). Implies <code>cacheable</code> unless
 	 * <code>cacheable</code> is given.</li>
 	 * <li><strong><code>timeout</code></strong> - The query timeout in seconds. Default is no timeout.</li>
+	 * <li><strong><code>asStream</code></strong> - Return a Java <code>Stream</code> that reads rows from the database as it is consumed,
+	 * instead of an array. Consume it in the same request. Not allowed with <code>unique</code> or an update/delete. Default is false.</li>
 	 * </ul>
 	 *
 	 * @param context   The context in which the BIF is being invoked.
@@ -158,7 +160,16 @@ public class ORMExecuteQuery extends BaseORMBIF {
 		if ( isUnique ) {
 			options.put( ORMKeys.maxResults, uniqueFirst ? 1 : 2 );
 		}
-		Object results = new HQLQuery( context, arguments.getAsString( ORMKeys.hql ), params, options ).execute();
+		HQLQuery query = new HQLQuery( context, arguments.getAsString( ORMKeys.hql ), params, options );
+		if ( BooleanCaster.cast( options.getOrDefault( ORMKeys.asStream, false ) ) ) {
+			if ( isUnique || query.isUpdate() ) {
+				throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.ARGUMENT,
+				    "The asStream option only applies to a select that returns many rows, not to a unique query or an update/delete.",
+				    "Remove asStream, or remove unique/uniqueFirst." );
+			}
+			return query.stream();
+		}
+		Object results = query.execute();
 		if ( results instanceof List<?> castList ) {
 			if ( isUnique ) {
 				if ( castList.size() > 1 ) {

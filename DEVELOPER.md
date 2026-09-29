@@ -50,6 +50,7 @@ end-user docs.
 | Feature | What it does | Details |
 | --- | --- | --- |
 | `entityCriteria()` | Fluent query builder: conditions, groups, automatic joins, subqueries, projections, paging, `paginate`, `each`/`chunk`, `getSQL()`, readable `writeDump()`, cborm method names and interception points. | [§10c](#10c-entitycriteria-the-fluent-query-builder) |
+| `asStream` option | `ormExecuteQuery()` and `entityLoad()` return a DB-backed Java `Stream` (`HQLQuery.stream()`, `ORMApp.streamEntitiesByFilter()`); rejected with `unique` or DML. Criteria `paginate()` also returns `offset`. | `HQLQuery`, `ORMApp` |
 | Case-insensitive HQL names | `ormExecuteQuery()` HQL resolves entity and property names in any case: a name Hibernate cannot resolve is rewritten to its one case-insensitive match and compiled again; the corrected HQL is cached per `ORMApp`. | `HQLCaseResolver` |
 | cborm criteria extras | `c.restrictions.*` condition objects for `add()`/`or()`/`and()`/`not()`, quantified subqueries (`subGeAll`, `propertyLtSome`, ...), and the SQL log (`startSqlLog()`, `logSQL()`, `getSqlLog()`). | [§10c](#10c-entitycriteria-the-fluent-query-builder) |
 

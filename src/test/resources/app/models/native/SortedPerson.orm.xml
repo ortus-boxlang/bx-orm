@@ -6,24 +6,22 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbURLMenuItemFacade" name="cbURLMenuItem">
-        <extends>cbMenuItem</extends>
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.SortedPersonFacade" name="SortedPerson">
+        <table name="sorted_people"/>
         <batch-size>25</batch-size>
-        <lazy>true</lazy>
-        <discriminator-value>URL</discriminator-value>
         <attributes>
-            <basic name="url">
-                <column name="url" nullable="true"/>
+            <id name="id">
+                <column name="id"/>
+                <generated-value generator="increment"/>
+                <target>Integer</target>
+            </id>
+            <basic name="firstName">
+                <column length="50" name="firstName"/>
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <basic name="target">
-                <column name="target" nullable="true"/>
-                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
-                <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
-            </basic>
-            <basic name="urlClass">
-                <column name="urlClass" nullable="true"/>
+            <basic name="lastName">
+                <column length="50" name="lastName"/>
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>

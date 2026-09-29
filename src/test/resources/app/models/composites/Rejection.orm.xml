@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.RejectionFacade" name="Rejection">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.RejectionFacade" name="Rejection">
         <table name="composites_Rejections"/>
         <batch-size>25</batch-size>
         <attributes>
@@ -41,7 +41,7 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <many-to-one name="user" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbAuthorFacade">
+            <many-to-one fetch="LAZY" name="user" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbAuthorFacade">
                 <join-column insertable="false" name="authorID" updatable="false"/>
             </many-to-one>
         </attributes>

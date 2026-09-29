@@ -410,8 +410,7 @@ public class HQLQuery {
 	 * @return The row count or the list of results.
 	 */
 	public Object execute() {
-		boolean							isUpdate	= this.hql.trim().toUpperCase().startsWith( UPDATE_PREFIX )
-		    || this.hql.trim().toUpperCase().startsWith( DELETE_PREFIX );
+		boolean							isUpdate	= isUpdate();
 		org.hibernate.query.Query<?>	hqlQuery	= prepare( !isUpdate );
 		if ( isUpdate ) {
 			return hqlQuery.executeUpdate();
@@ -423,6 +422,28 @@ public class HQLQuery {
 			    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
 			    .collect( java.util.stream.Collectors.toList() );
 		}
+	}
+
+	/**
+	 * Whether this query is a bulk update or delete (HQL starting with {@code update} or {@code delete}).
+	 *
+	 * @return True for DML.
+	 */
+	public boolean isUpdate() {
+		String start = this.hql.trim().toUpperCase();
+		return start.startsWith( UPDATE_PREFIX ) || start.startsWith( DELETE_PREFIX );
+	}
+
+	/**
+	 * Run a select as a stream (the {@code asStream} option): rows are read from the database as the stream is consumed,
+	 * with entity facades unwrapped to their BoxLang instances. The stream holds an open JDBC result set until it is
+	 * exhausted or closed, so consume it in the same request; Hibernate releases it when the session closes at the latest.
+	 *
+	 * @return A {@link java.util.stream.Stream} of entities, scalars or tuples.
+	 */
+	public java.util.stream.Stream<Object> stream() {
+		return inLockScopeStreaming( () -> prepare( true ).getResultStream() )
+		    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade );
 	}
 
 	/**

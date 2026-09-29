@@ -109,6 +109,7 @@ public class CriteriaTerminalsTest extends CriteriaTestSupport {
 		assertThat( ( ( Array ) page.get( Key.of( "results" ) ) ).size() ).isEqualTo( 2 );
 		assertThat( paging.get( Key.of( "page" ) ).toString() ).isEqualTo( "2" );
 		assertThat( paging.get( Key.of( "maxRows" ) ).toString() ).isEqualTo( "2" );
+		assertThat( paging.get( Key.of( "offset" ) ).toString() ).isEqualTo( "2" );
 		assertThat( paging.get( Key.of( "totalRecords" ) ).toString() ).isEqualTo( "5" );
 		assertThat( paging.get( Key.of( "totalPages" ) ).toString() ).isEqualTo( "3" );
 		IStruct last = ( IStruct ) run( "result = entityCriteria( 'Vehicle' ).order( 'vin' ).paginate( page = 3, maxRows = 2 );" );

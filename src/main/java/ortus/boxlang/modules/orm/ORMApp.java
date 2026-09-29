@@ -950,8 +950,48 @@ public class ORMApp {
 	 * @param entityName The name of the entity to load.
 	 * @param filter     Struct of filter criteria.
 	 * @param options    Struct of options, including maxResults, offset, order, etc.
+	 *
+	 * @return The matching entities.
 	 */
 	public Array loadEntitiesByFilter( IBoxContext context, String entityName, IStruct filter, IStruct options ) {
+		Query<?> query = filterQuery( context, entityName, filter, options );
+		return Array.of(
+		    executeFilterQuery( query, options )
+		        .stream()
+		        // Hibernate returns POJO facades; unwrap each to its BoxLang instance.
+		        .map( entity -> ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity ) )
+		        .toArray()
+		);
+	}
+
+	/**
+	 * Stream the entities matching filter criteria: rows are read from the database as the stream is consumed. The
+	 * stream holds an open JDBC result set until it is exhausted or closed, so consume it in the same request.
+	 *
+	 * @param context    JDBC-capable context in which the BIF was invoked.
+	 * @param entityName The name of the entity to load.
+	 * @param filter     Struct of filter criteria.
+	 * @param options    Struct of options, including maxResults, offset, order, etc.
+	 *
+	 * @return A stream of the matching entities.
+	 */
+	public java.util.stream.Stream<Object> streamEntitiesByFilter( IBoxContext context, String entityName, IStruct filter, IStruct options ) {
+		Query<?> query = filterQuery( context, entityName, filter, options );
+		applyFilterOptions( query, options );
+		return query.getResultStream().map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade );
+	}
+
+	/**
+	 * Build the query for an entityLoad filter: validated filter and sort properties, bound parameters.
+	 *
+	 * @param context    JDBC-capable context in which the BIF was invoked.
+	 * @param entityName The name of the entity to load.
+	 * @param filter     Struct of filter criteria.
+	 * @param options    Struct of options (orderBy, ignorecase); the entity's defaultSort is added when no order is given.
+	 *
+	 * @return The query, not yet run.
+	 */
+	private Query<?> filterQuery( IBoxContext context, String entityName, IStruct filter, IStruct options ) {
 		EntityRecord	entityRecord	= this.lookupEntity( entityName, true );
 		ORMContext		ormContext		= ORMContext.getForContext( context );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
@@ -1041,13 +1081,7 @@ public class ORMApp {
 			}
 		} );
 
-		return Array.of(
-		    executeFilterQuery( query, options )
-		        .stream()
-		        // Hibernate returns POJO facades; unwrap each to its BoxLang instance.
-		        .map( entity -> ( IClassRunnable ) ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity ) )
-		        .toArray()
-		);
+		return query;
 	}
 
 	/**
@@ -1136,6 +1170,17 @@ public class ORMApp {
 	 * @param options Struct of options, including maxResults, offset, etc.
 	 */
 	public List<?> executeFilterQuery( Query<?> query, IStruct options ) {
+		applyFilterOptions( query, options );
+		return query.list();
+	}
+
+	/**
+	 * Apply common query options (cacheable, cacheName, timeout, readOnly, maxResults, offset) to a filter query.
+	 *
+	 * @param query   The query.
+	 * @param options Struct of options.
+	 */
+	private void applyFilterOptions( Query<?> query, IStruct options ) {
 		// cacheable, cachename (the second-level cache region) and timeout, the same way ormExecuteQuery applies them.
 		HQLQuery.applyCacheAndTimeout( query, options );
 		if ( BooleanCaster.cast( options.getOrDefault( ORMKeys.readOnly, false ) ) ) {
@@ -1153,7 +1198,6 @@ public class ORMApp {
 				query.setFirstResult( offset );
 			}
 		}
-		return query.list();
 	}
 
 	/**

@@ -97,6 +97,8 @@ public class EntityLoad extends BaseORMBIF {
 	 * <li><strong><code>timeout</code></strong> - Number. Specifies the timeout value (in seconds) for the query. No timeout by default.</li>
 	 * <li><strong><code>readOnly</code></strong> - Boolean. Load the entities read-only: they are not dirty-checked and changes to them are
 	 * never saved. Default is `false`. See also <code>entityLoadReadOnly()</code>.</li>
+	 * <li><strong><code>asStream</code></strong> - Boolean. Return a Java <code>Stream</code> that reads entities from the database as it is
+	 * consumed, instead of an array. Consume it in the same request. Not allowed with <code>unique</code>. Default is `false`.</li>
 	 * </ul>
 	 *
 	 * @param context   The context in which the BIF is being invoked.
@@ -145,6 +147,9 @@ public class EntityLoad extends BaseORMBIF {
 		    && BooleanCaster.cast( given.getOrDefault( ORMKeys.readOnly, false ) ) ? Struct.of( ORMKeys.readOnly, true ) : null;
 		var		entity	= ormService.requireORMApp( context ).loadEntityById( context, arguments.getAsString( ORMKeys.entityName ),
 		    arguments.get( ORMKeys.idOrFilter ), options );
+		if ( wantsStream( arguments ) ) {
+			return java.util.stream.Stream.ofNullable( ( Object ) entity );
+		}
 		if ( BooleanCaster.cast( arguments.getOrDefault( ORMKeys.uniqueOrOrder, "false" ) ) ) {
 			return entity;
 		}
@@ -166,6 +171,15 @@ public class EntityLoad extends BaseORMBIF {
 		// uniqueFirst: take the first match (the pre-2.0 behavior); otherwise a unique load matching several rows is an error.
 		boolean	uniqueFirst	= BooleanCaster.cast( options.getOrDefault( ORMKeys.uniqueFirst, false ) );
 		boolean	unique		= uniqueFirst || BooleanCaster.cast( options.getOrDefault( ORMKeys.unique, false ) );
+		if ( BooleanCaster.cast( options.getOrDefault( ORMKeys.asStream, false ) ) ) {
+			if ( unique ) {
+				throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.ARGUMENT,
+				    "The asStream option cannot be combined with unique or uniqueFirst: a stream returns many entities.",
+				    "Remove asStream, or remove unique/uniqueFirst." );
+			}
+			return ormService.requireORMApp( context ).streamEntitiesByFilter( context, arguments.getAsString( ORMKeys.entityName ), filter,
+			    options );
+		}
 		if ( unique ) {
 			options.put( ORMKeys.unique, true );
 			options.put( ORMKeys.maxResults, uniqueFirst ? 1 : 2 );
@@ -179,6 +193,21 @@ public class EntityLoad extends BaseORMBIF {
 			return results.isEmpty() ? null : results.getFirst();
 		}
 		return results;
+	}
+
+	/**
+	 * Whether the options argument asks for a stream ({@code asStream : true}).
+	 *
+	 * @param arguments Arguments scope of the BIF.
+	 *
+	 * @return True to return a stream.
+	 */
+	private static boolean wantsStream( ArgumentsScope arguments ) {
+		Object options = arguments.get( ORMKeys.options );
+		if ( options == null && arguments.get( ORMKeys.uniqueOrOrder ) instanceof IStruct given ) {
+			options = given;
+		}
+		return options instanceof IStruct given && BooleanCaster.cast( given.getOrDefault( ORMKeys.asStream, false ) );
 	}
 
 	/**

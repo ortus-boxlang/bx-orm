@@ -6,8 +6,20 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbContentFacade" name="cbContent">
-        <table name="cb_content"/>
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbContentFacade" name="cbContent">
+        <table name="cb_content">
+            <index column-list="contentType" name="idx_discriminator"/>
+            <index column-list="contentType, isPublished" name="idx_published"/>
+            <index column-list="title, isPublished" name="idx_search"/>
+            <index column-list="slug" name="idx_slug"/>
+            <index column-list="slug, isPublished" name="idx_publishedSlug"/>
+            <index column-list="publishedDate" name="idx_publishedDate"/>
+            <index column-list="expireDate" name="idx_expireDate"/>
+            <index column-list="`cache`" name="idx_cache"/>
+            <index column-list="cacheTimeout" name="idx_cachetimeout"/>
+            <index column-list="cacheLastAccessTimeout" name="idx_cachelastaccesstimeout"/>
+            <index column-list="showInSearch" name="idx_showInSearch"/>
+        </table>
         <caching access="READ_WRITE" region="cbContent"/>
         <batch-size>25</batch-size>
         <inheritance strategy="SINGLE_TABLE"/>
@@ -134,40 +146,40 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <many-to-one fetch="LAZY" name="creator" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbAuthorFacade">
+            <many-to-one fetch="LAZY" name="creator" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbAuthorFacade">
                 <join-column name="FK_authorID" nullable="false"/>
             </many-to-one>
-            <one-to-many classification="BAG" fetch="LAZY" mapped-by="relatedContent" name="comments" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbCommentFacade">
+            <one-to-many classification="BAG" fetch="LAZY" mapped-by="relatedContent" name="comments" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbCommentFacade">
                 <order-by>createdDate</order-by>
                 <batch-size>25</batch-size>
                 <cascade>
                     <cascade-all/>
                 </cascade>
             </one-to-many>
-            <one-to-many classification="BAG" fetch="LAZY" mapped-by="relatedContent" name="customFields" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbCustomFieldFacade">
+            <one-to-many classification="BAG" fetch="LAZY" mapped-by="relatedContent" name="customFields" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbCustomFieldFacade">
                 <batch-size>25</batch-size>
                 <cascade>
                     <cascade-all/>
                 </cascade>
             </one-to-many>
-            <one-to-many classification="BAG" fetch="LAZY" mapped-by="relatedContent" name="contentVersions" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbContentVersionFacade">
+            <one-to-many classification="BAG" fetch="LAZY" mapped-by="relatedContent" name="contentVersions" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbContentVersionFacade">
                 <order-by>version desc</order-by>
                 <batch-size>25</batch-size>
                 <cascade>
                     <cascade-all/>
                 </cascade>
             </one-to-many>
-            <many-to-one fetch="LAZY" name="parent" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbContentFacade">
+            <many-to-one fetch="LAZY" name="parent" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbContentFacade">
                 <join-column name="FK_parentID"/>
             </many-to-one>
-            <one-to-many classification="BAG" fetch="LAZY" mapped-by="parent" name="children" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbContentFacade">
+            <one-to-many classification="BAG" fetch="LAZY" mapped-by="parent" name="children" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbContentFacade">
                 <order-by>createdDate</order-by>
                 <batch-size>25</batch-size>
                 <cascade>
                     <cascade-all/>
                 </cascade>
             </one-to-many>
-            <many-to-many classification="BAG" fetch="LAZY" name="relatedContent" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbContentFacade">
+            <many-to-many classification="BAG" fetch="LAZY" name="relatedContent" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbContentFacade">
                 <order-by>title</order-by>
                 <join-table name="cb_relatedContent">
                     <join-column name="FK_contentID"/>
@@ -178,7 +190,7 @@
                     <cascade-merge/>
                 </cascade>
             </many-to-many>
-            <many-to-many classification="BAG" fetch="LAZY" mapped-by="relatedContent" name="linkedContent" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbContentFacade">
+            <many-to-many classification="BAG" fetch="LAZY" mapped-by="relatedContent" name="linkedContent" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbContentFacade">
                 <order-by>title</order-by>
                 <cascade>
                     <cascade-persist/>

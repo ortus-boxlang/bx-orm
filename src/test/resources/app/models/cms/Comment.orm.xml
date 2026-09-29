@@ -6,8 +6,11 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbCommentFacade" name="cbComment">
-        <table name="cb_comment"/>
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbCommentFacade" name="cbComment">
+        <table name="cb_comment">
+            <index column-list="isApproved, FK_contentID" name="idx_contentComment"/>
+            <index column-list="isApproved" name="idx_approved"/>
+        </table>
         <caching access="READ_WRITE" region="cbComment"/>
         <batch-size>25</batch-size>
         <attributes>
@@ -63,7 +66,7 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.BooleanConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <many-to-one fetch="LAZY" name="relatedContent" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbContentFacade">
+            <many-to-one fetch="LAZY" name="relatedContent" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbContentFacade">
                 <join-column name="FK_contentID" nullable="false"/>
             </many-to-one>
         </attributes>

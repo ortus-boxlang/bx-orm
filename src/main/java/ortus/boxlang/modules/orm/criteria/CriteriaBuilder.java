@@ -2521,7 +2521,8 @@ public final class CriteriaBuilder implements IReferenceable {
 	 * @param page    The page number (1-based).
 	 * @param maxRows Rows per page.
 	 *
-	 * @return {@code { results, pagination : { page, maxRows, totalRecords, totalPages } }}.
+	 * @return {@code { results, pagination : { page, maxRows, offset, totalRecords, totalPages } }}. {@code offset} is the
+	 *         number of rows skipped before this page.
 	 */
 	public IStruct paginate( IBoxContext context, Object page, Object maxRows ) {
 		int		p		= positive( page, "page" );
@@ -2534,7 +2535,8 @@ public final class CriteriaBuilder implements IReferenceable {
 			Compiled c = compile( Mode.LIST, null );
 			results = shapeRows( run( context, c, ( p - 1 ) * size, size ), c );
 		}
-		IStruct paging = Struct.linkedOf( Key.of( "page" ), p, Key.of( "maxRows" ), size, Key.of( "totalRecords" ), total, Key.of( "totalPages" ),
+		IStruct paging = Struct.linkedOf( Key.of( "page" ), p, Key.of( "maxRows" ), size, Key.of( "offset" ), ( p - 1 ) * size,
+		    Key.of( "totalRecords" ), total, Key.of( "totalPages" ),
 		    ( long ) Math.ceil( total / ( double ) size ) );
 		return Struct.linkedOf( Key.of( "results" ), results, Key.of( "pagination" ), paging );
 	}

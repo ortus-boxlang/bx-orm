@@ -6,8 +6,8 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.ManufacturerFacade" name="Manufacturer">
-        <table name="manufacturers"/>
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.NotebookFacade" name="Notebook">
+        <table name="notebooks"/>
         <batch-size>25</batch-size>
         <attributes>
             <id name="id">
@@ -16,17 +16,13 @@
                 <target>Integer</target>
             </id>
             <basic name="name">
-                <column name="name"/>
+                <column length="100" name="name"/>
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <basic name="address">
-                <column name="address"/>
-                <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
-                <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
-            </basic>
-            <one-to-many classification="BAG" name="vehicles" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.VehicleFacade">
-                <join-column name="FK_manufacturer"/>
+            <one-to-many classification="BAG" fetch="LAZY" name="pinnedNotes" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.PinNoteFacade">
+                <sql-restriction>pinned = 1</sql-restriction>
+                <join-column name="notebook_id"/>
             </one-to-many>
         </attributes>
     </entity>

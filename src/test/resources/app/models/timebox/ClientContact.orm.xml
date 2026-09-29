@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ClientContactFacade" name="ClientContact">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.ClientContactFacade" name="ClientContact">
         <extends>User</extends>
         <secondary-table name="clientContact" owned="true">
             <primary-key-join-column name="userId"/>
@@ -22,7 +22,7 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.BooleanConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <many-to-one fetch="LAZY" name="Client" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ClientFacade">
+            <many-to-one fetch="LAZY" name="Client" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.ClientFacade">
                 <join-column name="FK_clientId" nullable="false" table="clientContact"/>
             </many-to-one>
         </attributes>
