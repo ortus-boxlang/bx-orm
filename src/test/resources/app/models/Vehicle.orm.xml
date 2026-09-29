@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.VehicleFacade" name="Vehicle">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.VehicleFacade" name="Vehicle">
         <table name="vehicles"/>
         <batch-size>25</batch-size>
         <attributes>
@@ -24,7 +24,7 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <many-to-many classification="BAG" fetch="EAGER" name="features" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.FeatureFacade">
+            <many-to-many classification="BAG" fetch="EAGER" name="features" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.FeatureFacade">
                 <join-table name="vehicle_features">
                     <join-column name="FK_vehicle"/>
                     <inverse-join-column name="FK_feature"/>
@@ -33,7 +33,7 @@
                     <cascade-all/>
                 </cascade>
             </many-to-many>
-            <many-to-one fetch="LAZY" name="manufacturer" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.ManufacturerFacade">
+            <many-to-one fetch="LAZY" name="manufacturer" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ManufacturerFacade">
                 <join-column name="FK_manufacturer"/>
             </many-to-one>
         </attributes>

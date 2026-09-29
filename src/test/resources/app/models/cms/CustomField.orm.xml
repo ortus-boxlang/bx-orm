@@ -6,10 +6,8 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbCustomFieldFacade" name="cbCustomField">
-        <table name="cb_customfield">
-            <index column-list="FK_contentID" name="idx_contentCustomFields"/>
-        </table>
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbCustomFieldFacade" name="cbCustomField">
+        <table name="cb_customfield"/>
         <caching access="READ_WRITE" region="cbCustomField"/>
         <batch-size>25</batch-size>
         <attributes>
@@ -45,7 +43,7 @@
                 <target>String</target>
                 <jdbc-type-code>-1</jdbc-type-code>
             </basic>
-            <many-to-one fetch="LAZY" name="relatedContent" optional="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbContentFacade">
+            <many-to-one fetch="LAZY" name="relatedContent" optional="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbContentFacade">
                 <join-column name="FK_contentID" nullable="true"/>
             </many-to-one>
         </attributes>

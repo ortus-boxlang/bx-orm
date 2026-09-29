@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.TimeOffNoteFacade" name="TimeOffNote">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.TimeOffNoteFacade" name="TimeOffNote">
         <table name="projectNote"/>
         <batch-size>25</batch-size>
         <attributes>
@@ -39,10 +39,10 @@
                 <target>String</target>
                 <jdbc-type-code>-1</jdbc-type-code>
             </basic>
-            <many-to-one fetch="LAZY" name="employee" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.EmployeeFacade">
+            <many-to-one fetch="LAZY" name="employee" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.EmployeeFacade">
                 <join-column name="FK_userId" nullable="false"/>
             </many-to-one>
-            <many-to-one fetch="LAZY" name="request" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.TimeOffFacade">
+            <many-to-one fetch="LAZY" name="request" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.TimeOffFacade">
                 <join-column name="FK_timeOffId" nullable="false"/>
             </many-to-one>
         </attributes>

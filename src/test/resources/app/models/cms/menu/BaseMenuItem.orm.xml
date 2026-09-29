@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbMenuItemFacade" name="cbMenuItem">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbMenuItemFacade" name="cbMenuItem">
         <table name="cb_menuItem"/>
         <caching access="READ_WRITE" region="cbMenuItem"/>
         <batch-size>25</batch-size>
@@ -64,10 +64,10 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <many-to-one fetch="LAZY" name="parent" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbMenuItemFacade">
+            <many-to-one fetch="LAZY" name="parent" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbMenuItemFacade">
                 <join-column name="FK_parentID"/>
             </many-to-one>
-            <one-to-many classification="BAG" fetch="LAZY" mapped-by="parent" name="children" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.cbMenuItemFacade">
+            <one-to-many classification="BAG" fetch="LAZY" mapped-by="parent" name="children" orphan-removal="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.cbMenuItemFacade">
                 <cascade>
                     <cascade-all/>
                 </cascade>

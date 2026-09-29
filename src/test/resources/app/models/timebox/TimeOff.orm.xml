@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.TimeOffFacade" name="TimeOff">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.TimeOffFacade" name="TimeOff">
         <table name="timeOff">
             <index column-list="status" name="idx_timeOffStatus"/>
         </table>
@@ -80,10 +80,10 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <many-to-one fetch="LAZY" name="employee" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.EmployeeFacade">
+            <many-to-one fetch="LAZY" name="employee" optional="false" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.EmployeeFacade">
                 <join-column name="FK_userId" nullable="false"/>
             </many-to-one>
-            <many-to-one fetch="LAZY" name="approver" optional="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.EmployeeFacade">
+            <many-to-one fetch="LAZY" name="approver" optional="true" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.EmployeeFacade">
                 <join-column name="FK_approverId" nullable="true"/>
             </many-to-one>
         </attributes>

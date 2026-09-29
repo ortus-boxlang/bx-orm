@@ -6,7 +6,7 @@
 ~ https://boxlang.io
 ~ https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html
 --><entity-mappings version="7.0" xmlns="http://www.hibernate.org/xsd/orm/mapping">
-    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.ClientFacade" name="Client">
+    <entity class="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ClientFacade" name="Client">
         <table name="client"/>
         <batch-size>25</batch-size>
         <attributes>
@@ -43,7 +43,7 @@
                 <convert converter="ortus.boxlang.modules.orm.hibernate.converters.StringConverter"/>
                 <java-type>org.hibernate.type.descriptor.java.ObjectJavaType</java-type>
             </basic>
-            <one-to-many classification="BAG" fetch="LAZY" mapped-by="client" name="contacts" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.bxormtest.ClientContactFacade"/>
+            <one-to-many classification="BAG" fetch="LAZY" mapped-by="client" name="contacts" target-entity="ortus.boxlang.modules.orm.hibernate.facade.generated.default.ClientContactFacade"/>
         </attributes>
     </entity>
 </entity-mappings>
