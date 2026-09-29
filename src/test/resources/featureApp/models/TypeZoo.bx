@@ -1,0 +1,15 @@
+/**
+ * Exercises ormType alias normalization: each property uses a documented alias that must normalize to the right
+ * converter/JDBC type and round-trip its value.
+ */
+class accessors="true" persistent="true" entityname="TypeZoo" table="feat_typezoo" {
+
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+
+	property name="flagYesNo" ormType="yesno" sqltype="boolean";
+	property name="flagTrueFalse" ormType="truefalse" sqltype="boolean";
+	property name="bigNum" ormType="bigint";
+	property name="smallNum" ormType="tinyint";
+	property name="decimalNum" ormType="numeric";
+	property name="altText" ormType="nvarchar" length="100";
+}

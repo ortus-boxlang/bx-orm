@@ -108,19 +108,22 @@ public class EntitySaveTest extends BaseORMTest {
 		instance.executeSource(
 			"""
 			function isDirty( entity ){
-					var sessionFactory = ormGetSessionFactory();
 					var session = ormGetSession();
-					var md = sessionFactory.getClassMetaData( "Category" );
-					println( "Identifier: " & md.getIdentifier( arguments.entity ) );
-					var snapshot = md.getDatabaseSnapshot( md.getIdentifier( arguments.entity ), session );
-					var currentState = md.getPropertyValues( arguments.entity );
+					// Hibernate 6+ removed SessionFactory.getClassMetaData(); the equivalent dirty-checking metadata now lives on
+					// the EntityPersister, reached via the mapping metamodel. The persister still exposes getIdentifier,
+					// getDatabaseSnapshot, getValues and findDirty, so the same snapshot comparison works.
+					var persister = ormGetSessionFactory().getMappingMetamodel().getEntityDescriptor( "Category" );
+					var id = persister.getIdentifier( arguments.entity, session );
+					println( "Identifier: " & id );
+					var snapshot = persister.getDatabaseSnapshot( id, session );
+					var currentState = persister.getValues( arguments.entity );
 					if( isNull( snapshot ) ){
 						println( "Snapshot is null" );
 						return false;
 					}
-					var modified = md.findModified(
-						snapshot,
+					var modified = persister.findDirty(
 						currentState,
+						snapshot,
 						arguments.entity,
 						session
 					);
@@ -201,6 +204,29 @@ public class EntitySaveTest extends BaseORMTest {
 		);
 		// @formatter:on
 		assertThat( variables.getAsBoolean( Key.of( "result" ) ) ).isFalse();
+	}
+
+	@DisplayName( "It assigns an identity id at entitySave() inside a transaction, before any flush" )
+	@Test
+	public void testIdentityIdAssignedOnSaveInTransaction() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction {
+				try {
+					e = entityNew( "VetoIdentityThing", { name : "identity-on-save" } );
+					entitySave( e );
+					result = !isNull( e.getId() );
+				} finally {
+					transactionRollback();
+				}
+			}
+			ormClearSession();
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.getAsBoolean( Key.of( "result" ) ) ).isTrue();
 	}
 
 }

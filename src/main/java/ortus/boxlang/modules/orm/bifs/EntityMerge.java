@@ -17,6 +17,8 @@
  */
 package ortus.boxlang.modules.orm.bifs;
 
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
+
 import java.util.Set;
 
 import org.hibernate.Session;
@@ -56,18 +58,22 @@ public class EntityMerge extends BaseORMBIF {
 	 * @argument.entity The entity instance to merge.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IClassRunnable	entity			= ( IClassRunnable ) arguments.get( ORMKeys.entity );
+		IClassRunnable	entity			= requireEntity( arguments.get( ORMKeys.entity ), "entity", "entityMerge" );
 		String			entityName		= getEntityName( entity );
 		IBoxContext		jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
 		ORMContext		ormContext		= ORMContext.getForContext( jdbcBoxContext );
-		ORMApp			ormApp			= ormContext.getORMApp();
-		if ( ormApp == null ) {
-			throw new BoxRuntimeException( "ORM application is not initialized." );
-		}
+		ORMApp			ormApp			= ormContext.requireORMApp();
 
 		EntityRecord	entityRecord	= ormApp.lookupEntity( entityName, true );
 		Session			session			= ormContext.getSession( entityRecord.getDatasource() );
-		return session.merge( entity );
+
+		// Hibernate manages the generated facade, not the IClassRunnable. Merge the facade by its Hibernate entity-name and
+		// return the caller's BoxLang instance (unwrapped from the managed facade).
+		String			hbName			= ORMApp.hibernateEntityName( session, entityName );
+		Object			facade			= FacadeSupport.wrap( ormContext.getFacadeNamespace(), entityName,
+		    entity );
+		Object			managed			= session.merge( hbName, facade );
+		return FacadeSupport.unwrapIfFacade( managed );
 	}
 
 }

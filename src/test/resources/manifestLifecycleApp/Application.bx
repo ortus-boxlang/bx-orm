@@ -1,0 +1,31 @@
+/**
+ * Test app for the ORM manifest lifecycle (auto -> trust, reload with changed entities, stale-manifest detection).
+ * Everything that varies between boots comes from Java system properties set by ManifestLifecycleBootTest, and the
+ * entities live in a temp folder the test populates, so the test never writes into the source tree.
+ */
+class {
+	variables.sys = createObject( "java", "java.lang.System" );
+
+	this.name = sys.getProperty( "bxorm.test.lifecycle.appName", "BXORMLifecycleTest" );
+
+	this.mappings[ "/root" ]            = getDirectoryFromPath( getCurrentTemplatePath() );
+	this.mappings[ "/lifecycleModels" ] = sys.getProperty( "bxorm.test.lifecycle.models", getDirectoryFromPath( getCurrentTemplatePath() ) & "models" );
+
+	this.datasources = {
+		"LifecycleTestDB" : { "connectionString" : "jdbc:derby:memory:" & sys.getProperty( "bxorm.test.lifecycle.db", "ormLifecycleTest" ) & ";create=true" }
+	};
+	this.datasource = "LifecycleTestDB";
+
+	this.ormSettings = {
+		"datasource"          : "LifecycleTestDB",
+		"dialect"             : "Derby",
+		"entityPaths"         : [ "/lifecycleModels" ],
+		"logSQL"              : "false",
+		"dbcreate"            : "dropcreate",
+		"saveMapping"         : false,
+		"ormManifest"         : sys.getProperty( "bxorm.test.lifecycle.mode", "off" ),
+		"ormManifestLocation" : sys.getProperty( "bxorm.test.lifecycle.location", "" ),
+		"namingStrategy"      : sys.getProperty( "bxorm.test.lifecycle.namingStrategy", "default" )
+	};
+	this.ormEnabled = "true";
+}

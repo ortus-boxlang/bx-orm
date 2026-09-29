@@ -56,6 +56,26 @@ public class TransactionManager extends BaseInterceptor {
 		this.ormService	= ( ( ORMService ) getRuntime().getGlobalService( ORMKeys.ORMService ) );
 	}
 
+	/*
+	 * Design note: the ORM does NOT run its own Hibernate transaction. Instead, ORMConnectionProvider
+	 * rides the BoxLang transaction connection (see that class) so BoxLang owns the real JDBC
+	 * commit/rollback, and this interceptor only synchronizes the Hibernate session with the BoxLang
+	 * transaction lifecycle:
+	 * <ul>
+	 * <li>commit/end: flush pending writes so they are emitted on the shared connection before BoxLang
+	 * commits them.</li>
+	 * <li>rollback: clear the session so it does not retain state that BoxLang rolls back at the JDBC
+	 * level.</li>
+	 * </ul>
+	 * Read-your-writes for in-transaction ORM queries is handled at the query choke points via
+	 * {@link ORMContext#flushForQuery(Session)} (Hibernate suppresses auto-flush-before-query when no
+	 * Hibernate transaction is in progress, and we deliberately run none).
+	 * <p>
+	 * Nested transactions are governed entirely by BoxLang (currently flattened into a single
+	 * demarcation unit unless the runtime's experimental enableNestedTransactions is on); this
+	 * interceptor treats every event uniformly and lets BoxLang decide what actually commits.
+	 */
+
 	@InterceptionPoint
 	public void onTransactionBegin( IStruct args ) {
 		IBoxContext	context	= args.getAs( IBoxContext.class, Key.context );
@@ -67,33 +87,16 @@ public class TransactionManager extends BaseInterceptor {
 		ORMContext			ormContext	= ORMContext.getForContext( jdbcContext );
 		ORMConfig			config		= ormContext.getConfig();
 
+		if ( !config.autoManageSession ) {
+			return;
+		}
+
 		ormApp.getDatasources().forEach( ( datasource ) -> {
 			Session ormSession = ormContext.getSession( datasource );
-			if ( config.autoManageSession ) {
-				// Ensure any pending operations are flushed before starting the transaction
-				// Lucee compat:
-				// https://github.com/Ortus-Solutions/extension-hibernate/blob/857aef3241c7aebaf179cdeb2217a0a3e4ff6be6/extension/src/main/java/ortus/extension/orm/HibernateORMTransaction.java#L48
-				ormSession.flush();
+			// Flush any pending pre-transaction work before the transaction boundary (Lucee compat).
+			if ( ormSession.isOpen() ) {
+				ORMContext.flush( ormSession, "transaction commit" );
 			}
-			// We should never hit this conditional as long as BoxLang does not support nested transactions
-			if ( ormSession.isJoinedToTransaction() ) {
-				if ( logger.isDebugEnabled() ) {
-					logger.debug(
-					    "Session [{}] is for datasource [{}] already joined to a transaction",
-					    ormSession,
-					    datasource.getName()
-					);
-				}
-				return;
-			}
-
-			logger.debug(
-			    "Starting ORM transaction on session [{}] for datasource: [{}]",
-			    ormSession,
-			    datasource.getName()
-			);
-
-			ormSession.beginTransaction();
 		} );
 	}
 
@@ -106,20 +109,24 @@ public class TransactionManager extends BaseInterceptor {
 			return;
 		}
 		ORMContext	ormContext						= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		// A CHILD_*_END savepoint marks the end of a nested transaction unit; flush so the nested
+		// unit's writes are emitted on the shared connection before the parent proceeds.
 		boolean		isChildTransactionEndSavepoint	= savepointName.startsWith( "CHILD_" ) && savepointName.endsWith( "_END" );
+		if ( !isChildTransactionEndSavepoint ) {
+			return;
+		}
 		ormApp.getDatasources().forEach( datasource -> {
 			Session ormSession = ormContext.getSession( datasource );
-
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
-				    "Setting ORM transaction savepoint [{}] on session [{}] for datasource [{}]",
-				    savepointName,
+				    "Flushing ORM session [{}] for datasource [{}] at child transaction savepoint [{}]",
 				    ormSession,
-				    datasource.getName()
+				    datasource.getName(),
+				    savepointName
 				);
 			}
-			if ( isChildTransactionEndSavepoint ) {
-				ormSession.flush();
+			if ( ormSession.isOpen() ) {
+				ORMContext.flush( ormSession, "transaction commit" );
 			}
 		} );
 	}
@@ -139,16 +146,20 @@ public class TransactionManager extends BaseInterceptor {
 
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
-				    "Committing ORM transaction and beginning NEW transaction on session [{}] for datasource [{}]",
+				    "Flushing ORM session [{}] for datasource [{}] on transaction commit; BoxLang owns the JDBC commit.",
 				    ormSession,
 				    datasource.getName()
 				);
 			}
-
-			ormSession.flush();
-			ormSession.getTransaction().commit();
-			ormSession.beginTransaction();
+			// Emit pending SQL on the shared transaction connection. BoxLang performs the real JDBC
+			// commit; in a single-unit nested transaction a child commit is a no-op governed by the
+			// outermost block.
+			if ( ormSession.isOpen() ) {
+				ORMContext.flush( ormSession, "transaction commit" );
+			}
 		} );
+		// The flushed writes are part of this commit: their postCommit events fire when the transaction ends.
+		ormContext.getPostCommits().markCommitted();
 	}
 
 	@InterceptionPoint
@@ -159,40 +170,28 @@ public class TransactionManager extends BaseInterceptor {
 		if ( ormApp == null ) {
 			return;
 		}
-		ORMContext	ormContext	= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-		ORMConfig	config		= ormContext.getConfig();
+		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
-			// FYI: Lucee's implementation actually waits until transaction END to rollback and clear the session.
 			Session ormSession = ormContext.getSession( datasource );
 
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
-				    "Rolling back ORM transaction on session [{}] for datasource [{}]",
+				    "Clearing ORM session [{}] for datasource [{}] on transaction rollback; BoxLang owns the JDBC rollback.",
 				    ormSession,
 				    datasource.getName()
 				);
 			}
-			ormSession.getTransaction().rollback();
-			if ( config.autoManageSession ) {
-				if ( logger.isDebugEnabled() ) {
-					logger.debug(
-					    "'autoManageSession' is enabled; clearing ORM session [{}] for datasource [{}] after transaction rollback.",
-					    ormSession,
-					    datasource.getName()
-					);
-				}
+			// BoxLang rolls back the shared connection (or a child savepoint) immediately after this event.
+			// Clearing the session is mandatory (independent of autoManageSession): it discards pending writes
+			// so they are never re-flushed at transaction end, and drops the first-level cache so the session
+			// does not retain entities whose rows were rolled back at the JDBC level.
+			if ( ormSession.isOpen() ) {
 				ormSession.clear();
 			}
-
-			logger.debug(
-			    "Beginning new ORM transaction on session [{}] for datasource [{}]",
-			    ormSession,
-			    datasource.getName()
-			);
-
-			ormSession.beginTransaction();
 		} );
+		// Rolled-back writes never get a postCommit event.
+		ormContext.getPostCommits().dropUncommitted();
 	}
 
 	@InterceptionPoint
@@ -206,30 +205,23 @@ public class TransactionManager extends BaseInterceptor {
 		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
 
 		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session	ormSession	= ormContext.getSession( datasource );
-			var		tx			= ormSession.getTransaction();
-
-			if ( !tx.isActive() ) {
-				if ( logger.isDebugEnabled() ) {
-					logger.debug(
-					    "Skipping ORM transaction end on session [{}] for datasource [{}] because Hibernate transaction is not active.",
-					    ormSession,
-					    datasource.getName()
-					);
-				}
-				return;
-			}
+			Session ormSession = ormContext.getSession( datasource );
 
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
-				    "Ending ORM transaction on session [{}] for datasource [{}]",
+				    "Flushing ORM session [{}] for datasource [{}] at transaction end.",
 				    ormSession,
 				    datasource.getName()
 				);
 			}
-
-			ormSession.flush();
-			tx.commit();
+			// Final flush so any pending writes (e.g. a transaction{} with no explicit commit) are
+			// emitted before BoxLang commits at the end of the demarcation unit. If the transaction was
+			// already rolled back, the session was cleared and this is a no-op.
+			if ( ormSession.isOpen() ) {
+				ORMContext.flush( ormSession, "transaction commit" );
+			}
 		} );
+		// BoxLang announces the end after the JDBC commit: fire the committed writes' postCommit events.
+		ormContext.getPostCommits().fire();
 	}
 }

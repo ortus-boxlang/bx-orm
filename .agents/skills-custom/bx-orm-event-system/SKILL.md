@@ -6,7 +6,7 @@ domain: bx-orm
 triggers: event listener, hibernate integrator, entity event, preInsert, postLoad, preUpdate, preDelete, TransactionManager, ApplicationListener, ORM transaction, event type registration, EventListenerRegistry, global listener, entity handler, interception point, onTransactionBegin
 role: expert
 scope: bx-orm
-related-skills: bx-orm-session-management, bx-orm-configuration, boxlang-core-dev-interceptors
+related-skills: bx-orm-session-management, bx-orm-configuration, bx-orm-transactions, boxlang-core-dev-interceptors
 ---
 
 # BoxLang ORM — Event System
@@ -29,7 +29,7 @@ flowchart TB
     D --> F["Announce BoxLang<br/>interception point"]
     E --> F
     F --> G["BoxLang InterceptorService"]
-    G --> H["TransactionManager<br/>(tx begin/commit/rollback)"]
+    G --> H["TransactionManager<br/>(flush on commit/end, clear on rollback)"]
     G --> I["ApplicationListener<br/>(app start/shutdown)"]
 
     subgraph "Entity-Level"
@@ -42,12 +42,20 @@ flowchart TB
 ## Key Classes
 
 | Class | Package | Responsibility |
-|---|---|---|
+| --- | --- | --- |
 | `EventListener` | `ortus.boxlang.modules.orm.config` | Hibernate `Integrator`; registers for all event types; dispatches to global & entity listeners |
-| `TransactionManager` | `ortus.boxlang.modules.orm.interceptors` | BoxLang interceptor; manages Hibernate transaction lifecycle |
+| `TransactionManager` | `ortus.boxlang.modules.orm.interceptors` | BoxLang interceptor; syncs the session to BoxLang tx events (flush/clear). ORM rides the BoxLang tx connection — see `bx-orm-transactions`. |
 | `ApplicationListener` | `ortus.boxlang.modules.orm.interceptors` | BoxLang interceptor; manages ORM app startup/shutdown |
 
 ## EventListener — Hibernate Integrator
+
+> The integrator is registered only when `eventHandling=true` (`ORMConfig.toHibernateConfig()`), and
+> `EntityNew.create()` fires `postNew` only then. With `eventHandling=false` (the default) no ORM event runs.
+
+**`postCommit( entity, action )`**: `onPostInsert/Update/Delete` also record the write in `config/PostCommitQueue`
+(per `ORMContext`, a Hibernate `SessionEventListener` on each session). `TransactionManager` marks them committed on
+`onTransactionCommit` (announced before the JDBC commit), drops uncommitted ones on rollback, and fires them on
+`onTransactionEnd` (after the commit). Outside a transaction they fire at `flushEnd`, or at once outside a flush.
 
 The `EventListener` implements `Integrator` and a dozen Hibernate event listener interfaces, giving it a hook into every phase of the entity lifecycle:
 
@@ -93,27 +101,36 @@ public void integrate( Metadata metadata, SessionFactoryImplementor sessionFacto
 
 ### Event Dispatch Pattern
 
-Each event handler follows the same pattern: build an args struct, optionally invoke the global listener, then invoke the entity-level handler:
+Each event handler follows the same pattern: build an args struct, invoke the global listener, then the entity-level handler, both through `ORMEventDispatcher`. The pre-operation events (`preInsert`, `preUpdate`, `preDelete`) are vetoable: `announceVetoable` calls both handlers and returns `true` to Hibernate when either returned `false`.
 
 ```java
 @Override
 public boolean onPreInsert( PreInsertEvent event ) {
-    IClassRunnable entity = unwrapEntity( event.getEntity() );
-    IStruct args = Struct.of(
-        "entity", entity
-    );
+    IClassRunnable entity = FacadeSupport.unwrap( event.getEntity() );
+    IStruct args = Struct.of( ORMKeys.event, event, ORMKeys.entity, entity );
 
-    // 1. Global listener (if configured)
-    if ( globalListener != null ) {
-        globalListener.inoke( "preInsert", args );
+    // Global handler, then the entity's own method. Either returning false vetoes.
+    if ( announceVetoable( ORMKeys.preInsert, event, entity, args ) ) {
+        if ( event.getId() == null ) {
+            // identity id: Hibernate cannot skip the INSERT, raise orm.event.veto instead
+            throw new ORMException( ORMErrorType.EVENT_VETO, ... );
+        }
+        return true;  // true = veto
     }
-
-    // 2. Entity-level handler (if entity has a handler method)
-    invokeEntityEvent( entity, "preInsert", args );
-
-    return false;  // false = don't veto the operation
+    updateEntityEventState( ... );  // copy handler changes into Hibernate's state
+    return false;
 }
 ```
+
+### Veto semantics
+
+- Only an explicit `false` (or the strings `"false"` / `"no"`) vetoes (`ORMEventDispatcher.isVeto`). `void` handlers never veto.
+- Both handlers always run, even when the first one vetoes.
+- Vetoed insert: no row, but the entity stays in the session (evict it before changing it, or the next flush fails with `orm.stale`).
+- Vetoed update: no SQL, the change stays, the entity stays dirty, and the update (and `preUpdate`) repeat on every flush. `entityReload()` discards it.
+- Vetoed delete: the row stays; the entity leaves the session.
+- Identity-id insert: cannot be vetoed; `orm.event.veto` error.
+- Tests: `config/EventVetoTest`, fixtures `VetoThing.bx`, `VetoIdentityThing.bx`, global veto in `events/EventHandler.bx`.
 
 ### Entity Unwrapping
 
@@ -152,30 +169,37 @@ private void ensureListenerReady() {
 
 ## TransactionManager — Transaction Lifecycle
 
-`TransactionManager` is a BoxLang interceptor that listens to BoxLang transaction events and translates them into Hibernate session transaction operations:
+> **The ORM does NOT run its own Hibernate transaction.** It **rides the BoxLang transaction's
+> JDBC connection** (via `ORMConnectionProvider`), so BoxLang owns the real commit/rollback. The
+> `TransactionManager` interceptor only synchronizes the Hibernate session with BoxLang's
+> transaction events. **For the full design see the `bx-orm-transactions` skill.**
+
+`TransactionManager` is a BoxLang interceptor that listens to BoxLang transaction events and
+flushes/clears the Hibernate session accordingly — it does **not** call
+`beginTransaction()`/`commit()`/`rollback()` on the Hibernate transaction:
 
 ```java
 public class TransactionManager extends BaseInterceptor {
 
     @InterceptionPoint
-    public void onTransactionBegin( IStruct args ) {
-        IBoxContext context = args.getAs( IBoxContext.class, Key.context );
-        ORMApp ormApp = ormService.getORMAppByContext( context );
-
-        ORMContext ormContext = ORMContext.getForContext( jdbcContext );
-
+    public void onTransactionCommit( IStruct args ) {
+        // Flush pending SQL onto the shared transaction connection; BoxLang performs the JDBC commit.
         ormApp.getDatasources().forEach( datasource -> {
             Session session = ormContext.getSession( datasource );
-
-            if ( config.autoManageSession ) {
-                session.flush();  // Flush pending ops before tx start
+            if ( session.isOpen() ) {
+                session.flush();
             }
+        } );
+    }
 
-            if ( session.isJoinedToTransaction() ) {
-                return;  // Already in a transaction (nested txs not supported)
+    @InterceptionPoint
+    public void onTransactionRollback( IStruct args ) {
+        // Clear the session so it drops state BoxLang rolls back at the JDBC level (always, not gated on autoManageSession).
+        ormApp.getDatasources().forEach( datasource -> {
+            Session session = ormContext.getSession( datasource );
+            if ( session.isOpen() ) {
+                session.clear();
             }
-
-            session.beginTransaction();
         } );
     }
 }
@@ -183,26 +207,33 @@ public class TransactionManager extends BaseInterceptor {
 
 ### Transaction Events
 
-| Interception Point | Hibernate Action |
-|---|---|
-| `onTransactionBegin` | `session.beginTransaction()` for each datasource |
-| `onTransactionCommit` | `session.getTransaction().commit()` |
-| `onTransactionRollback` | `session.getTransaction().rollback()` |
-| `onTransactionEnd` | Cleanup (close sessions if auto-managed) |
-| `onTransactionSetSavepoint` | `session.setSavepoint( name )` |
-| `onTransactionRollbackSavepoint` | `session.rollbackToSavepoint( name )` |
+| Interception Point | ORM Action (BoxLang owns the real JDBC commit/rollback) |
+| --- | --- |
+| `onTransactionBegin` | Pre-flush pending work **only when** `autoManageSession=true` (Lucee compat). No Hibernate `beginTransaction()`. |
+| `onTransactionCommit` | `session.flush()` — emit pending SQL on the shared connection; BoxLang commits it. |
+| `onTransactionRollback` | `session.clear()` — discard pending/first-level cache; BoxLang rolls back the connection. Always runs (not gated on `autoManageSession`). |
+| `onTransactionEnd` | `session.flush()` — final flush (no-op if already committed/cleared); BoxLang ends the unit. |
+| `onTransactionSetSavepoint` | `session.flush()` on a `CHILD_*_END` savepoint (nested-unit boundary). |
 
-### Auto-Managed Session Behavior
+### Read-your-writes inside a transaction
 
-When `autoManageSession=true`:
-```java
-if ( config.autoManageSession ) {
-    session.flush();  // Flush pending operations before transaction start
-}
-```
+Because there is no Hibernate transaction, Hibernate suppresses auto-flush-before-query. The query
+choke points (`ORMApp.loadEntitiesByFilter`, `HQLQuery.execute`) therefore call
+`ORMContext.flushForQuery(session)`, which flushes when a BoxLang transaction is active so an
+in-transaction ORM query observes its own pending writes.
 
-This provides Lucee compatibility:
-- [extension-hibernate Transaction.java](https://github.com/Ortus-Solutions/extension-hibernate/blob/857aef3/extension/src/main/java/ortus/extension/orm/HibernateORMTransaction.java#L48)
+### Nested transactions
+
+Governed entirely by BoxLang. With the default `enableNestedTransactions=false` (experimental),
+BoxLang **flattens** a nested `transaction{}`: a nested `transactionCommit()` performs a real JDBC
+commit on the shared connection (commits the parent too). The interceptor treats every event
+uniformly and lets BoxLang decide what commits.
+
+Historical note: earlier the ORM ran its own Hibernate transaction (`beginTransaction()` /
+`getTransaction().commit()` / `rollback()`) on a separate connection. That was replaced by the
+connection-riding model so ORM writes and native `queryExecute` share one demarcation unit. The
+`autoManageSession=true` pre-flush on begin retains [Lucee
+compatibility](https://github.com/Ortus-Solutions/extension-hibernate/blob/857aef3/extension/src/main/java/ortus/extension/orm/HibernateORMTransaction.java#L48).
 
 ## ApplicationListener — Application Lifecycle
 
@@ -241,10 +272,13 @@ To listen to a Hibernate event type not yet covered by `EventListener`:
 
 1. Implement the corresponding Hibernate listener interface (e.g., `RefreshEventListener`).
 2. Register it in the `integrate()` method:
+
    ```java
    registry.prependListeners( EventType.REFRESH, this );
    ```
+
 3. Implement the callback method:
+
    ```java
    @Override
    public void onRefresh( RefreshEvent event ) throws HibernateException {
@@ -266,6 +300,7 @@ class {
 
     function preInsert() {
         log.info( "About to insert Vehicle: #this.make# #this.model#" )
+        // return false to veto the insert
     }
 
     function postLoad() {

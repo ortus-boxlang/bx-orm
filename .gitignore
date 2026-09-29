@@ -34,3 +34,6 @@ src/test/resources/sqliteApp/models/**/*.hbm*
 ### AI Files ###
 .agents/skills/**
 .agents/guidelines/**
+# ORM manifest boot cache (regenerated; not committed in this repo)
+.bxorm/
+**/.bxorm/

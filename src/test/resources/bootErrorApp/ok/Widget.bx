@@ -1,0 +1,4 @@
+class persistent="true" table="widgets" {
+	property name="id" fieldtype="id" generator="increment" ormtype="integer";
+	property name="name" ormtype="string";
+}

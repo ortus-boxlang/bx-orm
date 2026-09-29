@@ -51,8 +51,10 @@ public class ORMFlush extends BaseORMBIF {
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
 		ORMContext	ormContext		= ORMContext.getForContext( jdbcBoxContext );
-		Session		session			= ormContext.getSession();
-		session.flush();
+		String		datasource		= arguments.getAsString( ORMKeys.datasource );
+		Session		session			= datasource == null || datasource.isBlank() ? ormContext.getSession()
+		    : ormContext.getSession( ortus.boxlang.runtime.scopes.Key.of( datasource ) );
+		ORMContext.flush( session, "ormFlush" );
 		// @TODO: Announce 'onFlush' event
 		return null;
 	}

@@ -37,7 +37,7 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.dialect, "DerbyTenSeven"
 		), context ).toHibernateConfig();
 
-		assertEquals( "org.hibernate.dialect.DerbyTenSevenDialect", config.getProperty( AvailableSettings.DIALECT ) );
+		assertEquals( "org.hibernate.community.dialect.DerbyDialect", config.getProperty( AvailableSettings.DIALECT ) );
 	}
 
 	@Test
@@ -47,7 +47,36 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.dialect, "DerbyTenSevenDialect"
 		), context ).toHibernateConfig();
 
-		assertEquals( "org.hibernate.dialect.DerbyTenSevenDialect", config.getProperty( AvailableSettings.DIALECT ) );
+		assertEquals( "org.hibernate.community.dialect.DerbyDialect", config.getProperty( AvailableSettings.DIALECT ) );
+	}
+
+	@Test
+	public void testLegacyDialectClassNames() {
+		// Hibernate 5 dialect classes that Hibernate 7 removed resolve through the alias table
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "org.hibernate.dialect.MySQL5InnoDBDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "org.hibernate.dialect.MySQLDialect", config.getProperty( AvailableSettings.DIALECT ) );
+
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "org.hibernate.dialect.DerbyTenSevenDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "org.hibernate.community.dialect.DerbyDialect", config.getProperty( AvailableSettings.DIALECT ) );
+
+		// Current Hibernate 7 classes and custom dialects are used as is
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "org.hibernate.dialect.MySQLDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "org.hibernate.dialect.MySQLDialect", config.getProperty( AvailableSettings.DIALECT ) );
+
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "com.example.MyDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "com.example.MyDialect", config.getProperty( AvailableSettings.DIALECT ) );
 	}
 
 	@Test
@@ -56,7 +85,7 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.datasource, "TestDB"
 		), context ).toHibernateConfig();
 
-		assertEquals( "true", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+		assertEquals( "allow", config.getProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT ) );
 		assertEquals( SQLiteDialectResolver.class.getName(), config.getProperty( AvailableSettings.DIALECT_RESOLVERS ) );
 	}
 
@@ -67,7 +96,7 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.dialect, "DerbyTenSeven"
 		), context ).toHibernateConfig();
 
-		assertEquals( "false", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+		assertEquals( "disallow", config.getProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT ) );
 	}
 
 	@Test
@@ -79,7 +108,7 @@ public class ORMConfigTest extends BaseORMTest {
 
 		Configuration config = ormConfig.toHibernateConfig();
 
-		assertEquals( "true", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+		assertEquals( "allow", config.getProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT ) );
 		assertThat( config.getProperty( AvailableSettings.DIALECT ) ).isNull();
 	}
 

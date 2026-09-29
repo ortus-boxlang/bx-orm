@@ -18,7 +18,47 @@ jobs:
     env:
       DB_USER: root
       DB_PASSWORD: root
+      # Gate + connection details for the standalone Postgres/MariaDB ORM boot smoke tests.
+      ORM_TEST_POSTGRES: "true"
+      PG_HOST: 127.0.0.1
+      PG_PORT: 5432
+      PG_DB: ormtest
+      PG_USER: postgres
+      PG_PASSWORD: postgres
+      ORM_TEST_MARIADB: "true"
+      MARIADB_HOST: 127.0.0.1
+      # 3307 on the host to avoid colliding with the systemctl-managed MySQL on 3306.
+      MARIADB_PORT: 3307
+      MARIADB_DB: ormtest
+      MARIADB_USER: root
+      MARIADB_PASSWORD: root
     continue-on-error: ${{ matrix.experimental }}
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ormtest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: ormtest
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     permissions:
       checks: write
       pull-requests: write
@@ -29,7 +69,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest"] # "windows-latest"
         jdkVersion: ["21"]
-        boxlangVersion: [ "1.13.0" ]
+        boxlangVersion: [ "1.17.5" ]
         experimental: [false]
     steps:
       - name: Checkout Repository

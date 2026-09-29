@@ -1,0 +1,3 @@
+class accessors="true" persistent="true" extends="MrVehicle" discriminatorValue="car" {
+	property name="doors" ormType="integer";
+}

@@ -1,0 +1,26 @@
+class {
+	this.name = "BXORMPostgresTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"PostgresTestDB": {
+			"connectionString": "jdbc:postgresql://#getSystemSetting( "PG_HOST", "127.0.0.1" )#:#getSystemSetting( "PG_PORT", 5432 )#/#getSystemSetting( "PG_DB", "ormtest" )#",
+			"username"        : "#getSystemSetting( "PG_USER", "postgres" )#",
+			"password"        : "#getSystemSetting( "PG_PASSWORD", "postgres" )#"
+		}
+	};
+	this.datasource = "PostgresTestDB";
+
+	this.ormSettings = {
+		"datasource"       : "PostgresTestDB",
+		"dialect"          : "PostgreSQL",
+		"entityPaths"      : [ "/root/models" ],
+		"saveMapping"      : "true",
+		"logSQL"           : "false",
+		"dbcreate"         : "dropcreate",
+		"cacheprovider"    : "ConcurrentHashMap",
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}

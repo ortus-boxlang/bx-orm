@@ -1,0 +1,14 @@
+/**
+ * A simple child entity used to give the inheritance root (Animal) a to-many association, so a subclass (Cat) inherits
+ * it. Exercises the inherited to-many snapshot getter (safe remove-during-iteration).
+ */
+class
+	accessors ="true"
+	persistent="true"
+	entityname="Toy"
+	table     ="fac_toys"
+{
+	property name="id"     fieldtype="id" generator="uuid" ormType="string";
+	property name="label"  ormType="string";
+	property name="animal" fieldtype="many-to-one" cfc="Animal" fkcolumn="FK_animalId";
+}

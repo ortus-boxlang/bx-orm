@@ -1,0 +1,26 @@
+/**
+ * useDBForMapping: the legacy_people table exists before the ORM starts (DatabaseMappingTest creates it); the entity
+ * declares no ormtypes and no id, and the ORM fills them in from the table.
+ */
+class {
+	this.name = "BXORMDbMappingTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"DbMappingDB": {
+			"connectionString": "jdbc:derby:memory:ormDbMapping;create=true"
+		}
+	};
+	this.datasource = "DbMappingDB";
+
+	this.ormSettings = {
+		"datasource"       : "DbMappingDB",
+		"dialect"          : "Derby",
+		"entityPaths"      : [ "/root/models" ],
+		"dbcreate"         : "none",
+		"useDBForMapping"  : true,
+		"ignoreParseErrors": false
+	};
+	this.ormEnabled = "true";
+}
