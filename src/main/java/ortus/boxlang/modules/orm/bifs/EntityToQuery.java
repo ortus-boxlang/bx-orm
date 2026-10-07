@@ -18,7 +18,6 @@
 package ortus.boxlang.modules.orm.bifs;
 
 import java.util.List;
-import java.util.Set;
 
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMContext;
@@ -55,13 +54,17 @@ public class EntityToQuery extends BaseORMBIF {
 
 	/**
 	 * Convert an entity or array of entities to a Query object.
+	 * <p>
+	 * Only id, version/timestamp and regular column properties (including inherited ones) are included.
+	 * The result query will not contain any relation data: relationship properties
+	 * (one-to-one, one-to-many, many-to-one, many-to-many) are not included as columns.
 	 *
 	 * @param context   The context in which the BIF is being invoked.
 	 * @param arguments Argument scope for the BIF.
 	 *
 	 * @argument.entity An instance of an ORM entity or an array of entities.
 	 *
-	 * @argument.name The name of the entity. Required if `entity` is an array.
+	 * @argument.name The name of the entity. Optional; inferred from the (first) entity if not provided. Useful with inheritance mappings.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
@@ -109,7 +112,10 @@ public class EntityToQuery extends BaseORMBIF {
 	}
 
 	private Query populateQuery( Array entities, EntityRecord entityRecord ) {
-		Set<IPropertyMeta>	props	= entityRecord.getEntityMeta().getAllPersistentProperties();
+		// Relationship properties are excluded entirely: the result query never contains relation data
+		List<IPropertyMeta>	props	= entityRecord.getEntityMeta().getAllPersistentProperties().stream()
+		    .filter( prop -> !prop.isAssociationType() )
+		    .toList();
 		Query				result	= new Query();
 		for ( IPropertyMeta prop : props ) {
 			result.addColumn( Key.of( prop.getName() ), QueryColumnType.fromString( prop.getORMType() ) );
@@ -119,7 +125,7 @@ public class EntityToQuery extends BaseORMBIF {
 			Object[]		row		= new Object[ props.size() ];
 			int				i		= 0;
 			for ( IPropertyMeta prop : props ) {
-				row[ i ] = prop.isAssociationType() ? null : entity.get( prop.getName() );
+				row[ i ] = entity.get( prop.getName() );
 				i++;
 			}
 			result.addRow( row );

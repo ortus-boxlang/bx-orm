@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Java
-        uses: actions/setup-java@v5.3.0
+        uses: actions/setup-java@v6
         with:
           distribution: "temurin"
           java-version: 21
@@ -42,7 +42,7 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Setup BoxLang
-        uses: ortus-boxlang/setup-boxlang@1.4.0
+        uses: ortus-boxlang/setup-boxlang@1.6.0
         with:
           with-commandbox: true
 
