@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- `entityToQuery()` no longer adds columns for relationship properties (`one-to-one`, `one-to-many`, `many-to-one`, `many-to-many`). Previously these columns were present but always `null`. The result query now contains no relation data, matching Adobe ColdFusion and Lucee. Code reading those always-empty columns must be updated.
+
 ## [1.7.0] - 2026-09-14
 
 ### ⭐ Added

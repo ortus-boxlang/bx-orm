@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Query;
 import tools.BaseORMTest;
@@ -51,19 +52,17 @@ public class EntityToQueryTest extends BaseORMTest {
 		// regular properties should be present
 		assertThat( row.containsKey( "make" ) ).isTrue();
 		assertThat( row.containsKey( "model" ) ).isTrue();
-		assertThat( row.containsKey( "features" ) ).isTrue();
 
-		// associations should be present, but NOT populated
-		assertThat( row.containsKey( "manufacturer" ) ).isTrue();
+		// associations should NOT be present, the query never contains relation data
+		assertThat( row.containsKey( "manufacturer" ) ).isFalse();
+		assertThat( row.containsKey( "features" ) ).isFalse();
 
 		assertThat( row.get( "vin" ) ).isEqualTo( "1HGCM82633A123456" );
 		assertThat( row.get( "make" ) ).isEqualTo( "Honda" );
 		assertThat( row.get( "model" ) ).isEqualTo( "Accord" );
-		assertThat( row.get( "features" ) ).isNull();
-		assertThat( row.get( "manufacturer" ) ).isNull();
 	}
 
-	@DisplayName( "It can convert one entity into a single-row query" )
+	@DisplayName( "It can convert an entity array into a multi-row query" )
 	@Test
 	public void testEntityToQueryArray() {
 		// @formatter:off
@@ -86,16 +85,14 @@ public class EntityToQueryTest extends BaseORMTest {
 		// regular properties should be present
 		assertThat( row.containsKey( "make" ) ).isTrue();
 		assertThat( row.containsKey( "model" ) ).isTrue();
-		assertThat( row.containsKey( "features" ) ).isTrue();
 
-		// associations should be present, but NOT populated
-		assertThat( row.containsKey( "manufacturer" ) ).isTrue();
+		// associations should NOT be present, the query never contains relation data
+		assertThat( row.containsKey( "manufacturer" ) ).isFalse();
+		assertThat( row.containsKey( "features" ) ).isFalse();
 
 		assertThat( row.get( "vin" ) ).isEqualTo( "1HGCM82633A123456" );
 		assertThat( row.get( "make" ) ).isEqualTo( "Honda" );
 		assertThat( row.get( "model" ) ).isEqualTo( "Accord" );
-		assertThat( row.get( "features" ) ).isNull();
-		assertThat( row.get( "manufacturer" ) ).isNull();
 	}
 
 	@DisplayName( "It can convert an explicit array of multiple entities into a multi-row query" )
@@ -217,5 +214,23 @@ public class EntityToQueryTest extends BaseORMTest {
 		assertThat( variables.get( result ) ).isNotNull();
 		assertThat( variables.get( result ) ).isInstanceOf( Query.class );
 		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 0 );
+	}
+
+	@DisplayName( "It does not include relationship columns for an empty array with an entity name" )
+	@Test
+	public void testEntityToQueryEmptyArrayWithNameExcludesRelations() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityToQuery( [], "Vehicle" );
+		""", context );
+		// @formatter:on
+
+		Query qry = variables.getAsQuery( result );
+		assertThat( qry.size() ).isEqualTo( 0 );
+		assertThat( qry.hasColumn( Key.of( "vin" ) ) ).isTrue();
+		assertThat( qry.hasColumn( Key.of( "make" ) ) ).isTrue();
+		assertThat( qry.hasColumn( Key.of( "model" ) ) ).isTrue();
+		assertThat( qry.hasColumn( Key.of( "manufacturer" ) ) ).isFalse();
+		assertThat( qry.hasColumn( Key.of( "features" ) ) ).isFalse();
 	}
 }
