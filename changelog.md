@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-10-07
+
 ### 🐛 Fixed
 
 - `entityToQuery()` no longer adds columns for relationship properties (`one-to-one`, `one-to-many`, `many-to-one`, `many-to-many`). Previously these columns were present but always `null`. The result query now contains no relation data, matching Adobe ColdFusion and Lucee. Code reading those always-empty columns must be updated.
@@ -331,7 +333,8 @@ No significant changes.
 
 - First iteration of this module
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.0...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.1...HEAD
+[1.7.1]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.7...v1.7.0
 [1.6.7]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.6...v1.6.7
 [1.6.6]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.5...v1.6.6
