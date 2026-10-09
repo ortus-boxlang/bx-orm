@@ -20,6 +20,7 @@ package ortus.boxlang.modules.orm.bifs;
 import java.util.Set;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.observability.ORMObserver;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -90,6 +91,16 @@ public class EntityLoadByPK extends BaseORMBIF {
 	 * @return The entity or null; for an array of ids, an array in the same order with null for missing ids.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		// Lets onORMQuery report which entity the statements belong to
+		ORMObserver.hintEntity( arguments.getAsString( ORMKeys.entityName ) );
+		try {
+			return invokeLoad( context, arguments );
+		} finally {
+			ORMObserver.clearHints();
+		}
+	}
+
+	private Object invokeLoad( IBoxContext context, ArgumentsScope arguments ) {
 		String		entityName		= arguments.getAsString( ORMKeys.entity );
 		Object		keyValue		= arguments.get( Key.id );
 		IStruct		options			= arguments.get( ORMKeys.options ) instanceof IStruct struct ? struct : null;

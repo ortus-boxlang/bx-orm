@@ -48,6 +48,7 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.BaseService;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.util.EncryptionUtil;
 
@@ -115,7 +116,12 @@ public class ORMService extends BaseService {
 	    ORMKeys.EVENT_AFTER_CRITERIA_COUNT,
 	    ORMKeys.EVENT_BEFORE_CRITERIA_GET,
 	    ORMKeys.EVENT_AFTER_CRITERIA_GET,
-	    ORMKeys.EVENT_CRITERIA_ADDITION ).toArray( new Key[ 0 ] );
+	    ORMKeys.EVENT_CRITERIA_ADDITION,
+	    ORMKeys.EVENT_ORM_PRE_CONFIG_LOAD,
+	    ORMKeys.EVENT_ORM_POST_CONFIG_LOAD,
+	    ORMKeys.EVENT_ORM_QUERY,
+	    ORMKeys.EVENT_ORM_FLUSH,
+	    ORMKeys.EVENT_ORM_EXCEPTION ).toArray( new Key[ 0 ] );
 
 	/**
 	 * --------------------------------------------------------------------------
@@ -726,6 +732,75 @@ public class ORMService extends BaseService {
 		if ( watcher != null ) {
 			watcher.stop();
 		}
+	}
+
+	/**
+	 * Get Hibernate statistics for an ORM application as a plain struct, keyed by datasource name.
+	 * <p>
+	 * Hibernate only collects counters when statistics are enabled, via the <code>generateStatistics</code> ORM setting or
+	 * {@link #setStatisticsEnabled(Key, boolean)}. When disabled, each datasource reports <code>enabled: false</code> and no counters.
+	 *
+	 * @param appName The unique name of the ORM application.
+	 *
+	 * @return A struct with <code>appName</code>, and a <code>datasources</code> struct of per-datasource statistics.
+	 *
+	 * @throws BoxRuntimeException If there is no such ORM application.
+	 */
+	public IStruct getStatistics( Key appName ) {
+		ORMApp ormApp = getORMApp( appName );
+		if ( ormApp == null ) {
+			throw new BoxRuntimeException( "No ORM application found with name [" + appName.getName() + "]" );
+		}
+		IStruct datasources = new Struct();
+		ormApp.getSessionFactories().forEach( ( datasource, factory ) -> {
+			org.hibernate.stat.Statistics	stats	= factory.getStatistics();
+			IStruct							entry	= new Struct();
+			entry.put( Key.of( "enabled" ), stats.isStatisticsEnabled() );
+			if ( stats.isStatisticsEnabled() ) {
+				entry.put( Key.of( "startTime" ), stats.getStartTime() );
+				entry.put( Key.of( "sessionOpenCount" ), stats.getSessionOpenCount() );
+				entry.put( Key.of( "sessionCloseCount" ), stats.getSessionCloseCount() );
+				entry.put( Key.of( "flushCount" ), stats.getFlushCount() );
+				entry.put( Key.of( "connectCount" ), stats.getConnectCount() );
+				entry.put( Key.of( "prepareStatementCount" ), stats.getPrepareStatementCount() );
+				entry.put( Key.of( "transactionCount" ), stats.getTransactionCount() );
+				entry.put( Key.of( "successfulTransactionCount" ), stats.getSuccessfulTransactionCount() );
+				entry.put( Key.of( "queryExecutionCount" ), stats.getQueryExecutionCount() );
+				entry.put( Key.of( "queryExecutionMaxTime" ), stats.getQueryExecutionMaxTime() );
+				entry.put( Key.of( "queryExecutionMaxTimeQueryString" ), stats.getQueryExecutionMaxTimeQueryString() );
+				entry.put( Key.of( "entityLoadCount" ), stats.getEntityLoadCount() );
+				entry.put( Key.of( "entityFetchCount" ), stats.getEntityFetchCount() );
+				entry.put( Key.of( "entityInsertCount" ), stats.getEntityInsertCount() );
+				entry.put( Key.of( "entityUpdateCount" ), stats.getEntityUpdateCount() );
+				entry.put( Key.of( "entityDeleteCount" ), stats.getEntityDeleteCount() );
+				entry.put( Key.of( "collectionLoadCount" ), stats.getCollectionLoadCount() );
+				entry.put( Key.of( "collectionFetchCount" ), stats.getCollectionFetchCount() );
+				entry.put( Key.of( "secondLevelCacheHitCount" ), stats.getSecondLevelCacheHitCount() );
+				entry.put( Key.of( "secondLevelCacheMissCount" ), stats.getSecondLevelCacheMissCount() );
+				entry.put( Key.of( "secondLevelCachePutCount" ), stats.getSecondLevelCachePutCount() );
+				entry.put( Key.of( "queryCacheHitCount" ), stats.getQueryCacheHitCount() );
+				entry.put( Key.of( "queryCacheMissCount" ), stats.getQueryCacheMissCount() );
+			}
+			datasources.put( datasource, entry );
+		} );
+		return Struct.of( ORMKeys.appName, appName.getName(), Key.of( "datasources" ), datasources );
+	}
+
+	/**
+	 * Switch Hibernate statistics collection on or off at runtime, for every datasource of an ORM application.
+	 * Counters start from zero when switched on.
+	 *
+	 * @param appName The unique name of the ORM application.
+	 * @param enabled True to collect statistics.
+	 *
+	 * @throws BoxRuntimeException If there is no such ORM application.
+	 */
+	public void setStatisticsEnabled( Key appName, boolean enabled ) {
+		ORMApp ormApp = getORMApp( appName );
+		if ( ormApp == null ) {
+			throw new BoxRuntimeException( "No ORM application found with name [" + appName.getName() + "]" );
+		}
+		ormApp.getSessionFactories().values().forEach( factory -> factory.getStatistics().setStatisticsEnabled( enabled ) );
 	}
 
 	/**

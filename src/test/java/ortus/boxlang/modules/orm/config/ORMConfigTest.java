@@ -169,10 +169,19 @@ public class ORMConfigTest extends BaseORMTest {
 	}
 
 	@Test
+	public void testObservabilitySettings() {
+		ORMConfig config = new ORMConfig( Struct.of( "announceQueryParams", true, "generateStatistics", true ), context );
+		assertThat( config.announceQueryParams ).isTrue();
+		assertThat( config.generateStatistics ).isTrue();
+	}
+
+	@Test
 	public void testDefaultConfig() {
 		ORMConfig config = new ORMConfig( Struct.of(), context );
 		assertThat( config.secondaryCacheEnabled ).isFalse();
 		assertThat( config.logSQL ).isFalse();
+		assertThat( config.announceQueryParams ).isFalse();
+		assertThat( config.generateStatistics ).isFalse();
 		assertThat( config.eventHandling ).isFalse();
 		assertThat( config.autoGenMap ).isTrue();
 		assertThat( config.generateMappings ).isTrue();

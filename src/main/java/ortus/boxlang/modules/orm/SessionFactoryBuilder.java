@@ -86,6 +86,11 @@ public class SessionFactoryBuilder {
 	private IJDBCCapableContext		context;
 
 	/**
+	 * The unique ORM application name, reported on observability events.
+	 */
+	private String					appName;
+
+	/**
 	 * ------------------------------------------------------------------------------------------------------------
 	 * Static Helpers
 	 * ------------------------------------------------------------------------------------------------------------
@@ -118,6 +123,20 @@ public class SessionFactoryBuilder {
 	 * @param entities       The discovered entities for this session factory.
 	 */
 	public SessionFactoryBuilder( IJDBCCapableContext context, Key datasourceName, ORMConfig ormConfig, List<EntityRecord> entities ) {
+		this( context, datasourceName, ormConfig, entities, null );
+	}
+
+	/**
+	 * Constructor
+	 *
+	 * @param context        The BoxLang context for this session factory.
+	 * @param datasourceName The ORM datasource for this session factory.
+	 * @param ormConfig      The ORM configuration for this session factory.
+	 * @param entities       The discovered entities for this session factory.
+	 * @param appName        The unique ORM application name, reported on observability events. Falls back to the context's application name.
+	 */
+	public SessionFactoryBuilder( IJDBCCapableContext context, Key datasourceName, ORMConfig ormConfig, List<EntityRecord> entities, String appName ) {
+		this.appName		= appName != null ? appName : ORMService.getAppNameFromContext( ( IBoxContext ) context ).getName();
 		this.ormConfig		= ormConfig;
 		this.context		= context;
 		this.datasourceName	= datasourceName;
@@ -183,7 +202,7 @@ public class SessionFactoryBuilder {
 		classLoaders.add( runtime.getClass().getClassLoader() );
 
 		// Any configuration which needs a specific java type (such as the connection provider instance) goes here
-		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasourceName ) );
+		properties.put( AvailableSettings.CONNECTION_PROVIDER, new ORMConnectionProvider( this.datasourceName, this.appName, ormConfig.announceQueryParams ) );
 		// Acquire a connection lazily per statement and release it immediately after. Each acquisition goes
 		// back through ORMConnectionProvider, which is transaction-aware, so ORM writes issued inside a
 		// BoxLang transaction{} ride that transaction's shared connection and are governed by BoxLang's

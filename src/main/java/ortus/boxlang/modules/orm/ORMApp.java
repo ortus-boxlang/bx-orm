@@ -345,7 +345,8 @@ public class ORMApp {
 	 * @return A new SessionFactory instance for the given datasource.
 	 */
 	private SessionFactory buildSessionFactoryForDatasource( Key datasource, IJDBCCapableContext context ) {
-		SessionFactoryBuilder builder = new SessionFactoryBuilder( context, datasource, config, entityMap.getOrDefault( datasource, new ArrayList<>() ) );
+		SessionFactoryBuilder builder = new SessionFactoryBuilder( context, datasource, config, entityMap.getOrDefault( datasource, new ArrayList<>() ),
+		    this.name.getName() );
 		return builder.build();
 	}
 
@@ -1416,6 +1417,13 @@ public class ORMApp {
 	@Deprecated( since = "1.6.3", forRemoval = true )
 	public DataSource getDatasourceForNameOrDefault( IBoxContext context, Key datasourceName ) {
 		return ORMContext.getForContext( context ).getDatasource( datasourceName );
+	}
+
+	/**
+	 * Get an unmodifiable view of the session factories for this ORM application, keyed by datasource name.
+	 */
+	public Map<Key, SessionFactory> getSessionFactories() {
+		return java.util.Collections.unmodifiableMap( this.sessionFactories );
 	}
 
 	/**

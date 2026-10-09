@@ -29,6 +29,7 @@ import org.hibernate.Session;
 import org.hibernate.metamodel.model.domain.EntityDomainType;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.observability.ORMObserver;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -412,15 +413,21 @@ public class HQLQuery {
 	public Object execute() {
 		boolean							isUpdate	= isUpdate();
 		org.hibernate.query.Query<?>	hqlQuery	= prepare( !isUpdate );
-		if ( isUpdate ) {
-			return hqlQuery.executeUpdate();
-		} else {
-			// Hibernate returns POJO facades for entity results; unwrap each to its BoxLang instance so callers only ever
-			// see IClassRunnables. Scalars/projections pass through untouched.
-			return inLockScope( hqlQuery::list )
-			    .stream()
-			    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
-			    .collect( java.util.stream.Collectors.toList() );
+		// Lets onORMQuery report the HQL behind the statements
+		ORMObserver.hintHql( this.hql );
+		try {
+			if ( isUpdate ) {
+				return hqlQuery.executeUpdate();
+			} else {
+				// Hibernate returns POJO facades for entity results; unwrap each to its BoxLang instance so callers only ever
+				// see IClassRunnables. Scalars/projections pass through untouched.
+				return inLockScope( hqlQuery::list )
+				    .stream()
+				    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
+				    .collect( java.util.stream.Collectors.toList() );
+			}
+		} finally {
+			ORMObserver.clearHints();
 		}
 	}
 
