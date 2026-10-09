@@ -41,17 +41,31 @@ entities changed.
 
 ### Example
 
-```java
-class extends="boxlang.runtime.events.BaseInterceptor" {
+```javascript
+// OrmWatcher.bx
+class {
 
-    @InterceptionPoint
-    function onORMQuery( struct data ) {
+    function onORMQuery( data ) {
+        // 100 ms
         if ( data.elapsedNanos > 100000000 ) {
-            writeLog( text="Slow ORM query (#data.kind#): #data.sql#", log="orm" );
+            writeLog( text="Slow ORM #data.kind#: #data.sql#", type="warning" );
         }
     }
 
+    function onORMException( data ) {
+        writeLog( text="ORM failure on #data.datasource#: #data.error.getMessage()#", type="error" );
+    }
+
 }
+```
+
+Register it with `boxRegisterInterceptor()`, naming the events it listens to:
+
+```javascript
+boxRegisterInterceptor(
+    interceptor : new OrmWatcher(),
+    points      : [ "onORMQuery", "onORMException" ]
+);
 ```
 
 ## Settings
