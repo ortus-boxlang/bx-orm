@@ -347,6 +347,23 @@ public class ORMObservabilityTest {
 		assertThat( recorder.queries.stream().anyMatch( q -> !q.containsKey( ORMKeys.params ) ) ).isTrue();
 	}
 
+	@DisplayName( "It keeps ORM writes inside a transaction working while observed, and commits them" )
+	@Test
+	public void testObservedTransaction() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				entitySave( entityNew( "Product", { name : "InTransaction" } ) );
+				ormFlush();
+			}
+			result = queryExecute( "SELECT * FROM products WHERE name = 'InTransaction'" );
+		""", context );
+		// @formatter:on
+
+		assertThat( context.getScopeNearby( ortus.boxlang.runtime.scopes.VariablesScope.name ).getAsQuery( Key.of( "result" ) ).size() ).isEqualTo( 1 );
+		assertThat( recorder.queries.stream().anyMatch( q -> "insert".equals( q.get( ORMKeys.kind ) ) ) ).isTrue();
+	}
+
 	@DisplayName( "It reports HQL for HQL queries" )
 	@Test
 	public void testHqlHint() {
