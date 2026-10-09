@@ -115,6 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An association parameter given as an id (`ormExecuteQuery()`, `entityLoad()`) no longer fails with "cannot be used as ...Facade" when the session already holds a lazy proxy for that row.
 - A failed flush at the end of a request still closes the request's ORM sessions.
 - The `uniquekey` and `index` property annotations create their unique constraints and indexes again (lost in the move to `mapping.xml`). Properties sharing a name form one multi-column constraint or index; both accept a comma-separated list, and both work on `many-to-one` foreign keys.
+- [BL-2739](https://ortussolutions.atlassian.net/browse/BL-2739) - `generator="identity"` no longer fails on PostgreSQL when `dialect` is set explicitly and the table name is on the reserved-word list (`comment`, `collection`, `release`, `synonym`, `user`, ...). Hibernate read the new key back with `select currval('"comment"_id_seq')`, which PostgreSQL rejects with `invalid name syntax`. An explicit PostgreSQL dialect now tells Hibernate the driver returns generated keys, as auto-detection already did. Set `hibernate.jdbc.use_get_generated_keys` in `hibernateProperties` to override it.
 
 ## [1.7.1] - 2026-10-07
 
