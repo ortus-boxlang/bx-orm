@@ -238,6 +238,16 @@ public class ORMConfig {
 	public boolean								logSQL					= false;
 
 	/**
+	 * Include bound parameter values in the <code>onORMQuery</code> event. Off by default, since values may be sensitive.
+	 */
+	public boolean								announceQueryParams		= false;
+
+	/**
+	 * Collect Hibernate statistics, which are exposed by <code>ORMService.getStatistics()</code>. Off by default, as collection has a small cost.
+	 */
+	public boolean								generateStatistics		= false;
+
+	/**
 	 * Defines the naming convention to use on table and column names.
 	 *
 	 * - default : Uses the table or column names as is
@@ -515,6 +525,12 @@ public class ORMConfig {
 		if ( properties.containsKey( ORMKeys.logSQL ) && properties.get( ORMKeys.logSQL ) != null ) {
 			logSQL = BooleanCaster.cast( properties.get( ORMKeys.logSQL ) );
 		}
+		if ( properties.containsKey( ORMKeys.announceQueryParams ) && properties.get( ORMKeys.announceQueryParams ) != null ) {
+			announceQueryParams = BooleanCaster.cast( properties.get( ORMKeys.announceQueryParams ) );
+		}
+		if ( properties.containsKey( ORMKeys.generateStatistics ) && properties.get( ORMKeys.generateStatistics ) != null ) {
+			generateStatistics = BooleanCaster.cast( properties.get( ORMKeys.generateStatistics ) );
+		}
 		if ( properties.containsKey( ORMKeys.secondaryCacheEnabled ) && properties.get( ORMKeys.secondaryCacheEnabled ) != null ) {
 			secondaryCacheEnabled = BooleanCaster.cast( properties.get( ORMKeys.secondaryCacheEnabled ) );
 		}
@@ -744,6 +760,10 @@ public class ORMConfig {
 			if ( this.cacheConfigFile != null && !this.cacheConfigFile.isEmpty() ) {
 				configuration.setProperty( "hibernate.javax.cache.uri", this.cacheConfigFile );
 			}
+		}
+
+		if ( this.generateStatistics ) {
+			configuration.setProperty( AvailableSettings.GENERATE_STATISTICS, "true" );
 		}
 
 		if ( this.logSQL ) {

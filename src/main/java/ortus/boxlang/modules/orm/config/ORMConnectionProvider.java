@@ -22,6 +22,7 @@ import java.sql.SQLException;
 
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
 
+import ortus.boxlang.modules.orm.observability.ORMObserver;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -59,9 +60,25 @@ public class ORMConnectionProvider implements ConnectionProvider {
 	 */
 	private Key						datasourceName;
 
+	/**
+	 * The unique name of the ORM application this provider serves, reported on observability events.
+	 */
+	private String					appName;
+
+	/**
+	 * Whether bound parameter values are included in the onORMQuery event.
+	 */
+	private boolean					announceQueryParams;
+
 	public ORMConnectionProvider( Key datasourceName ) {
-		this.logger			= runtime.getLoggingService().getLogger( "orm" );
-		this.datasourceName	= datasourceName;
+		this( datasourceName, null, false );
+	}
+
+	public ORMConnectionProvider( Key datasourceName, String appName, boolean announceQueryParams ) {
+		this.logger					= runtime.getLoggingService().getLogger( "orm" );
+		this.datasourceName			= datasourceName;
+		this.appName				= appName;
+		this.announceQueryParams	= announceQueryParams;
 	}
 
 	@Override
@@ -90,11 +107,12 @@ public class ORMConnectionProvider implements ConnectionProvider {
 		if ( connectionManager.isInTransaction() && isHibernateIsolatedWork() ) {
 			Connection isolated = datasource.getBoxConnection();
 			logger.trace( "Getting isolated-work connection {} for datasource: {}", isolated, datasourceName.getOriginalValue() );
-			return isolated;
+			return ORMObserver.wrap( isolated, datasourceName, appName, announceQueryParams );
 		}
 		Connection connection = connectionManager.getBoxConnection( datasource );
 		logger.trace( "Getting connection {} for datasource: {}", connection, datasourceName.getOriginalValue() );
-		return connection;
+		// A no-op unless somebody is listening for ORM observability events
+		return ORMObserver.wrap( connection, datasourceName, appName, announceQueryParams );
 	}
 
 	/** Hibernate's JDBC isolation delegate: the only caller that commits/rolls back the connection it is given. */
@@ -126,6 +144,8 @@ public class ORMConnectionProvider implements ConnectionProvider {
 	 */
 	@Override
 	public void closeConnection( Connection conn ) throws SQLException {
+		// Observability may have wrapped the connection; identity checks and the close itself need the real one.
+		conn = ORMObserver.unwrap( conn );
 		if ( isActiveTransactionConnection( conn ) ) {
 			logger.trace( "Skipping close of transaction-owned connection {} for datasource: {}", conn, datasourceName.getOriginalValue() );
 			return;
