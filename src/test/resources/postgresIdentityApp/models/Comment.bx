@@ -1,0 +1,7 @@
+/**
+ * `comment` is on the reserved-word list, so the mapping quotes the table name.
+ */
+class accessors="true" persistent="true" table="comment" {
+	property name="id" fieldtype="id" ormType="integer" generator="identity";
+	property name="body" ormType="string";
+}
