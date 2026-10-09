@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ⭐ Added
+
+- ORM observability events for tools that want to watch ORM activity without reflecting into Hibernate. `onORMQuery` is announced after each JDBC statement with `sql`, `kind`, `elapsedNanos`, `rows`, `datasource`, `appName`, `hql`, `entityName`, `error` and, optionally, `params`. `onORMFlush` reports insert, update and delete counts per flush, and `onORMException` reports failures. Nothing is wrapped or built when there are no listeners. See `docs/observability-events.md`.
+- `announceQueryParams` ORM setting (default `false`) to include bound parameter values in `onORMQuery`.
+- `generateStatistics` ORM setting (default `false`), plus `ORMService.getStatistics( appName )` and `ORMService.setStatisticsEnabled( appName, enabled )` for a plain-struct view of Hibernate statistics.
+
+### ⚡ Changed
+
+- `ORMPreConfigLoad` and `ORMPostConfigLoad` are now registered as interception points.
+
 ### 🐛 Fixed
 
 - [BL-2739](https://ortussolutions.atlassian.net/browse/BL-2739) - `generator="identity"` no longer fails on PostgreSQL when `dialect` is set explicitly and the table name is on the reserved-word list (`comment`, `collection`, `release`, `synonym`, `user`, ...). Hibernate read the new key back with `select currval('"comment"_id_seq')`, which PostgreSQL rejects with `invalid name syntax`. An explicit PostgreSQL dialect now tells Hibernate the driver returns generated keys, as auto-detection already did. Set `hibernate.jdbc.use_get_generated_keys` in `hibernateProperties` to override it.

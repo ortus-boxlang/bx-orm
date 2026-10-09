@@ -25,6 +25,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.observability.ORMObserver;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -225,6 +226,9 @@ public class ORMContext {
 
 			SessionFactory	sessionFactory	= this.ormApp.getSessionFactoryOrThrow( datasource );
 			Session			session			= sessionFactory.openSession();
+			// Brackets flushes so onORMFlush can report counts. Does nothing unless someone listens to the event.
+			( ( org.hibernate.engine.spi.SharedSessionContractImplementor ) session ).getEventListenerManager()
+			    .addListener( new ORMObserver.FlushListener( datasource.getOriginalName(), this.ormApp.getName().getName() ) );
 			if ( !config.autoManageSession ) {
 				session.setHibernateFlushMode( org.hibernate.FlushMode.MANUAL );
 			}

@@ -20,6 +20,7 @@ package ortus.boxlang.modules.orm.bifs;
 import java.util.Set;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.observability.ORMObserver;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -70,6 +71,16 @@ public class EntityLoadByPK extends BaseORMBIF {
 	 * @argument.unique Not implemented. In BoxLang, a single entity is always returned.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		// Lets onORMQuery report which entity the statements belong to
+		ORMObserver.hintEntity( arguments.getAsString( ORMKeys.entityName ) );
+		try {
+			return invokeLoad( context, arguments );
+		} finally {
+			ORMObserver.clearHints();
+		}
+	}
+
+	private Object invokeLoad( IBoxContext context, ArgumentsScope arguments ) {
 		String		entityName		= arguments.getAsString( ORMKeys.entity );
 		Object		keyValue		= arguments.get( Key.id );
 

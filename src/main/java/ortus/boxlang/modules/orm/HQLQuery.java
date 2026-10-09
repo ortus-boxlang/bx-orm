@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.hibernate.Session;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.observability.ORMObserver;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -375,10 +376,15 @@ public class HQLQuery {
 				}
 			}
 		}
-		if ( isUpdate ) {
-			return hqlQuery.executeUpdate();
-		} else {
-			return hqlQuery.list();
+		ORMObserver.hintHql( this.hql );
+		try {
+			if ( isUpdate ) {
+				return hqlQuery.executeUpdate();
+			} else {
+				return hqlQuery.list();
+			}
+		} finally {
+			ORMObserver.clearHints();
 		}
 
 	}
