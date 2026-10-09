@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- [BL-2739](https://ortussolutions.atlassian.net/browse/BL-2739) - `generator="identity"` no longer fails on PostgreSQL when `dialect` is set explicitly and the table name is on the reserved-word list (`comment`, `collection`, `release`, `synonym`, `user`, ...). Hibernate read the new key back with `select currval('"comment"_id_seq')`, which PostgreSQL rejects with `invalid name syntax`. An explicit PostgreSQL dialect now tells Hibernate the driver returns generated keys, as auto-detection already did. Set `hibernate.jdbc.use_get_generated_keys` in `hibernateProperties` to override it.
+
 ## [1.7.1] - 2026-10-07
 
 ### 🐛 Fixed

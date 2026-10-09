@@ -68,6 +68,9 @@ dependencies {
 	// SQLite JDBC driver, used to test ORM boot against a SQLite datasource
 	// https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
 	testImplementation "org.xerial:sqlite-jdbc:3.53.4.0"
+	// PostgreSQL JDBC driver, used to test ORM boot and identity generation against a PostgreSQL datasource
+	// https://mvnrepository.com/artifact/org.postgresql/postgresql
+	testImplementation "org.postgresql:postgresql:42.7.4"
 	// Explicitly declare the JUnit platform launcher (to avoid deprecation)
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
@@ -233,13 +236,13 @@ shadowJar.finalizedBy( createModuleStructure )
  * refuses to hand out a driver to a caller outside its loading classloader's lineage.
  * This copies test-only JDBC driver jars (not shipped in the module's distribution zip, since it
  * runs after `zipModuleStructure`) into the live `build/module/libs` folder so ORM tests that need a
- * real JDBC connection (e.g. SQLite) can resolve their driver.
+ * real JDBC connection (e.g. SQLite, PostgreSQL) can resolve their driver.
  */
 task copyTestJdbcDrivers( type: Copy, dependsOn: createModuleStructure ) {
 	// Must run after the module zip is built, so the test-only driver never ends up in the
 	// distributed module zip (only in the live build/module folder used by the test harness).
 	mustRunAfter zipModuleStructure
-	from configurations.testRuntimeClasspath.filter { it.name.startsWith( 'sqlite-jdbc' ) }
+	from configurations.testRuntimeClasspath.filter { it.name.startsWith( 'sqlite-jdbc' ) || it.name.startsWith( 'postgresql-' ) }
 	into 'build/module/libs'
 }
 
@@ -252,6 +255,7 @@ task copyTestJdbcDrivers( type: Copy, dependsOn: createModuleStructure ) {
 task removeTestJdbcDrivers( type: Delete ) {
 	delete fileTree( 'build/module/libs' ) {
 		include 'sqlite-jdbc-*.jar'
+		include 'postgresql-*.jar'
 	}
 }
 test.finalizedBy( removeTestJdbcDrivers )

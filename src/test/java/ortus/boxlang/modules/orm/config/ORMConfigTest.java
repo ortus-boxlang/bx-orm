@@ -18,6 +18,7 @@
 package ortus.boxlang.modules.orm.config;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.Assert.assertEquals;
 
 import org.hibernate.cfg.AvailableSettings;
@@ -68,6 +69,49 @@ public class ORMConfigTest extends BaseORMTest {
 		), context ).toHibernateConfig();
 
 		assertEquals( "false", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+	}
+
+	@Test
+	public void testGeneratedKeysEnabledForExplicitPostgreSQLDialect() {
+		for ( String dialectName : new String[] { "PostgreSQL", "PostgreSQL10", "PostgreSQL95Dialect", "org.hibernate.dialect.PostgreSQL94Dialect",
+		    "PostgresPlus" } ) {
+			Configuration config = new ORMConfig( Struct.of(
+			    ORMKeys.datasource, "TestDB",
+			    ORMKeys.dialect, dialectName
+			), context ).toHibernateConfig();
+
+			assertWithMessage( dialectName ).that( config.getProperty( AvailableSettings.USE_GET_GENERATED_KEYS ) ).isEqualTo( "true" );
+		}
+	}
+
+	@Test
+	public void testGeneratedKeysUntouchedForOtherDialects() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "MySQL"
+		), context ).toHibernateConfig();
+
+		assertThat( config.getProperty( AvailableSettings.USE_GET_GENERATED_KEYS ) ).isNull();
+	}
+
+	@Test
+	public void testGeneratedKeysUntouchedWhenDialectMissing() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB"
+		), context ).toHibernateConfig();
+
+		assertThat( config.getProperty( AvailableSettings.USE_GET_GENERATED_KEYS ) ).isNull();
+	}
+
+	@Test
+	public void testGeneratedKeysCanBeOverriddenForPostgreSQL() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "PostgreSQL",
+		    ORMKeys.hibernateProperties, Struct.of( AvailableSettings.USE_GET_GENERATED_KEYS, "false" )
+		), context ).toHibernateConfig();
+
+		assertEquals( "false", config.getProperty( AvailableSettings.USE_GET_GENERATED_KEYS ) );
 	}
 
 	@Test
