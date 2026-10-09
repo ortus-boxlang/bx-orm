@@ -1,0 +1,7 @@
+/**
+ * Control entity: `remark` is not a reserved word, so nothing is quoted.
+ */
+class accessors="true" persistent="true" table="remark" {
+	property name="id" fieldtype="id" ormType="integer" generator="identity";
+	property name="body" ormType="string";
+}

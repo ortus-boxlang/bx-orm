@@ -1,0 +1,7 @@
+/**
+ * `user` is a genuinely reserved word in PostgreSQL, so the table must stay quoted in DDL and DML.
+ */
+class accessors="true" persistent="true" table="user" {
+	property name="id" fieldtype="id" ormType="integer" generator="identity";
+	property name="name" ormType="string";
+}

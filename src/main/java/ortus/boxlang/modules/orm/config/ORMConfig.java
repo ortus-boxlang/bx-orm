@@ -669,7 +669,15 @@ public class ORMConfig {
 			// https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/cfg/JdbcSettings.html#DIALECT
 			// configuration.setProperty(AvailableSettings.DIALECT, dialect);
 
-			configuration.setProperty( AvailableSettings.DIALECT, toFullHibernateDialectName( dialect ) );
+			String fullDialectName = toFullHibernateDialectName( dialect );
+			configuration.setProperty( AvailableSettings.DIALECT, fullDialectName );
+
+			// With an explicit dialect Hibernate skips the JDBC metadata, so it no longer learns that the driver can return generated keys. It then reads
+			// an identity back with `select currval('<table>_<column>_seq')`, which PostgreSQL rejects when the table name is quoted, as it is for reserved
+			// words like `comment`. Declare the driver capability ourselves, as auto-detection does. The PostgreSQL driver always supports it.
+			if ( isPostgreSQLDialect( fullDialectName ) ) {
+				configuration.setProperty( AvailableSettings.USE_GET_GENERATED_KEYS, "true" );
+			}
 		}
 
 		if ( this.schema != null ) {
@@ -835,6 +843,16 @@ public class ORMConfig {
 		properties.setProperty( "hibernate.cache.region_prefix", datasource.getName() + "_" );
 		properties.setProperty( "hibernate.javax.cache.provider", getJCacheProviderClassPath() );
 		return properties;
+	}
+
+	/**
+	 * Whether the given full Hibernate dialect class name is a PostgreSQL dialect, such as {@code org.hibernate.dialect.PostgreSQL10Dialect}.
+	 *
+	 * @param fullDialectName The full dialect class name, as returned by {@link #toFullHibernateDialectName(String)}.
+	 */
+	private static boolean isPostgreSQLDialect( String fullDialectName ) {
+		String simpleName = fullDialectName.substring( fullDialectName.lastIndexOf( '.' ) + 1 );
+		return simpleName.toLowerCase().startsWith( "postgre" );
 	}
 
 	/**
