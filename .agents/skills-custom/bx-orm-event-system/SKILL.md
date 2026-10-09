@@ -150,6 +150,15 @@ private void ensureListenerReady() {
 }
 ```
 
+## Observability Events (InterceptorService)
+
+Separate from the Hibernate event listener above, these are announced through BoxLang's `InterceptorService`:
+
+- `onORMQuery`, `onORMFlush` and `onORMException`, built in `observability/ORMObserver`. Full payloads are in `docs/observability-events.md`.
+- `ORMConnectionProvider.getConnection()` wraps the JDBC connection with `ORMObserver.wrap()`. Statements, prepared statements and result sets are `java.lang.reflect.Proxy` objects, so query timing and row counts need no Hibernate hooks.
+- `ORMContext.getSession()` attaches `ORMObserver.FlushListener`, which brackets a flush so the statements it runs can be counted.
+- `InterceptorService.hasState()` only says the interception point is registered, which is always true for ORM events. Check the state has listeners (`getState( key ).size() > 0`) before doing observability work.
+
 ## TransactionManager — Transaction Lifecycle
 
 `TransactionManager` is a BoxLang interceptor that listens to BoxLang transaction events and translates them into Hibernate session transaction operations:
