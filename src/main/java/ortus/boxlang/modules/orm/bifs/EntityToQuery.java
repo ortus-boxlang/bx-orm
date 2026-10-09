@@ -67,11 +67,8 @@ public class EntityToQuery extends BaseORMBIF {
 	 * @argument.name The name of the entity. Optional; inferred from the (first) entity if not provided. Useful with inheritance mappings.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IBoxContext	jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
-		ORMApp		ormApp			= ORMContext.getForContext( jdbcBoxContext ).getORMApp();
-		if ( ormApp == null ) {
-			throw new BoxRuntimeException( "ORM application is not initialized." );
-		}
+		IBoxContext		jdbcBoxContext	= context.getParentOfType( IJDBCCapableContext.class );
+		ORMApp			ormApp			= ORMContext.getForContext( jdbcBoxContext ).requireORMApp();
 
 		EntityRecord	entityRecord	= null;
 		String			entityName		= arguments.containsKey( Key._name )
@@ -105,10 +102,7 @@ public class EntityToQuery extends BaseORMBIF {
 	}
 
 	private String getEntityNameOrThrow( Object item ) {
-		if ( ! ( item instanceof IClassRunnable ) ) {
-			throw new IllegalArgumentException( "Entity must be an Boxlang class or array of classes" );
-		}
-		return getEntityName( ( IClassRunnable ) item );
+		return getEntityName( requireEntity( item, "entity", "entityToQuery" ) );
 	}
 
 	private Query populateQuery( Array entities, EntityRecord entityRecord ) {

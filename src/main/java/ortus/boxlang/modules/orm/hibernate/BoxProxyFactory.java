@@ -17,15 +17,12 @@
  */
 package ortus.boxlang.modules.orm.hibernate;
 
-import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Set;
 
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.property.access.spi.Getter;
-import org.hibernate.property.access.spi.Setter;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.ProxyFactory;
 import org.hibernate.type.CompositeType;
@@ -37,33 +34,26 @@ import org.hibernate.type.CompositeType;
  */
 public class BoxProxyFactory implements ProxyFactory {
 
-	@SuppressWarnings( "unused" )
-	private String			className; // needed for compilation
 	private String			entityName;
 	private PersistentClass	mappingInfo;
-	@SuppressWarnings( "unused" )
-	private Getter			idGetter;  // needed for compilation
-	@SuppressWarnings( "unused" )
-	private Setter			idSetter;  // needed for compilation
 
-	public BoxProxyFactory( PersistentClass mappingInfo, Getter idGetter, Setter idSetter ) {
+	public BoxProxyFactory( PersistentClass mappingInfo ) {
 		this.mappingInfo	= mappingInfo;
-		this.idGetter		= idGetter;
-		this.idSetter		= idSetter;
-		this.className		= mappingInfo.getClassName();
 		this.entityName		= mappingInfo.getEntityName();
 	}
 
 	@Override
-	public void postInstantiate( String entityName, Class persistentClass, Set<Class> interfaces,
+	public void postInstantiate( String entityName, Class<?> persistentClass, Set<Class<?>> interfaces,
 	    Method getIdentifierMethod, Method setIdentifierMethod, CompositeType componentIdType )
 	    throws HibernateException {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException( "Unimplemented method 'postInstantiate'" );
+		// BoxLang entities have no Java class or identifier accessor methods; only the entity name matters.
+		if ( entityName != null ) {
+			this.entityName = entityName;
+		}
 	}
 
 	@Override
-	public HibernateProxy getProxy( Serializable id, SharedSessionContractImplementor session )
+	public HibernateProxy getProxy( Object id, SharedSessionContractImplementor session )
 	    throws HibernateException {
 		return new BoxProxy( entityName, id, session, mappingInfo );
 	}

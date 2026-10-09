@@ -1,0 +1,6 @@
+class accessors="true" persistent="true" table="mr_authors" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="name" ormType="string";
+	property name="books" fieldtype="one-to-many" cfc="MrBook" fkcolumn="authorId" inverse="true" type="array" singularName="book";
+	property name="activeBooks" fieldtype="one-to-many" cfc="MrBook" fkcolumn="authorId" inverse="true" type="array" where="active = 1";
+}

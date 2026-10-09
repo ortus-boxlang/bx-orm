@@ -1,0 +1,12 @@
+/**
+ * Fixture for collection-level where (Phase 3B): pinnedNotes only holds pinned notes.
+ */
+class persistent="true" table="notebooks" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="name" ormType="string" length="100";
+
+	property name="pinnedNotes" fieldtype="one-to-many" cfc="PinNote" fkcolumn="notebook_id" where="pinned = 1" lazy="true";
+
+}

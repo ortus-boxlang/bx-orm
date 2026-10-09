@@ -1,0 +1,5 @@
+class accessors="true" persistent="true" table="toys" {
+	property name="id" generator="increment" fieldtype="id" ormType="integer";
+	property name="label" ormType="string";
+	property name="animal" fieldtype="many-to-one" cfc="Animal" fkcolumn="animalId" lazy="true";
+}

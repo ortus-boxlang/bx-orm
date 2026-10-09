@@ -1,0 +1,4 @@
+class accessors="true" persistent="true" table="dogs" extends="Animal" joinColumn="id" discriminatorValue="dog" {
+	property name="breed" ormType="string";
+	property name="goodBoy" ormType="boolean";
+}

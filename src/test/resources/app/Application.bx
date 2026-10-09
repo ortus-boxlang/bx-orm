@@ -38,6 +38,11 @@ class {
 		"dbcreate"             : "dropcreate",
 		"cacheprovider"        : "ConcurrentHashMap",
 		"secondarycacheenabled": true,
+		"eventHandling"        : true,
+		"sqlFunctions"         : {
+			"nameLen" : { "sql" : "char_length(?1)", "returns" : "integer" },
+			"shout"   : "upper(?1)"
+		},
 		"eventHandler"         : "root.models.events.EventHandler",
 		"ignoreParseErrors"    : true
 	};

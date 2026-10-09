@@ -41,14 +41,14 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 /**
  * Boots a full ORM application against a real PostgreSQL datasource and saves entities whose table names are on the reserved-word list.
  * <p>
- * Those table names are quoted in the generated mapping. With {@code generator="identity"} Hibernate 5 reads the new key back with
+ * Those table names are quoted in the generated mapping. With {@code generator="identity"} Hibernate reads the new key back with
  * {@code select currval('
  * 
 <table>
  * _<column>_seq')}, so a quoted table name used to produce {@code currval('"comment"_id_seq')}, which PostgreSQL rejects
  * with "invalid name syntax" (BL-2739).
  * <p>
- * Connection settings come from {@code PG_HOST}, {@code PG_PORT}, {@code PG_DATABASE}, {@code PG_USER} and {@code PG_PASSWORD}. The tests are skipped
+ * Connection settings come from {@code PG_HOST}, {@code PG_PORT}, {@code PG_DB}, {@code PG_USER} and {@code PG_PASSWORD}. The tests are skipped
  * when
  * no PostgreSQL server is reachable. Subclasses choose the ORM dialect: explicit, or blank to let Hibernate auto-detect it.
  */
@@ -76,8 +76,8 @@ public abstract class AbstractPostgreSQLIdentityTest {
 	}
 
 	private static boolean postgresIsReachable() {
-		String url = "jdbc:postgresql://" + env( "PG_HOST", "127.0.0.1" ) + ":" + env( "PG_PORT", "5432" ) + "/" + env( "PG_DATABASE", "bxorm_test" );
-		try ( Connection ignored = DriverManager.getConnection( url, env( "PG_USER", "postgres" ), env( "PG_PASSWORD", "" ) ) ) {
+		String url = "jdbc:postgresql://" + env( "PG_HOST", "127.0.0.1" ) + ":" + env( "PG_PORT", "5432" ) + "/" + env( "PG_DB", "ormtest" );
+		try ( Connection ignored = DriverManager.getConnection( url, env( "PG_USER", "postgres" ), env( "PG_PASSWORD", "postgres" ) ) ) {
 			return true;
 		} catch ( Exception e ) {
 			return false;
@@ -104,7 +104,7 @@ public abstract class AbstractPostgreSQLIdentityTest {
 
 		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
 		RequestBoxContext.setCurrent( context );
-		context.loadApplicationDescriptor( Paths.get( "src/test/resources/postgresApp/index.bxs" ).toAbsolutePath().toUri() );
+		context.loadApplicationDescriptor( Paths.get( "src/test/resources/postgresIdentityApp/index.bxs" ).toAbsolutePath().toUri() );
 		context.getApplicationListener().onRequestStart( context, null );
 		variables = context.getScopeNearby( VariablesScope.name );
 	}

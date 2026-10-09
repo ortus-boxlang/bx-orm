@@ -1,0 +1,24 @@
+class {
+	this.name = "BXORMFacadeCompositeTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"FacadeCompositeDB": {
+			"connectionString": "jdbc:derby:memory:ormFacadeCompositeTest;create=true"
+		}
+	};
+	this.datasource = "FacadeCompositeDB";
+
+	this.ormSettings = {
+		"datasource"       : "FacadeCompositeDB",
+		"dialect"          : "Derby",
+		"entityPaths"      : [ "/root/models" ],
+		"saveMapping"      : "true",
+		"logSQL"           : "false",
+		"dbcreate"         : "dropcreate",
+		"cacheprovider"    : "ConcurrentHashMap",
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}

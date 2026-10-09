@@ -1,0 +1,12 @@
+/**
+ * Fixture for lock mode "force" (Phase 3B): a versioned entity.
+ */
+class persistent="true" table="versioned_notes" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="version" fieldtype="version" ormType="integer";
+
+	property name="title" ormType="string" length="100";
+
+}

@@ -1,0 +1,8 @@
+/**
+ * Exercises the `uuid2` id generator (Hibernate's modern UUID generator) with a string-mapped key.
+ */
+class accessors="true" persistent="true" entityname="Uuid2Gen" table="feat_uuid2gen" {
+
+	property name="id" fieldtype="id" generator="uuid2" ormType="string" length="36";
+	property name="label" ormType="string" notnull="true";
+}

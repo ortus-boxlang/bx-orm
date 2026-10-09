@@ -1,0 +1,12 @@
+/**
+ * Fixture for entityToStruct (Phase 4): a post that points back at its author (a cycle).
+ */
+class persistent="true" table="memo_posts" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="title" ormType="string" length="100";
+
+	property name="author" fieldtype="many-to-one" cfc="MemoAuthor" fkcolumn="author_id";
+
+}

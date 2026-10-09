@@ -1,0 +1,7 @@
+class accessors="true" persistent="true" table="gadgets" {
+	property name="id" generator="increment" fieldtype="id" ormType="integer";
+	property name="name" ormType="string";
+	property name="price" ormType="big_decimal";
+	property name="active" ormType="boolean";
+	property name="createdDate" ormType="timestamp";
+}

@@ -1,0 +1,14 @@
+/**
+ * Exercises the `sequence` id generator (a real DB SEQUENCE on Derby).
+ */
+class accessors="true" persistent="true" entityname="Sequenced" table="feat_sequenced" {
+
+	property
+		name="id"
+		fieldtype="id"
+		generator="sequence"
+		params="{ sequence = 'feat_seq' }"
+		ormType="integer";
+
+	property name="label" ormType="string" notnull="true";
+}

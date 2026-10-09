@@ -24,7 +24,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.runtime.scopes.Key;
-import ortus.boxlang.runtime.types.exceptions.KeyNotFoundException;
 import tools.BaseORMTest;
 
 public class EntityReloadTest extends BaseORMTest {
@@ -69,17 +68,17 @@ public class EntityReloadTest extends BaseORMTest {
 		assertEquals( "101 Ford Circle, Detroit MI", variables.get( Key.of( "reloadedAddress" ) ) );
 	}
 
-	@DisplayName( "It throws if the argument is not a valid entity" )
+	/**
+	 * Test: It throws a clear orm.argument error if the argument names no variable.
+	 */
+	@DisplayName( "It throws a clear orm.argument error if the argument names no variable" )
 	@Test
 	public void testBadEntityName() {
-		assertThrows( KeyNotFoundException.class, () -> {
-			instance.executeSource(
-			    """
-			    	entityReload( "Fooey" );
-			    """,
-			    context
-			);
-		} );
+		// Compare the BoxLang type: the module's ORMException class is loaded by the module class loader, not the test's.
+		ortus.boxlang.runtime.types.exceptions.BoxLangException e = assertThrows( ortus.boxlang.runtime.types.exceptions.BoxLangException.class,
+		    () -> instance.executeSource( "entityReload( \"Fooey\" );", context ) );
+		assertEquals( "orm.argument", e.getType() );
+		assertEquals( true, e.getMessage().contains( "[Fooey]" ) );
 	}
 
 }

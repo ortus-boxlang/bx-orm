@@ -1,0 +1,4 @@
+class accessors="true" persistent="true" table="mr_items" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="label" ormType="string";
+}

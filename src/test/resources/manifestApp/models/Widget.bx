@@ -1,0 +1,4 @@
+class accessors="true" persistent="true" table="widgets" {
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+	property name="label" ormType="string";
+}

@@ -1,0 +1,5 @@
+class accessors="true" persistent="true" table="mr_docs" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="title" ormType="string";
+	property name="lastModified" fieldtype="timestamp";
+}

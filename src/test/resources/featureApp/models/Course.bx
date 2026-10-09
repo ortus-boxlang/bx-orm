@@ -1,0 +1,18 @@
+/**
+ * Inverse side of the Student many-to-many.
+ */
+class accessors="true" persistent="true" entityname="Course" table="feat_course" {
+
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+	property name="title" ormType="string" notnull="true";
+
+	property
+		name        ="students"
+		singularName="student"
+		fieldtype   ="many-to-many"
+		cfc         ="Student"
+		linktable   ="feat_student_course"
+		fkcolumn    ="FK_courseId"
+		inversejoincolumn="FK_studentId"
+		inverse     ="true";
+}

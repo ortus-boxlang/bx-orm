@@ -1,0 +1,12 @@
+/**
+ * Joined-inheritance root (no discriminator): each subclass lives in its own table, joined to this one by key.
+ */
+class
+	accessors ="true"
+	persistent="true"
+	entityname="Shape"
+	table     ="fac_shapes"
+{
+	property name="id"    fieldtype="id" generator="uuid" ormType="string";
+	property name="color" ormType="string";
+}

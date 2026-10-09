@@ -1,0 +1,5 @@
+class accessors="true" persistent="true" table="lc_pets" {
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+	property name="name" ormType="string";
+	property name="owner" fieldtype="many-to-one" cfc="Owner" fkcolumn="ownerId";
+}

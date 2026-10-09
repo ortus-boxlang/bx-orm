@@ -20,7 +20,7 @@ package ortus.boxlang.modules.orm.config;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.jdbc.dialect.spi.DialectResolutionInfo;
 import org.hibernate.engine.jdbc.dialect.spi.DialectResolver;
-import org.sqlite.hibernate.dialect.SQLiteDialect;
+import org.hibernate.community.dialect.SQLiteDialect;
 
 /**
  * Resolves the SQLite dialect for Hibernate.

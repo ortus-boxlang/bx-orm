@@ -18,12 +18,20 @@ ORM BIFs (Built-In Functions) provide the public API for BoxLang developers to i
 ## BIF Inventory
 
 | Category | BIFs |
-|---|---|
+| --- | --- |
 | **Entity CRUD** | `EntityNew`, `EntityLoad`, `EntityLoadByPK`, `EntityLoadByExample`, `EntitySave`, `EntityDelete`, `EntityMerge`, `EntityReload`, `EntityNameArray`, `EntityToQuery` |
 | **Session Management** | `ORMGetSession`, `ORMGetSessionFactory`, `ORMCloseSession`, `ORMCloseAllSessions`, `ORMClearSession`, `ORMFlush`, `ORMFlushAll`, `ORMReload` |
 | **Cache & Eviction** | `ORMEvictEntity`, `ORMEvictCollection`, `ORMEvictQueries` |
 | **HQL Queries** | `ORMExecuteQuery` |
-| **Metadata** | `ORMGetHibernateVersion` |
+| **Inspection** | `EntityGetName`, `EntityGetDatasource`, `EntityGetId`, `EntityGetMetadata`, `EntityIsDirty`, `EntityGetDirtyProperties`, `ORMIsSessionDirty`, `ORMGetSessionStatistics` (all delegate to `EntityInspector`) |
+| **Metadata** | `ORMGetHibernateVersion`, `ORMDiagnostics`, `ORMGetSQLFunctions` |
+| **Load helpers** | `EntityLoadOrNew`, `EntityLoadOrSave`, `EntityLoadOrFail`, `EntityLoadByPKOrFail` (shared steps in `bifs/LoadOr`), `EntityGetReference`, `EntityLoadReadOnly` |
+| **Session control** | `EntityEvict`, `EntityLock` (`EntityLocking`), `ORMReadOnly` (`ORMContext.readOnly()`) |
+| **Structs** | `EntityToStruct` (`memento/EntityMemento`), `EntityLoadAsStruct` (`criteria/StructLoads` + `MementoProjection`) |
+
+`EntitySave` / `EntityDelete` take one entity or an array plus `{ flush : true }` (`BaseORMBIF.entities()`,
+`flushRequested()`); `EntitySave.save()` and `EntityNew.create()` are the shared static cores other BIFs reuse.
+`EntityLoadByPK` takes an array of ids (`ORMApp.loadEntitiesByIds`, one `findMultiple`) and an options struct.
 
 ## BaseORMBIF — The Parent Class
 
@@ -50,6 +58,19 @@ public abstract class BaseORMBIF extends BIF {
     }
 }
 ```
+
+`BaseORMBIF` also owns error handling:
+
+- `invoke()` wraps every BIF and sends any Hibernate / JPA / JDBC failure through `ORMErrors.translate`,
+  producing an `ORMException` with an `orm.*` type, BoxLang entity names and a fix in `detail`. The
+  error context (`errorContext`) adds the BIF name, the HQL and params, and the app's entity and
+  property names for "Did you mean" suggestions. Non-ORM errors (e.g. from a developer's event
+  handler) pass through unchanged.
+- `requireEntity( value, argumentName, bifName )` returns the argument as an `IClassRunnable` or
+  throws a clear `orm.argument` error naming what was passed. Use it instead of casting.
+- Get the ORM application with `ormService.requireORMApp( context )` or
+  `ormContext.requireORMApp()`, never `getORMApp()` plus a null check: they raise
+  `orm.notEnabled` / `orm.notReady` with the reason (including the last startup failure).
 
 ## BIF Structure Pattern
 
@@ -136,6 +157,7 @@ public class EntityLoad extends BaseORMBIF {
 ```
 
 Options struct:
+
 ```js
 var options = {
     unique     : false,    // Return single entity?
@@ -220,6 +242,19 @@ public class ORMFlush extends BaseORMBIF {
 public class ORMFlushAll extends BaseORMBIF {
     // Signature: ormFlushAll()
     // Flushes all pending changes across all datasources
+}
+```
+
+### Inspection BIFs
+
+Resolve the entity argument with `EntityInspector.resolve( ormApp, value, bifName )` (a name or an instance; a struct is `orm.argument`) and keep the logic in `EntityInspector`, so every BIF shares one set of rules:
+
+```java
+@BoxBIF
+public class EntityIsDirty extends BaseORMBIF {
+    // Signature: entityIsDirty( entity )
+    // ORMContext.getForContext( context ) -> requireORMApp() -> EntityInspector.resolve(...)
+    // -> EntityInspector.dirtyProperties(...) is not empty
 }
 ```
 
@@ -394,6 +429,15 @@ src/main/java/ortus/boxlang/modules/orm/bifs/
 ├── EntityReload.java
 ├── EntityNameArray.java
 ├── EntityToQuery.java
+├── EntityGetName.java         # Inspection BIFs: see EntityInspector
+├── EntityGetDatasource.java
+├── EntityGetId.java
+├── EntityGetMetadata.java
+├── EntityIsDirty.java
+├── EntityGetDirtyProperties.java
+├── ORMIsSessionDirty.java
+├── ORMGetSessionStatistics.java
+├── ORMDiagnostics.java
 ├── ORMExecuteQuery.java
 ├── ORMGetSession.java
 ├── ORMGetSessionFactory.java
@@ -418,6 +462,7 @@ src/main/resources/META-INF/services/ortus.boxlang.runtime.bifs.BIF
 ```
 
 Each line in this file is the fully-qualified class name of a BIF:
+
 ```
 ortus.boxlang.modules.orm.bifs.EntityNew
 ortus.boxlang.modules.orm.bifs.EntityLoad
@@ -429,7 +474,8 @@ ortus.boxlang.modules.orm.bifs.EntitySave
 
 1. **Always extend `BaseORMBIF`** — never extend `BIF` directly for ORM functions; `BaseORMBIF` provides shared ORM service access and entity name resolution.
 2. **Resolve ORM context explicitly** — use `context.getParentOfType( IJDBCCapableContext.class )` to find the JDBC-capable context, then get the ORM context from it.
-3. **Guard against null `ORMApp`** — throw a descriptive `BoxRuntimeException` if no ORM application is configured, rather than letting a NullPointerException surface.
+3. **Use `requireORMApp()`, never a null check** — it throws `orm.notEnabled` / `orm.notReady` with the reason instead of a NullPointerException.
+3a. **Throw `ORMException`, not `BoxRuntimeException`** — pick an `ORMErrorType`, name the entity and property in the message, put the fix in `detail`, and use `ORMErrors.entityNotFound` / `propertyNotFound` / `suggestion` for "Did you mean". Add a case to `errors/ORMErrorMessagesTest`.
 4. **Use `ORMKeys` for argument names** — all argument names should reference `ORMKeys` constants.
 5. **Support both positional and named HQL parameters** — in `ORMExecuteQuery` and similar BIFs, detect whether `params` is an `Array` (positional) or `IStruct` (named).
 6. **Return BoxLang-native types** — return `IClassRunnable`, `Array`, `IStruct`, `Boolean`, or `Number`; never raw Hibernate objects.

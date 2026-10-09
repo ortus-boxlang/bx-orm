@@ -1,0 +1,4 @@
+class accessors="true" persistent="true" table="accounts" {
+	property name="id" generator="increment" fieldtype="id" ormType="integer";
+	property name="owner" ormType="string";
+}

@@ -1,0 +1,8 @@
+/**
+ * Exercises the `native` id generator (resolves to the database's native strategy - IDENTITY on Derby).
+ */
+class accessors="true" persistent="true" entityname="NativeGen" table="feat_nativegen" {
+
+	property name="id" fieldtype="id" generator="native" ormType="integer";
+	property name="label" ormType="string" notnull="true";
+}
