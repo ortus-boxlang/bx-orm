@@ -97,6 +97,33 @@ GORM-style helpers on the entity class itself. Design details in [§10f](#10f-st
 
 ---
 
+## Branches, versions and pre-releases
+
+- **`next`** is where 2.0 is built and tested. All 2.0 work goes there (pull requests target `next`).
+  `development` and `master` still carry 1.x until 2.0.0 is final.
+- **Requirements:** BoxLang 1.18.0 or later (`gradle.properties` `boxlangVersion`, `box.json`
+  `boxlang.minimumVersion`), Java 21, Hibernate 7.4.8 (bundled).
+- **Pre-releases** (`2.0.0-alpha.N`, `2.0.0-beta.N`, `2.0.0-rc.N`) are published by hand from `next`:
+  GitHub **Actions > Pre-Release (next) > Run workflow** on the `next` branch, choosing the label.
+  `.github/workflows/prerelease.yml`:
+  1. refuses to run on any branch but `next`;
+  2. runs the test suite (no green tests, no pre-release);
+  3. picks the next free number for the label from the existing tags (`v2.0.0-beta.1` exists, so
+     `2.0.0-beta.2`), and builds with it (`gradle.properties` is changed in the runner only);
+  4. uploads the zip to `downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-orm/<version>/` and the
+     API docs to `apidocs.ortussolutions.com`, publishes to ForgeBox, tags the commit and creates a GitHub
+     pre-release whose notes are the changelog's `[Unreleased]` section.
+
+  It never finalizes the changelog, bumps `development` or touches the stable release. GitHub only lists a
+  manually-run workflow when the file is also on the default branch (`development`).
+- **Installing one:** `box install bx-orm@2.0.0-beta.1` or `install-bx-module bx-orm@2.0.0-beta.1`. A plain
+  `install bx-orm` keeps installing the latest stable 1.x.
+- **cborm 6** has the same `next` branch and workflow (`6.0.0-beta.N`). Publish the bx-orm pre-release first:
+  cborm 6 runs on bx-orm 2, and its CI builds bx-orm from `next`.
+- **Final release:** a pull request from `next` into `development`, then the normal release flow.
+
+---
+
 ## 1. What bx-orm is
 
 `bx-orm` is the middleware that lets the dynamic **BoxLang** JVM language use **Hibernate ORM**
@@ -1199,6 +1226,14 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
   static entity methods (Phase 8, done: [§10f](#10f-static-entity-methods-phase-8)), and dynamic finders (next, using
   BoxLang 1.18's `afterBoxClassCreation` event). Casting is not a phase: bx-orm casts ids itself and Hibernate 7 coerces
   query parameters, so cborm's `idCast()`/`autoCast()` just return their value.
+- **Pre-release feedback** — `2.0.0-beta.N` pre-releases from `next` for external testing; fixes land on `next`.
+- **Known test-suite issue** — `FacadeAssociationBootTest` and `FacadeRepresentationBootTest` boot the same app
+  (`facadeApp`) against the same in-memory Derby database, breaking the "one Derby database per test class" rule
+  above. The second boot waits on Derby's held lock (3 to 6 minutes) before it passes. Giving one of them its own
+  app name and database fixes it.
+- **BoxLang [BL-2745](https://ortussolutions.atlassian.net/browse/BL-2745)** — a `.bxs` script with an `import` and a
+  `try/catch` fails with a `VerifyError` (1.17.5 and 1.18.0). bx-orm's tests use fully-qualified class names until
+  it is fixed.
 
 ---
 

@@ -28,14 +28,24 @@
 
 bx-orm announces `onORMQuery`, `onORMFlush` and `onORMException` events for SQL and flush activity, and exposes Hibernate statistics through `ORMService.getStatistics()`. See [ORM Observability Events](docs/observability-events.md).
 
+## Installing
+
+```bash
+box install bx-orm
+# or, outside CommandBox
+install-bx-module bx-orm
+```
+
+bx-orm 2.0 (Hibernate 7.4, BoxLang 1.18.0+) is in pre-release for testing. Ask for a pre-release by version, for example `box install bx-orm@2.0.0-beta.1`; the [releases page](https://github.com/ortus-boxlang/bx-orm/releases) lists them.
+
 ## Development
 
-To get started hacking on bx-orm:
-
-1. Clone the repo
-2. Copy the latest boxlang binary jar to `src/test/resources/libs/boxlang-1.0.0.jar`
-3. Download the [MySQL JDBC driver module](https://s3.amazonaws.com/downloads.ortussolutions.com/ortussolutions/boxlang-modules/bx-mysql/1.0.0/bx-mysql-1.0.0-snapshot.zip) and unzip it to to `src/test/resources/libs/modules/`
-4. Run `docker-compose up -d mysql` in the root
+* **Branches:** 2.0 work happens on `next`; send pull requests there. `development` carries 1.x until 2.0.0 is final.
+* **Requirements:** Java 21 and BoxLang 1.18.0. `./gradlew installModuleDependencies` downloads the BoxLang runtime jar and the `bx-mysql` module the tests use.
+* **Database:** `docker-compose up -d mysql` starts the MySQL instance the test suite uses. Derby and SQLite tests are embedded.
+* **Build and test:** `./gradlew build` (or `./gradlew test --tests '<pattern>'`). Run `./gradlew spotlessApply` before committing.
+* **Pre-releases:** maintainers publish `2.0.0-<label>.N` from `next` with **Actions > Pre-Release (next)**.
+* **Architecture and design:** see [DEVELOPER.md](DEVELOPER.md) and the skills in `.agents/skills-custom/`.
 
 ## Skills
 
