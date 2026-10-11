@@ -329,6 +329,23 @@ var vehicle = ormExecuteQuery(
 )
 ```
 
+## Static Entity Methods
+
+`statics/StaticEntityMethods` adds `User::get( 1 )`, `User::findWhere( filter )`, `User::criteria()` and the rest of
+`METHOD_NAMES` to every entity class's static scope at ORM startup (`ORMApp.startup()`, when `ormSettings.staticMethods`
+is on, the default). They are not a second implementation: each `EntityStaticFunction` calls the matching BIF through
+`FunctionService.getGlobalFunction( name ).invoke( context, namedArgs, false, name )` with the entity name filled in.
+
+- **Adding a method:** add the name to `METHOD_NAMES` and an `add( m, entity, "name", ( c, a ) -> ..., arguments )`
+  entry in `methodsFor()`, calling a BIF (`bif( ... )`) or a criteria method (`call( c, criteria, "method", ... )`).
+  Declare its arguments so named calls work, then cover it in `StaticEntityMethodsTest`.
+- **Never** overwrite an entity's own static: `installInto()` only writes empty names or names holding an
+  `EntityStaticFunction`.
+- A recompiled entity class loses them; `interceptors/StaticMethodsListener` restores them on `afterBoxClassCreation`
+  and, with the trusted cache off, on `onRequestStart`.
+- In test scripts, call them with a fully-qualified name (`root.models.Manufacturer::get( 1 )`): a script with an
+  `import` and a `try/catch` hits a BoxLang compiler `VerifyError` (1.17.5 and 1.18.0).
+
 ## Argument Patterns
 
 ### Required Pattern: entityName as first argument

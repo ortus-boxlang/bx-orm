@@ -1,0 +1,22 @@
+class {
+	this.name = "BXORMStaticOffTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"StaticOffDB": {
+			"connectionString": "jdbc:derby:memory:ormStaticOffTest;create=true"
+		}
+	};
+	this.datasource = "StaticOffDB";
+
+	this.ormSettings = {
+		"datasource"       : "StaticOffDB",
+		"dialect"          : "Derby",
+		"entityPaths"      : [ "/root/models" ],
+		"dbcreate"         : "dropcreate",
+		"staticMethods"    : false,
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}

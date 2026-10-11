@@ -86,6 +86,15 @@ Convenience features inspired by Grails GORM, cborm and mementifier. Design deta
 | Entities as structs | `entityToStruct( entityOrArray, { includes, excludes, profile } )`, mementifier-compatible `this.memento`, ISO 8601 dates. | [§10e](#10e-gorm-inspired-additions-phase-4) |
 | Structs without entities | `entityLoadAsStruct( name, idOrFilter, includes )` and criteria `asStruct( includes )`: the same structs from projection queries. | [§10e](#10e-gorm-inspired-additions-phase-4) |
 
+### Static entity methods (Phase 8)
+
+GORM-style helpers on the entity class itself. Design details in [§10f](#10f-static-entity-methods-phase-8).
+
+| Feature | Shape | Details |
+| --- | --- | --- |
+| Static methods | `User::get( 1 )`, `User::findWhere( { email : x } )`, `User::count()`, `User::criteria()`, `User::new( {} )`, `User::firstOrCreate( filter )`, `User::deleteWhere( filter )` and the rest: each calls the matching BIF. | [§10f](#10f-static-entity-methods-phase-8) |
+| `staticMethods` setting | On by default; `ormSettings.staticMethods = false` leaves entity classes untouched. | [§10f](#10f-static-entity-methods-phase-8) |
+
 ---
 
 ## 1. What bx-orm is
@@ -849,6 +858,52 @@ and that no entity was loaded), and a `BootErrorsTest` scenario for `defaultSort
 
 ---
 
+## 10f. Static entity methods (Phase 8)
+
+**What.** At ORM startup, `StaticEntityMethods.install()` puts one function per method into each entity class's static
+scope, so `User::get( 1 )` works with no service object and no base class. The list is
+`StaticEntityMethods.METHOD_NAMES`: `get`, `getOrFail`, `getAll`, `read`, `getReference`, `findWhere`,
+`findWhereOrFail`, `findAllWhere`, `first`, `exists`, `count`, `list`, `executeQuery`, `criteria`, `newCriteria`,
+`new`, `firstOrNew`, `firstOrCreate`, `deleteWhere`, `updateWhere`.
+
+**Why injection.** BoxLang statics are not inherited (a parent's static is not visible as `Child::method()`), so a base
+class cannot provide them. The static scope is reachable through public API (`ClassLocator.load()` +
+`BoxClassSupport.getStaticScope()`), so no reflection is needed.
+
+**How each method works.** Each is an `EntityStaticFunction` (a `DynamicFunction` subclass, which also marks it as
+ours) whose body calls the matching BIF through the function service (`entityLoadByPK`, `entityLoad`,
+`entityCriteria`, ...), with the entity name filled in. One implementation, same session, events, errors and options
+as the BIF. `exists`, `count`, `deleteWhere` and `updateWhere` go through a criteria builder; `deleteWhere` and
+`updateWhere` refuse an empty filter (`orm.argument`), since it would touch every row.
+
+**Rules.**
+
+- A static the entity declares itself is kept; only empty names or names holding an `EntityStaticFunction` are
+  written.
+- Instances reach these statics when they have no method of that name (BoxLang resolves instance calls to static
+  functions), so `user.count()` works; the entity's own instance methods win.
+- `staticMethods = false` makes startup call `uninstall()` instead, which removes our functions, so turning the
+  setting off and reloading takes them away.
+
+**Recompiled classes.** When BoxLang recompiles an edited entity file, the new class starts with an empty static scope.
+`StaticEntityMethods` remembers which compiled classes it handled (weak keys), and `interceptors/StaticMethodsListener`
+puts the methods back:
+
+- `afterBoxClassCreation` (BoxLang 1.18+): an instance of a new class gets the methods put on its class. The common
+  case is one map lookup; classes that are not entities are remembered too.
+- `onRequestStart`, only when the runtime's trusted cache is off: `refresh()` loads every entity class (which lets
+  BoxLang recompile an edited one) and re-adds the methods to any new class. This covers a static call that is the
+  first use of an edited entity. With the trusted cache on, classes never recompile and the check is skipped.
+
+**BoxLang bug found on the way.** On 1.17.5 and 1.18.0, a script (`.bxs` or `executeSource()`) that has an `import`
+statement and a `try/catch` fails to compile with `java.lang.VerifyError: Inconsistent stackmap frames`. The tests use
+fully-qualified names (`root.models.Manufacturer::get( 1 )`) instead of `import`.
+
+**Tests.** `statics/StaticEntityMethodsTest` (every method, own statics and instance methods win, recompile through
+both paths) and `statics/StaticMethodsOffTest` (Derby app with `staticMethods = false`).
+
+---
+
 ## 11. The ORM manifest boot cache (`.bxorm/`)
 
 Boot has three costs: entity **discovery** (walking the tree), **metadata parsing** (per entity,
@@ -1140,8 +1195,9 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
 
 - **cborm-compatible path** — the V2 plan: new BIFs (Phase 2), the fluent `entityCriteria()` (Phase 3),
   Hibernate-native features (Phase 3B, done: [§10d](#10d-hibernate-native-features-phase-3b)), GORM-inspired
-  additions (Phase 4, done: [§10e](#10e-gorm-inspired-additions-phase-4)), dynamic finders, cborm calling bx-orm BIFs, a live cborm test run, and opt-in static class
-  helpers. Casting is not a phase: bx-orm casts ids itself and Hibernate 7 coerces
+  additions (Phase 4, done: [§10e](#10e-gorm-inspired-additions-phase-4)), cborm calling bx-orm BIFs, a live cborm test run,
+  static entity methods (Phase 8, done: [§10f](#10f-static-entity-methods-phase-8)), and dynamic finders (next, using
+  BoxLang 1.18's `afterBoxClassCreation` event). Casting is not a phase: bx-orm casts ids itself and Hibernate 7 coerces
   query parameters, so cborm's `idCast()`/`autoCast()` just return their value.
 
 ---
@@ -1160,6 +1216,7 @@ and `ortus.boxlang.modules.orm.config.ORMEntityWatcher`; wired in `ORMApp.startu
 | Entities as structs | `ortus.boxlang.modules.orm.memento` (`MementoSpec`, `EntityMemento`, `IsoDates`) |
 | Locking, read-only, post-commit | `EntityLocking`, `ORMContext.readOnly()`, `config/BoxTransactionCoordinatorBuilder`, `config/PostCommitQueue` |
 | Facade Java annotations | `hibernate/facade/FacadeAnnotations` |
+| Static entity methods | `ortus.boxlang.modules.orm.statics` (`StaticEntityMethods`), `interceptors/StaticMethodsListener` |
 | Session lifecycle | `ORMService` → `ORMApp` → `ORMContext`, `SessionFactoryBuilder` |
 | Subsystem deep-dives | `.agents/skills-custom/` |
 

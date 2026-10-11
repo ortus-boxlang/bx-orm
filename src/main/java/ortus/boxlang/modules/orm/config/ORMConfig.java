@@ -248,6 +248,12 @@ public class ORMConfig {
 	public boolean								generateStatistics		= false;
 
 	/**
+	 * Add static helper methods (<code>User::get( 1 )</code>, <code>User::findWhere( {} )</code> and so on) to every entity class at ORM
+	 * startup. On by default; set <code>staticMethods = false</code> to leave entity classes untouched.
+	 */
+	public boolean								staticMethods			= true;
+
+	/**
 	 * Defines the naming convention to use on table and column names.
 	 *
 	 * - default : Uses the table or column names as is
@@ -530,6 +536,9 @@ public class ORMConfig {
 		}
 		if ( properties.containsKey( ORMKeys.generateStatistics ) && properties.get( ORMKeys.generateStatistics ) != null ) {
 			generateStatistics = BooleanCaster.cast( properties.get( ORMKeys.generateStatistics ) );
+		}
+		if ( properties.containsKey( ORMKeys.staticMethods ) && properties.get( ORMKeys.staticMethods ) != null ) {
+			staticMethods = BooleanCaster.cast( properties.get( ORMKeys.staticMethods ) );
 		}
 		if ( properties.containsKey( ORMKeys.secondaryCacheEnabled ) && properties.get( ORMKeys.secondaryCacheEnabled ) != null ) {
 			secondaryCacheEnabled = BooleanCaster.cast( properties.get( ORMKeys.secondaryCacheEnabled ) );

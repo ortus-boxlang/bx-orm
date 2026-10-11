@@ -266,6 +266,7 @@ public class ORMKeys {
 	 */
 	public static final Key	announceQueryParams			= Key.of( "announceQueryParams" );
 	public static final Key	generateStatistics			= Key.of( "generateStatistics" );
+	public static final Key	staticMethods				= Key.of( "staticMethods" );
 	public static final Key	sql							= Key.of( "sql" );
 	public static final Key	kind						= Key.of( "kind" );
 	public static final Key	elapsedNanos				= Key.of( "elapsedNanos" );

@@ -1,0 +1,15 @@
+/**
+ * Entity for the static entity method tests: it declares its own static count() and instance list(), which bx-orm must keep.
+ */
+class persistent="true" table="static_things" {
+	property name="id" generator="increment" fieldtype="id" ormType="integer";
+	property name="name" ormType="string";
+
+	static function count(){
+		return "own count";
+	}
+
+	function list(){
+		return "own list";
+	}
+}

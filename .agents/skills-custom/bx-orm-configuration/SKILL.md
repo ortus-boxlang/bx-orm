@@ -50,6 +50,7 @@ flowchart LR
 | **Paths** | `entityPaths`, `sqlScript` | `[ "/models" ]` |
 | **Logging** | `logSQL`, `logSQLFormat`, `logSQLParameters`, `logLevel` | `false` |
 | **Entity Defaults** | `useDBForMapping`, `eventHandler`, `datasource` | — |
+| **Entity classes** | `staticMethods` (static helper methods such as `User::get( 1 )`, see `statics/StaticEntityMethods`) | `true` |
 
 ### Configuration Parsing
 

@@ -222,6 +222,13 @@ public class ORMApp {
 			( ( ORMService ) runtime.getGlobalService( ORMKeys.ORMService ) ).ensureEntityWatcher( this.name, this.config, context );
 		}
 
+		// Static helper methods on the entity classes (User::get( 1 ) and so on), or remove them when the setting was turned off.
+		if ( this.config.staticMethods ) {
+			ortus.boxlang.modules.orm.statics.StaticEntityMethods.install( context, this );
+		} else {
+			ortus.boxlang.modules.orm.statics.StaticEntityMethods.uninstall( context, this );
+		}
+
 		// Configure logging according to the ORM configuration, after all session factories are built.
 		// This ensures that any logging during session factory construction is not affected by the new configuration, which could cause confusion or issues
 		// if the new configuration is invalid.
