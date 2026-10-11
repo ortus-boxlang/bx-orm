@@ -15,7 +15,7 @@
 	"type": "boxlang-modules",
 	"keywords": ["boxlang"],
 	"boxlang": {
-		"minimumVersion": "1.17.5",
+		"minimumVersion": "1.18.0",
 		"moduleName": "orm",
 		"executable": "bxorm"
 	},
