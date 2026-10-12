@@ -38,7 +38,7 @@ flowchart TB
 ## Key Files
 
 | File | Location | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `BaseORMTest.java` | `src/test/java/tools/` | Shared test superclass; starts/stops BoxLang runtime |
 | `JDBCTestUtils.java` | `src/test/java/tools/` | JDBC helper utilities for tests |
 | `docker-compose.yml` | `/` (project root) | MySQL 8 container definition |

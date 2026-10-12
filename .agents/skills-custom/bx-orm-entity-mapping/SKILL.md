@@ -30,7 +30,7 @@ flowchart LR
 ## Key Classes
 
 | Class | Package | Responsibility |
-|---|---|---|
+| --- | --- | --- |
 | `MappingGenerator` | `ortus.boxlang.modules.orm.mapping` | Walks directories, discovers entities, orchestrates XML generation |
 | `EntityRecord` | `ortus.boxlang.modules.orm.mapping` | Value object holding entity name, FQN, class name, datasource, metadata, XML path |
 | `IEntityMeta` | `ortus.boxlang.modules.orm.mapping.inspectors` | Interface for normalized entity metadata |
@@ -61,7 +61,7 @@ private static final String ENTITY_TEMP_FOLDER = "orm_mappings";
 ### Save-Mapping Behavior
 
 | `saveMapping` | `saveAlongsideEntity` | Result |
-|---|---|---|
+| --- | --- | --- |
 | `true` (default) | `false` | XML files saved to temp directory (`orm_mappings/`) |
 | `true` | `true` | XML files saved alongside each `.bx`/`.cfc` file |
 
@@ -89,6 +89,7 @@ public class EntityRecord {
 ```
 
 The `resolverPrefix` is parsed from the class path:
+
 ```java
 this.resolverPrefix = parseResolverPrefix(
     (String) this.metadata.getOrDefault(Key.path, ClassLocator.BX_PREFIX)
@@ -126,7 +127,7 @@ public interface IEntityMeta {
 Translates traditional CFML annotations into the normalized interface:
 
 | CFML Annotation | IEntityMeta Method |
-|---|---|
+| --- | --- |
 | `entityname="Vehicle"` | `getEntityName()` |
 | `table="vehicles"` | `getTableName()` |
 | `schema="dbo"` | `getSchemaName()` |
@@ -216,6 +217,25 @@ public class ModernEntityMeta extends AbstractEntityMeta {
 ```
 
 Then update `EntityRecord.setEntityMeta()` to detect the annotation style and instantiate the correct inspector.
+
+
+## Id Generators and Unsaved Values
+
+`MappingXMLWriter.appendGenerator()` maps the `generator` annotation:
+
+| `generator` | Emitted | Notes |
+| --- | --- | --- |
+| `assigned` | nothing | the application sets the id |
+| `identity` | `<generated-value strategy="IDENTITY">` | |
+| `native` | `<generic-generator class="native">` | Hibernate picks the dialect's strategy: identity (MySQL, MariaDB, SQL Server, Derby) or a sequence (PostgreSQL, Oracle). Params `sequence_name` = `hibernate_sequence` or the `sequence` annotation, `increment_size` = 1 (bx-orm 1.x compatible). See `appendNativeGenerator()` |
+| `increment` | `<generated-value generator="increment">` | |
+| `uuid`, `uuid2`, `guid` | `<generic-generator class="uuid">` | 32-char hex string id |
+| anything else | `<generic-generator class="...">` with its params | `sequence`, `foreign`, `select`, custom classes |
+
+`MappingXMLWriter.resolveUnsavedValue()` writes `<unsaved-value>`: the `unsavedValue` annotation when set, otherwise
+`null` for generated ids without a `default`. Hibernate 7 ignores `<unsaved-value>` in mapping.xml, so
+`BoxPersisterFactory.applyUnsavedValue()` copies it onto `SimpleValue.setNullValue()` before the persister is built. This
+stops Hibernate from instantiating every entity at boot to read its default id (a large boot-time cost).
 
 ## File Locations
 

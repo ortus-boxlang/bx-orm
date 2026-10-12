@@ -144,6 +144,11 @@ var vehicle = entityNew( "Vehicle", {
 // vehicle is NOT yet persisted; call entitySave( vehicle ) to persist
 ```
 
+`EntityNew.create()` sets only keys that are declared properties of the entity or a parent class
+(`declaredPropertyName()` walks `getSuper()`), using the declared name; other keys are skipped. There is no `ignoreExtras`
+argument; a third positional argument is accepted and ignored. `entityLoadOrNew()` / `entityLoadOrSave()` reuse
+`create()`, and `postNew` fires only with `eventHandling=true`.
+
 ### EntityLoad
 
 Loads entities with optional filtering, sorting, and pagination:

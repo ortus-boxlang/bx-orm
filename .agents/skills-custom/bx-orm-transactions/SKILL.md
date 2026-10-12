@@ -28,7 +28,7 @@ commit or roll back independently of the surrounding `transaction{}`).
 ## The four cooperating pieces
 
 | Piece | File | Role |
-|---|---|---|
+| --- | --- | --- |
 | `ORMConnectionProvider` | `config/ORMConnectionProvider.java` | `getConnection()` returns the transaction's shared connection when in a `transaction{}`; `closeConnection()` skips closing it; `supportsAggressiveRelease()` returns `true`. |
 | `SessionFactoryBuilder` | `SessionFactoryBuilder.java` | Sets `CONNECTION_HANDLING = DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT` so the session acquires/releases per statement instead of holding one connection. |
 | `TransactionManager` | `interceptors/TransactionManager.java` | Interceptor: flush on commit/end, clear on rollback. No Hibernate begin/commit/rollback. |
@@ -116,7 +116,7 @@ The interceptor listens to BoxLang transaction interception points and only flus
 Hibernate session. **It never calls `beginTransaction`/`commit`/`rollback` on Hibernate.**
 
 | Interception point | Action |
-|---|---|
+| --- | --- |
 | `onTransactionBegin` | Pre-flush pending work **only when** `autoManageSession=true` (Lucee compat). |
 | `onTransactionCommit` | `session.flush()` — emit pending SQL on the shared connection; BoxLang commits it. |
 | `onTransactionRollback` | `session.clear()` — discard pending writes + first-level cache; BoxLang rolls back the connection. **Always runs** (not gated on `autoManageSession`) — mandatory so pending work is never re-flushed at end. |

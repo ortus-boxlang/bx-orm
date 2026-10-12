@@ -29,7 +29,7 @@ flowchart LR
 ## Key Classes
 
 | Class | Package | Responsibility |
-|---|---|---|
+| --- | --- | --- |
 | `ORMConfig` | `ortus.boxlang.modules.orm.config` | Configuration manager, normalizer, validator; converts BoxLang settings to Hibernate props |
 | `ORMConnectionProvider` | `ortus.boxlang.modules.orm.config` | Hibernate `ConnectionProvider` backed by BoxLang's `ConnectionManager` |
 | `ORMKeys` | `ortus.boxlang.modules.orm.config` | Central constants: config keys, interception points, ORM metadata keys |
@@ -41,16 +41,23 @@ flowchart LR
 ### Property Categories
 
 | Category | Properties | Default |
-|---|---|---|
+| --- | --- | --- |
 | **Mapping** | `generateMappings`, `autoGenMap` (deprecated) | `true` |
 | **Session** | `autoManageSession` | `false` |
-| **Cache** | `cacheProvider`, `cacheConfigFile`, `cacheConfigProperties` | `BoxCacheProvider` |
+| **Cache** | `secondaryCacheEnabled`, `cacheProvider`, `cacheConfig` (parsed into `cacheRegions` / `cacheConfigFile`) | off, `BoxCacheProvider` |
 | **Schema** | `dialect`, `schema`, `catalog`, `ddl` (none/update/create/create-drop/validate) | auto-detect |
 | **Naming** | `namingStrategy`, `tablePrefix` | `MacroCaseNamingStrategy` |
-| **Paths** | `entityPaths`, `sqlScript` | `[ "/models" ]` |
+| **Paths** | `entityPaths`, `sqlScript` (runs only when `dbcreate` creates the tables; resolved like `expandPath()`) | `[ "/models" ]` |
 | **Logging** | `logSQL`, `logSQLFormat`, `logSQLParameters`, `logLevel` | `false` |
 | **Entity Defaults** | `useDBForMapping`, `eventHandler`, `datasource` | — |
 | **Entity classes** | `staticMethods` (static helper methods such as `User::get( 1 )`, see `statics/StaticEntityMethods`) | `true` |
+
+### Compatibility-only settings
+
+- `proxyLazyLoading` is parsed but has no effect (a lazy to-one is always a proxy); setting it logs a one-time warning
+  (`PROXY_LAZY_LOADING_WARNED`).
+- `sqlScript` and a `cacheConfig` path go through `resolveAppPath()`: used as written when the file exists, else expanded
+  like `expandPath()`, else kept as written. `createsSchema( dbcreate )` decides whether `hbm2ddl.import_files` is set.
 
 ### Configuration Parsing
 
@@ -60,8 +67,8 @@ public class ORMConfig {
     public boolean  generateMappings      = true;
     public boolean  autoManageSession     = false;
     public String   cacheProvider         = "BoxCacheProvider";
-    public String   cacheConfigFile;
-    public IStruct  cacheConfigProperties = CacheConfig.DEFAULTS;
+    public String              cacheConfigFile;                              // resolved cacheConfig path, else null
+    public CacheRegionSettings cacheRegions = CacheRegionSettings.EMPTY;     // BoxCache properties per region (see bx-orm-cache-integration)
     public String   dialect;
     public String   ddl                   = "none";
     public String   namingStrategy        = "MacroCaseNamingStrategy";
@@ -186,7 +193,7 @@ configuration.setProperty(
 Converts camelCase to MACRO_CASE:
 
 | Input | Output |
-|---|---|
+| --- | --- |
 | `authors` | `AUTHORS` |
 | `bookAuthors` | `BOOK_AUTHORS` |
 | `authorContact` | `AUTHOR_CONTACT` |

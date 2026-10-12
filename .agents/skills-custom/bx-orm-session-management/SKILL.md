@@ -40,7 +40,7 @@ flowchart TB
 ## Key Classes
 
 | Class | Scope | Responsibility |
-|---|---|---|
+| --- | --- | --- |
 | `ORMService` | Global (BoxRuntime service) | Entry point; manages `ORMApp` map; provides static helpers |
 | `ORMApp` | Application | Holds session factories, datasources, config for one BoxLang app |
 | `ORMContext` | Request / Thread | Manages Hibernate sessions for the lifetime of a context |
@@ -263,7 +263,7 @@ public class SessionFactoryBuilder {
 
         // 2. Register the BoxLang representation strategy via the pluggable persister factory
         //    (Hibernate 6+ removed the tuplizer; see the bx-orm-hibernate-bridge skill).
-        configuration.getProperties().put( "hibernate.persister.factory", new BoxPersisterFactory( entityMap ) );
+        configuration.getProperties().put( "hibernate.persister.factory", new BoxPersisterFactory( entityMap, ormConfig.facadeNamespace ) );
         configuration.setInterceptor( new ORMInterceptor() );
 
         // 3. Set connection provider (BoxLang datasource → JDBC) — transaction-aware, see bx-orm-transactions
