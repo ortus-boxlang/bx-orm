@@ -46,7 +46,9 @@ import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
 import ortus.boxlang.runtime.dynamic.casters.KeyCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
+import ortus.boxlang.runtime.loader.IModuleClassLoader;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
+import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
@@ -238,12 +240,16 @@ public class ORMApp {
 	}
 
 	/**
-	 * The ORM module classloader: the parent of each build's facade classloader.
+	 * The ORM module classloader, which loads the module's own dependencies (Hibernate and the JDBC drivers it bundles). It is
+	 * the parent of each build's facade classloader and the loader Hibernate resolves mapped and generator classes against.
+	 * Read through {@code ModuleRecord.getModuleClassLoader()}, the replacement for the deprecated {@code classLoader} field.
 	 *
-	 * @return The module classloader.
+	 * @return The module classloader, or null when the ORM module is not registered or has no classloader yet.
 	 */
-	private static ClassLoader moduleClassLoader() {
-		return runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader;
+	public static ClassLoader moduleClassLoader() {
+		ModuleRecord		record	= runtime.getModuleService().getModuleRecord( ORMKeys.moduleName );
+		IModuleClassLoader	loader	= record == null ? null : record.getModuleClassLoader();
+		return loader == null ? null : loader.toClassLoader();
 	}
 
 	/**
@@ -311,7 +317,7 @@ public class ORMApp {
 	 * to {@code "dev"} when the module record carries no version.
 	 */
 	private static String moduleVersion() {
-		ortus.boxlang.runtime.modules.ModuleRecord record = runtime.getModuleService().getModuleRecord( Key.of( "orm" ) );
+		ModuleRecord record = runtime.getModuleService().getModuleRecord( Key.of( "orm" ) );
 		return record == null || record.version == null || record.version.isBlank() ? "dev" : record.version;
 	}
 

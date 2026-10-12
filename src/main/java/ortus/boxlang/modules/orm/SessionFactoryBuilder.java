@@ -44,7 +44,6 @@ import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
-import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.scopes.Key;
 
 /**
@@ -164,9 +163,8 @@ public class SessionFactoryBuilder {
 	public SessionFactory build() {
 		// Sadly, JAXB hardcodes the context classloader, so we have to temporarily set the context classloader to whatever classloader is used to load this
 		// module's dependencies.
-		ClassLoader		oldClassLoader	= Thread.currentThread().getContextClassLoader();
-		ModuleRecord	moduleRecord	= runtime.getModuleService().getModuleRecord( Key.of( "orm" ) );
-		Thread.currentThread().setContextClassLoader( moduleRecord.classLoader );
+		ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
+		Thread.currentThread().setContextClassLoader( ORMApp.moduleClassLoader() );
 
 		// Make sure we clean up the classloader when we're done.
 		SessionFactory	factory	= null;
@@ -198,7 +196,10 @@ public class SessionFactoryBuilder {
 		Configuration			configuration	= ormConfig.toHibernateConfig();
 		Properties				properties		= new Properties();
 		Collection<ClassLoader>	classLoaders	= new ArrayList<>();
-		classLoaders.add( runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader );
+		ClassLoader				moduleLoader	= ORMApp.moduleClassLoader();
+		if ( moduleLoader != null ) {
+			classLoaders.add( moduleLoader );
+		}
 		classLoaders.add( runtime.getClass().getClassLoader() );
 
 		// Any configuration which needs a specific java type (such as the connection provider instance) goes here
@@ -386,7 +387,7 @@ public class SessionFactoryBuilder {
 	 */
 	private void generateEntityFacades( Collection<EntityRecord> entities ) {
 		ClassLoader						loader		= ormConfig.facadeClassLoader != null ? ormConfig.facadeClassLoader
-		    : runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader;
+		    : ORMApp.moduleClassLoader();
 
 		// Facades must be generated parents-first: a subclass facade extends its parent facade, so the parent class must
 		// already exist. Order by inheritance depth (roots first), reusing the same depth calculation the mapping-file
