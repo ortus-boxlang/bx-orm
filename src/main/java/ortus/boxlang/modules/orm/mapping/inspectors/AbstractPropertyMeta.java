@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.scopes.Key;
@@ -116,6 +117,12 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 				this.sqlType = "varchar";
 				annotations.put( Key.sqltype, this.sqlType );
 			}
+		}
+
+		// `unsavedValue`: the id (or version) value that marks a new, unsaved entity, written as Hibernate's <unsaved-value>
+		if ( annotations.containsKey( ORMKeys.unsavedValue ) && annotations.get( ORMKeys.unsavedValue ) != null ) {
+			String unsaved = StringCaster.cast( annotations.get( ORMKeys.unsavedValue ) );
+			this.unsavedValue = unsaved.isBlank() ? null : unsaved.trim();
 		}
 
 		this.column			= parseColumnAnnotations( this.annotations );
@@ -252,7 +259,10 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	}
 
 	/**
-	 * Get the unsaved value for this property.
+	 * Get the unsaved value for this property: the {@code unsavedValue} annotation, or null when it is not set.
+	 * <p>
+	 * Hibernate compares an entity's id against it to tell a new entity from a detached one: {@code null}, {@code any},
+	 * {@code none}, {@code undefined} or a literal id value.
 	 */
 	public String getUnsavedValue() {
 		return this.unsavedValue;

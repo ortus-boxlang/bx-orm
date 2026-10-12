@@ -285,6 +285,59 @@ public class MappingGeneratorTest {
 		assertThat( gv.getAttribute( "generator" ) ).isEqualTo( "increment" );
 	}
 
+	@DisplayName( "It writes unsaved-value null for a generated id, so Hibernate does not instantiate the entity at boot" )
+	@ParameterizedTest
+	@CsvSource( { "native", "increment", "identity", "uuid", "sequence" } )
+	public void testWriterUnsavedValueForGeneratedId( String generator ) {
+		Document doc = writeXML( "class persistent { property name=\"the_id\" fieldtype=\"id\" generator=\"" + generator + "\"; }" );
+		assertThat( childText( first( doc, "id" ), "unsaved-value" ) ).isEqualTo( "null" );
+	}
+
+	@DisplayName( "It leaves unsaved-value to Hibernate for assigned ids, ids with a default and ids without a generator" )
+	@ParameterizedTest
+	@CsvSource( delimiter = '|', value = {
+	    "property name=\"the_id\" fieldtype=\"id\" generator=\"assigned\";",
+	    "property name=\"the_id\" fieldtype=\"id\" generator=\"native\" default=\"0\";",
+	    "property name=\"the_id\" fieldtype=\"id\";"
+	} )
+	public void testWriterNoDefaultUnsavedValue( String property ) {
+		Document doc = writeXML( "class persistent { " + property + " }" );
+		assertThat( childElement( first( doc, "id" ), "unsaved-value" ) ).isNull();
+	}
+
+	@DisplayName( "It treats a null default annotation (as runtime metadata carries it) as no default" )
+	@Test
+	public void testWriterUnsavedValueWithNullDefaultAnnotation() {
+		IStruct meta = getClassMetaFromCode( "class persistent { property name=\"the_id\" fieldtype=\"id\" generator=\"native\"; }" );
+		for ( Object prop : meta.getAsArray( Key.properties ) ) {
+			( ( IStruct ) prop ).getAsStruct( Key.annotations ).put( Key._DEFAULT, null );
+		}
+		Document doc = new MappingXMLWriter( AbstractEntityMeta.autoDiscoverMetaType( meta ), null, ormConfig ).generateXML();
+		assertThat( childText( first( doc, "id" ), "unsaved-value" ) ).isEqualTo( "null" );
+	}
+
+	@DisplayName( "It writes an explicit unsavedValue annotation" )
+	@Test
+	public void testWriterExplicitUnsavedValue() {
+		Document doc = writeXML( "class persistent { property name=\"the_id\" fieldtype=\"id\" generator=\"assigned\" unsavedValue=\"0\"; }" );
+		assertThat( childText( first( doc, "id" ), "unsaved-value" ) ).isEqualTo( "0" );
+
+		doc = writeXML( "class persistent { property name=\"the_id\" fieldtype=\"id\" generator=\"native\" unsavedValue=\"-1\"; }" );
+		assertThat( childText( first( doc, "id" ), "unsaved-value" ) ).isEqualTo( "-1" );
+	}
+
+	@DisplayName( "It writes no unsaved-value on composite id parts" )
+	@Test
+	public void testWriterCompositeIdNoUnsavedValue() {
+		Document doc = writeXML( """
+		                         class persistent {
+		                         	property name="id1" fieldtype="id" ormType="integer";
+		                         	property name="id2" fieldtype="id" ormType="string";
+		                         }
+		                         """ );
+		assertThat( doc.getElementsByTagName( "unsaved-value" ).getLength() ).isEqualTo( 0 );
+	}
+
 	@DisplayName( "It normalizes generator names regardless of case" )
 	@ParameterizedTest
 	@CsvSource( {

@@ -285,6 +285,12 @@ public class SessionFactoryBuilder {
 	 * @return Absolute path of the combined mapping file.
 	 */
 	private String buildCombinedMappingXml( List<EntityRecord> ordered ) {
+		// Fast path: every mapping is our own in-memory output, so splice the <entity> elements as text instead of
+		// parsing each document into a DOM and serializing the merged tree again.
+		String spliced = spliceGeneratedMappings( ordered );
+		if ( spliced != null ) {
+			return spliced;
+		}
 		try {
 			var factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
 			factory.setNamespaceAware( true );
@@ -320,6 +326,52 @@ public class SessionFactoryBuilder {
 		} catch ( Exception e ) {
 			throw new ortus.boxlang.runtime.types.exceptions.BoxRuntimeException( "Failed to build combined ORM mapping.xml document", e );
 		}
+	}
+
+	/**
+	 * Merge the entities' in-memory mappings into one {@code <entity-mappings>} document by text, when every mapping is in
+	 * the shape {@link ortus.boxlang.modules.orm.mapping.MappingXMLWriter} writes: an {@code <entity-mappings>} root in the
+	 * default ORM namespace, with no prefixed namespaces, holding only {@code <entity>} elements. The result is the same
+	 * document the DOM merge builds, without parsing and re-serializing every mapping on each boot.
+	 *
+	 * @param ordered The entities, parents and hierarchy roots first.
+	 *
+	 * @return The combined mapping, or null when a mapping is on disk or in another shape (the caller then uses the DOM merge).
+	 */
+	static String spliceGeneratedMappings( List<EntityRecord> ordered ) {
+		String			ns			= ortus.boxlang.modules.orm.mapping.MappingXMLWriter.ORM_NAMESPACE;
+		String			rootOpen	= "<entity-mappings";
+		String			rootClose	= "</entity-mappings>";
+		StringBuilder	combined	= new StringBuilder( 64 * 1024 );
+		combined.append( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<entity-mappings xmlns=\"" ).append( ns )
+		    .append( "\" version=\"" ).append( ortus.boxlang.modules.orm.mapping.MappingXMLWriter.ORM_VERSION ).append( "\">\n" );
+		for ( EntityRecord entity : ordered ) {
+			String xml = entity.getXmlMapping();
+			if ( xml == null || xml.isEmpty() ) {
+				if ( entity.getXmlFilePath() != null ) {
+					return null;
+				}
+				continue;
+			}
+			int	start	= xml.indexOf( rootOpen );
+			int	open	= start < 0 ? -1 : xml.indexOf( '>', start );
+			int	end		= xml.lastIndexOf( rootClose );
+			if ( open < 0 || end < open || xml.contains( "xmlns:" ) ) {
+				return null;
+			}
+			String rootTag = xml.substring( start, open );
+			if ( !rootTag.contains( "xmlns=\"" + ns + "\"" ) || rootTag.endsWith( "/" ) ) {
+				return null;
+			}
+			String	body		= xml.substring( open + 1, end );
+			// Only <entity> elements (and whitespace or comments) may sit under the root, as in the DOM merge
+			String	stripped	= body.replaceAll( "(?s)<!--.*?-->", "" ).trim();
+			if ( !stripped.isEmpty() && !stripped.startsWith( "<entity " ) && !stripped.startsWith( "<entity>" ) ) {
+				return null;
+			}
+			combined.append( body ).append( '\n' );
+		}
+		return combined.append( rootClose ).append( '\n' ).toString();
 	}
 
 	/**
