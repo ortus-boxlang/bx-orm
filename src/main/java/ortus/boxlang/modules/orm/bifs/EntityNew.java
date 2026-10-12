@@ -38,6 +38,7 @@ import ortus.boxlang.runtime.services.InterceptorService;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Argument;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.types.Property;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 import ortus.boxlang.runtime.validation.Validator;
@@ -52,8 +53,7 @@ public class EntityNew extends BaseORMBIF {
 		super();
 		declaredArguments = new Argument[] {
 		    new Argument( true, "String", ORMKeys.entityName, Set.of( Validator.REQUIRED, Validator.NON_EMPTY ) ),
-		    new Argument( false, "Struct", Key.properties ),
-		    new Argument( false, "Boolean", ORMKeys.ignoreExtras, Set.of( Validator.NOT_IMPLEMENTED ) )
+		    new Argument( false, "Struct", Key.properties )
 		};
 	}
 
@@ -65,13 +65,46 @@ public class EntityNew extends BaseORMBIF {
 	 *
 	 * @argument.entityName The name of the entity to create.
 	 *
-	 * @argument.properties A struct of properties to populate on the new entity.
-	 *
-	 * @argument.ignoreExtras If false, an error will be thrown if properties are provided that do not exist on the entity. Not implemented.
+	 * @argument.properties A struct of property values to set on the new entity. Keys that are not declared properties of the
+	 *                      entity (or one of its parent classes) are skipped.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
 		IStruct properties = arguments.containsKey( Key.properties ) ? arguments.getAsStruct( Key.properties ) : Struct.EMPTY;
 		return create( context, arguments.getAsString( ORMKeys.entityName ), properties );
+	}
+
+	/**
+	 * Copy the values whose keys are declared properties of the entity (or of a parent class) into its variables scope, using
+	 * the property's declared name. Any other key is skipped: BoxLang is dynamic, so extra keys are allowed but never set.
+	 *
+	 * @param entity The new entity.
+	 * @param values The values to set.
+	 */
+	static void setDeclaredProperties( IClassRunnable entity, IStruct values ) {
+		values.forEach( ( key, value ) -> {
+			Key declared = declaredPropertyName( entity, key );
+			if ( declared != null ) {
+				entity.getVariablesScope().put( declared, value );
+			}
+		} );
+	}
+
+	/**
+	 * The declared name of a property on an entity class or one of its parent classes, matched without regard to case.
+	 *
+	 * @param entity The entity.
+	 * @param key    The key to look up.
+	 *
+	 * @return The property's declared name, or null when the class declares no such property.
+	 */
+	static Key declaredPropertyName( IClassRunnable entity, Key key ) {
+		for ( IClassRunnable cls = entity; cls != null; cls = cls.getSuper() ) {
+			Property property = cls.getProperties().get( key );
+			if ( property != null ) {
+				return property.name();
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -104,7 +137,7 @@ public class EntityNew extends BaseORMBIF {
 		);
 
 		if ( properties != null && !properties.isEmpty() ) {
-			entity.getVariablesScope().putAll( properties );
+			setDeclaredProperties( entity, properties );
 		}
 
 		// Fire the postNew event on the entity itself and on the global event-handler class. Hibernate has no

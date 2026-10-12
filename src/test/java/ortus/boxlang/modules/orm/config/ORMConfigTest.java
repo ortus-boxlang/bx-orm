@@ -303,6 +303,37 @@ public class ORMConfigTest extends BaseORMTest {
 		assertEquals( "false", config.getProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION ) );
 	}
 
+	@DisplayName( "proxyLazyLoading is accepted and has no effect on the Hibernate configuration" )
+	@Test
+	public void testProxyLazyLoadingIsAccepted() {
+		Configuration	withSetting	= new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.proxyLazyLoading, true
+		), context ).toHibernateConfig();
+		Configuration	without		= new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB"
+		), context ).toHibernateConfig();
+
+		assertEquals( hibernateSettings( without ), hibernateSettings( withSetting ) );
+	}
+
+	/**
+	 * The plain string Hibernate settings of a configuration, leaving out object instances (which differ per build).
+	 *
+	 * @param config The Hibernate configuration.
+	 *
+	 * @return The {@code hibernate.*} settings whose values are strings.
+	 */
+	private static java.util.Map<String, String> hibernateSettings( Configuration config ) {
+		java.util.Map<String, String> settings = new java.util.TreeMap<>();
+		config.getProperties().forEach( ( key, value ) -> {
+			if ( key.toString().startsWith( "hibernate." ) && value instanceof String text && !text.contains( "@" ) ) {
+				settings.put( key.toString(), text );
+			}
+		} );
+		return settings;
+	}
+
 	@DisplayName( "sqlScript is read and handed to Hibernate when dbcreate creates the tables" )
 	@Test
 	public void testSqlScriptRunsWithDropCreate() {
