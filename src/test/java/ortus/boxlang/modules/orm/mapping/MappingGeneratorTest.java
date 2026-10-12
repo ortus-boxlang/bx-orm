@@ -352,11 +352,50 @@ public class MappingGeneratorTest {
 		assertThat( gg.getAttribute( "class" ) ).isEqualTo( expectedClass );
 	}
 
-	@DisplayName( "It emits IDENTITY for identity/native generators" )
+	@DisplayName( "It emits IDENTITY for the identity generator" )
 	@Test
 	public void testWriterIdentityGenerator() {
 		Document doc = writeXML( "class persistent { property name=\"the_id\" fieldtype=\"id\" generator=\"identity\"; }" );
 		assertThat( first( doc, "generated-value" ).getAttribute( "strategy" ) ).isEqualTo( "IDENTITY" );
+	}
+
+	@DisplayName( "It emits Hibernate's native generator with the 1.x hibernate_sequence and an increment of 1" )
+	@Test
+	public void testWriterNativeGenerator() {
+		Document	doc	= writeXML( "class persistent { property name=\"the_id\" fieldtype=\"id\" generator=\"native\"; }" );
+		Element		gg	= first( doc, "generic-generator" );
+		assertThat( gg.getAttribute( "class" ) ).isEqualTo( "native" );
+		assertThat( generatorParam( gg, "sequence_name" ) ).isEqualTo( "hibernate_sequence" );
+		assertThat( generatorParam( gg, "increment_size" ) ).isEqualTo( "1" );
+		assertThat( first( doc, "generated-value" ).getAttribute( "generator" ) ).isEqualTo( gg.getAttribute( "name" ) );
+	}
+
+	@DisplayName( "A native generator uses the property's sequence annotation as the sequence name" )
+	@Test
+	public void testWriterNativeGeneratorNamedSequence() {
+		Document	doc	= writeXML(
+		    "class persistent { property name=\"the_id\" fieldtype=\"id\" generator=\"native\" sequence=\"user_seq\"; }" );
+		Element		gg	= first( doc, "generic-generator" );
+		assertThat( generatorParam( gg, "sequence_name" ) ).isEqualTo( "user_seq" );
+	}
+
+	/**
+	 * The value of a named {@code <parameter>} of a generic generator.
+	 *
+	 * @param generator The {@code <generic-generator>} element.
+	 * @param name      The parameter name.
+	 *
+	 * @return The parameter value, or null when absent.
+	 */
+	private static String generatorParam( Element generator, String name ) {
+		org.w3c.dom.NodeList params = generator.getElementsByTagNameNS( "*", "parameter" );
+		for ( int i = 0; i < params.getLength(); i++ ) {
+			Element param = ( Element ) params.item( i );
+			if ( name.equals( param.getAttribute( "name" ) ) ) {
+				return param.getAttribute( "value" );
+			}
+		}
+		return null;
 	}
 
 	@DisplayName( "It throws for an unrecognized generator name" )

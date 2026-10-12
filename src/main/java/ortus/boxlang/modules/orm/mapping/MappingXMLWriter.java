@@ -60,17 +60,23 @@ public class MappingXMLWriter {
 	/**
 	 * The Hibernate 7 modern mapping namespace.
 	 */
-	public static final String				ORM_NAMESPACE	= "http://www.hibernate.org/xsd/orm/mapping";
+	public static final String				ORM_NAMESPACE			= "http://www.hibernate.org/xsd/orm/mapping";
 
 	/**
 	 * The mapping format version emitted (required, fixed at 7.0 by the XSD).
 	 */
-	public static final String				ORM_VERSION		= "7.0";
+	public static final String				ORM_VERSION				= "7.0";
+
+	/**
+	 * The shared sequence a {@code native} id uses on sequence databases when the property names none: bx-orm 1.x (Hibernate 5)
+	 * used it, so existing databases keep working.
+	 */
+	public static final String				NATIVE_SEQUENCE_NAME	= "hibernate_sequence";
 
 	/**
 	 * Set of SQL reserved words (any SQL dialect) that need to be escaped when used in identifiers.
 	 */
-	private static final Set<String>		RESERVED_WORDS	= Set.of( "absolute", "access", "accessible", "action", "add", "after", "alias",
+	private static final Set<String>		RESERVED_WORDS			= Set.of( "absolute", "access", "accessible", "action", "add", "after", "alias",
 	    "all", "allocate", "allow", "alter", "analyze", "and", "any", "application", "are", "array", "as", "asc",
 	    "asensitive", "assertion", "associate", "asutime", "asymmetric", "at", "atomic", "audit", "authorization", "aux",
 	    "auxiliary", "avg", "backup", "before", "begin", "between", "bigint", "binary", "bit", "bit_length", "blob",
@@ -132,7 +138,7 @@ public class MappingXMLWriter {
 	    "vcat", "view", "volumes", "waitfor", "when", "whenever", "where", "while", "window", "with", "within", "without",
 	    "wlm", "work", "write", "writetext", "xor", "year", "year_month", "zerofill", "zone", "rank" );
 
-	private static final BoxRuntime			runtime			= BoxRuntime.getInstance();
+	private static final BoxRuntime			runtime					= BoxRuntime.getInstance();
 
 	private BoxLangLogger					logger;
 
@@ -616,7 +622,8 @@ public class MappingXMLWriter {
 	 * class while resolving a {@code <generated-value>}. The common legacy strategies are mapped explicitly: {@code uuid}/{@code uuid2}/{@code guid} to
 	 * the
 	 * string UUID generator (a {@code VARCHAR}-compatible hex string, so a primary-key load binds against the string id column), {@code increment} to its
-	 * matching {@code <generated-value>}, and {@code identity}/{@code native} to {@code IDENTITY}. Any other strategy (e.g. {@code sequence},
+	 * matching {@code <generated-value>}, {@code identity} to {@code IDENTITY}, and {@code native} to the database's own strategy (see
+	 * {@link #appendNativeGenerator}). Any other strategy (e.g. {@code sequence},
 	 * {@code foreign}, {@code select}, {@code sequence-identity}, or a custom generator class) is emitted best-effort as a {@code <generic-generator>}
 	 * carrying its strategy and any params; {@code sequence} is verified working, the rarer ones are unverified.
 	 */
@@ -654,11 +661,12 @@ public class MappingXMLWriter {
 				generatedValue.setAttribute( "generator", "increment" );
 				idNode.appendChild( generatedValue );
 			}
-			case "identity", "native" -> {
+			case "identity" -> {
 				Element generatedValue = createEl( "generated-value" );
 				generatedValue.setAttribute( "strategy", "IDENTITY" );
 				idNode.appendChild( generatedValue );
 			}
+			case "native" -> appendNativeGenerator( idNode, prop, generatorInfo );
 			default -> {
 				// Other legacy generators (sequence, foreign, select, sequence-identity, custom classes, and any carrying <param>s) are emitted best-effort as
 				// a
@@ -701,6 +709,44 @@ public class MappingXMLWriter {
 				idNode.appendChild( genericGenerator );
 			}
 		}
+	}
+
+	/**
+	 * Append a {@code native} id generator: Hibernate picks the database's own strategy, an identity column where the dialect
+	 * supports one (MySQL, MariaDB, SQL Server, Derby, ...) and a sequence otherwise (PostgreSQL, Oracle, ...).
+	 * <p>
+	 * For sequence databases this keeps bx-orm 1.x (Hibernate 5) behavior so existing databases work unchanged: one shared
+	 * sequence named {@code hibernate_sequence} (or the property's {@code sequence} annotation) with an increment of 1. Any
+	 * {@code params} on the property are passed through and win. On identity databases the parameters are ignored.
+	 *
+	 * @param idNode        The {@code <id>} element.
+	 * @param prop          The id property.
+	 * @param generatorInfo The property's generator metadata.
+	 */
+	private void appendNativeGenerator( Element idNode, IPropertyMeta prop, IStruct generatorInfo ) {
+		String	generatorName	= entity.getEntityName() + "_" + prop.getName() + "_generator";
+		Element	generatedValue	= createEl( "generated-value" );
+		generatedValue.setAttribute( "generator", generatorName );
+		idNode.appendChild( generatedValue );
+
+		Element genericGenerator = createEl( "generic-generator" );
+		genericGenerator.setAttribute( "name", generatorName );
+		genericGenerator.setAttribute( "class", "native" );
+
+		IStruct	params		= new ortus.boxlang.runtime.types.Struct( ortus.boxlang.runtime.types.IStruct.TYPES.LINKED );
+		String	sequence	= generatorInfo.containsKey( ORMKeys.sequence ) ? generatorInfo.getAsString( ORMKeys.sequence ) : null;
+		params.put( "sequence_name", sequence == null || sequence.isBlank() ? NATIVE_SEQUENCE_NAME : sequence.trim() );
+		params.put( "increment_size", "1" );
+		if ( generatorInfo.containsKey( Key.params ) ) {
+			params.putAll( generatorInfo.getAsStruct( Key.params ) );
+		}
+		params.forEach( ( key, value ) -> {
+			Element paramEl = createEl( "parameter" );
+			paramEl.setAttribute( "name", key.getName() );
+			paramEl.setAttribute( "value", value.toString() );
+			genericGenerator.appendChild( paramEl );
+		} );
+		idNode.appendChild( genericGenerator );
 	}
 
 	/**
