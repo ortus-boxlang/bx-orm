@@ -1,0 +1,1 @@
+-- Imported by the sqlScript test; never executed by it.

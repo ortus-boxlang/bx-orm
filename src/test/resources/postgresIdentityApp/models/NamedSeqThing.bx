@@ -1,0 +1,7 @@
+/**
+ * A `native` id with a `sequence` annotation: the named sequence is used instead of `hibernate_sequence`.
+ */
+class accessors="true" persistent="true" table="named_seq_thing" {
+	property name="id" fieldtype="id" ormType="integer" generator="native" sequence="named_thing_seq";
+	property name="label" ormType="string";
+}

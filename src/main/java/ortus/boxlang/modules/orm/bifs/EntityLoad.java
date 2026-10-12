@@ -49,8 +49,8 @@ public class EntityLoad extends BaseORMBIF {
 	    "offset", 0,
 	    // Specifies the maximum number of objects to be retrieved.
 	    "maxresults", null,
-	    // Whether the result has to be cached in the secondary cache. Default is false.
-	    "cacheable", Boolean.FALSE,
+	    // Whether the result has to be cached in the secondary cache. Unset means "not cached, unless cachename is given".
+	    "cacheable", null,
 	    // Name of the cache in secondary cache.
 	    "cachename", null,
 	    // Specifies the timeout value (in seconds) for the query.

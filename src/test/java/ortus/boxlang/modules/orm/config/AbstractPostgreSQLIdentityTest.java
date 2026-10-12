@@ -163,4 +163,41 @@ public abstract class AbstractPostgreSQLIdentityTest {
 
 		assertThat( ( ( Number ) variables.get( Key.of( "remarkId" ) ) ).intValue() ).isEqualTo( 1 );
 	}
+
+	@DisplayName( "A native id uses the shared hibernate_sequence with an increment of 1, as bx-orm 1.x did" )
+	@Test
+	public void testNativeUsesHibernateSequence() {
+		// @formatter:off
+		instance.executeSource( """
+			a = entityNew( "NativeThing", { label : "a" } );
+			entitySave( a );
+			b = entityNew( "NativeThing", { label : "b" } );
+			entitySave( b );
+			ormFlush();
+			nativeIds = [ a.getId(), b.getId() ];
+			seqs = queryExecute( "select sequence_name from information_schema.sequences where sequence_name = 'hibernate_sequence'" ).recordCount;
+		""", context );
+		// @formatter:on
+
+		ortus.boxlang.runtime.types.Array ids = ( ortus.boxlang.runtime.types.Array ) variables.get( Key.of( "nativeIds" ) );
+		assertThat( ( ( Number ) ids.get( 1 ) ).intValue() - ( ( Number ) ids.get( 0 ) ).intValue() ).isEqualTo( 1 );
+		assertThat( ( ( Number ) variables.get( Key.of( "seqs" ) ) ).intValue() ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "A native id with a sequence annotation uses that sequence" )
+	@Test
+	public void testNativeUsesNamedSequence() {
+		// @formatter:off
+		instance.executeSource( """
+			n = entityNew( "NamedSeqThing", { label : "n" } );
+			entitySave( n );
+			ormFlush();
+			namedId = n.getId();
+			namedSeqs = queryExecute( "select sequence_name from information_schema.sequences where sequence_name = 'named_thing_seq'" ).recordCount;
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( Key.of( "namedId" ) ) ).isNotNull();
+		assertThat( ( ( Number ) variables.get( Key.of( "namedSeqs" ) ) ).intValue() ).isEqualTo( 1 );
+	}
 }

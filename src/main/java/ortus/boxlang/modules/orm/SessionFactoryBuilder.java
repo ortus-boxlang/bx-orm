@@ -229,6 +229,8 @@ public class SessionFactoryBuilder {
 		// Route every entity persister through the BoxLang representation strategy (Hibernate 6+/7+ replacement for the
 		// Hibernate 5 tuplizer). See BoxPersisterFactory for why this goes through the persister factory service.
 		properties.put( "hibernate.persister.factory", new BoxPersisterFactory( entityMap, ormConfig.facadeNamespace ) );
+		// The collection-cache integrator reads cacheUse/cacheName from the entity records.
+		properties.put( ortus.boxlang.modules.orm.hibernate.cache.CollectionCacheIntegrator.ENTITY_RECORDS_SETTING, entityMap );
 
 		// Collect XML mapping files and add them to the Hibernate configuration.
 		// The modern mapping.xml format resolves a dynamic entity's <extends> superclass eagerly (Hibernate registers each dynamic class as its file is

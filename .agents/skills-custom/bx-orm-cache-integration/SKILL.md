@@ -46,22 +46,35 @@ flowchart TB
 ### In `ORMConfig`
 
 ```java
-// These properties control cache behavior
-public String  cacheProvider   = "BoxCacheProvider";  // Default: use BoxLang's cache
-public String  cacheConfigFile;                        // Path to jcache config
-public IStruct cacheConfigProperties = CacheConfig.DEFAULTS;
+public String              cacheProvider   = "BoxCacheProvider";        // or any registered BoxLang cache provider
+public String              cacheConfigFile;                              // resolved cacheConfig path (JSON or ehcache.xml), else null
+public CacheRegionSettings cacheRegions    = CacheRegionSettings.EMPTY;  // BoxCache properties per region
 ```
 
-### In `boxlang.json` or `Application.bx`
+`BoxHibernateCache.getCacheProvider()` resolves a region's BoxLang cache: an existing BoxLang cache with the region's name is
+used as is; otherwise one is created with `cacheProvider` and `cacheRegions.propertiesFor( regionName )` (BoxLang defaults,
+then shared properties, then the best matching `regions` override). `EhcacheXmlReader` maps EHCache 2/3 files.
+
+### In `Application.bx`
 
 ```js
 this.ormSettings = {
-    cacheProvider   : "BoxCacheProvider",
-    cacheConfig     : {
-        // Custom properties passed to ICacheProvider
+    secondaryCacheEnabled : true,
+    cacheProvider         : "BoxCacheProvider",
+    cacheConfig           : {
+        maxObjects     : 1000,                                   // shared BoxCache properties
+        defaultTimeout : 3600,
+        regions        : { "User" : { maxObjects : 5000 } }      // per-region overrides
     }
+    // or cacheConfig : "config/ehcache.xml" (EHCache 2 or 3) or "config/cache.json"
 }
 ```
+
+### Collection caching
+
+`cacheuse` / `cachename` on a collection property are applied by `CollectionCacheIntegrator` (mapping.xml has no caching
+element for collections, and `hibernate.collectioncache.*` only works with the JPA bootstrap). It reads the entity records
+from the `bxorm.entity_records` setting set by `SessionFactoryBuilder`.
 
 ### Entity-Level Cache Configuration
 
@@ -284,7 +297,7 @@ var results = ormExecuteQuery(
 `cacheinclude` controls which data goes into the cache:
 
 | Value | Behavior |
-|---|---|
+| --- | --- |
 | `all` (default) | Cache both the entity and its lazy associations |
 | `non-lazy` | Cache only the entity; exclude lazy-loaded associations |
 

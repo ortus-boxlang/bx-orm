@@ -33,9 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Faster ORM boot. Generated ids (`native`, `identity`, `increment`, `uuid`, `sequence` and the like) now tell Hibernate that a null id means "not saved yet", so Hibernate no longer creates one throwaway instance of every entity at startup to find out. The per-entity mappings are also joined as text instead of through a DOM merge, and with `enableThreadedMapping` on (the default) apps with more than 20 entities add the static entity methods in parallel.
 - The ORM module classloader is read through BoxLang's `ModuleRecord.getModuleClassLoader()` instead of the deprecated `classLoader` field.
 - Entity loads by id use Hibernate's `Session.find()` instead of the deprecated `Session.get( entityName, id )`, and managed checks use `Session.contains( entity )` instead of the deprecated `contains( entityName, entity )`. `ormReadOnly()` still makes those loads read-only.
+- The `native` id generator uses the database's own strategy, as bx-orm 1.x did: an identity column on MySQL, MariaDB, SQL Server and Derby, and a sequence on PostgreSQL and Oracle. The sequence is the shared `hibernate_sequence` with an increment of 1 (or the property's `sequence` annotation), so databases created by bx-orm 1.x keep working. Before, `native` always meant `identity`.
+- `entityNew()` only sets keys that are declared properties of the entity (or a parent class); other keys are skipped. The unimplemented `ignoreExtras` argument is removed (a third argument is accepted and ignored).
+- `proxyLazyLoading` has no effect and logs a one-time warning: a lazy to-one association is always loaded through a proxy.
+- The secondary cache is BoxLang's BoxCache: every Hibernate cache region is a BoxLang cache. A BoxLang cache that already exists with a region's name (for example one defined in `boxlang.json`) is used as that region, and `cacheProvider` can name any registered BoxLang cache provider.
 
 ### 🚀 Added
 
+- `cacheConfig` configures the second-level cache regions: a struct of BoxCache properties (`maxObjects`, `defaultTimeout`, ...) with an optional `regions` struct of per-region overrides, a JSON file of the same shape, or an EHCache 2 or 3 `ehcache.xml` whose settings are mapped to BoxCache properties.
+- `cacheUse` and `cacheName` on a collection property (`one-to-many`, `many-to-many`, `collection`) cache the collection in the second-level cache.
 - The `unsavedValue` property annotation on an id is honored: it is the id value that marks an entity as new (not yet saved), for example `unsavedValue="0"` on an assigned numeric id.
 - Static entity methods: every entity class gets `User::get( 1 )`, `getOrFail`, `getAll`, `read`, `getReference`, `findWhere`, `findWhereOrFail`, `findAllWhere`, `first`, `exists`, `count`, `list`, `executeQuery`, `criteria` / `newCriteria`, `new`, `firstOrNew`, `firstOrCreate`, `deleteWhere` and `updateWhere`, each calling the matching BIF. A static method the entity declares itself is kept, and instances reach them too (`user.count()`) unless they declare a method of that name. On by default; set `ormSettings.staticMethods = false` to turn them off. In development (trusted cache off), an edited entity gets its methods back on the next request.
 - `asStream` option for `ormExecuteQuery()` and `entityLoad()`: return a Java `Stream` that reads rows from the database as it is consumed, instead of an array. Works with BoxLang closures (`.filter()`, `.map()`, `.toList()`), `maxResults`, `offset` and sort orders. Not allowed with `unique` or an update/delete (`orm.argument`).
@@ -89,6 +95,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 
+- `entityLoad()` with a `cachename` option did not cache unless `cacheable : true` was also passed.
+- The `sqlScript` setting was never read, so the script never ran after `dbcreate` created the tables.
+- The `cacheConfig` struct was ignored for the default BoxCache provider.
+- The mapping CLI's `--debug` flag had no effect.
 - `entitySave()` of a new entity with a database-generated id (`generator="identity"` or `"native"` on MySQL) sets the id right away again, inside a `transaction{}` too. Hibernate 7 had delayed the insert until the flush, so `getId()` returned null.
 - The entity-level `where` annotation was never read, so it had no effect; it now restricts every load and query of the entity.
 - Optimistic-locking `<version>` columns now work end-to-end.

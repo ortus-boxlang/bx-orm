@@ -86,10 +86,10 @@ public class GenerateMappings {
 					debugMode = true;
 				}
 			}
-			// Note that none of our logging will print out until we set the debug mode.
-			// if ( debugMode ) {
-			// LoggingConfigurator.reconfigureDebugMode( debugMode );
-			// }
+			// --debug turns on the ORM logger's debug output (mapping generation details) for this run.
+			if ( debugMode ) {
+				logger.setLevel( ch.qos.logback.classic.Level.DEBUG );
+			}
 
 			if ( mappings.size() > 0 ) {
 				for ( String key : mappings.keySet() ) {

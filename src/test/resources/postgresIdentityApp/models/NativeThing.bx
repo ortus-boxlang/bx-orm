@@ -1,0 +1,7 @@
+/**
+ * A `native` id on PostgreSQL: Hibernate uses a sequence, the shared `hibernate_sequence` that bx-orm 1.x used.
+ */
+class accessors="true" persistent="true" table="native_thing" {
+	property name="id" fieldtype="id" ormType="integer" generator="native";
+	property name="label" ormType="string";
+}
