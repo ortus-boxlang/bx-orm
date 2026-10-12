@@ -33,6 +33,7 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.bifs.BIFDescriptor;
 import ortus.boxlang.runtime.context.FunctionBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext;
+import ortus.boxlang.runtime.context.ThreadBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.loader.ClassLocator;
@@ -73,7 +74,7 @@ public final class StaticEntityMethods {
 	/**
 	 * The static methods added to each entity class, in documentation order.
 	 */
-	public static final List<String>			METHOD_NAMES	= List.of(
+	public static final List<String>			METHOD_NAMES				= List.of(
 	    "get", "getOrFail", "getAll", "read", "getReference",
 	    "findWhere", "findWhereOrFail", "findAllWhere", "first", "exists", "count", "list",
 	    "executeQuery", "criteria", "newCriteria",
@@ -83,32 +84,38 @@ public final class StaticEntityMethods {
 	 * Entity classes that already carry the methods. Keyed by the compiled Java class, which BoxLang replaces on recompile, so a
 	 * recompiled class is seen as new. Weak keys let unloaded classes go.
 	 */
-	private static final Map<Class<?>, Boolean>	INSTALLED		= Collections.synchronizedMap( new WeakHashMap<>() );
+	private static final Map<Class<?>, Boolean>	INSTALLED					= Collections.synchronizedMap( new WeakHashMap<>() );
 
 	/**
 	 * Classes seen at instance creation that are not entities of the creating application, so the next instance skips the
 	 * entity lookup. Cleared at every ORM startup, since a reload can turn a class into an entity.
 	 */
-	private static final Map<Class<?>, Boolean>	NOT_ENTITY		= Collections.synchronizedMap( new WeakHashMap<>() );
+	private static final Map<Class<?>, Boolean>	NOT_ENTITY					= Collections.synchronizedMap( new WeakHashMap<>() );
 
-	private static final Key					ENTITY_LOAD		= Key.of( "entityLoad" );
-	private static final Key					LOAD_BY_PK		= Key.of( "entityLoadByPK" );
-	private static final Key					LOAD_BY_PK_FAIL	= Key.of( "entityLoadByPKOrFail" );
-	private static final Key					GET_REFERENCE	= Key.of( "entityGetReference" );
-	private static final Key					ENTITY_NEW		= Key.of( "entityNew" );
-	private static final Key					LOAD_OR_NEW		= Key.of( "entityLoadOrNew" );
-	private static final Key					LOAD_OR_SAVE	= Key.of( "entityLoadOrSave" );
-	private static final Key					CRITERIA		= Key.of( "entityCriteria" );
-	private static final Key					EXECUTE_QUERY	= Key.of( "ormExecuteQuery" );
+	private static final Key					ENTITY_LOAD					= Key.of( "entityLoad" );
+	private static final Key					LOAD_BY_PK					= Key.of( "entityLoadByPK" );
+	private static final Key					LOAD_BY_PK_FAIL				= Key.of( "entityLoadByPKOrFail" );
+	private static final Key					GET_REFERENCE				= Key.of( "entityGetReference" );
+	private static final Key					ENTITY_NEW					= Key.of( "entityNew" );
+	private static final Key					LOAD_OR_NEW					= Key.of( "entityLoadOrNew" );
+	private static final Key					LOAD_OR_SAVE				= Key.of( "entityLoadOrSave" );
+	private static final Key					CRITERIA					= Key.of( "entityCriteria" );
+	private static final Key					EXECUTE_QUERY				= Key.of( "ormExecuteQuery" );
 
-	private static final Key					FILTER			= Key.of( "filter" );
-	private static final Key					SORT			= Key.of( "sort" );
-	private static final Key					IDS				= Key.of( "ids" );
-	private static final Key					VALUES			= Key.of( "values" );
-	private static final Key					ID_OR_FILTER	= ORMKeys.idOrFilter;
-	private static final Key					MAX				= Key.of( "max" );
+	private static final Key					FILTER						= Key.of( "filter" );
+	private static final Key					SORT						= Key.of( "sort" );
+	private static final Key					IDS							= Key.of( "ids" );
+	private static final Key					VALUES						= Key.of( "values" );
+	private static final Key					ID_OR_FILTER				= ORMKeys.idOrFilter;
+	private static final Key					MAX							= Key.of( "max" );
 
-	private static final BoxRuntime				runtime			= BoxRuntime.getInstance();
+	private static final BoxRuntime				runtime						= BoxRuntime.getInstance();
+
+	/**
+	 * Above this many entities, and with {@code enableThreadedMapping} on, startup loads the entity classes in parallel. Same
+	 * threshold as metadata parsing in {@code MappingGenerator}.
+	 */
+	private static final int					MAX_SYNCHRONOUS_ENTITIES	= 20;
 
 	private StaticEntityMethods() {
 	}
@@ -122,12 +129,29 @@ public final class StaticEntityMethods {
 	 */
 	public static void install( IBoxContext context, ORMApp app ) {
 		NOT_ENTITY.clear();
-		for ( EntityRecord record : app.getEntityRecords() ) {
-			try {
-				installOn( context, record, true );
-			} catch ( RuntimeException e ) {
-				logger().warn( "Could not add static methods to entity [{}] ({}): {}", record.getEntityName(), record.getClassFQN(), e.getMessage() );
-			}
+		List<EntityRecord> records = app.getEntityRecords();
+		// Loading every entity class is most of this method's cost, so large models load them in parallel, like metadata parsing.
+		if ( app.getConfig().enableThreadedMapping && records.size() > MAX_SYNCHRONOUS_ENTITIES ) {
+			records.parallelStream().forEach( record -> ThreadBoxContext.runInContext( context, ctx -> {
+				installOrWarn( ctx, record );
+				return null;
+			} ) );
+		} else {
+			records.forEach( record -> installOrWarn( context, record ) );
+		}
+	}
+
+	/**
+	 * Add the methods to one entity class at ORM startup, logging and skipping an entity whose class cannot be loaded.
+	 *
+	 * @param context The context to load the class in.
+	 * @param record  The entity.
+	 */
+	private static void installOrWarn( IBoxContext context, EntityRecord record ) {
+		try {
+			installOn( context, record, true );
+		} catch ( RuntimeException e ) {
+			logger().warn( "Could not add static methods to entity [{}] ({}): {}", record.getEntityName(), record.getClassFQN(), e.getMessage() );
 		}
 	}
 
