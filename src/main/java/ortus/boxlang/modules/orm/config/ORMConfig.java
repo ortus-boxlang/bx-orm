@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,10 +38,10 @@ import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.tool.schema.Action;
 
+import ortus.boxlang.modules.orm.hibernate.cache.CacheRegionSettings;
 import ortus.boxlang.modules.orm.config.naming.BoxLangClassNamingStrategy;
 import ortus.boxlang.modules.orm.config.naming.MacroCaseNamingStrategy;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.config.segments.CacheConfig;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
@@ -148,22 +149,26 @@ public class ORMConfig {
 	public boolean													autoManageSession			= false;
 
 	/**
-	 * Specify a string path to the secondary cache configuration file. This configuration file must be formatted to the specification of the jCache
-	 * provider specified in the `cacheProvider` setting.
+	 * The resolved path of the <code>cacheConfig</code> file, when <code>cacheConfig</code> is a path: an EHCache 2 or 3
+	 * <code>ehcache.xml</code> or a <code>.json</code> file. Null when <code>cacheConfig</code> is a struct or not set.
 	 */
 	public String													cacheConfigFile;
 
 	/**
-	 * A structure of properties to configure the secondary cache provider
+	 * The BoxCache properties of each second-level cache region, read from the <code>cacheConfig</code> setting (a struct, a
+	 * JSON file or an <code>ehcache.xml</code>). See {@link CacheRegionSettings}.
 	 */
-	public IStruct													cacheConfigProperties		= CacheConfig.DEFAULTS;
+	public CacheRegionSettings										cacheRegions				= CacheRegionSettings.EMPTY;
 
 	/**
-	 * Specify the alias name OR full class path of a jCache provider to use for the second-level cache. Must be one of the following:
+	 * The BoxLang cache provider that backs each second-level cache region (a BoxLang cache per region):
 	 * <ul>
-	 * <li><code>ehcache</code> - use the EHCache jCache implementation bundled with the BoxLang ORM module</li>
-	 * <li><code>com.foo.MyJCacheProvider</code> - String path to a custom jCache provider loaded into your BoxLang application.</li>
+	 * <li><code>BoxCacheProvider</code> (default), or the legacy aliases <code>ConcurrentHashMap</code> and
+	 * <code>HashTable</code>: BoxLang's own BoxCache;</li>
+	 * <li>the name of any other registered BoxLang cache provider, for example one from a Redis or Couchbase module.</li>
 	 * </ul>
+	 * A BoxLang cache that already exists with a region's name (for example one defined in <code>boxlang.json</code>) is used as
+	 * is, whatever this setting says.
 	 */
 	public String													cacheProvider				= DEFAULT_CACHEPROVIDER;
 
@@ -560,12 +565,16 @@ public class ORMConfig {
 
 		// String properties: Check key existence, check for null, and check for empty
 		// or blank (whitespace-only) strings
-		if ( properties.containsKey( ORMKeys.cacheConfig ) && properties.get( ORMKeys.cacheConfig ) != null
-		    && properties.get( ORMKeys.cacheConfig ) instanceof String ) {
-			cacheConfigFile = properties.getAsString( ORMKeys.cacheConfig );
-		} else if ( properties.containsKey( ORMKeys.cacheConfig ) && properties.get( ORMKeys.cacheConfig ) != null
-		    && properties.get( ORMKeys.cacheConfig ) instanceof IStruct configStruct ) {
-			cacheConfigProperties = configStruct;
+		if ( properties.get( ORMKeys.cacheConfig ) instanceof String configPath && !configPath.isBlank() ) {
+			cacheConfigFile = resolveAppPath( configPath.trim(), context );
+			if ( new File( cacheConfigFile ).isFile() ) {
+				cacheRegions = CacheRegionSettings.fromFile( Path.of( cacheConfigFile ) );
+			} else {
+				logger.error( "ORM Configuration `cacheConfig` file not found: {}. The second-level cache uses BoxCache defaults.",
+				    cacheConfigFile );
+			}
+		} else if ( properties.get( ORMKeys.cacheConfig ) instanceof IStruct configStruct ) {
+			cacheRegions = CacheRegionSettings.fromStruct( configStruct );
 		}
 
 		if ( properties.containsKey( ORMKeys.cacheProvider ) && properties.get( ORMKeys.cacheProvider ) != null
@@ -621,7 +630,7 @@ public class ORMConfig {
 
 		if ( properties.containsKey( ORMKeys.sqlScript ) && properties.get( ORMKeys.sqlScript ) != null
 		    && !properties.getAsString( ORMKeys.sqlScript ).isBlank() ) {
-			sqlScript = resolveSqlScript( properties.getAsString( ORMKeys.sqlScript ).trim(), context );
+			sqlScript = resolveAppPath( properties.getAsString( ORMKeys.sqlScript ).trim(), context );
 		}
 
 		if ( properties.containsKey( ORMKeys.useDBForMapping ) && properties.get( ORMKeys.useDBForMapping ) != null ) {
@@ -723,6 +732,8 @@ public class ORMConfig {
 		if ( this.eventHandling ) {
 			registryBuilder.applyIntegrator( new EventListener( getEventDispatcher() ) );
 		}
+		// Collection caching (cacheUse on a collection property): mapping.xml has no element for it. See the integrator.
+		registryBuilder.applyIntegrator( new ortus.boxlang.modules.orm.hibernate.cache.CollectionCacheIntegrator() );
 		// Hibernate resolves the mapped <entity class="..."> names through the bootstrap registry's ClassLoaderService. This
 		// build's generated entity facades live in its own facade classloader (see FacadeClassLoader), so register it here -
 		// applied loaders are consulted before the thread context loader, so a reload always resolves its own facades.
@@ -887,15 +898,15 @@ public class ORMConfig {
 	}
 
 	/**
-	 * Resolve the <code>sqlScript</code> setting to a file path. A path that exists as given is used as is; otherwise it is
-	 * expanded like <code>expandPath()</code> (mappings, then the application root).
+	 * Resolve a file setting (<code>sqlScript</code>, a <code>cacheConfig</code> path) to a file path. A path that exists as
+	 * given is used as is; otherwise it is expanded like <code>expandPath()</code> (mappings, then the application root).
 	 *
 	 * @param path    The configured path.
 	 * @param context The context the ORM application starts in; may be null in unit tests.
 	 *
-	 * @return The path to hand to Hibernate.
+	 * @return The resolved path.
 	 */
-	private static String resolveSqlScript( String path, IBoxContext context ) {
+	private static String resolveAppPath( String path, IBoxContext context ) {
 		if ( new File( path ).exists() || context == null ) {
 			return path;
 		}

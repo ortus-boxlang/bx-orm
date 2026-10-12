@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns="http://www.ehcache.org/v3">
+	<cache-template name="small">
+		<expiry><ttl unit="minutes">10</ttl></expiry>
+		<heap unit="entries">100</heap>
+	</cache-template>
+	<cache alias="User" uses-template="small">
+		<resources><heap unit="entries">400</heap></resources>
+	</cache>
+	<cache alias="Lookup">
+		<expiry><none/></expiry>
+	</cache>
+	<cache alias="Session">
+		<expiry><tti unit="hours">2</tti></expiry>
+	</cache>
+</config>

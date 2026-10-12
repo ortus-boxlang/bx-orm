@@ -38,6 +38,8 @@ class {
 		"dbcreate"             : "dropcreate",
 		"cacheprovider"        : "ConcurrentHashMap",
 		"secondarycacheenabled": true,
+		// per-region BoxCache properties; see SecondaryCacheTest
+		"cacheConfig"          : { "regions" : { "cachedOwner" : { "maxObjects" : 777 } } },
 		"eventHandling"        : true,
 		"sqlFunctions"         : {
 			"nameLen" : { "sql" : "char_length(?1)", "returns" : "integer" },

@@ -1,0 +1,1 @@
+{ "maxObjects" : 2000, "regions" : { "User" : { "maxObjects" : 50 } } }
