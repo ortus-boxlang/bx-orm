@@ -24,6 +24,7 @@ end-user docs.
 | Composite ids, inheritance, value collections | Composite primary keys, single-table and joined inheritance, `fieldtype="collection"` (array and struct). | [§5](#5-the-facade-concretely), [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
 | Boot cache (`.bxorm/`) | `ormManifest="auto"` writes the resolved boot model and facade bytecode (`manifest-{app}.json`, `facades-{app}.jar`, so several apps can share one folder); `trust` boots straight from it. `ormManifestLocation` moves it. In `auto`, editing an entity reloads the ORM on the next request. | [§11](#11-the-orm-manifest-boot-cache-bxorm) |
 | Faster boot | Generated ids tell Hibernate a null id means "unsaved", so Hibernate no longer builds a throwaway instance of every entity at startup. Mappings are joined as text, and large models add static methods in parallel. `unsavedValue` on an id is honored. | [§11](#boot-performance-measured) |
+| BoxCache second-level cache | Every Hibernate cache region is a BoxLang cache. `cacheConfig` sets BoxCache properties for all regions or per region (struct, JSON file or an old `ehcache.xml`); a BoxLang cache that already exists with a region's name is used as is; `cacheUse` on a collection caches it. | [§10g](#10g-second-level-cache-boxcache) |
 | `bxorm` CLI | `boxlang module:orm <verb> [--app=<name>]` inspects the boot cache: `info`, `validate`, `entities`, `entity`, `mappings`, `clear`. | [§11](#the-bxorm-cli) |
 | Transactions ride BoxLang | ORM work inside `transaction{}` uses the same JDBC connection as `queryExecute()`; BoxLang owns commit and rollback. Queries inside a transaction see pending ORM writes. | [§8](#8-transactions-riding-the-boxlang-connection) |
 | `uniquekey` / `index` | Property annotations become unique constraints and indexes, including multi-column ones. | [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
@@ -931,6 +932,49 @@ fully-qualified names (`root.models.Manufacturer::get( 1 )`) instead of `import`
 both paths) and `statics/StaticMethodsOffTest` (Derby app with `staticMethods = false`).
 
 ---
+
+## 10g. Second-level cache (BoxCache)
+
+The second-level cache is off by default (`secondaryCacheEnabled`). When on, Hibernate's JCache region factory is pointed at
+bx-orm's own JCache provider (`hibernate/cache/BoxHibernateCachingProvider` → `BoxHibernateCacheManager` →
+`BoxHibernateCache`). EHCache is not used. Each `BoxHibernateCache` is one Hibernate region, and it stores its entries in a
+BoxLang cache with the region's name, found or created on first use (`BoxHibernateCache.getCacheProvider`):
+
+1. a BoxLang cache that already exists with the region's name is used as is. This is how an application puts a region on
+   its own cache (defined in `boxlang.json`, with any provider: BoxCache, Redis, Couchbase...). Name the BoxLang cache after
+   the entity's `cacheName`;
+2. otherwise a cache is created with the `cacheProvider` setting (`BoxCacheProvider` by default; `ConcurrentHashMap`,
+   `HashTable` and `ehcache` are aliases for it) and the region's properties from `cacheConfig`.
+
+**Region properties.** `ORMConfig.cacheRegions` is a `CacheRegionSettings`, read from `cacheConfig`:
+
+| `cacheConfig` value | Read by |
+| --- | --- |
+| struct: BoxCache properties plus an optional `regions` struct of per-region overrides | `CacheRegionSettings.fromStruct` |
+| path of a `.json` file with the same shape | `CacheRegionSettings.fromFile` |
+| path of an EHCache 2 or 3 `ehcache.xml` | `EhcacheXmlReader` |
+
+A region's properties are BoxLang's cache defaults (`CacheConfig.DEFAULTS`), then the shared properties, then the overrides
+of the best matching region name: an equal name, else the longest configured name the region name ends with after a dot
+(`User` matches the default entity region `bxorm.app.User`). `EhcacheXmlReader` maps `maxEntriesLocalHeap`/
+`maxElementsInMemory`/`<heap unit="entries">` to `maxObjects`, `timeToLiveSeconds`/`<ttl>` to `defaultTimeout`,
+`timeToIdleSeconds`/`<tti>` to `defaultLastAccessTimeout`, `eternal`/`<none/>` to no expiry, and the eviction policy. It
+parses with DTDs and external entities off. A path that does not exist as given is expanded like `expandPath()`.
+
+**Collection caching.** Hibernate 7's `mapping.xml` has no caching element for collections, and the
+`hibernate.collectioncache.<role>` settings are only read by the JPA bootstrap (`EntityManagerFactoryBuilderImpl`), not by
+the native `Configuration` bx-orm uses. So `CollectionCacheIntegrator` (registered with the bootstrap registry, always, next
+to the event listener) sets `Collection.setCacheConcurrencyStrategy` / `setCacheRegionName` on the boot model from the
+collection property's `cacheUse` / `cacheName`. `SessionFactoryImpl` calls integrators before
+`primeSecondLevelCacheRegions`, so the collection gets its region exactly like an annotated one. It reads the entity
+records from the `bxorm.entity_records` setting, which `SessionFactoryBuilder` sets.
+
+**`native` id generator.** `native` is emitted as a `<generic-generator class="native">`. Hibernate resolves that name to the
+dialect's own strategy (`Dialect.getNativeValueGenerationStrategy`): identity where the dialect supports identity columns
+(MySQL, MariaDB, SQL Server, Derby), a sequence otherwise (PostgreSQL, Oracle). For sequences the writer passes
+`sequence_name=hibernate_sequence` (or the property's `sequence`) and `increment_size=1`, which is what bx-orm 1.x on
+Hibernate 5 used, so 1.x databases keep working. The PostgreSQL tests (`AbstractPostgreSQLIdentityTest`) cover it when a
+PostgreSQL server is reachable.
 
 ## 11. The ORM manifest boot cache (`.bxorm/`)
 
