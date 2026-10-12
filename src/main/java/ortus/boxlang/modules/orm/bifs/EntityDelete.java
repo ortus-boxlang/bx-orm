@@ -84,7 +84,7 @@ public class EntityDelete extends BaseORMBIF {
 			// re-associated via merge first, since Hibernate 6+ rejects removing an unmanaged instance).
 			String			hbName			= ORMApp.hibernateEntityName( session, entityName );
 			Object			facade			= FacadeSupport.wrap( ormContext.getFacadeNamespace(), entityName, entity );
-			session.remove( session.contains( hbName, facade ) ? facade : session.merge( hbName, facade ) );
+			session.remove( session.contains( facade ) ? facade : session.merge( hbName, facade ) );
 			touched.add( session );
 		}
 		if ( flushRequested( arguments.get( ORMKeys.options ) ) ) {

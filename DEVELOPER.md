@@ -23,6 +23,7 @@ end-user docs.
 | Modern `mapping.xml` | Hibernate 7 mapping format, fed to Hibernate in memory. | [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
 | Composite ids, inheritance, value collections | Composite primary keys, single-table and joined inheritance, `fieldtype="collection"` (array and struct). | [§5](#5-the-facade-concretely), [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
 | Boot cache (`.bxorm/`) | `ormManifest="auto"` writes the resolved boot model and facade bytecode (`manifest-{app}.json`, `facades-{app}.jar`, so several apps can share one folder); `trust` boots straight from it. `ormManifestLocation` moves it. In `auto`, editing an entity reloads the ORM on the next request. | [§11](#11-the-orm-manifest-boot-cache-bxorm) |
+| Faster boot | Generated ids tell Hibernate a null id means "unsaved", so Hibernate no longer builds a throwaway instance of every entity at startup. Mappings are joined as text, and large models add static methods in parallel. `unsavedValue` on an id is honored. | [§11](#boot-performance-measured) |
 | `bxorm` CLI | `boxlang module:orm <verb> [--app=<name>]` inspects the boot cache: `info`, `validate`, `entities`, `entity`, `mappings`, `clear`. | [§11](#the-bxorm-cli) |
 | Transactions ride BoxLang | ORM work inside `transaction{}` uses the same JDBC connection as `queryExecute()`; BoxLang owns commit and rollback. Queries inside a transaction see pending ORM writes. | [§8](#8-transactions-riding-the-boxlang-connection) |
 | `uniquekey` / `index` | Property annotations become unique constraints and indexes, including multi-column ones. | [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
@@ -933,11 +934,10 @@ both paths) and `statics/StaticMethodsOffTest` (Derby app with `staticMethods = 
 
 ## 11. The ORM manifest boot cache (`.bxorm/`)
 
-Boot has three costs: entity **discovery** (walking the tree), **metadata parsing** (per entity,
+Boot has four costs: entity **discovery** (walking the tree), **metadata parsing** (per entity,
 scales linearly with entity count), **mapping generation**, and Hibernate's own `SessionFactory`
-build (a fixed floor we cannot avoid). Profiling a cold boot showed metadata parsing + mapping
-generation dominate for large-entity apps, while Hibernate's build is a fixed ~2s floor. The
-manifest cache targets the part we *can* remove.
+build, which also grows with entity count and which we cannot skip. The manifest cache targets the
+parts we *can* remove.
 
 **The `ormManifest` setting** (default `off`):
 
@@ -962,22 +962,10 @@ manifest also records the key (`appName`), and `ManifestService.verify` fails a 
 another application (for example one copied or renamed by hand). `ManifestService` exposes `manifestFile`,
 `checksumFile`, `facadesJar`, `listApps` and `clear( folder, app )` so nothing builds these names by hand.
 
-**Performance (estimated).** These are extrapolations from cold-boot profiling, not a fresh
-benchmark run — replace them with formal `./gradlew jmhCompare` numbers when available. A cold boot
-pays four costs: entity **discovery**, **metadata parsing** (scales with entity count),
-**mapping generation**, and **facade codegen** — plus Hibernate's own `SessionFactory` build, a
-fixed **~2s floor** we cannot remove. Profiling showed the first four dominate for large-entity
-apps. `trust` mode removes all four: it reads a single `manifest-{app}.json` and injects the pre-built
-`facades-{app}.jar`, so boot collapses toward the ~2s Hibernate floor.
-
-| App size | `off` cold boot (discover + parse + map + codegen + ~2s build) | `trust` cold boot (manifest read + ~2s build) | Estimated cold-start speedup |
-| --- | --- | --- | --- |
-| Small (a handful of entities) | Floor-dominated | ≈ floor | Modest — the fixed ~2s build dominates either way |
-| Large (dozens of entities) | Parse/map/codegen is the **majority** of above-floor time | ≈ floor + one file read | **Considerable** — an estimated ~2–4× faster cold start |
-
-The boost grows with entity count: the removed work scales with the number of entities, while
-`trust` mode's cost (one manifest read + facade injection) is effectively flat. Zero entity-file
-I/O and no ByteBuddy codegen at boot are the two levers.
+**Performance.** Measured numbers are in [Boot performance (measured)](#boot-performance-measured) below.
+`trust` removes discovery, metadata parsing, mapping generation and facade codegen, but Hibernate's own
+`SessionFactory` build stays, and it is the largest remaining cost (see the profile there). Expect `trust` to
+cut boot by roughly a third to a half on a large model, not to collapse it to a fixed floor.
 
 **What the manifest stores** (`OrmManifest`, serialized as JSON via BoxLang's own `JSONUtil` so it
 round-trips through BoxLang types): a format version, an ORM version stamp, a config fingerprint,
@@ -1015,6 +1003,55 @@ are captured, see "Self-contained accessors" in §5); in `trust`, the jar's byte
 build's `FacadeClassLoader`, which defines them instead of re-running codegen, with a transparent
 ByteBuddy fallback if a class cannot be defined. ByteBuddy stays a dependency (it is only skipped at
 runtime, not removed).
+
+### Boot performance (measured)
+
+Synthetic models of 25, 100 and 250 entities (each with associations), MariaDB on the same machine, JMH single-shot
+boots, 5 forks each, median in seconds. "next" is the `next` branch before the boot speedups; "now" includes them.
+
+| Entities | `trust` next | `trust` now | `auto` next | `auto` now | `off` next | `off` now | 1.7.1 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 10 | 4.05 | 3.94 | 4.43 | 4.59 | 4.63 | 4.33 | 2.35 |
+| 15 | 4.12 | 3.86 | 5.25 | 4.84 | 4.89 | 4.77 | 2.70 |
+| 25 | 4.64 | 3.86 | 5.47 | 5.10 | 5.13 | 5.23 | 3.13 |
+| 100 | 6.18 | 4.66 | 8.32 | 8.02 | | | 6.21 |
+| 250 | 9.12 | 7.12 | 15.89 | 14.14 | 13.00 | 13.48 | 8.46 |
+
+Runs on this machine vary by about ±0.5s, so differences under that are noise. 10 to 25 entities used 8 boots each
+(12 for `off` at 10 and 15, alternating next and now); the 1.7.1 column boots with no cache.
+
+`off` is unchanged within noise at every size (the 250-entity `off` numbers predate the parallel static methods). At
+250 entities a 2.0 `trust` boot is now faster than a 1.7.1 boot. For typical apps (10 to 25 entities) 2.0 is about
+1.5 to 2s slower than 1.7.1 in every mode, `trust` included: that is a fixed per-JVM cost, see below.
+
+What the speedups changed:
+
+1. **No throwaway entity per class.** Hibernate decides whether an entity is new by comparing its id to the id's
+   "unsaved value". When the mapping does not say, Hibernate 7 (`UnsavedValueFactory.getUnsavedIdentifierValue`)
+   creates one instance of every entity at startup to read its default id, which for bx-orm means resolving, compiling
+   and instantiating every BoxLang class through the facade. `MappingXMLWriter` now writes `<unsaved-value>null</...>`
+   for generated ids (any generator except `assigned`, and no `default` on the id), or the id's `unsavedValue`
+   annotation when set. Hibernate 7 ignores `<unsaved-value>` in `mapping.xml` (only its legacy `hbm.xml` path reads
+   it), so `BoxPersisterFactory.applyUnsavedValue` copies it onto the id's `SimpleValue.setNullValue` before the
+   persister is built.
+2. **Text splice of mappings.** `SessionFactoryBuilder.spliceGeneratedMappings` joins the per-entity `<entity>`
+   elements as text when every mapping is generated and has the plain default-namespace shape; anything else (an
+   on-disk mapping, a prefixed namespace, another child element) falls back to the DOM merge.
+3. **Parallel static methods.** `StaticEntityMethods.install` loads every entity class to add the static methods.
+   With `enableThreadedMapping` on and more than 20 entities it does this on a parallel stream, like
+   `MappingGenerator` does for metadata parsing.
+
+Where boot time goes now (250 entities, `trust`, wall-clock sampling of the boot thread): Hibernate's metamodel and
+persister build is the largest part, then JAXB parsing and XSD validation of `mapping.xml`, then BoxLang class
+resolution. `hibernate.validate_xml=false` does not help: Hibernate still resolves the XSD. BoxLang's resolver lists
+the entity folder on every class lookup (`FileSystemUtil.pathExistsCaseInsensitive`), so lookups grow with the square
+of the entity count in one folder; caching that in BoxLang core is the next lever.
+
+**The fixed cost on small apps.** At 10 entities the `SessionFactory` build is about 3.7s of a 4.7s boot. About 37% of
+the boot is the JVM loading classes: a cold 2.0 boot loads about 11,000 classes against 8,000 for 1.7.1 (Hibernate 7
++1,900, ByteBuddy +720, JAXB/Jakarta +580). XSD resolution and the JAXB context take another ~18%. None of this
+depends on the entity count, so the boot cache cannot remove it. BoxLang's `DynamicClassLoader` caches correctly and
+is not the problem; the class volume is. A JVM class-data-sharing (CDS) archive is the candidate fix, untested so far.
 
 ### The `bxorm` CLI
 

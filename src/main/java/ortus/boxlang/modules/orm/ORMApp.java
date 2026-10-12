@@ -46,7 +46,9 @@ import ortus.boxlang.runtime.dynamic.casters.GenericCaster;
 import ortus.boxlang.runtime.dynamic.casters.KeyCaster;
 import ortus.boxlang.runtime.jdbc.ConnectionManager;
 import ortus.boxlang.runtime.jdbc.DataSource;
+import ortus.boxlang.runtime.loader.IModuleClassLoader;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
+import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.Array;
@@ -238,12 +240,16 @@ public class ORMApp {
 	}
 
 	/**
-	 * The ORM module classloader: the parent of each build's facade classloader.
+	 * The ORM module classloader, which loads the module's own dependencies (Hibernate and the JDBC drivers it bundles). It is
+	 * the parent of each build's facade classloader and the loader Hibernate resolves mapped and generator classes against.
+	 * Read through {@code ModuleRecord.getModuleClassLoader()}, the replacement for the deprecated {@code classLoader} field.
 	 *
-	 * @return The module classloader.
+	 * @return The module classloader, or null when the ORM module is not registered or has no classloader yet.
 	 */
-	private static ClassLoader moduleClassLoader() {
-		return runtime.getModuleService().getModuleRecord( Key.of( "orm" ) ).classLoader;
+	public static ClassLoader moduleClassLoader() {
+		ModuleRecord		record	= runtime.getModuleService().getModuleRecord( ORMKeys.moduleName );
+		IModuleClassLoader	loader	= record == null ? null : record.getModuleClassLoader();
+		return loader == null ? null : loader.toClassLoader();
 	}
 
 	/**
@@ -311,7 +317,7 @@ public class ORMApp {
 	 * to {@code "dev"} when the module record carries no version.
 	 */
 	private static String moduleVersion() {
-		ortus.boxlang.runtime.modules.ModuleRecord record = runtime.getModuleService().getModuleRecord( Key.of( "orm" ) );
+		ModuleRecord record = runtime.getModuleService().getModuleRecord( Key.of( "orm" ) );
 		return record == null || record.version == null || record.version.isBlank() ? "dev" : record.version;
 	}
 
@@ -642,9 +648,8 @@ public class ORMApp {
 		Object									id				= toIdentifier( context, session, entityRecord, keyValue );
 		String									hbName			= hibernateEntityName( session, entityRecord.getEntityName() );
 		List<jakarta.persistence.FindOption>	findOptions		= findOptions( context, session, entityRecord, options );
-		var										entity			= findOptions.isEmpty()
-		    ? session.get( hbName, id )
-		    : session.find( hbName, id, findOptions.toArray( new jakarta.persistence.FindOption[ 0 ] ) );
+		var										entity			= find( session, hbName, id,
+		    findOptions.toArray( new jakarta.persistence.FindOption[ 0 ] ) );
 		if ( entity instanceof BoxProxy castProxy ) {
 			return castProxy.getRunnable();
 		} else {
@@ -679,6 +684,26 @@ public class ORMApp {
 			    : ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.unwrapIfFacade( entity ) );
 		}
 		return result;
+	}
+
+	/**
+	 * Load an entity by id with {@code Session.find}, the replacement for the deprecated {@code Session.get( String, Object )}.
+	 * Unlike {@code get}, {@code find} does not apply the session's default read-only mode (set by {@code ormReadOnly()}),
+	 * so this adds {@code ReadOnlyMode.READ_ONLY} when the session is read-only by default and no read-only mode was given.
+	 *
+	 * @param session    The Hibernate session.
+	 * @param entityName The Hibernate entity name.
+	 * @param id         The identifier.
+	 * @param options    Find options (lock, timeout, read-only); may be empty.
+	 *
+	 * @return The entity, or null when no row has that id.
+	 */
+	public static Object find( Session session, String entityName, Object id, jakarta.persistence.FindOption... options ) {
+		if ( session.isDefaultReadOnly() && java.util.Arrays.stream( options ).noneMatch( o -> o instanceof org.hibernate.ReadOnlyMode ) ) {
+			options							= java.util.Arrays.copyOf( options, options.length + 1 );
+			options[ options.length - 1 ]	= org.hibernate.ReadOnlyMode.READ_ONLY;
+		}
+		return session.find( entityName, id, options );
 	}
 
 	/**
@@ -1289,7 +1314,7 @@ public class ORMApp {
 		if ( value instanceof IClassRunnable runnable ) {
 			// Hibernate tracks the facade, so operate on that representation.
 			Object managed = ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport.wrap( this.config.facadeNamespace, entityName, runnable );
-			if ( session.contains( hibernateEntityName( session, entityName ), managed ) ) {
+			if ( session.contains( managed ) ) {
 				return managed;
 			}
 			Object id = getEntityPersister( session, entityName ).getIdentifier( managed, ( SharedSessionContractImplementor ) session );
@@ -1311,7 +1336,7 @@ public class ORMApp {
 	 * @return A managed reference assignable to the entity's mapped representation.
 	 */
 	private Object referenceFor( Session session, String entityName, Object id ) {
-		Object reference = session.get( hibernateEntityName( session, entityName ), id );
+		Object reference = find( session, hibernateEntityName( session, entityName ), id );
 		// When the session already holds a lazy proxy for this row (e.g. read through an association), get() returns that
 		// proxy, which is not assignable to the facade class a query parameter needs. Use the entity behind it.
 		if ( reference instanceof org.hibernate.proxy.HibernateProxy proxy ) {

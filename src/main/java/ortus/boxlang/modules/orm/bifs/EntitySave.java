@@ -129,7 +129,7 @@ public class EntitySave extends BaseORMBIF {
 		// the caller's instance so it stays live and carries generated ids/event changes.
 		Object			facade			= FacadeSupport.wrap( ormContext.getFacadeNamespace(), entityName,
 		    entity );
-		if ( session.contains( hbName, facade ) ) {
+		if ( session.contains( facade ) ) {
 			// Already managed: nothing to do; the flush will persist any changes.
 		} else if ( forceInsert || isTransient( session, hbName, facade ) ) {
 			session.persist( hbName, facade );

@@ -22,10 +22,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
-import ortus.boxlang.runtime.modules.ModuleRecord;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
@@ -116,6 +117,12 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 				this.sqlType = "varchar";
 				annotations.put( Key.sqltype, this.sqlType );
 			}
+		}
+
+		// `unsavedValue`: the id (or version) value that marks a new, unsaved entity, written as Hibernate's <unsaved-value>
+		if ( annotations.containsKey( ORMKeys.unsavedValue ) && annotations.get( ORMKeys.unsavedValue ) != null ) {
+			String unsaved = StringCaster.cast( annotations.get( ORMKeys.unsavedValue ) );
+			this.unsavedValue = unsaved.isBlank() ? null : unsaved.trim();
 		}
 
 		this.column			= parseColumnAnnotations( this.annotations );
@@ -252,7 +259,10 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 	}
 
 	/**
-	 * Get the unsaved value for this property.
+	 * Get the unsaved value for this property: the {@code unsavedValue} annotation, or null when it is not set.
+	 * <p>
+	 * Hibernate compares an entity's id against it to tell a new entity from a detached one: {@code null}, {@code any},
+	 * {@code none}, {@code undefined} or a literal id value.
 	 */
 	public String getUnsavedValue() {
 		return this.unsavedValue;
@@ -340,9 +350,9 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 
 		// Include the ORM module classloader so custom generators packaged in modules are resolved.
 		try {
-			ModuleRecord ormModule = runtime.getModuleService().getModuleRecord( ORMKeys.moduleName );
-			if ( ormModule != null && ormModule.classLoader != null ) {
-				classLoaders.add( ormModule.classLoader );
+			ClassLoader ormLoader = ORMApp.moduleClassLoader();
+			if ( ormLoader != null ) {
+				classLoaders.add( ormLoader );
 			}
 		} catch ( Exception ignored ) {
 			// Module may not be registered during unit tests; fall through to other loaders.
