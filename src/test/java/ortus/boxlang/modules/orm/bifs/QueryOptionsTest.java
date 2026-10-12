@@ -104,6 +104,34 @@ public class QueryOptionsTest extends BaseORMTest {
 	}
 
 	/**
+	 * Test: entityLoad with only a cachename (no cacheable) caches the query in that region.
+	 */
+	@DisplayName( "entityLoad cachename alone turns on query caching in that region" )
+	@Test
+	public void testEntityLoadCacheNameImpliesCacheable() {
+		Object found = run( """
+		                    entityLoad( "Manufacturer", {}, "", { cachename : "qo_implied" } );
+		                    cache  = ORMGetSessionFactory().getCache();
+		                    result = !isNull( cache.getRegion( "qo_implied" ) ) || !isNull( cache.getRegion( "TestDB_qo_implied" ) );
+		                    """ );
+		assertThat( ( Boolean ) found ).isTrue();
+	}
+
+	/**
+	 * Test: entityLoad with a cachename and cacheable false does not cache.
+	 */
+	@DisplayName( "entityLoad cacheable false wins over cachename" )
+	@Test
+	public void testEntityLoadCacheableFalseWins() {
+		Object found = run( """
+		                    entityLoad( "Manufacturer", {}, "", { cachename : "qo_not_cached", cacheable : false } );
+		                    cache  = ORMGetSessionFactory().getCache();
+		                    result = !isNull( cache.getRegion( "qo_not_cached" ) ) || !isNull( cache.getRegion( "TestDB_qo_not_cached" ) );
+		                    """ );
+		assertThat( ( Boolean ) found ).isFalse();
+	}
+
+	/**
 	 * Test: entityLoad ignorecase sorts a text property case-insensitively.
 	 */
 	@DisplayName( "entityLoad ignorecase sorts a text property case-insensitively" )

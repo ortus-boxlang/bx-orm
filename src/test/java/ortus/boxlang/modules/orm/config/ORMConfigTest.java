@@ -20,9 +20,13 @@ package ortus.boxlang.modules.orm.config;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.runtime.types.Array;
@@ -297,6 +301,42 @@ public class ORMConfigTest extends BaseORMTest {
 		), context ).toHibernateConfig();
 
 		assertEquals( "false", config.getProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION ) );
+	}
+
+	@DisplayName( "sqlScript is read and handed to Hibernate when dbcreate creates the tables" )
+	@Test
+	public void testSqlScriptRunsWithDropCreate() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dbcreate, "dropcreate",
+		    ORMKeys.sqlScript, "src/test/resources/app/sqlscript-test.sql"
+		), context ).toHibernateConfig();
+
+		assertEquals( "src/test/resources/app/sqlscript-test.sql", config.getProperty( AvailableSettings.HBM2DDL_IMPORT_FILES ) );
+	}
+
+	@DisplayName( "sqlScript is ignored when dbcreate does not create the tables" )
+	@Test
+	public void testSqlScriptIgnoredWithUpdate() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dbcreate, "update",
+		    ORMKeys.sqlScript, "src/test/resources/app/sqlscript-test.sql"
+		), context ).toHibernateConfig();
+
+		assertNull( config.getProperty( AvailableSettings.HBM2DDL_IMPORT_FILES ) );
+	}
+
+	@DisplayName( "createsSchema is true only for dbcreate values that create the tables" )
+	@Test
+	public void testCreatesSchema() {
+		assertTrue( ORMConfig.createsSchema( "dropcreate" ) );
+		assertTrue( ORMConfig.createsSchema( "create" ) );
+		assertTrue( ORMConfig.createsSchema( "create-drop" ) );
+		assertTrue( ORMConfig.createsSchema( "drop-and-create" ) );
+		assertFalse( ORMConfig.createsSchema( "update" ) );
+		assertFalse( ORMConfig.createsSchema( "none" ) );
+		assertFalse( ORMConfig.createsSchema( null ) );
 	}
 
 	@Test

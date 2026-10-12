@@ -53,6 +53,7 @@ import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.InterceptorService;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.IStruct;
+import ortus.boxlang.runtime.util.FileSystemUtil;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
@@ -333,8 +334,9 @@ public class ORMConfig {
 	public boolean								ignoreParseErrors		= false;
 
 	/**
-	 * Path to a SQL script file that will be executed after the ORM is initialized.
-	 * Only used if dbcreate is set to <code>dropcreate</code>.
+	 * Path to a SQL script file that Hibernate runs after it creates the tables. Only used when <code>dbcreate</code> creates
+	 * the schema (<code>dropcreate</code>, or a Hibernate value such as <code>create</code> or <code>create-drop</code>).
+	 * A path that does not exist as given is expanded against the application (mappings and the application root).
 	 */
 	public String								sqlScript;
 
@@ -611,6 +613,11 @@ public class ORMConfig {
 			ormConfig = properties.getAsString( ORMKeys.ormConfig );
 		}
 
+		if ( properties.containsKey( ORMKeys.sqlScript ) && properties.get( ORMKeys.sqlScript ) != null
+		    && !properties.getAsString( ORMKeys.sqlScript ).isBlank() ) {
+			sqlScript = resolveSqlScript( properties.getAsString( ORMKeys.sqlScript ).trim(), context );
+		}
+
 		if ( properties.containsKey( ORMKeys.useDBForMapping ) && properties.get( ORMKeys.useDBForMapping ) != null ) {
 			useDBForMapping = BooleanCaster.cast( properties.get( ORMKeys.useDBForMapping ) );
 		}
@@ -809,19 +816,16 @@ public class ORMConfig {
 		}
 
 		if ( this.sqlScript != null ) {
-			if ( Action.CREATE.toString().equals( this.dbcreate ) ) {
+			if ( createsSchema( this.dbcreate ) ) {
 				if ( new File( sqlScript ).exists() ) {
-					// @TODO: We could possibly upgrade this to use the JPA setting:
-					// `JAKARTA_HBM2DDL_CREATE_SCRIPT_SOURCE`, but we'd have to test to see if that
-					// script executes *after* the schema generation (correct behavior), or *in
-					// place of* the schema generation (incorrect behavior).
+					// Hibernate runs `hbm2ddl.import_files` right after it creates the tables.
 					configuration.setProperty( AvailableSettings.HBM2DDL_IMPORT_FILES, sqlScript );
 				} else {
 					logger.error( "ORM Configuration `sqlScript` file not found: {}", sqlScript );
 				}
 			} else {
-				logger.trace(
-				    "ORM Configuration `sqlScript` is only valid with `dbcreate=dropcreate`. Ignoring for now." );
+				logger.warn( "ORM Configuration `sqlScript` only runs when `dbcreate` creates the tables (for example `dropcreate`); "
+				    + "it is ignored with dbcreate [{}].", this.dbcreate == null ? "none" : this.dbcreate );
 			}
 		}
 
@@ -853,6 +857,43 @@ public class ORMConfig {
 		}
 
 		return configuration;
+	}
+
+	/**
+	 * Whether a <code>dbcreate</code> value makes Hibernate create the tables, which is when it runs the <code>sqlScript</code>.
+	 *
+	 * @param dbcreate The <code>dbcreate</code> setting, after <code>dropcreate</code> is translated (may be null).
+	 *
+	 * @return True for values that create the schema (<code>dropcreate</code>, <code>create</code>, <code>create-drop</code>,
+	 *         <code>create-only</code>).
+	 */
+	static boolean createsSchema( String dbcreate ) {
+		if ( dbcreate == null || dbcreate.isBlank() ) {
+			return false;
+		}
+		String	value	= "dropcreate".equalsIgnoreCase( dbcreate ) ? "drop-and-create" : dbcreate;
+		Action	action	= Action.interpretHbm2ddlSetting( value );
+		return action == Action.CREATE || action == Action.CREATE_DROP || action == Action.CREATE_ONLY;
+	}
+
+	/**
+	 * Resolve the <code>sqlScript</code> setting to a file path. A path that exists as given is used as is; otherwise it is
+	 * expanded like <code>expandPath()</code> (mappings, then the application root).
+	 *
+	 * @param path    The configured path.
+	 * @param context The context the ORM application starts in; may be null in unit tests.
+	 *
+	 * @return The path to hand to Hibernate.
+	 */
+	private static String resolveSqlScript( String path, IBoxContext context ) {
+		if ( new File( path ).exists() || context == null ) {
+			return path;
+		}
+		try {
+			return FileSystemUtil.expandPath( context, path ).absolutePath().toString();
+		} catch ( RuntimeException e ) {
+			return path;
+		}
 	}
 
 	/**
