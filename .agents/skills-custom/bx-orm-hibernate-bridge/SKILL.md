@@ -61,7 +61,7 @@ flowchart TB
 
 ```java
 // Route every entity persister through the BoxLang representation strategy.
-properties.put( "hibernate.persister.factory", new BoxPersisterFactory( entityMap ) );
+properties.put( "hibernate.persister.factory", new BoxPersisterFactory( entityMap, ormConfig.facadeNamespace ) );
 ```
 
 `entityMap` is the discovered entities keyed by lower-cased entity name, so the resolver can hand each `BoxEntityRepresentationStrategy` its `EntityRecord` without a runtime lookup (the persister is built at boot, before the ORM app is registered).

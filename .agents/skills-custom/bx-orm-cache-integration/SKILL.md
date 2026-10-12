@@ -36,7 +36,7 @@ flowchart TB
 ## Key Classes
 
 | Class | Package | Implements | Responsibility |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `BoxHibernateCachingProvider` | `ortus.boxlang.modules.orm.hibernate.cache` | `javax.cache.CachingProvider` | JCache provider entry point; creates `BoxHibernateCacheManager` |
 | `BoxHibernateCacheManager` | same | `javax.cache.CacheManager` | Manages named caches; creates `BoxHibernateCache` instances |
 | `BoxHibernateCache` | same | `javax.cache.Cache<K, V>` | Wraps BoxLang's `ICacheProvider` as a JSR-107 `Cache` |
@@ -249,7 +249,7 @@ public class BoxHibernateCache<K, V> implements Cache<K, V> {
 Hibernate defines cache concurrency strategies. These are set per-entity via the `cacheuse` annotation:
 
 | `cacheuse` value | Hibernate `CacheConcurrencyStrategy` | Use Case |
-|---|---|---|
+| --- | --- | --- |
 | `read-only` | `READ_ONLY` | Immutable reference data (countries, states) |
 | `read-write` | `READ_WRITE` | General-purpose; soft-lock based isolation |
 | `nonstrict-read-write` | `NONSTRICT_READ_WRITE` | Rarely-updated data; no locking |
