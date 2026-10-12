@@ -297,7 +297,7 @@ var results = ormExecuteQuery(
 `cacheinclude` controls which data goes into the cache:
 
 | Value | Behavior |
-|---|---|
+| --- | --- |
 | `all` (default) | Cache both the entity and its lazy associations |
 | `non-lazy` | Cache only the entity; exclude lazy-loaded associations |
 
