@@ -70,7 +70,7 @@ dependencies {
 	testImplementation "org.xerial:sqlite-jdbc:3.53.4.0"
 	// PostgreSQL JDBC driver, used to test ORM boot and identity generation against a PostgreSQL datasource
 	// https://mvnrepository.com/artifact/org.postgresql/postgresql
-	testImplementation "org.postgresql:postgresql:42.7.4"
+	testImplementation "org.postgresql:postgresql:42.7.12"
 	// Explicitly declare the JUnit platform launcher (to avoid deprecation)
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
