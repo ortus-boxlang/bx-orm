@@ -899,7 +899,8 @@ public class ORMConfig {
 
 	/**
 	 * Resolve a file setting (<code>sqlScript</code>, a <code>cacheConfig</code> path) to a file path. A path that exists as
-	 * given is used as is; otherwise it is expanded like <code>expandPath()</code> (mappings, then the application root).
+	 * given is used as is; otherwise it is expanded like <code>expandPath()</code> (mappings, then the application root), and
+	 * kept as written when the expanded path does not exist either.
 	 *
 	 * @param path    The configured path.
 	 * @param context The context the ORM application starts in; may be null in unit tests.
@@ -911,7 +912,9 @@ public class ORMConfig {
 			return path;
 		}
 		try {
-			return FileSystemUtil.expandPath( context, path ).absolutePath().toString();
+			String expanded = FileSystemUtil.expandPath( context, path ).absolutePath().toString();
+			// Keep the path as written when the expanded one does not exist either, so errors name what the app configured
+			return new File( expanded ).exists() ? expanded : path;
 		} catch ( RuntimeException e ) {
 			return path;
 		}
