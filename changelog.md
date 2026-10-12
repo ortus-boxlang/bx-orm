@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ORMPreConfigLoad` and `ORMPostConfigLoad` are now registered as interception points.
 - Faster ORM boot. Generated ids (`native`, `identity`, `increment`, `uuid`, `sequence` and the like) now tell Hibernate that a null id means "not saved yet", so Hibernate no longer creates one throwaway instance of every entity at startup to find out. The per-entity mappings are also joined as text instead of through a DOM merge, and with `enableThreadedMapping` on (the default) apps with more than 20 entities add the static entity methods in parallel.
 - The ORM module classloader is read through BoxLang's `ModuleRecord.getModuleClassLoader()` instead of the deprecated `classLoader` field.
+- Entity loads by id use Hibernate's `Session.find()` instead of the deprecated `Session.get( entityName, id )`, and managed checks use `Session.contains( entity )` instead of the deprecated `contains( entityName, entity )`. `ormReadOnly()` still makes those loads read-only.
 
 ### 🚀 Added
 

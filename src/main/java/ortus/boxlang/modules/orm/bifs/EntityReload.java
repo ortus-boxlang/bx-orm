@@ -90,7 +90,7 @@ public class EntityReload extends BaseORMBIF {
 		String	hbName		= ORMApp.hibernateEntityName( session, entityName );
 		// Hibernate manages the generated facade, not the IClassRunnable; the facade's state delegates to this instance.
 		Object	facade		= FacadeSupport.wrap( namespace, entityName, runnable );
-		if ( session.contains( hbName, facade ) ) {
+		if ( session.contains( facade ) ) {
 			session.refresh( facade );
 			return entity;
 		}
@@ -106,7 +106,7 @@ public class EntityReload extends BaseORMBIF {
 		SharedSessionContractImplementor	source	= ( SharedSessionContractImplementor ) session;
 		boolean								tracked	= source.getPersistenceContextInternal()
 		    .getEntity( source.generateEntityKey( id, persister ) ) != null;
-		Object								loaded	= session.get( hbName, id );
+		Object								loaded	= ORMApp.find( session, hbName, id );
 		if ( loaded == null ) {
 			throw new BoxRuntimeException( "Cannot reload entity [" + entityName + "] with id [" + id + "]: the row no longer exists." );
 		}
