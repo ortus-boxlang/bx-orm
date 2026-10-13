@@ -18,15 +18,17 @@
 package ortus.boxlang.modules.orm.hibernate;
 
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Set;
 
 import org.hibernate.cache.spi.access.CollectionDataAccess;
 import org.hibernate.cache.spi.access.EntityDataAccess;
 import org.hibernate.cache.spi.access.NaturalIdDataAccess;
 import org.hibernate.mapping.Collection;
+import org.hibernate.mapping.Component;
 import org.hibernate.mapping.KeyValue;
 import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.Property;
+import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.metamodel.spi.RuntimeModelCreationContext;
 import org.hibernate.persister.collection.CollectionPersister;
@@ -35,8 +37,14 @@ import org.hibernate.persister.internal.PersisterFactoryImpl;
 import org.hibernate.persister.spi.PersisterFactory;
 import org.hibernate.service.spi.ServiceRegistryAwareService;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
+import org.hibernate.type.BasicType;
 
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.modules.orm.mapping.UnsavedValues;
+import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
+import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
+import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.logging.BoxLangLogger;
 
 /**
  * Hibernate {@link PersisterFactory} service that injects the BoxLang {@link BoxRepresentationResolver} into every entity
@@ -52,10 +60,10 @@ import ortus.boxlang.modules.orm.mapping.EntityRecord;
  */
 public class BoxPersisterFactory implements PersisterFactory, ServiceRegistryAwareService {
 
-	/** The {@code <unsaved-value>} inside a mapping's {@code <id>} element. */
-	private static final Pattern			UNSAVED_VALUE	= Pattern.compile( "<unsaved-value>([^<]*)</unsaved-value>" );
+	/** Hibernate's unsaved-value keywords, which are not parsed as a value. */
+	private static final Set<String>		HIBERNATE_KEYWORDS	= Set.of( "null", "none", "any", "undefined", "negative" );
 
-	private final PersisterFactoryImpl		delegate		= new PersisterFactoryImpl();
+	private final PersisterFactoryImpl		delegate			= new PersisterFactoryImpl();
 	private final BoxRepresentationResolver	resolver;
 	private final Map<String, EntityRecord>	entityRecords;
 
@@ -76,7 +84,7 @@ public class BoxPersisterFactory implements PersisterFactory, ServiceRegistryAwa
 	@Override
 	public EntityPersister createEntityPersister( PersistentClass entityBinding, EntityDataAccess entityCacheAccessStrategy,
 	    NaturalIdDataAccess naturalIdCacheAccessStrategy, RuntimeModelCreationContext creationContext ) {
-		applyUnsavedValue( entityBinding );
+		applyUnsavedValues( entityBinding );
 		return delegate.createEntityPersister(
 		    entityBinding,
 		    entityCacheAccessStrategy,
@@ -86,58 +94,95 @@ public class BoxPersisterFactory implements PersisterFactory, ServiceRegistryAwa
 	}
 
 	/**
-	 * Give the entity's id the unsaved value its mapping declares, before Hibernate builds the persister.
+	 * Declare the unsaved value of the entity's id and version on the boot model, before Hibernate builds the persister.
 	 * <p>
-	 * Hibernate 7 reads {@code <unsaved-value>} only from legacy {@code hbm.xml}; in {@code mapping.xml} it is parsed and
-	 * then ignored. Without an unsaved value, Hibernate creates one throwaway instance of the entity while building the
-	 * persister, only to read the id a new entity starts with. For a BoxLang entity that loads, compiles and instantiates
-	 * the entity class at boot. The mapping writer decides the value (see {@code MappingXMLWriter}); this applies it to
-	 * the boot model, so Hibernate skips that instance. An id Hibernate has already given an unsaved value is left alone.
+	 * Without one, Hibernate 7 instantiates the entity at boot to read the id and version a new instance starts with. For a
+	 * BoxLang entity that runs its pseudo-constructor and {@code init()} during ORM startup, before the application is
+	 * ready (for example, before ColdBox and WireBox exist). {@link UnsavedValues} decides the values from the entity's
+	 * metadata; they match what Hibernate would read off a fresh instance. Hibernate never instantiates the entity for a
+	 * composite id, so those are left alone, as is any id or version Hibernate already has an unsaved value for. The id and
+	 * version live on the root entity, so a subclass is handled through its root.
 	 *
 	 * @param entityBinding The entity's boot model.
 	 */
-	private void applyUnsavedValue( PersistentClass entityBinding ) {
-		KeyValue identifier = entityBinding.getIdentifier();
-		if ( ! ( identifier instanceof SimpleValue simpleId ) || simpleId.getNullValueSemantic() != null ) {
+	private void applyUnsavedValues( PersistentClass entityBinding ) {
+		RootClass		root	= entityBinding.getRootClass();
+		EntityRecord	record	= recordFor( root );
+		if ( record == null ) {
 			return;
 		}
-		// The JPA entity name is the BoxLang entity name; Hibernate's own entity name is the facade class name
-		EntityRecord record = null;
-		for ( String name : new String[] { entityBinding.getJpaEntityName(), entityBinding.getEntityName() } ) {
-			if ( record == null && name != null ) {
-				record = entityRecords.get( name.toLowerCase().trim() );
+		IEntityMeta	meta		= record.getEntityMeta();
+
+		KeyValue	identifier	= root.getIdentifier();
+		if ( identifier instanceof SimpleValue simpleId && ! ( identifier instanceof Component ) && simpleId.getNullValueSemantic() == null ) {
+			Set<IPropertyMeta> idProperties = meta.getIdProperties();
+			if ( idProperties.size() == 1 ) {
+				simpleId.setNullValue( parseableOrNull( UnsavedValues.forId( idProperties.iterator().next() ), simpleId, root ) );
 			}
 		}
-		String unsaved = record == null ? null : unsavedValueOf( record.getXmlMapping() );
-		if ( unsaved != null ) {
-			simpleId.setNullValue( unsaved );
+
+		Property		version			= root.getVersion();
+		IPropertyMeta	versionProperty	= meta.getVersionProperty();
+		if ( version != null && versionProperty != null && version.getValue() instanceof SimpleValue versionValue
+		    && versionValue.getNullValueSemantic() == null ) {
+			versionValue.setNullValue( parseableOrNull( UnsavedValues.forVersion( versionProperty ), versionValue, root ) );
 		}
 	}
 
 	/**
-	 * The {@code <unsaved-value>} of the {@code <id>} element in an entity's mapping, or null when there is none.
+	 * The bx-orm entity record of a boot entity, found by its JPA entity name (the BoxLang entity name) or its Hibernate
+	 * entity name (the facade class name).
 	 *
-	 * @param xmlMapping The entity's generated mapping.
+	 * @param entityBinding The entity's boot model.
 	 *
-	 * @return The unsaved value text, or null.
+	 * @return The record, or null when the entity is not a bx-orm entity.
 	 */
-	static String unsavedValueOf( String xmlMapping ) {
-		if ( xmlMapping == null ) {
-			return null;
+	private EntityRecord recordFor( PersistentClass entityBinding ) {
+		for ( String name : new String[] { entityBinding.getJpaEntityName(), entityBinding.getEntityName() } ) {
+			EntityRecord record = name == null ? null : entityRecords.get( name.toLowerCase().trim() );
+			if ( record != null ) {
+				return record;
+			}
 		}
-		int	start	= xmlMapping.indexOf( "<id " );
-		int	end		= start < 0 ? -1 : xmlMapping.indexOf( "</id>", start );
-		if ( end < 0 ) {
-			return null;
+		return null;
+	}
+
+	/**
+	 * Check that a literal unsaved value (not one of Hibernate's keywords) parses as the value's type. Hibernate parses it
+	 * while building the persister and fails the whole boot when it cannot, so an unparseable {@code default} or
+	 * {@code unsavedValue} falls back to {@value UnsavedValues#NULL} with a warning instead.
+	 *
+	 * @param unsaved The unsaved value.
+	 * @param value   The id or version value it applies to.
+	 * @param root    The root entity, for the warning.
+	 *
+	 * @return The unsaved value, or {@value UnsavedValues#NULL} when it does not parse.
+	 */
+	private static String parseableOrNull( String unsaved, SimpleValue value, PersistentClass root ) {
+		if ( HIBERNATE_KEYWORDS.contains( unsaved ) || ! ( value.getType() instanceof BasicType<?> basicType ) ) {
+			return unsaved;
 		}
-		Matcher matcher = UNSAVED_VALUE.matcher( xmlMapping.substring( start, end ) );
-		return matcher.find() ? matcher.group( 1 ).trim() : null;
+		try {
+			basicType.getJavaTypeDescriptor().fromString( unsaved );
+			return unsaved;
+		} catch ( RuntimeException e ) {
+			logger().warn( "The unsaved value [{}] of entity [{}] is not a valid {}; using null instead.", unsaved, root.getJpaEntityName(),
+			    basicType.getJavaType().getSimpleName() );
+			return UnsavedValues.NULL;
+		}
 	}
 
 	@Override
 	public CollectionPersister createCollectionPersister( Collection collectionBinding, CollectionDataAccess cacheAccessStrategy,
 	    RuntimeModelCreationContext creationContext ) {
 		return delegate.createCollectionPersister( collectionBinding, cacheAccessStrategy, creationContext );
+	}
+
+	/**
+	 * @return The ORM logger.
+	 */
+	private static BoxLangLogger logger() {
+		return BoxRuntime.getInstance().getLoggingService().getLogger( "orm" );
 	}
 
 }

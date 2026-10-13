@@ -1,0 +1,5 @@
+class persistent="true" table="guarded_booking" extends="GuardedEntity" {
+	property name="flightID"  fieldtype="id" ormType="integer" generator="assigned";
+	property name="seatID"    fieldtype="id" ormType="string"  generator="assigned";
+	property name="passenger" ormType="string";
+}

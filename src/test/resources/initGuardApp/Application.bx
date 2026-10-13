@@ -1,0 +1,26 @@
+/**
+ * Entities whose init() needs the application (like a cborm ActiveEntity reading application.wirebox): they throw when
+ * created before the test marks the application ready. The ORM must boot without creating any of them.
+ */
+class {
+	this.name = "BXORMInitGuardTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"InitGuardDB": {
+			"connectionString": "jdbc:derby:memory:ormInitGuardTest;create=true"
+		}
+	};
+	this.datasource = "InitGuardDB";
+
+	this.ormSettings = {
+		"datasource"       : "InitGuardDB",
+		"dialect"          : "Derby",
+		"entityPaths"      : [ "/root/models" ],
+		"logSQL"           : "false",
+		"dbcreate"         : "dropcreate",
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}

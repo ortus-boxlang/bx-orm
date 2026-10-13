@@ -293,16 +293,37 @@ public class MappingGeneratorTest {
 		assertThat( childText( first( doc, "id" ), "unsaved-value" ) ).isEqualTo( "null" );
 	}
 
-	@DisplayName( "It leaves unsaved-value to Hibernate for assigned ids, ids with a default and ids without a generator" )
+	@DisplayName( "It writes unsaved-value null for assigned ids and ids without a generator" )
 	@ParameterizedTest
 	@CsvSource( delimiter = '|', value = {
 	    "property name=\"the_id\" fieldtype=\"id\" generator=\"assigned\";",
-	    "property name=\"the_id\" fieldtype=\"id\" generator=\"native\" default=\"0\";",
 	    "property name=\"the_id\" fieldtype=\"id\";"
 	} )
-	public void testWriterNoDefaultUnsavedValue( String property ) {
+	public void testWriterUnsavedValueForAssignedId( String property ) {
 		Document doc = writeXML( "class persistent { " + property + " }" );
-		assertThat( childElement( first( doc, "id" ), "unsaved-value" ) ).isNull();
+		assertThat( childText( first( doc, "id" ), "unsaved-value" ) ).isEqualTo( "null" );
+	}
+
+	@DisplayName( "It writes the id default as its unsaved-value, keeping a blank default" )
+	@ParameterizedTest
+	@CsvSource( delimiter = '|', value = { "native|0|0", "assigned|0|0", "uuid|''|''" } )
+	public void testWriterUnsavedValueFromDefault( String generator, String defaultValue, String expected ) {
+		Document doc = writeXML(
+		    "class persistent { property name=\"the_id\" fieldtype=\"id\" generator=\"" + generator + "\" default=\"" + defaultValue + "\"; }" );
+		assertThat( childText( first( doc, "id" ), "unsaved-value" ) ).isEqualTo( expected );
+	}
+
+	@DisplayName( "It declares a version unsaved value: null without a default, undefined with one, or the explicit annotation" )
+	@ParameterizedTest
+	@CsvSource( delimiter = '|', value = {
+	    "property name=\"revision\" fieldtype=\"version\" ormType=\"integer\";|null",
+	    "property name=\"revision\" fieldtype=\"version\" ormType=\"integer\" default=\"0\";|undefined",
+	    "property name=\"revision\" fieldtype=\"version\" ormType=\"integer\" unsavedValue=\"negative\";|negative"
+	} )
+	public void testVersionUnsavedValue( String property, String expected ) {
+		IEntityMeta meta = AbstractEntityMeta.autoDiscoverMetaType(
+		    getClassMetaFromCode( "class persistent { property name=\"id\" fieldtype=\"id\" generator=\"native\"; " + property + " }" ) );
+		assertThat( UnsavedValues.forVersion( meta.getVersionProperty() ) ).isEqualTo( expected );
 	}
 
 	@DisplayName( "It treats a null default annotation (as runtime metadata carries it) as no default" )

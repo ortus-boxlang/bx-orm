@@ -1,0 +1,4 @@
+class persistent="true" table="default_id_thing" extends="GuardedEntity" {
+	property name="id"    fieldtype="id" generator="uuid" ormType="string" length="36" default="";
+	property name="label" ormType="string";
+}

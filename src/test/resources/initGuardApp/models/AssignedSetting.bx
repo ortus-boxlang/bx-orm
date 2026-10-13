@@ -1,0 +1,4 @@
+class persistent="true" table="assigned_setting" extends="GuardedEntity" {
+	property name="name"  fieldtype="id" generator="assigned" ormType="string" length="100";
+	property name="value" ormType="string";
+}
