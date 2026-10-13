@@ -117,7 +117,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		// Update fieldtype annotation just in case we altered it.
 		annotations.put( ORMKeys.fieldtype, associationType );
 
-		final String	finalAssociationType	= associationType;
+		// Compare against the normalized (lower-cased, trimmed) type: the annotation itself may be mixed case,
+		// e.g. fieldtype="Collection" or fieldtype="One-To-Many", and FIELDTYPE.fromString() accepts that.
+		final String	finalAssociationType	= association.getAsString( Key.type );
 		// to-many associations and simple-value collections (`fieldtype="collection"`, a <bag>/<map> of
 		// scalars in a link table) share the collection annotations: type, batchsize, structKey*, element*
 		final boolean	isCollection			= finalAssociationType.endsWith( "-to-many" ) || finalAssociationType.equals( "collection" );

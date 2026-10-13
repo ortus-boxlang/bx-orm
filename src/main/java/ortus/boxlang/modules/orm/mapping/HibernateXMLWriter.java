@@ -352,17 +352,6 @@ public class HibernateXMLWriter {
 	}
 
 	/**
-	 * Create a bag or map collection element for the given property metadata.
-	 * <p>
-	 * May also create &lt;map-key&gt; &lt;element&gt; xml nodes.
-	 *
-	 * @param prop        Property meta, containing association and column metadata
-	 * @param association Association-specific metadata
-	 * @param columnInfo  Column-specific metadata
-	 *
-	 * @return The collection node of either bag or map type.
-	 */
-	/**
 	 * Generate a simple-value collection (`fieldtype="collection"`), i.e. the Adobe CF ORM "collection mapping":
 	 * a {@code <bag>} ({@code type="array"}) or {@code <map>} ({@code type="struct"}) of scalar values that live in
 	 * their own table, keyed back to the owning entity by {@code fkcolumn}.
@@ -419,6 +408,17 @@ public class HibernateXMLWriter {
 		return collectionNode;
 	}
 
+	/**
+	 * Create a bag or map collection element for the given property metadata.
+	 * <p>
+	 * May also create &lt;map-key&gt; &lt;element&gt; xml nodes.
+	 *
+	 * @param prop        Property meta, containing association and column metadata
+	 * @param association Association-specific metadata
+	 * @param columnInfo  Column-specific metadata
+	 *
+	 * @return The collection node of either bag or map type.
+	 */
 	private Element generateCollectionElement( IPropertyMeta prop, IStruct association, IStruct columnInfo ) {
 		String	type	= association.getAsString( ORMKeys.collectionType );
 		// Cite: https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#d0e10663

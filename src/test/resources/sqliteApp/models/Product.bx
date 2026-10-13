@@ -4,5 +4,8 @@ class accessors ="#true#" persistent="true" table ="products" {
 	property name="name" ormType="string";
 
 	// simple-value collection (Adobe CF ORM "collection mapping"): one row per tag in product_tags
-	property name="tags" type="array" fieldtype="collection" elementtype="string" elementcolumn="tag" table="product_tags" fkcolumn="product_id";
+	property name="tags" type="array" fieldtype="collection" elementtype="string" elementcolumn="tag" table="product_tags" fkcolumn="product_id" orderby="tag ASC";
+
+	// struct flavour of the same: one row per key/value pair in product_specs
+	property name="specs" type="struct" fieldtype="collection" structkeycolumn="spec_name" structkeytype="string" elementtype="string" elementcolumn="spec_value" table="product_specs" fkcolumn="product_id";
 }

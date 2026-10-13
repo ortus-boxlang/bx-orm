@@ -90,7 +90,7 @@ public class SQLiteDialectBootTest {
 		instance.getApplicationService().shutdownApplication( Key.of( "BXORMSQLiteTest" ) );
 	}
 
-	@DisplayName( "It round-trips a simple-value collection (fieldtype=collection): schema, insert, load, replace, clear" )
+	@DisplayName( "It round-trips a simple-value collection (fieldtype=collection): schema, insert, load, helpers, replace, clear" )
 	@Test
 	public void testElementCollectionRoundTrip() {
 		// @formatter:off
@@ -107,9 +107,21 @@ public class SQLiteDialectBootTest {
 
 			loaded     = entityLoad( "Product", { name : "Gadget" }, true );
 			loadedTags = loaded.getTags();
-			loadedTagsSorted = loadedTags.toList();
+			// the mapping carries orderby="tag ASC", so the bag is ordered on load
+			loadedTagList = loadedTags.toList();
+
+			// generated helpers take the scalar value, not an entity
+			hasRed    = loaded.hasTags( "red" );
+			hasGreen  = loaded.hasTags( "green" );
+			transaction {
+				loaded.addTags( "green" ).removeTags( "red" );
+				entitySave( loaded );
+			}
+			ormClearSession();
+			rowsAfterHelpers = queryExecute( "SELECT tag FROM product_tags ORDER BY tag" );
 
 			transaction {
+				loaded = entityLoad( "Product", { name : "Gadget" }, true );
 				loaded.setTags( [ "blue" ] );
 				entitySave( loaded );
 			}
@@ -132,10 +144,74 @@ public class SQLiteDialectBootTest {
 		assertThat( variables.getAsQuery( Key.of( "rows" ) ).getRowAsStruct( 1 ).get( "tag" ) ).isEqualTo( "sale" );
 
 		assertThat( variables.get( Key.of( "loadedTags" ) ) ).isNotNull();
-		assertThat( variables.getAsString( Key.of( "loadedTagsSorted" ) ) ).isEqualTo( "red,sale" );
+		assertThat( variables.getAsString( Key.of( "loadedTagList" ) ) ).isEqualTo( "red,sale" );
+
+		assertThat( variables.getAsBoolean( Key.of( "hasRed" ) ) ).isTrue();
+		assertThat( variables.getAsBoolean( Key.of( "hasGreen" ) ) ).isFalse();
+		assertThat( variables.getAsQuery( Key.of( "rowsAfterHelpers" ) ).size() ).isEqualTo( 2 );
+		assertThat( variables.getAsQuery( Key.of( "rowsAfterHelpers" ) ).getRowAsStruct( 0 ).get( "tag" ) ).isEqualTo( "green" );
+		assertThat( variables.getAsQuery( Key.of( "rowsAfterHelpers" ) ).getRowAsStruct( 1 ).get( "tag" ) ).isEqualTo( "sale" );
 
 		assertThat( variables.getAsQuery( Key.of( "rowsAfterReplace" ) ).size() ).isEqualTo( 1 );
 		assertThat( variables.getAsQuery( Key.of( "rowsAfterReplace" ) ).getRowAsStruct( 0 ).get( "tag" ) ).isEqualTo( "blue" );
+		assertThat( variables.getAsQuery( Key.of( "rowsAfterClear" ) ).size() ).isEqualTo( 0 );
+	}
+
+	@DisplayName( "It round-trips a struct collection (fieldtype=collection type=struct): schema, insert, load, helpers, replace, clear" )
+	@Test
+	public void testElementCollectionMapRoundTrip() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				p = entityNew( "Product", { name : "Gizmo" } );
+				p.setSpecs( { color : "red", size : "L" } );
+				entitySave( p );
+			}
+			ormClearSession();
+
+			tableCheck = queryExecute( "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'product_specs'" );
+			rows       = queryExecute( "SELECT spec_name, spec_value FROM product_specs ORDER BY spec_name" );
+
+			loaded      = entityLoad( "Product", { name : "Gizmo" }, true );
+			loadedSpecs = loaded.getSpecs();
+			loadedColor = loadedSpecs[ "color" ];
+			loadedKeys  = loadedSpecs.keyArray().sort( "text" ).toList();
+			hasColor    = loaded.hasSpecs( "color" );
+			hasWeight   = loaded.hasSpecs( "weight" );
+
+			transaction {
+				loaded.setSpecs( { weight : "2kg" } );
+				entitySave( loaded );
+			}
+			ormClearSession();
+			rowsAfterReplace = queryExecute( "SELECT spec_name, spec_value FROM product_specs ORDER BY spec_name" );
+
+			transaction {
+				again = entityLoad( "Product", { name : "Gizmo" }, true );
+				again.setSpecs( {} );
+				entitySave( again );
+			}
+			ormClearSession();
+			rowsAfterClear = queryExecute( "SELECT spec_name FROM product_specs" );
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.getAsQuery( Key.of( "tableCheck" ) ).size() ).isEqualTo( 1 );
+		assertThat( variables.getAsQuery( Key.of( "rows" ) ).size() ).isEqualTo( 2 );
+		assertThat( variables.getAsQuery( Key.of( "rows" ) ).getRowAsStruct( 0 ).get( "spec_name" ) ).isEqualTo( "color" );
+		assertThat( variables.getAsQuery( Key.of( "rows" ) ).getRowAsStruct( 0 ).get( "spec_value" ) ).isEqualTo( "red" );
+		assertThat( variables.getAsQuery( Key.of( "rows" ) ).getRowAsStruct( 1 ).get( "spec_name" ) ).isEqualTo( "size" );
+		assertThat( variables.getAsQuery( Key.of( "rows" ) ).getRowAsStruct( 1 ).get( "spec_value" ) ).isEqualTo( "L" );
+
+		assertThat( variables.get( Key.of( "loadedSpecs" ) ) ).isNotNull();
+		assertThat( variables.getAsString( Key.of( "loadedColor" ) ) ).isEqualTo( "red" );
+		assertThat( variables.getAsString( Key.of( "loadedKeys" ) ) ).isEqualTo( "color,size" );
+		assertThat( variables.getAsBoolean( Key.of( "hasColor" ) ) ).isTrue();
+		assertThat( variables.getAsBoolean( Key.of( "hasWeight" ) ) ).isFalse();
+
+		assertThat( variables.getAsQuery( Key.of( "rowsAfterReplace" ) ).size() ).isEqualTo( 1 );
+		assertThat( variables.getAsQuery( Key.of( "rowsAfterReplace" ) ).getRowAsStruct( 0 ).get( "spec_name" ) ).isEqualTo( "weight" );
+		assertThat( variables.getAsQuery( Key.of( "rowsAfterReplace" ) ).getRowAsStruct( 0 ).get( "spec_value" ) ).isEqualTo( "2kg" );
 		assertThat( variables.getAsQuery( Key.of( "rowsAfterClear" ) ).size() ).isEqualTo( 0 );
 	}
 

@@ -1030,7 +1030,7 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
-	@DisplayName( "It maps simple-value collections (fieldtype=collection) as a bag of elements" )
+	@DisplayName( "It maps simple-value collections (fieldtype=collection, any case) as a bag of elements" )
 	@ParameterizedTest
 	// @formatter:off
 	@ValueSource( strings = {
@@ -1055,6 +1055,21 @@ public class HibernateXMLWriterTest {
 	    		name="tags"
 	    		type="array"
 	    		fieldtype="collection"
+	    		elementtype="string"
+	    		elementcolumn="tag"
+	    		table="product_tags"
+	    		fkcolumn="product_id"
+	    		orderby="tag ASC"
+	    		lazy="true"
+	    		batchsize="10";
+	    }
+	    """,
+	    """
+	    class persistent {
+	    	property
+	    		name="tags"
+	    		type="array"
+	    		fieldtype="Collection"
 	    		elementtype="string"
 	    		elementcolumn="tag"
 	    		table="product_tags"

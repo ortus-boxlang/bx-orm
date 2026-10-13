@@ -19,12 +19,14 @@ package ortus.boxlang.modules.orm.hibernate;
 
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.property.access.spi.Getter;
+import org.hibernate.type.MapType;
 
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMKeys;
@@ -32,6 +34,7 @@ import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.runnables.IClassRunnable;
+import ortus.boxlang.runtime.types.IStruct;
 
 /**
  * Hibernate {@link Getter} implementation that reads a mapped property value from a BoxLang entity.
@@ -108,7 +111,7 @@ public class BoxPropertyGetter implements Getter {
 
 		if ( owner instanceof IClassRunnable castRunnable ) {
 			// If the being assigned from an object return the property directly
-			return castRunnable.getVariablesScope().get( mappedProperty.getName() );
+			return toHibernateValue( castRunnable.getVariablesScope().get( mappedProperty.getName() ) );
 		} else {
 
 			// Otherwise we assume this is a primary key lookup and load the entity to get the property
@@ -130,8 +133,30 @@ public class BoxPropertyGetter implements Getter {
 				return null;
 			}
 
-			return entity.get( mappedProperty.getName() );
+			return toHibernateValue( entity.get( mappedProperty.getName() ) );
 		}
+	}
+
+	/**
+	 * Translate a value read from the entity into what Hibernate can persist.
+	 * <p>
+	 * A BoxLang struct assigned to a map collection (`type="struct"` on a to-many association or a `fieldtype="collection"`)
+	 * keys its entries by {@link ortus.boxlang.runtime.scopes.Key}, but Hibernate binds the map key through the mapped
+	 * {@code <map-key type>} (string, integer, ...) and would fail with a {@code ClassCastException} on the Key. Hand it a
+	 * plain map keyed by the original key values instead. Once Hibernate has wrapped the map in a {@code PersistentMap} the
+	 * value is no longer a BoxLang struct and is returned as-is, so change tracking keeps working.
+	 *
+	 * @param value The raw property value from the entity's variables scope
+	 *
+	 * @return The value Hibernate should see
+	 */
+	private Object toHibernateValue( Object value ) {
+		if ( value instanceof IStruct struct && mappedProperty.getType() instanceof MapType ) {
+			Map<Object, Object> converted = new LinkedHashMap<>( struct.size() );
+			struct.entrySet().forEach( entry -> converted.put( entry.getKey().getOriginalValue(), entry.getValue() ) );
+			return converted;
+		}
+		return value;
 	}
 
 	/**
