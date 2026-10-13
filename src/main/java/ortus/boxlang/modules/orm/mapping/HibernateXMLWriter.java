@@ -362,6 +362,63 @@ public class HibernateXMLWriter {
 	 *
 	 * @return The collection node of either bag or map type.
 	 */
+	/**
+	 * Generate a simple-value collection (`fieldtype="collection"`), i.e. the Adobe CF ORM "collection mapping":
+	 * a {@code <bag>} ({@code type="array"}) or {@code <map>} ({@code type="struct"}) of scalar values that live in
+	 * their own table, keyed back to the owning entity by {@code fkcolumn}.
+	 * <p>
+	 * Same {@code <bag>}/{@code <map>} skeleton as a to-many association ({@link #generateCollectionElement}),
+	 * but the child is an {@code <element column type>} built from {@code elementColumn}/{@code elementType}
+	 * instead of a {@code <one-to-many>}/{@code <many-to-many>} entity reference:
+	 *
+	 * <pre>
+	 * &lt;bag name="tags" table="product_tags" lazy="true"&gt;
+	 *     &lt;key column="product_id"/&gt;
+	 *     &lt;element column="tag" type="string"/&gt;
+	 * &lt;/bag&gt;
+	 * </pre>
+	 *
+	 * @param prop Property meta for the collection
+	 *
+	 * @return The collection element
+	 */
+	public Element generateElementCollection( IPropertyMeta prop ) {
+		IStruct association = prop.getAssociation();
+
+		if ( !association.containsKey( ORMKeys.elementColumn ) ) {
+			throw new BoxRuntimeException(
+			    "Missing required 'elementColumn' annotation for collection property '%s' on entity '%s'".formatted( prop.getName(),
+			        this.entity.getEntityName() ) );
+		}
+		if ( !association.containsKey( Key.column ) ) {
+			throw new BoxRuntimeException(
+			    "Missing required 'fkcolumn' annotation for collection property '%s' on entity '%s'".formatted( prop.getName(),
+			        this.entity.getEntityName() ) );
+		}
+		// element types use the same aliases as property ormTypes (int -> integer, datetime -> timestamp, ...)
+		association.put( ORMKeys.elementType, toHibernateType( association.getAsString( ORMKeys.elementType ) ) );
+
+		Element collectionNode = generateCollectionElement( prop, association, prop.getColumn() );
+		populateStringAttributes( collectionNode, association, List.of( ORMKeys.table, ORMKeys.schema, ORMKeys.catalog ) );
+		if ( association.containsKey( ORMKeys.orderBy ) ) {
+			collectionNode.setAttribute( "order-by", association.getAsString( ORMKeys.orderBy ) );
+		}
+
+		// The mapping DTD wants <key> before <map-key>/<element>; generateCollectionElement appends it last.
+		Node keyNode = null;
+		for ( Node child = collectionNode.getFirstChild(); child != null; child = child.getNextSibling() ) {
+			if ( "key".equals( child.getNodeName() ) ) {
+				keyNode = child;
+				break;
+			}
+		}
+		if ( keyNode != null && keyNode != collectionNode.getFirstChild() ) {
+			collectionNode.insertBefore( keyNode, collectionNode.getFirstChild() );
+		}
+
+		return collectionNode;
+	}
+
 	private Element generateCollectionElement( IPropertyMeta prop, IStruct association, IStruct columnInfo ) {
 		String	type	= association.getAsString( ORMKeys.collectionType );
 		// Cite: https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html#d0e10663
@@ -869,6 +926,8 @@ public class HibernateXMLWriter {
 				    case ONE_TO_MANY :
 				    case MANY_TO_MANY :
 					    return generateToManyAssociation( propertyMeta );
+				    case COLLECTION :
+					    return generateElementCollection( propertyMeta );
 				    default :
 					    logger.warn( "Unhandled association/field type: {} on property {}", propertyMeta.getFieldType(), propertyMeta.getName() );
 					    return null;

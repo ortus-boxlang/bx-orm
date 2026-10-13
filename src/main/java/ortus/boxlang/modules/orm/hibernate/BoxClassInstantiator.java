@@ -126,7 +126,8 @@ public class BoxClassInstantiator implements Instantiator {
 			    // hasX(), used on all associations
 			    DynamicFunction hasUDF		= null;
 			    String		associationType	= association.getAsString( Key.type );
-			    if ( associationType.endsWith( "to-many" ) ) {
+			    // to-many associations and simple-value collections get the collection-aware hasX( item )
+			    if ( associationType.endsWith( "to-many" ) || associationType.equals( "collection" ) ) {
 				    hasUDF = getToManyHasMethod( collectionType, association );
 			    } else {
 				    hasUDF = getSimpleHasMethod( collectionType, association );

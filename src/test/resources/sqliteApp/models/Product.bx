@@ -2,4 +2,7 @@ class accessors ="#true#" persistent="true" table ="products" {
 	property name="id" generator="increment" fieldtype="id" ormType="integer";
 
 	property name="name" ormType="string";
+
+	// simple-value collection (Adobe CF ORM "collection mapping"): one row per tag in product_tags
+	property name="tags" type="array" fieldtype="collection" elementtype="string" elementcolumn="tag" table="product_tags" fkcolumn="product_id";
 }

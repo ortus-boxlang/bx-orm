@@ -90,6 +90,55 @@ public class SQLiteDialectBootTest {
 		instance.getApplicationService().shutdownApplication( Key.of( "BXORMSQLiteTest" ) );
 	}
 
+	@DisplayName( "It round-trips a simple-value collection (fieldtype=collection): schema, insert, load, replace, clear" )
+	@Test
+	public void testElementCollectionRoundTrip() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				p = entityNew( "Product", { name : "Gadget" } );
+				p.setTags( [ "red", "sale" ] );
+				entitySave( p );
+			}
+			ormClearSession();
+
+			tableCheck = queryExecute( "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'product_tags'" );
+			rows       = queryExecute( "SELECT tag FROM product_tags ORDER BY tag" );
+
+			loaded     = entityLoad( "Product", { name : "Gadget" }, true );
+			loadedTags = loaded.getTags();
+			loadedTagsSorted = loadedTags.toList();
+
+			transaction {
+				loaded.setTags( [ "blue" ] );
+				entitySave( loaded );
+			}
+			ormClearSession();
+			rowsAfterReplace = queryExecute( "SELECT tag FROM product_tags ORDER BY tag" );
+
+			transaction {
+				again = entityLoad( "Product", { name : "Gadget" }, true );
+				again.setTags( [] );
+				entitySave( again );
+			}
+			ormClearSession();
+			rowsAfterClear = queryExecute( "SELECT tag FROM product_tags ORDER BY tag" );
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.getAsQuery( Key.of( "tableCheck" ) ).size() ).isEqualTo( 1 );
+		assertThat( variables.getAsQuery( Key.of( "rows" ) ).size() ).isEqualTo( 2 );
+		assertThat( variables.getAsQuery( Key.of( "rows" ) ).getRowAsStruct( 0 ).get( "tag" ) ).isEqualTo( "red" );
+		assertThat( variables.getAsQuery( Key.of( "rows" ) ).getRowAsStruct( 1 ).get( "tag" ) ).isEqualTo( "sale" );
+
+		assertThat( variables.get( Key.of( "loadedTags" ) ) ).isNotNull();
+		assertThat( variables.getAsString( Key.of( "loadedTagsSorted" ) ) ).isEqualTo( "red,sale" );
+
+		assertThat( variables.getAsQuery( Key.of( "rowsAfterReplace" ) ).size() ).isEqualTo( 1 );
+		assertThat( variables.getAsQuery( Key.of( "rowsAfterReplace" ) ).getRowAsStruct( 0 ).get( "tag" ) ).isEqualTo( "blue" );
+		assertThat( variables.getAsQuery( Key.of( "rowsAfterClear" ) ).size() ).isEqualTo( 0 );
+	}
+
 	@DisplayName( "It can boot an ORM SessionFactory against a SQLite datasource, and save/query an entity" )
 	@Test
 	public void testSQLiteORMBoot() {

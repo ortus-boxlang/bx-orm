@@ -1030,25 +1030,157 @@ public class HibernateXMLWriterTest {
 	}
 
 	// @formatter:off
-	@DisplayName( "It maps one-to-many relationships" )
+	@DisplayName( "It maps simple-value collections (fieldtype=collection) as a bag of elements" )
 	@ParameterizedTest
+	// @formatter:off
 	@ValueSource( strings = {
 	    """
 	    class persistent {
 	    	property
-	    		name="owners"
+	    		name="tags"
 	    		type="array"
-	    		cfc="Person"
-	    		cascade="all"
-	    		fieldtype="one-to-many"
-				class="Person"
-	    		fkcolumn="FK_owner"
-	    		mappedBy="owners"
-	    		orderBy="name DESC"
-	    		where="Age IS NOT NULL"
-	    		optimisticLock="false";
+	    		fieldtype="collection"
+	    		elementtype="string"
+	    		elementcolumn="tag"
+	    		table="product_tags"
+	    		fkcolumn="product_id"
+	    		orderby="tag ASC"
+	    		lazy="true"
+	    		batchsize="10";
+	    }
+	    """,
+	    """
+	    component persistent="true" {
+	    	property
+	    		name="tags"
+	    		type="array"
+	    		fieldtype="collection"
+	    		elementtype="string"
+	    		elementcolumn="tag"
+	    		table="product_tags"
+	    		fkcolumn="product_id"
+	    		orderby="tag ASC"
+	    		lazy="true"
+	    		batchsize="10";
 	    }
 	    """
+	} )
+	// @formatter:on
+	public void testElementCollectionBag( String sourceCode ) {
+		IStruct		meta		= getClassMetaFromCode( sourceCode );
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+
+		Node		classEL		= doc.getDocumentElement().getFirstChild();
+
+		// no <property> is generated for the collection
+		assertEquals( 1, classEL.getChildNodes().getLength() );
+
+		Node bagNode = classEL.getFirstChild();
+		assertNotNull( bagNode );
+		assertEquals( "bag", bagNode.getNodeName() );
+
+		NamedNodeMap bagAttrs = bagNode.getAttributes();
+		assertEquals( "tags", bagAttrs.getNamedItem( "name" ).getTextContent() );
+		assertEquals( "product_tags", bagAttrs.getNamedItem( "table" ).getTextContent() );
+		assertEquals( "true", bagAttrs.getNamedItem( "lazy" ).getTextContent() );
+		assertEquals( "tag ASC", bagAttrs.getNamedItem( "order-by" ).getTextContent() );
+		assertEquals( "10", bagAttrs.getNamedItem( "batch-size" ).getTextContent() );
+
+		// <key> comes first, then the <element>
+		assertEquals( 2, bagNode.getChildNodes().getLength() );
+		Node keyNode = bagNode.getFirstChild();
+		assertEquals( "key", keyNode.getNodeName() );
+		assertEquals( "product_id", keyNode.getAttributes().getNamedItem( "column" ).getTextContent() );
+
+		Node elementNode = bagNode.getLastChild();
+		assertEquals( "element", elementNode.getNodeName() );
+		assertEquals( "tag", elementNode.getAttributes().getNamedItem( "column" ).getTextContent() );
+		assertEquals( "string", elementNode.getAttributes().getNamedItem( "type" ).getTextContent() );
+	}
+
+	@DisplayName( "It maps struct collections (fieldtype=collection type=struct) as a map with a map-key, and aliases the element type" )
+	@Test
+	public void testElementCollectionMap() {
+		// @formatter:off
+		IStruct		meta		= getClassMetaFromCode( """
+		    class persistent {
+		    	property
+		    		name="attributes"
+		    		type="struct"
+		    		fieldtype="collection"
+		    		structkeycolumn="attr_name"
+		    		structkeytype="string"
+		    		elementtype="int"
+		    		elementcolumn="attr_value"
+		    		table="product_attributes"
+		    		fkcolumn="product_id";
+		    }
+		""" );
+		// @formatter:on
+
+		IEntityMeta	entityMeta	= AbstractEntityMeta.autoDiscoverMetaType( meta );
+		Document	doc			= new HibernateXMLWriter( entityMeta, null, ormConfig ).generateXML();
+
+		Node		mapNode		= doc.getDocumentElement().getFirstChild().getFirstChild();
+		assertNotNull( mapNode );
+		assertEquals( "map", mapNode.getNodeName() );
+		assertEquals( "product_attributes", mapNode.getAttributes().getNamedItem( "table" ).getTextContent() );
+
+		NodeList children = mapNode.getChildNodes();
+		assertEquals( 3, children.getLength() );
+		assertEquals( "key", children.item( 0 ).getNodeName() );
+		assertEquals( "product_id", children.item( 0 ).getAttributes().getNamedItem( "column" ).getTextContent() );
+		assertEquals( "map-key", children.item( 1 ).getNodeName() );
+		assertEquals( "attr_name", children.item( 1 ).getAttributes().getNamedItem( "column" ).getTextContent() );
+		assertEquals( "string", children.item( 1 ).getAttributes().getNamedItem( "type" ).getTextContent() );
+		assertEquals( "element", children.item( 2 ).getNodeName() );
+		assertEquals( "attr_value", children.item( 2 ).getAttributes().getNamedItem( "column" ).getTextContent() );
+		// int -> integer via the ormType aliases
+		assertEquals( "integer", children.item( 2 ).getAttributes().getNamedItem( "type" ).getTextContent() );
+	}
+
+	@DisplayName( "It rejects a collection without elementcolumn or fkcolumn" )
+	@ParameterizedTest
+	// @formatter:off
+	@ValueSource( strings = {
+	    """
+	    class persistent {
+	    	property name="tags" type="array" fieldtype="collection" elementtype="string" table="product_tags" fkcolumn="product_id";
+	    }
+	    """,
+	    """
+	    class persistent {
+	    	property name="tags" type="array" fieldtype="collection" elementtype="string" elementcolumn="tag" table="product_tags";
+	    }
+	    """
+	} )
+	// @formatter:on
+	public void testElementCollectionValidation( String sourceCode ) {
+		IStruct meta = getClassMetaFromCode( sourceCode );
+		assertThrows( BoxRuntimeException.class, () -> AbstractEntityMeta.autoDiscoverMetaType( meta ) );
+	}
+
+	@DisplayName( "It maps one-to-many relationships" )
+	@ParameterizedTest
+	@ValueSource( strings = {
+	    """
+	     class persistent {
+	     	property
+	     		name="owners"
+	     		type="array"
+	     		cfc="Person"
+	     		cascade="all"
+	     		fieldtype="one-to-many"
+	    class="Person"
+	     		fkcolumn="FK_owner"
+	     		mappedBy="owners"
+	     		orderBy="name DESC"
+	     		where="Age IS NOT NULL"
+	     		optimisticLock="false";
+	     }
+	     """
 	} )
 	// @formatter:on
 	public void testOneToMany( String sourceCode ) {
