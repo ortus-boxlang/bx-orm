@@ -23,7 +23,7 @@ end-user docs.
 | Modern `mapping.xml` | Hibernate 7 mapping format, fed to Hibernate in memory. | [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
 | Composite ids, inheritance, value collections | Composite primary keys, single-table and joined inheritance, `fieldtype="collection"` (array and struct). | [§5](#5-the-facade-concretely), [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
 | Boot cache (`.bxorm/`) | `ormManifest="auto"` writes the resolved boot model and facade bytecode (`manifest-{app}.json`, `facades-{app}.jar`, so several apps can share one folder); `trust` boots straight from it. `ormManifestLocation` moves it. In `auto`, editing an entity reloads the ORM on the next request. | [§11](#11-the-orm-manifest-boot-cache-bxorm) |
-| Faster boot | Generated ids tell Hibernate a null id means "unsaved", so Hibernate no longer builds a throwaway instance of every entity at startup. Mappings are joined as text, and large models add static methods in parallel. `unsavedValue` on an id is honored. | [§11](#boot-performance-measured) |
+| Faster boot | Every id and version tells Hibernate its "unsaved" value, so Hibernate never builds a throwaway instance of an entity (or runs its `init()`) at startup. Mappings are joined as text, and large models add static methods in parallel. `unsavedValue` on an id is honored. | [§11](#boot-performance-measured) |
 | BoxCache second-level cache | Every Hibernate cache region is a BoxLang cache. `cacheConfig` sets BoxCache properties for all regions or per region (struct, JSON file or an old `ehcache.xml`); a BoxLang cache that already exists with a region's name is used as is; `cacheUse` on a collection caches it. | [§10g](#10g-second-level-cache-boxcache) |
 | `bxorm` CLI | `boxlang module:orm <verb> [--app=<name>]` inspects the boot cache: `info`, `validate`, `entities`, `entity`, `mappings`, `clear`. | [§11](#the-bxorm-cli) |
 | Transactions ride BoxLang | ORM work inside `transaction{}` uses the same JDBC connection as `queryExecute()`; BoxLang owns commit and rollback. Queries inside a transaction see pending ORM writes. | [§8](#8-transactions-riding-the-boxlang-connection) |
@@ -1070,14 +1070,19 @@ Runs on this machine vary by about ±0.5s, so differences under that are noise. 
 
 What the speedups changed:
 
-1. **No throwaway entity per class.** Hibernate decides whether an entity is new by comparing its id to the id's
-   "unsaved value". When the mapping does not say, Hibernate 7 (`UnsavedValueFactory.getUnsavedIdentifierValue`)
-   creates one instance of every entity at startup to read its default id, which for bx-orm means resolving, compiling
-   and instantiating every BoxLang class through the facade. `MappingXMLWriter` now writes `<unsaved-value>null</...>`
-   for generated ids (any generator except `assigned`, and no `default` on the id), or the id's `unsavedValue`
-   annotation when set. Hibernate 7 ignores `<unsaved-value>` in `mapping.xml` (only its legacy `hbm.xml` path reads
-   it), so `BoxPersisterFactory.applyUnsavedValue` copies it onto the id's `SimpleValue.setNullValue` before the
-   persister is built.
+1. **No throwaway entity per class.** Hibernate decides whether an entity is new by comparing its id (and version) to
+   the "unsaved value". When the mapping does not say, Hibernate 7 (`UnsavedValueFactory.getUnsavedIdentifierValue` /
+   `getUnsavedVersionValue`) creates one instance of the entity at startup to read its starting id and version. For
+   bx-orm that means resolving, compiling and instantiating the BoxLang class through the facade, and running its
+   pseudo-constructor and `init()` during `onApplicationStart`, before the application is ready: an `init()` that
+   reads `application.wirebox` (a cborm `ActiveEntity`) then fails the whole ORM boot. `UnsavedValues` decides the
+   value for every single id (`unsavedValue` annotation, else the id's `default`, else `null`) and every version
+   (`unsavedValue`, else `undefined` when it has a `default`, else `null`): the values Hibernate would read off a fresh
+   BoxLang instance. Hibernate 7 ignores `<unsaved-value>` in `mapping.xml` (only its legacy `hbm.xml` path reads it),
+   so `BoxPersisterFactory.applyUnsavedValues` sets them on the root entity's id and version `SimpleValue` before the
+   persister is built (a value that does not parse as the column type falls back to `null` with a warning). Composite
+   ids need nothing: Hibernate never instantiates the entity for them. `InitGuardBootTest` boots entities whose
+   `init()` throws.
 2. **Text splice of mappings.** `SessionFactoryBuilder.spliceGeneratedMappings` joins the per-entity `<entity>`
    elements as text when every mapping is generated and has the plain default-namespace shape; anything else (an
    on-disk mapping, a prefixed namespace, another child element) falls back to the DOM merge.

@@ -567,8 +567,9 @@ public class MappingXMLWriter {
 			    prop.getName(), entity.getEntityName() );
 		}
 
-		// <unsaved-value>
-		String unsavedValue = resolveUnsavedValue( prop, allowGenerator );
+		// <unsaved-value>: always declared for a single id, so Hibernate never instantiates the entity at boot (see
+		// UnsavedValues). Composite-key parts only carry an explicit one; Hibernate never instantiates for those.
+		String unsavedValue = allowGenerator ? UnsavedValues.forId( prop ) : prop.getUnsavedValue();
 		if ( unsavedValue != null ) {
 			appendTextElement( theNode, "unsaved-value", unsavedValue );
 		}
@@ -577,41 +578,6 @@ public class MappingXMLWriter {
 		appendBasicType( theNode, prop, false );
 
 		return theNode;
-	}
-
-	/**
-	 * The {@code <unsaved-value>} to write for an id: the property's {@code unsavedValue} annotation when set, otherwise
-	 * {@code null} for a single, generated id that has no {@code default}.
-	 * <p>
-	 * Without an {@code <unsaved-value>}, Hibernate creates one throwaway instance of every entity while it builds the
-	 * SessionFactory, only to read the id a new entity starts with. For a BoxLang entity that means loading, compiling and
-	 * instantiating every entity class at boot, which was the largest single cost of a cached ({@code trust}) boot. A
-	 * generated id starts out empty unless the property has a {@code default}, so {@code null} is the value Hibernate would
-	 * infer. Assigned and composite ids, and ids with a {@code default}, keep Hibernate's inference.
-	 *
-	 * @param prop           The id property.
-	 * @param allowGenerator Whether the id may carry a generator (false for composite-key parts).
-	 *
-	 * @return The unsaved value, or null to let Hibernate infer it.
-	 */
-	private static String resolveUnsavedValue( IPropertyMeta prop, boolean allowGenerator ) {
-		if ( prop.getUnsavedValue() != null ) {
-			return prop.getUnsavedValue();
-		}
-		IStruct generator = prop.getGenerator();
-		if ( !allowGenerator || generator == null || generator.isEmpty() ) {
-			return null;
-		}
-		String strategy = generator.getAsString( Key._CLASS );
-		if ( strategy == null || "assigned".equalsIgnoreCase( strategy.trim() ) ) {
-			return null;
-		}
-		// BoxLang metadata always carries a `default` annotation, null when the property has none
-		IStruct annotations = prop.getAnnotations();
-		if ( annotations != null && annotations.get( Key._DEFAULT ) != null ) {
-			return null;
-		}
-		return "null";
 	}
 
 	/**

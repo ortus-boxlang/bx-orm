@@ -1,0 +1,4 @@
+class persistent="true" table="base_document" extends="GuardedEntity" {
+	property name="id"    fieldtype="id" generator="increment" ormType="integer";
+	property name="title" ormType="string";
+}

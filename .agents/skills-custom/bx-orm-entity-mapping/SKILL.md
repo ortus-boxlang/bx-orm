@@ -232,10 +232,20 @@ Then update `EntityRecord.setEntityMeta()` to detect the annotation style and in
 | `uuid`, `uuid2`, `guid` | `<generic-generator class="uuid">` | 32-char hex string id |
 | anything else | `<generic-generator class="...">` with its params | `sequence`, `foreign`, `select`, custom classes |
 
-`MappingXMLWriter.resolveUnsavedValue()` writes `<unsaved-value>`: the `unsavedValue` annotation when set, otherwise
-`null` for generated ids without a `default`. Hibernate 7 ignores `<unsaved-value>` in mapping.xml, so
-`BoxPersisterFactory.applyUnsavedValue()` copies it onto `SimpleValue.setNullValue()` before the persister is built. This
-stops Hibernate from instantiating every entity at boot to read its default id (a large boot-time cost).
+Hibernate tells a new entity from an existing one by its id (and version) "unsaved value". Without one, Hibernate 7
+instantiates the entity at boot to read it, which runs the BoxLang class's `init()` before the application is ready.
+`UnsavedValues` always decides it, so no entity is ever created at boot:
+
+| Property | Unsaved value |
+| --- | --- |
+| single id | `unsavedValue` annotation, else the `default`, else `null` |
+| version | `unsavedValue` annotation, else `undefined` when it has a `default`, else `null` |
+| composite id parts | nothing (Hibernate never instantiates for a composite id) |
+
+`MappingXMLWriter` writes the id value as `<unsaved-value>`, but Hibernate 7 ignores it in mapping.xml, so
+`BoxPersisterFactory.applyUnsavedValues()` sets both values on the root entity's `SimpleValue.setNullValue()` before the
+persister is built. A literal that does not parse as the column type falls back to `null` with a warning. Covered by
+`InitGuardBootTest` (entities whose `init()` throws until the app is ready).
 
 ## File Locations
 

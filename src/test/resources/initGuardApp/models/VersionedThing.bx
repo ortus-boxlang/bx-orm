@@ -1,0 +1,5 @@
+class persistent="true" table="versioned_thing" extends="GuardedEntity" {
+	property name="id"       fieldtype="id" generator="increment" ormType="integer";
+	property name="revision" fieldtype="version" ormType="integer";
+	property name="label"    ormType="string";
+}

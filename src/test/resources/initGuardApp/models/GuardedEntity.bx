@@ -1,0 +1,14 @@
+/**
+ * Base class of the init-guard entities: init() fails until the test sets application.ready, the way an init() that
+ * reads application.wirebox fails before ColdBox has loaded.
+ */
+abstract class {
+
+	function init(){
+		if ( !application.keyExists( "ready" ) ) {
+			throw( type = "InitGuard", message = "init() of [#getMetadata( this ).name#] ran before the application was ready" );
+		}
+		return this;
+	}
+
+}
