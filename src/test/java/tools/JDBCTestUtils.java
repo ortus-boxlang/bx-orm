@@ -43,6 +43,8 @@ public class JDBCTestUtils {
 	 */
 	public static void resetTables( DataSource datasource, IBoxContext context ) {
 		datasource.execute( "DELETE FROM vehicles", context );
+		datasource.execute( "DELETE FROM manufacturer_aliases", context );
+		datasource.execute( "DELETE FROM manufacturer_plants", context );
 		datasource.execute( "DELETE FROM manufacturers", context );
 		datasource.execute( "DELETE FROM vehicle_types", context );
 		datasource.execute(
@@ -53,6 +55,23 @@ public class JDBCTestUtils {
 		    ( 77, 'General Moters Corporation', 'P.O. BOX 33170, Detroit, MI 48232-5170' )
 		    """, context );
 
+		// simple-value collections on Manufacturer (fieldtype="collection")
+		datasource.execute(
+		    """
+		    INSERT INTO manufacturer_aliases ( FK_manufacturer, alias ) VALUES
+		    ( 1, 'Ford' ),
+		    ( 1, 'FoMoCo' ),
+		    ( 42, 'Honda' ),
+		    ( 42, 'Honda Motor' ),
+		    ( 77, 'GM' ),
+		    ( 77, 'General Motors' )
+		    """, context );
+		datasource.execute(
+		    """
+		    INSERT INTO manufacturer_plants ( FK_manufacturer, plant_code ) VALUES
+		    ( 42, 100 ),
+		    ( 42, 200 )
+		    """, context );
 		datasource.execute(
 		    """
 		    INSERT INTO vehicles (vin,make,model,FK_manufacturer) VALUES
