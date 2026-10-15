@@ -264,12 +264,12 @@ final class CriteriaMethods {
 		/* Joins */
 		/* ------------------------------------------------------------------------------------------------------- */
 		String A = "association|associationName";
-		def( "joinTo|createAlias", A + ",alias,joinType", false,
-		    ( c, x, a ) -> c.joinTo( str( a[ 0 ] ), str( a[ 1 ] ), JoinKind.parse( a[ 2 ], JoinKind.INNER ) ) );
-		def( "innerJoin", A + ",alias", false, ( c, x, a ) -> c.joinTo( str( a[ 0 ] ), str( a[ 1 ] ), JoinKind.INNER ) );
-		def( "leftJoin", A + ",alias", false, ( c, x, a ) -> c.joinTo( str( a[ 0 ] ), str( a[ 1 ] ), JoinKind.LEFT ) );
-		def( "rightJoin", A + ",alias", false, ( c, x, a ) -> c.joinTo( str( a[ 0 ] ), str( a[ 1 ] ), JoinKind.RIGHT ) );
-		def( "fullJoin", A + ",alias", false, ( c, x, a ) -> c.joinTo( str( a[ 0 ] ), str( a[ 1 ] ), JoinKind.FULL ) );
+		def( "joinTo|createAlias", A + ",alias,joinType,withClause|with|on", false,
+		    ( c, x, a ) -> c.joinTo( x, str( a[ 0 ] ), str( a[ 1 ] ), JoinKind.parse( a[ 2 ], JoinKind.INNER ), a[ 3 ] ) );
+		def( "innerJoin", A + ",alias,withClause|with|on", false, ( c, x, a ) -> c.joinTo( x, str( a[ 0 ] ), str( a[ 1 ] ), JoinKind.INNER, a[ 2 ] ) );
+		def( "leftJoin", A + ",alias,withClause|with|on", false, ( c, x, a ) -> c.joinTo( x, str( a[ 0 ] ), str( a[ 1 ] ), JoinKind.LEFT, a[ 2 ] ) );
+		def( "rightJoin", A + ",alias,withClause|with|on", false, ( c, x, a ) -> c.joinTo( x, str( a[ 0 ] ), str( a[ 1 ] ), JoinKind.RIGHT, a[ 2 ] ) );
+		def( "fullJoin", A + ",alias,withClause|with|on", false, ( c, x, a ) -> c.joinTo( x, str( a[ 0 ] ), str( a[ 1 ] ), JoinKind.FULL, a[ 2 ] ) );
 		def( "fetch|joinFetch", A, false, ( c, x, a ) -> c.fetch( str( a[ 0 ] ) ) );
 		def( "createCriteria", A + ",joinType|callback,callback", false, ( c, x, a ) -> withCall( c, x, str( a[ 0 ] ), a[ 1 ], a[ 2 ] ) );
 		def( "end|endAssociation|resetCriteria", "", false, ( c, x, a ) -> c.end() );
@@ -301,6 +301,7 @@ final class CriteriaMethods {
 		} );
 		def( "withProjections", "projections", false, ( c, x, a ) -> c.withProjections( ( IStruct ) a[ 0 ] ) );
 		def( "asDistinct|distinct", "", false, ( c, x, a ) -> c.asDistinct() );
+		def( "resultTransformer|setResultTransformer", "transformer|resultTransformer", false, ( c, x, a ) -> c.resultTransformer( a[ 0 ] ) );
 		def( "asStruct|asStructs", "includes,options", false,
 		    ( c, x, a ) -> c.asStruct( a[ 0 ], a[ 1 ] == null ? null : struct( a[ 1 ], "asStruct" ) ) );
 		def( "asQuery", "", false, ( c, x, a ) -> c.shape( Shape.QUERY ) );

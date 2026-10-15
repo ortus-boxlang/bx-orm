@@ -420,10 +420,10 @@ public class HQLQuery {
 				return hqlQuery.executeUpdate();
 			} else {
 				// Hibernate returns POJO facades for entity results; unwrap each to its BoxLang instance so callers only ever
-				// see IClassRunnables. Scalars/projections pass through untouched.
+				// see IClassRunnables, also inside tuples and new map(...)/new list(...) rows. Scalars pass through untouched.
 				return inLockScope( hqlQuery::list )
 				    .stream()
-				    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade )
+				    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapRow )
 				    .collect( java.util.stream.Collectors.toList() );
 			}
 		} finally {
@@ -450,7 +450,7 @@ public class HQLQuery {
 	 */
 	public java.util.stream.Stream<Object> stream() {
 		return inLockScopeStreaming( () -> prepare( true ).getResultStream() )
-		    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapIfFacade );
+		    .map( ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport::unwrapRow );
 	}
 
 	/**

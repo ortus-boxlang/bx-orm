@@ -234,6 +234,22 @@ public class StaticEntityMethodsTest extends BaseORMTest {
 		}
 	}
 
+	@DisplayName( "A .cfc entity gets the static methods too" )
+	@Test
+	public void testCfcEntity() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+			cfcCount = root.models.timebox.Client::count();
+			cfcList  = isArray( root.models.timebox.Client::list() );
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.get( Key.of( "cfcCount" ) ).toString() ).matches( "\\d+" );
+		assertThat( variables.get( Key.of( "cfcList" ) ) ).isEqualTo( true );
+	}
+
 	@DisplayName( "Every documented method is added" )
 	@Test
 	public void testMethodList() {

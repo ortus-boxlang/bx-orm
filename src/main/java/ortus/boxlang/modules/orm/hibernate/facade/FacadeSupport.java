@@ -327,4 +327,43 @@ public final class FacadeSupport {
 		}
 		return object;
 	}
+
+	/**
+	 * Unwrap the facades of one HQL result row: the row itself, the elements of a tuple ({@code select a, b}), the
+	 * values of a {@code select new map( ... )} row and the elements of a {@code select new list( ... )} row. Rows
+	 * without facades are returned as they are; a row with facades is copied (Hibernate's own row is not changed).
+	 *
+	 * @param row One result row.
+	 *
+	 * @return The row with BoxLang instances in place of facades.
+	 */
+	public static Object unwrapRow( Object row ) {
+		if ( row instanceof BoxEntityFacade ) {
+			return unwrapIfFacade( row );
+		}
+		if ( row instanceof Object[] tuple ) {
+			Object[] copy = null;
+			for ( int i = 0; i < tuple.length; i++ ) {
+				Object unwrapped = unwrapIfFacade( tuple[ i ] );
+				if ( unwrapped != tuple[ i ] ) {
+					if ( copy == null ) {
+						copy = tuple.clone();
+					}
+					copy[ i ] = unwrapped;
+				}
+			}
+			return copy == null ? tuple : copy;
+		}
+		if ( row instanceof java.util.Map<?, ?> map && map.values().stream().anyMatch( BoxEntityFacade.class::isInstance ) ) {
+			java.util.Map<Object, Object> copy = new java.util.LinkedHashMap<>();
+			map.forEach( ( key, value ) -> copy.put( key, unwrapIfFacade( value ) ) );
+			return copy;
+		}
+		if ( row instanceof java.util.List<?> list && list.stream().anyMatch( BoxEntityFacade.class::isInstance ) ) {
+			java.util.List<Object> copy = new java.util.ArrayList<>( list.size() );
+			list.forEach( value -> copy.add( unwrapIfFacade( value ) ) );
+			return copy;
+		}
+		return row;
+	}
 }

@@ -188,6 +188,8 @@ public class TransactionManager extends BaseInterceptor {
 			// does not retain entities whose rows were rolled back at the JDBC level.
 			if ( ormSession.isOpen() ) {
 				ormSession.clear();
+				// Release the cache entries the rolled-back writes locked (Hibernate's after-rollback work).
+				ORMContext.completeTransaction( ormSession, false );
 			}
 		} );
 		// Rolled-back writes never get a postCommit event.
@@ -219,6 +221,9 @@ public class TransactionManager extends BaseInterceptor {
 			// already rolled back, the session was cleared and this is a no-op.
 			if ( ormSession.isOpen() ) {
 				ORMContext.flush( ormSession, "transaction commit" );
+				// The transaction is over: run Hibernate's after-commit work (second-level cache updates, bulk query
+				// clean-up), which Hibernate itself never triggers because the ORM rides the BoxLang transaction.
+				ORMContext.completeTransaction( ormSession, true );
 			}
 		} );
 		// BoxLang announces the end after the JDBC commit: fire the committed writes' postCommit events.
