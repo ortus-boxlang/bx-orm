@@ -210,8 +210,17 @@ public class EntityRecord {
 		return resolverPrefix;
 	}
 
+	/**
+	 * The class resolver that loads the entity's class. BoxLang's {@code bx} resolver loads both {@code .bx} and
+	 * {@code .cfc} files; there is no {@code cfc} resolver, so a {@code .cfc} entity must not ask for one (its static
+	 * methods would not be installed).
+	 *
+	 * @param filePath The entity's file path (unused: every file type uses the same resolver).
+	 *
+	 * @return {@code bx}.
+	 */
 	private String parseResolverPrefix( String filePath ) {
-		return filePath != null && filePath.endsWith( "cfc" ) ? "cfc" : ClassLocator.BX_PREFIX;
+		return ClassLocator.BX_PREFIX;
 	}
 
 	/**

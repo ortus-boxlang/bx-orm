@@ -55,6 +55,7 @@ end-user docs.
 | `asStream` option | `ormExecuteQuery()` and `entityLoad()` return a DB-backed Java `Stream` (`HQLQuery.stream()`, `ORMApp.streamEntitiesByFilter()`); rejected with `unique` or DML. Criteria `paginate()` also returns `offset`. | `HQLQuery`, `ORMApp` |
 | Case-insensitive HQL names | `ormExecuteQuery()` HQL resolves entity and property names in any case: a name Hibernate cannot resolve is rewritten to its one case-insensitive match and compiled again; the corrected HQL is cached per `ORMApp`. | `HQLCaseResolver` |
 | cborm criteria extras | `c.restrictions.*` condition objects for `add()`/`or()`/`and()`/`not()`, quantified subqueries (`subGeAll`, `propertyLtSome`, ...), and the SQL log (`startSqlLog()`, `logSQL()`, `getSqlLog()`). | [§10c](#10c-entitycriteria-the-fluent-query-builder) |
+| cborm 4/5 criteria compatibility | `joinTo( assoc, alias, joinType, withClause )` (restriction or closure, rendered as `join ... on`), `resultTransformer( c.DISTINCT_ROOT_ENTITY )` and the other transformer constants, sorting by a projection alias, subclass properties on a base entity, and the `class` pseudo-property (`isEq( "class", "Entry" )` → `type(x) = cbEntry`). | [§10c](#10c-entitycriteria-the-fluent-query-builder) |
 
 ### Hibernate-native features (Phase 3B)
 

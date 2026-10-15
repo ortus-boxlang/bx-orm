@@ -175,6 +175,8 @@ public final class CriteriaBuilder implements IReferenceable {
 		boolean				fetch;
 		/** Whether a condition, order or projection uses this join (a fetch-only join is left out of counts). */
 		boolean				referenced;
+		/** Extra join conditions ({@code joinTo( ..., withClause )}), rendered as {@code on ...}; null for none. */
+		Group				with;
 
 		/**
 		 * Create a join.
@@ -204,6 +206,7 @@ public final class CriteriaBuilder implements IReferenceable {
 			Join j = new Join( hql, parentHql, attribute, model, plural, kind );
 			j.fetch			= fetch;
 			j.referenced	= referenced;
+			j.with			= with == null ? null : with.copy();
 			return j;
 		}
 	}
@@ -301,6 +304,8 @@ public final class CriteriaBuilder implements IReferenceable {
 	private List<Projection>								projections;
 	/** Whether rows are distinct. */
 	private boolean											distinct;
+	/** Whether repeated root entities are dropped from entity rows ({@code resultTransformer( DISTINCT_ROOT_ENTITY )}). */
+	private boolean											distinctRoots;
 	/** What {@code list()} returns. */
 	private Shape											shape;
 	/** Orderings. */
@@ -380,8 +385,10 @@ public final class CriteriaBuilder implements IReferenceable {
 
 	/**
 	 * Read a property: the cborm join-type constants {@code INNER_JOIN} (0), {@code LEFT_JOIN} (1), {@code RIGHT_JOIN}
-	 * (2) and {@code FULL_JOIN} (4), and {@code restrictions}, the {@link Restrictions} helper that builds conditions to
-	 * pass to {@code add()}, {@code or()}, {@code and()} and {@code not()}.
+	 * (2) and {@code FULL_JOIN} (4), the cborm result transformer constants for {@code resultTransformer()}
+	 * ({@code ROOT_ENTITY}, {@code DISTINCT_ROOT_ENTITY}, {@code ALIAS_TO_ENTITY_MAP}, {@code PROJECTION}), and
+	 * {@code restrictions}, the {@link Restrictions} helper that builds conditions to pass to {@code add()}, {@code or()},
+	 * {@code and()} and {@code not()}.
 	 *
 	 * @param context The context.
 	 * @param name    The property name.
@@ -397,6 +404,7 @@ public final class CriteriaBuilder implements IReferenceable {
 			case "RIGHT_JOIN", "RIGHT_OUTER_JOIN" -> 2;
 			case "FULL_JOIN", "FULL_OUTER_JOIN" -> 4;
 			case "RESTRICTIONS" -> Restrictions.INSTANCE;
+			case "ROOT_ENTITY", "DISTINCT_ROOT_ENTITY", "ALIAS_TO_ENTITY_MAP", "PROJECTION" -> name.getName().toUpperCase();
 			default -> {
 				if ( Boolean.TRUE.equals( safe ) ) {
 					yield null;
@@ -938,6 +946,10 @@ public final class CriteriaBuilder implements IReferenceable {
 	 * @return This builder.
 	 */
 	CriteriaBuilder compare( String property, String operator, Object value ) {
+		ClassPath classPath = classPath( property );
+		if ( classPath != null ) {
+			return compareClass( classPath, operator, value == null ? List.of() : List.of( value ), false );
+		}
 		String expr = wherePath( property );
 		if ( value == null ) {
 			if ( operator.equals( "=" ) ) {
@@ -953,6 +965,130 @@ public final class CriteriaBuilder implements IReferenceable {
 			return add( Frag.of( expr, " " + operator + " ", sub ) );
 		}
 		return add( Frag.of( expr, " " + operator + " ", new Param( value ) ) );
+	}
+
+	/**
+	 * The entity a {@code class} pseudo-property stands for.
+	 *
+	 * @param hql   The HQL alias of the entity.
+	 * @param model The entity's model.
+	 */
+	record ClassPath( String hql, EntityModel model ) {
+	}
+
+	/**
+	 * Whether a path is the Hibernate 5 {@code class} pseudo-property (the entity's own type, compared by discriminator
+	 * value or entity name): {@code class}, {@code alias.class} or {@code association.class}, when the entity has no
+	 * real property named {@code class}.
+	 *
+	 * @param property The path.
+	 *
+	 * @return The entity it applies to, or null when it is not the pseudo-property.
+	 */
+	private ClassPath classPath( String property ) {
+		if ( property == null ) {
+			return null;
+		}
+		String trimmed = property.trim();
+		if ( trimmed.equalsIgnoreCase( "class" ) ) {
+			return current.model().isEntity() && current.model().find( "class" ) == null ? new ClassPath( current.hql(), current.model() ) : null;
+		}
+		if ( !trimmed.toLowerCase().endsWith( ".class" ) ) {
+			return null;
+		}
+		String	prefix	= trimmed.substring( 0, trimmed.length() - ".class".length() );
+		Alias	named	= prefix.contains( "." ) ? null : findAlias( prefix );
+		if ( named != null ) {
+			return named.model().isEntity() && named.model().find( "class" ) == null ? new ClassPath( named.hql(), named.model() ) : null;
+		}
+		EntityModel.Attr attr = current.model().find( prefix.split( "\\." )[ 0 ] );
+		if ( attr == null || !attr.isAssociation() ) {
+			return null;
+		}
+		JoinKind	kind	= optionalDepth > 0 ? JoinKind.LEFT : JoinKind.INNER;
+		Join		join	= joinPath( prefix, kind );
+		if ( join.model.find( "class" ) != null ) {
+			return null;
+		}
+		join.referenced = true;
+		return new ClassPath( join.hql, join.model );
+	}
+
+	/**
+	 * Compare an entity's type ({@code class} pseudo-property) with discriminator values or entity names:
+	 * {@code type(alias) = cbEntry} or {@code type(alias) in (cbEntry, cbPage)}. The entity names are written into the
+	 * HQL, never the values. As in Hibernate 5, a value that is no entity or discriminator value of the hierarchy
+	 * matches no row (so {@code <>} and {@code isNotIn} match every row for it).
+	 *
+	 * @param path     The entity.
+	 * @param operator {@code =} or {@code <>}.
+	 * @param values   The discriminator values or entity names.
+	 * @param list     Whether the values came as a list ({@code isIn}).
+	 *
+	 * @return This builder.
+	 */
+	private CriteriaBuilder compareClass( ClassPath path, String operator, List<Object> values, boolean list ) {
+		if ( !operator.equals( "=" ) && !operator.equals( "<>" ) ) {
+			throw new ORMException( ORMErrorType.ARGUMENT, "The class of an entity can only be compared with = , <>, isIn() or isNotIn().",
+			    "Use isEq( \"class\", \"Entry\" ) with a discriminator value or an entity name." );
+		}
+		if ( values.isEmpty() ) {
+			if ( list ) {
+				return add( Frag.of( operator.equals( "=" ) ? "1 = 0" : "1 = 1" ) );
+			}
+			throw new ORMException( ORMErrorType.ARGUMENT, "The class of an entity cannot be compared with null.",
+			    "Pass a discriminator value or an entity name." );
+		}
+		List<String> names = new ArrayList<>();
+		for ( Object value : values ) {
+			String name = entityTypeName( path.model(), value );
+			if ( name != null && !names.contains( name ) ) {
+				names.add( name );
+			}
+		}
+		if ( names.isEmpty() ) {
+			return add( Frag.of( operator.equals( "=" ) ? "1 = 0" : "1 = 1" ) );
+		}
+		String expr = "type(" + path.hql() + ")";
+		if ( names.size() == 1 && !list ) {
+			return add( Frag.of( expr + " " + operator + " " + names.get( 0 ) ) );
+		}
+		return add( Frag.of( expr + ( operator.equals( "=" ) ? " in (" : " not in (" ) + String.join( ", ", names ) + ")" ) );
+	}
+
+	/**
+	 * The entity of a hierarchy a {@code class} value means: an entity name, or a discriminator value.
+	 *
+	 * @param model The root of the hierarchy.
+	 * @param value The value.
+	 *
+	 * @return The entity name, or null when no entity of the hierarchy matches.
+	 */
+	private String entityTypeName( EntityModel model, Object value ) {
+		String				text	= StringCaster.cast( value ).trim();
+		Map<String, String>	names	= model.hierarchyEntityNames();
+		for ( String name : names.keySet() ) {
+			if ( name.equalsIgnoreCase( text ) ) {
+				return name;
+			}
+		}
+		List<String> known = new ArrayList<>();
+		for ( Map.Entry<String, String> name : names.entrySet() ) {
+			Object discriminator = factory.getMappingMetamodel().getEntityDescriptor( name.getValue() ).getDiscriminatorValue();
+			if ( discriminator != null ) {
+				known.add( discriminator.toString() );
+				if ( discriminator.toString().equalsIgnoreCase( text ) ) {
+					return name.getKey();
+				}
+			}
+		}
+		var logger = ( ( ortus.boxlang.modules.orm.ORMService ) BoxRuntime.getInstance().getGlobalService( ORMKeys.ORMService ) ).getLogger();
+		if ( logger.isDebugEnabled() ) {
+			logger.debug(
+			    "entityCriteria: [{}] is not an entity or discriminator value of [{}] ({}; discriminator values {}), so the class condition matches no row.",
+			    text, model.name(), String.join( ", ", names.keySet() ), String.join( ", ", known ) );
+		}
+		return null;
 	}
 
 	/**
@@ -995,6 +1131,10 @@ public final class CriteriaBuilder implements IReferenceable {
 	 * @return This builder.
 	 */
 	CriteriaBuilder in( String property, Object values, boolean negated ) {
+		ClassPath classPath = values instanceof CriteriaBuilder ? null : classPath( property );
+		if ( classPath != null ) {
+			return compareClass( classPath, negated ? "<>" : "=", toList( values ), true );
+		}
 		String	expr	= wherePath( property );
 		String	keyword	= negated ? " not in " : " in ";
 		if ( values instanceof CriteriaBuilder sub ) {
@@ -1364,6 +1504,27 @@ public final class CriteriaBuilder implements IReferenceable {
 	 * @return This builder.
 	 */
 	CriteriaBuilder joinTo( String association, String alias, JoinKind kind ) {
+		return joinTo( null, association, alias, kind, null );
+	}
+
+	/**
+	 * Join an association, optionally giving it an alias for later paths ({@code alias.property}) and extra join
+	 * conditions (cborm's {@code createAlias( association, alias, joinType, withClause )}).
+	 * <p>
+	 * The conditions go into the join's {@code on} clause, not the {@code where}, so a left join keeps the rows that
+	 * have no matching association. They may use the new alias and the properties of earlier aliases, but not create
+	 * joins of their own (an {@code on} clause can only see the joins before it).
+	 *
+	 * @param context     The context (needed only with a closure).
+	 * @param association The association path.
+	 * @param alias       The alias (empty for none).
+	 * @param kind        The join type.
+	 * @param withClause  A restriction ({@code c.restrictions.isTrue( "a.active" )}) or a closure that adds conditions
+	 *                    ({@code ( c ) => c.isTrue( "a.active" )}); null for none.
+	 *
+	 * @return This builder.
+	 */
+	CriteriaBuilder joinTo( IBoxContext context, String association, String alias, JoinKind kind, Object withClause ) {
 		Join join = joinPath( association, kind );
 		join.kind		= kind;
 		join.referenced	= true;
@@ -1373,6 +1534,23 @@ public final class CriteriaBuilder implements IReferenceable {
 				    "Use letters, digits and underscores, starting with a letter." );
 			}
 			aliases.put( alias.toLowerCase(), new Alias( join.hql, join.model ) );
+		}
+		if ( withClause != null && ! ( withClause instanceof String s && s.isBlank() ) ) {
+			Group	clause		= join.with != null ? join.with : new Group( false );
+			int		joinCount	= joins.size();
+			groups.push( clause );
+			try {
+				call( context, withClause, this );
+			} finally {
+				groups.pop();
+			}
+			if ( joins.size() != joinCount ) {
+				throw new ORMException( ORMErrorType.ARGUMENT,
+				    "The withClause of the join on [" + association + "] uses a path that needs another join.",
+				    "Only use properties of the joined association (e.g. \"" + ( alias == null || alias.isBlank() ? "alias" : alias )
+				        + ".isActive\") or of earlier aliases in a withClause; put other conditions in the where clause." );
+			}
+			join.with = clause;
 		}
 		return this;
 	}
@@ -1489,9 +1667,10 @@ public final class CriteriaBuilder implements IReferenceable {
 		c.current		= current == root ? c.root : current;
 		c.projections	= new ArrayList<>();
 		projections.forEach( p -> c.projections.add( new Projection( p.function(), c.retargetText( p.expr(), root ), p.alias() ) ) );
-		c.distinct	= distinct;
-		c.shape		= shape;
-		c.orders	= new ArrayList<>();
+		c.distinct		= distinct;
+		c.distinctRoots	= distinctRoots;
+		c.shape			= shape;
+		c.orders		= new ArrayList<>();
 		orders.forEach( o -> c.orders.add( new Order( c.retargetText( o.expr(), root ), o.asc() ) ) );
 		c.firstResult	= firstResult;
 		c.maxResults	= maxResults;
@@ -1530,6 +1709,7 @@ public final class CriteriaBuilder implements IReferenceable {
 		Join copy = new Join( j.hql, j.parentHql.equals( root.hql() ) ? c.root.hql() : j.parentHql, j.attribute, j.model, j.plural, j.kind );
 		copy.fetch		= j.fetch;
 		copy.referenced	= j.referenced;
+		copy.with		= j.with == null ? null : ( Group ) retargetNode( j.with.copy(), c );
 		return copy;
 	}
 
@@ -1810,7 +1990,50 @@ public final class CriteriaBuilder implements IReferenceable {
 	}
 
 	/**
+	 * cborm {@code resultTransformer()}: what the rows of {@code list()} look like, from the Hibernate 5 transformer
+	 * names cborm exposed as constants.
+	 * <ul>
+	 * <li>{@code DISTINCT_ROOT_ENTITY}: entities, each root entity once. As in Hibernate 5 the repeats are dropped from
+	 * the fetched rows, not by a SQL {@code distinct} (so it works with text and blob columns on every database);
+	 * paths through collections already select distinct roots.</li>
+	 * <li>{@code ROOT_ENTITY}: entities ({@code asEntities()}).</li>
+	 * <li>{@code ALIAS_TO_ENTITY_MAP}: one struct per row ({@code asStruct()}).</li>
+	 * <li>{@code PROJECTION}: no change (projected values are already the rows).</li>
+	 * </ul>
+	 *
+	 * @param transformer The constant ({@code c.DISTINCT_ROOT_ENTITY}) or its name, any casing.
+	 *
+	 * @return This builder.
+	 *
+	 * @throws ORMException {@code orm.argument} for anything else (Hibernate transformer objects are not supported).
+	 */
+	CriteriaBuilder resultTransformer( Object transformer ) {
+		String name = transformer == null ? "" : transformer.toString().trim().toUpperCase();
+		return switch ( name ) {
+			case "DISTINCT_ROOT_ENTITY" -> {
+				distinctRoots = true;
+				yield shape( Shape.ENTITY );
+			}
+			case "ROOT_ENTITY" -> {
+				distinctRoots = false;
+				yield shape( Shape.ENTITY );
+			}
+			case "ALIAS_TO_ENTITY_MAP" -> {
+				distinctRoots = false;
+				yield shape( Shape.STRUCT );
+			}
+			case "PROJECTION" -> this;
+			default -> throw new ORMException( ORMErrorType.ARGUMENT,
+			    "entityCriteria.resultTransformer() does not support [" + ( transformer == null ? "null" : transformer ) + "].",
+			    "Pass c.DISTINCT_ROOT_ENTITY, c.ROOT_ENTITY, c.ALIAS_TO_ENTITY_MAP or c.PROJECTION, or use asDistinct(), asEntities() or asStruct()." );
+		};
+	}
+
+	/**
 	 * Add orderings: {@code order( "name" )}, {@code order( "name", "desc" )}, {@code order( "name desc, id" )}.
+	 * <p>
+	 * A name that is not a property but is the alias of a projection ({@code withProjections( count = "id:total" )}
+	 * then {@code order( "total desc" )}) sorts by that projection.
 	 *
 	 * @param property   One property, or a comma-separated list with optional {@code asc}/{@code desc}.
 	 * @param direction  {@code asc} or {@code desc} (applies to entries without their own).
@@ -1820,19 +2043,44 @@ public final class CriteriaBuilder implements IReferenceable {
 	 */
 	CriteriaBuilder order( String property, String direction, boolean ignoreCase ) {
 		for ( String entry : property.split( "," ) ) {
-			String[]	words	= entry.trim().split( "\\s+" );
-			String		dir		= words.length > 1 ? words[ 1 ] : ( direction == null || direction.isBlank() ? "asc" : direction );
-			boolean		asc		= switch ( dir.trim().toLowerCase() ) {
-									case "asc", "ascending" -> true;
-									case "desc", "descending" -> false;
-									default -> throw new ORMException( ORMErrorType.ARGUMENT, "Unknown sort direction [" + dir + "].",
-									    "Use asc or desc." );
-								};
-			Path		path	= resolve( words[ 0 ], JoinKind.LEFT );
-			String		expr	= ignoreCase && isText( path ) ? "lower(" + path.hql() + ")" : path.hql();
+			String[]	words		= entry.trim().split( "\\s+" );
+			String		dir			= words.length > 1 ? words[ 1 ] : ( direction == null || direction.isBlank() ? "asc" : direction );
+			boolean		asc			= switch ( dir.trim().toLowerCase() ) {
+										case "asc", "ascending" -> true;
+										case "desc", "descending" -> false;
+										default -> throw new ORMException( ORMErrorType.ARGUMENT, "Unknown sort direction [" + dir + "].",
+										    "Use asc or desc." );
+									};
+			Projection	projected	= projectionAlias( words[ 0 ] );
+			if ( projected != null ) {
+				orders.add( new Order( projected.select(), asc ) );
+				continue;
+			}
+			Path	path	= resolve( words[ 0 ], JoinKind.LEFT );
+			String	expr	= ignoreCase && isText( path ) ? "lower(" + path.hql() + ")" : path.hql();
 			orders.add( new Order( expr, asc ) );
 		}
 		return this;
+	}
+
+	/**
+	 * The projection a sort name refers to, when it is a projection alias and not a property of the current entity
+	 * (properties win, so adding a projection never changes an existing sort).
+	 *
+	 * @param name The sort name.
+	 *
+	 * @return The projection, or null.
+	 */
+	private Projection projectionAlias( String name ) {
+		if ( projections.isEmpty() || name.contains( "." ) || name.contains( "(" ) || current.model().find( name ) != null ) {
+			return null;
+		}
+		for ( Projection p : projections ) {
+			if ( p.alias().equalsIgnoreCase( name ) ) {
+				return p;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -2030,11 +2278,18 @@ public final class CriteriaBuilder implements IReferenceable {
 			if ( join.fetch && !join.referenced && !allowFetch ) {
 				continue;
 			}
+			boolean	conditioned	= join.with != null && !join.with.isEmpty();
+			// Hibernate refuses an on clause on a fetch join, so a join with conditions is joined but not fetched.
+			boolean	fetchIt		= join.fetch && allowFetch && !conditioned;
 			hql.append( ' ' ).append( join.kind.hql );
-			if ( join.fetch && allowFetch ) {
+			if ( fetchIt ) {
 				hql.append( " fetch" );
 			}
 			hql.append( ' ' ).append( join.parentHql ).append( '.' ).append( join.attribute ).append( ' ' ).append( join.hql );
+			if ( conditioned ) {
+				hql.append( " on " );
+				join.with.render( hql, ctx );
+			}
 		}
 		if ( !where.isEmpty() ) {
 			hql.append( " where " );
@@ -2305,6 +2560,15 @@ public final class CriteriaBuilder implements IReferenceable {
 			return result;
 		}
 		Array result = new Array();
+		if ( distinctRoots && projections.isEmpty() ) {
+			java.util.Set<Object> seen = java.util.Collections.newSetFromMap( new java.util.IdentityHashMap<>() );
+			rows.forEach( r -> {
+				if ( seen.add( r ) ) {
+					result.add( toBox( r ) );
+				}
+			} );
+			return result;
+		}
 		rows.forEach( r -> result.add( toBox( r ) ) );
 		return result;
 	}

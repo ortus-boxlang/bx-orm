@@ -95,6 +95,8 @@ final class EntityModel {
 	private final SessionFactoryImplementor	factory;
 	/** Attributes by lower-cased name, built on first use. */
 	private Map<String, Attr>				attributes;
+	/** Attributes only subtypes (subclass entities) declare, by lower-cased name, built on first use. */
+	private Map<String, Attr>				subtypeAttributes;
 
 	/**
 	 * Wrap a Hibernate domain type.
@@ -140,14 +142,41 @@ final class EntityModel {
 	}
 
 	/**
-	 * Find an attribute by name, ignoring case.
+	 * Find an attribute by name, ignoring case. An attribute the entity does not have but one of its subclass entities
+	 * declares is found too (Hibernate 5 criteria allowed it, and HQL resolves it on the subtype): a condition on it
+	 * matches only rows of that subclass.
 	 *
 	 * @param attributeName The attribute name as the developer wrote it.
 	 *
-	 * @return The attribute, or null when the model has none by that name.
+	 * @return The attribute, or null when neither the model nor a subtype has one by that name.
 	 */
 	Attr find( String attributeName ) {
-		return attributes().get( attributeName.toLowerCase() );
+		String	lower	= attributeName.toLowerCase();
+		Attr	attr	= attributes().get( lower );
+		return attr != null ? attr : subtypeAttributes().get( lower );
+	}
+
+	/**
+	 * The entities of this entity's hierarchy: this one and every subclass entity below it, this one first (empty for a
+	 * component).
+	 *
+	 * @return JPA (BoxLang) entity names to Hibernate entity names, in that order.
+	 */
+	Map<String, String> hierarchyEntityNames() {
+		Map<String, String> names = new LinkedHashMap<>();
+		if ( !entity ) {
+			return names;
+		}
+		java.util.Deque<ManagedDomainType<?>> pending = new java.util.ArrayDeque<>();
+		pending.add( type );
+		while ( !pending.isEmpty() ) {
+			ManagedDomainType<?> next = pending.removeFirst();
+			if ( next instanceof EntityDomainType<?> e ) {
+				names.put( e.getName(), e.getHibernateEntityName() );
+			}
+			pending.addAll( next.getSubTypes() );
+		}
+		return names;
 	}
 
 	/**
@@ -208,6 +237,31 @@ final class EntityModel {
 			attributes = map;
 		}
 		return attributes;
+	}
+
+	/**
+	 * Build the subtype attribute map on first use: attributes declared by subclass entities (at any depth) that this
+	 * model does not have, the nearest subtype first.
+	 *
+	 * @return The attributes by lower-cased name.
+	 */
+	private Map<String, Attr> subtypeAttributes() {
+		if ( subtypeAttributes == null ) {
+			Map<String, Attr>						map		= new LinkedHashMap<>();
+			java.util.Deque<ManagedDomainType<?>>	pending	= new java.util.ArrayDeque<>( type.getSubTypes() );
+			while ( !pending.isEmpty() ) {
+				ManagedDomainType<?> sub = pending.removeFirst();
+				for ( Attribute<?, ?> attribute : sub.getAttributes() ) {
+					String key = attribute.getName().toLowerCase();
+					if ( !attributes().containsKey( key ) && !map.containsKey( key ) ) {
+						map.put( key, toAttr( attribute ) );
+					}
+				}
+				pending.addAll( sub.getSubTypes() );
+			}
+			subtypeAttributes = map;
+		}
+		return subtypeAttributes;
 	}
 
 	/**

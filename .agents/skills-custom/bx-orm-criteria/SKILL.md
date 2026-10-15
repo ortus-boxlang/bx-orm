@@ -60,6 +60,19 @@ and never change the builder; `copy()` branches it.
   `or`/`and`/`not` and aliases); it returns a `Restriction`. `CriteriaBuilder.call()` replays a `Restriction` like a
   closure, so `or`/`and`/`not`/`add( restrictions... )` accept both. Misspellings get did-you-mean via
   `suggestCondition()`.
+- Join conditions: `joinTo( assoc, alias, kind, withClause )` evaluates the restriction/closure into `Join.with` (a
+  `Group`, pushed on `groups` while it runs) and `renderFrom` writes it as `join ... on <cond>`. It may use the new
+  alias, but a path that creates another join is `orm.argument` (an `on` clause cannot see later joins). `copy()`
+  copies and retargets `with`.
+- `resultTransformer( name )` maps cborm's Hibernate 5 constants (`c.DISTINCT_ROOT_ENTITY` etc. are strings from
+  `dereference`): `DISTINCT_ROOT_ENTITY` sets `distinctRoots` (repeats dropped in `shapeRows` by identity, no SQL
+  `distinct`), `ROOT_ENTITY` entities, `ALIAS_TO_ENTITY_MAP` structs, `PROJECTION` no-op.
+- `order()` falls back to a projection alias (`projectionAlias()`) when the name is not a property; properties win.
+- `EntityModel.find()` falls back to attributes declared only by subclass entities (`subtypeAttributes()`); HQL resolves
+  them on the subtype (Hibernate's implicit treat).
+- `class` / `alias.class` / `assoc.class` (when no real `class` property exists) compares `type(alias)` with entity
+  names written into the HQL (`classPath()`, `compareClass()`); values are entity names or discriminator values
+  (`hierarchyEntityNames()` + the persister's discriminator), an unknown value matches no row (Hibernate 5 behavior).
 - Quantified subqueries (`sub{Eq,Gt,Ge,Lt,Le}{All,Some}`, `property...`; cborm has `EqAll` but no `EqSome`) reuse
   `valueVsSubquery()` / `compare()` with operators like `>= all`.
 - SQL log: `logSQL( label = "Criteria", executable, format )` appends `{ type, sql }` and writes the ORM log;

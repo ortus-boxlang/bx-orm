@@ -70,6 +70,35 @@ public class TransactionManagerTest extends BaseORMTest {
 		assertThat( variables.getAsQuery( result ).getRowAsStruct( 0 ).get( "name" ) ).isEqualTo( name );
 	}
 
+	@DisplayName( "Hibernate's end-of-transaction work runs when a transaction ends or rolls back, not at session close" )
+	@Test
+	public void testTransactionCompletionWork() {
+		// @formatter:off
+		instance.executeSource( """
+			pending = () => {
+				var s = ormGetSession();
+				return s.unwrap( s.getClass().getClassLoader().loadClass( "org.hibernate.engine.spi.SessionImplementor" ) )
+					.getActionQueue().hasAfterTransactionActions();
+			};
+			ormClearSession();
+			transaction {
+				ormExecuteQuery( "update Manufacturer set address = address where id = 1" );
+				m = entityLoadByPK( "Manufacturer", 1 );
+				m.setAddress( m.getAddress() );
+				entitySave( m );
+			}
+			afterCommit = pending();
+			transaction {
+				ormExecuteQuery( "update Manufacturer set address = address where id = 1" );
+				transactionRollback();
+			}
+			afterRollback = pending();
+		""", context );
+		// @formatter:on
+		assertThat( variables.get( Key.of( "afterCommit" ) ) ).isEqualTo( false );
+		assertThat( variables.get( Key.of( "afterRollback" ) ) ).isEqualTo( false );
+	}
+
 	@DisplayName( "It commits on transaction close" )
 	@Test
 	public void testTransactionCommitOnClose() {

@@ -441,6 +441,27 @@ public class ORMContext {
 	}
 
 	/**
+	 * Run the work Hibernate keeps for the end of a transaction: second-level cache updates and the clean-up of bulk
+	 * {@code update}/{@code delete} queries (query cache and region invalidation).
+	 * <p>
+	 * Hibernate runs it when its own transaction completes. The ORM rides the BoxLang transaction (or autocommit
+	 * outside one) instead, so Hibernate never sees that moment: bx-orm calls this when a BoxLang transaction ends or
+	 * rolls back, and before it closes a session (otherwise Hibernate warns HHH90010101/HHH90010108 on close).
+	 *
+	 * @param session    The session (ignored when closed).
+	 * @param successful Whether the work was committed (false after a rollback: cached entries are evicted instead).
+	 */
+	public static void completeTransaction( Session session, boolean successful ) {
+		if ( session == null || !session.isOpen() ) {
+			return;
+		}
+		org.hibernate.engine.spi.ActionQueue actions = session.unwrap( org.hibernate.engine.spi.SessionImplementor.class ).getActionQueue();
+		if ( actions.hasAfterTransactionActions() ) {
+			actions.afterTransactionCompletion( successful );
+		}
+	}
+
+	/**
 	 * Close all open Hibernate sessions for this request context.
 	 * <p>
 	 * Attempts a transaction commit prior to closing the sessions, if an active transaction is present.
@@ -499,6 +520,12 @@ public class ORMContext {
 				this.logger.error( "Error committing transaction on session", e );
 				tx.rollback();
 			}
+		}
+		// Writes outside a transaction{} were auto-committed and a transaction{} has ended by now.
+		try {
+			completeTransaction( session, true );
+		} catch ( RuntimeException e ) {
+			this.logger.warn( "Error running the end-of-transaction work of an ORM session before closing it", e );
 		}
 		session.close();
 		return this;
