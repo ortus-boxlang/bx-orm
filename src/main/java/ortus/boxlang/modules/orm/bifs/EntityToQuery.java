@@ -114,7 +114,7 @@ public class EntityToQuery extends BaseORMBIF {
 	private Query populateQuery( Array entities, EntityRecord entityRecord ) {
 		// Relationship properties are excluded entirely: the result query never contains relation data
 		List<IPropertyMeta>	props	= entityRecord.getEntityMeta().getAllPersistentProperties().stream()
-		    .filter( prop -> !prop.isAssociationType() )
+		    .filter( prop -> !prop.isAssociationType() && !prop.isCollectionType() )
 		    .toList();
 		Query				result	= new Query();
 		for ( IPropertyMeta prop : props ) {

@@ -115,6 +115,7 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		    .findFirst().orElse( null );
 
 		this.associations		= this.localPersistentProperties.stream().filter( (
-		    IPropertyMeta prop ) -> prop.isAssociationType() ).collect( Collectors.toCollection( LinkedHashSet::new ) );
+		    IPropertyMeta prop ) -> prop.isAssociationType() || prop.getFieldType() == IPropertyMeta.FIELDTYPE.COLLECTION )
+		    .collect( Collectors.toCollection( LinkedHashSet::new ) );
 	}
 }

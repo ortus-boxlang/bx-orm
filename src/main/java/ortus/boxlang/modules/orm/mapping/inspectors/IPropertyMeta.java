@@ -123,6 +123,11 @@ public interface IPropertyMeta {
 	public boolean isAssociationType();
 
 	/**
+	 * Return true if the field type is a simple-value collection (`fieldtype="collection"`).
+	 */
+	public boolean isCollectionType();
+
+	/**
 	 * Get the SQL type, aka `property sqltype="varchar"...`.
 	 */
 	public String getSqlType();
@@ -178,6 +183,15 @@ public interface IPropertyMeta {
 		 */
 		public boolean isAssociationType() {
 			return this == ONE_TO_ONE || this == ONE_TO_MANY || this == MANY_TO_ONE || this == MANY_TO_MANY;
+		}
+
+		/**
+		 * Return true if the field type is a simple-value collection (`fieldtype="collection"`): a bag or map of
+		 * scalar values in a link table. Mapped like a to-many association (<bag>/<map> with a <key>), but
+		 * with an <element> instead of an entity reference.
+		 */
+		public boolean isCollectionType() {
+			return this == COLLECTION;
 		}
 
 		/**
