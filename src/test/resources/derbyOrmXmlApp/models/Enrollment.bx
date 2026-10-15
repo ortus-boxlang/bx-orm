@@ -1,0 +1,5 @@
+class accessors="true" persistent="true" table="enrollments" {
+	property name="studentId" fieldtype="id" ormType="integer" generator="assigned";
+	property name="courseId" fieldtype="id" ormType="string" generator="assigned";
+	property name="grade" ormType="string";
+}

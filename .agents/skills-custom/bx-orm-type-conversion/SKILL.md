@@ -35,7 +35,7 @@ flowchart LR
 ## Key Classes
 
 | Converter | BoxLang Type | JDBC Type | Package |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `StringConverter` | `String` / `Object` | `String` | `ortus.boxlang.modules.orm.hibernate.converters` |
 | `BooleanConverter` | `Boolean` / `Object` | `Boolean` | same |
 | `IntegerConverter` | `Integer` / `Object` | `Integer` | same |
@@ -219,6 +219,7 @@ public class JsonConverter implements AttributeConverter<Object, String> {
 ```
 
 Then register it in the configuration:
+
 ```java
 configuration.addAttributeConverter( JsonConverter.class );
 ```

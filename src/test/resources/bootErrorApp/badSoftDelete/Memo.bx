@@ -1,0 +1,7 @@
+/**
+ * softDelete has a value that is not a known strategy.
+ */
+class persistent="true" table="memos" softDelete="sometimes" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="title" ormType="string";
+}

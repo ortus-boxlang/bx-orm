@@ -17,8 +17,8 @@
  */
 package ortus.boxlang.modules.orm.hibernate.converters;
 
-import javax.persistence.AttributeConverter;
-import javax.persistence.Converter;
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
 
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 

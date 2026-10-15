@@ -1,0 +1,8 @@
+class accessors="true" persistent="true" table="fac_bookings" {
+
+	// Composite (2-column) primary key: both parts are assigned by the caller.
+	property name="flightID" fieldtype="id" ormType="integer" generator="assigned";
+	property name="seatID"   fieldtype="id" ormType="string"  generator="assigned";
+
+	property name="passenger" ormType="string";
+}

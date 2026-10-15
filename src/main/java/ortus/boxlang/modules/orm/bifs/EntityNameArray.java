@@ -64,7 +64,7 @@ public class EntityNameArray extends BaseORMBIF {
 		String				datasourceName	= ( String ) arguments.getAsString( Key.datasource );
 		String				delimiter		= ( String ) arguments.getOrDefault( Key.delimiter, "," );
 
-		ORMApp				ormApp			= this.ormService.getORMAppByContext( context );
+		ORMApp				ormApp			= this.ormService.requireORMApp( context );
 		List<EntityRecord>	entityList		= datasourceName != null
 		    ? ormApp.getEntityRecords( Key.of( datasourceName ) )
 		    : ormApp.getEntityRecords();

@@ -41,14 +41,14 @@ import ortus.boxlang.runtime.scopes.VariablesScope;
 /**
  * Boots a full ORM application against a real PostgreSQL datasource and saves entities whose table names are on the reserved-word list.
  * <p>
- * Those table names are quoted in the generated mapping. With {@code generator="identity"} Hibernate 5 reads the new key back with
+ * Those table names are quoted in the generated mapping. With {@code generator="identity"} Hibernate reads the new key back with
  * {@code select currval('
  * 
 <table>
  * _<column>_seq')}, so a quoted table name used to produce {@code currval('"comment"_id_seq')}, which PostgreSQL rejects
  * with "invalid name syntax" (BL-2739).
  * <p>
- * Connection settings come from {@code PG_HOST}, {@code PG_PORT}, {@code PG_DATABASE}, {@code PG_USER} and {@code PG_PASSWORD}. The tests are skipped
+ * Connection settings come from {@code PG_HOST}, {@code PG_PORT}, {@code PG_DB}, {@code PG_USER} and {@code PG_PASSWORD}. The tests are skipped
  * when
  * no PostgreSQL server is reachable. Subclasses choose the ORM dialect: explicit, or blank to let Hibernate auto-detect it.
  */
@@ -76,8 +76,8 @@ public abstract class AbstractPostgreSQLIdentityTest {
 	}
 
 	private static boolean postgresIsReachable() {
-		String url = "jdbc:postgresql://" + env( "PG_HOST", "127.0.0.1" ) + ":" + env( "PG_PORT", "5432" ) + "/" + env( "PG_DATABASE", "bxorm_test" );
-		try ( Connection ignored = DriverManager.getConnection( url, env( "PG_USER", "postgres" ), env( "PG_PASSWORD", "" ) ) ) {
+		String url = "jdbc:postgresql://" + env( "PG_HOST", "127.0.0.1" ) + ":" + env( "PG_PORT", "5432" ) + "/" + env( "PG_DB", "ormtest" );
+		try ( Connection ignored = DriverManager.getConnection( url, env( "PG_USER", "postgres" ), env( "PG_PASSWORD", "postgres" ) ) ) {
 			return true;
 		} catch ( Exception e ) {
 			return false;
@@ -104,7 +104,7 @@ public abstract class AbstractPostgreSQLIdentityTest {
 
 		context = new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
 		RequestBoxContext.setCurrent( context );
-		context.loadApplicationDescriptor( Paths.get( "src/test/resources/postgresApp/index.bxs" ).toAbsolutePath().toUri() );
+		context.loadApplicationDescriptor( Paths.get( "src/test/resources/postgresIdentityApp/index.bxs" ).toAbsolutePath().toUri() );
 		context.getApplicationListener().onRequestStart( context, null );
 		variables = context.getScopeNearby( VariablesScope.name );
 	}
@@ -162,5 +162,42 @@ public abstract class AbstractPostgreSQLIdentityTest {
 		// @formatter:on
 
 		assertThat( ( ( Number ) variables.get( Key.of( "remarkId" ) ) ).intValue() ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "A native id uses the shared hibernate_sequence with an increment of 1, as bx-orm 1.x did" )
+	@Test
+	public void testNativeUsesHibernateSequence() {
+		// @formatter:off
+		instance.executeSource( """
+			a = entityNew( "NativeThing", { label : "a" } );
+			entitySave( a );
+			b = entityNew( "NativeThing", { label : "b" } );
+			entitySave( b );
+			ormFlush();
+			nativeIds = [ a.getId(), b.getId() ];
+			seqs = queryExecute( "select sequence_name from information_schema.sequences where sequence_name = 'hibernate_sequence'" ).recordCount;
+		""", context );
+		// @formatter:on
+
+		ortus.boxlang.runtime.types.Array ids = ( ortus.boxlang.runtime.types.Array ) variables.get( Key.of( "nativeIds" ) );
+		assertThat( ( ( Number ) ids.get( 1 ) ).intValue() - ( ( Number ) ids.get( 0 ) ).intValue() ).isEqualTo( 1 );
+		assertThat( ( ( Number ) variables.get( Key.of( "seqs" ) ) ).intValue() ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "A native id with a sequence annotation uses that sequence" )
+	@Test
+	public void testNativeUsesNamedSequence() {
+		// @formatter:off
+		instance.executeSource( """
+			n = entityNew( "NamedSeqThing", { label : "n" } );
+			entitySave( n );
+			ormFlush();
+			namedId = n.getId();
+			namedSeqs = queryExecute( "select sequence_name from information_schema.sequences where sequence_name = 'named_thing_seq'" ).recordCount;
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.get( Key.of( "namedId" ) ) ).isNotNull();
+		assertThat( ( ( Number ) variables.get( Key.of( "namedSeqs" ) ) ).intValue() ).isEqualTo( 1 );
 	}
 }

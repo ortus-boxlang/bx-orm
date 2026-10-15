@@ -1,0 +1,13 @@
+/**
+ * Joined-inheritance subclass: stored in its own table, joined back to the root by the shared key column.
+ */
+class
+	accessors ="true"
+	persistent="true"
+	entityname="Square"
+	table     ="fac_squares"
+	extends   ="Shape"
+	joinColumn="shapeID"
+{
+	property name="side" ormType="integer";
+}

@@ -48,9 +48,12 @@ public class ORMGetSessionFactoryTest extends BaseORMTest {
 	@Test
 	public void testEntitySessionMetadata() {
 		// @formatter:off
+		// Hibernate 6+ removed SessionFactory.getClassMetaData(); entity metadata now lives on the EntityPersister,
+		// reached via the mapping metamodel. This is the path cborm will use once it is updated for Hibernate 7.
 		instance.executeSource( """
-			result = ormGetSessionFactory().getClassMetaData( "cbAuthor" );
-			result2 = ormGetSessionFactory().getClassMetaData( "cbContent" );
+			metamodel = ormGetSessionFactory().getMappingMetamodel();
+			result = metamodel.getEntityDescriptor( "cbAuthor" );
+			result2 = metamodel.getEntityDescriptor( "cbContent" );
 			tableName = result.getTableName();
 			discriminatorColumn = result2.getDiscriminatorColumnName();
 		""", context );

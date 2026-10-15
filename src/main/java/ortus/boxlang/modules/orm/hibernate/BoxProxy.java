@@ -17,7 +17,6 @@
  */
 package ortus.boxlang.modules.orm.hibernate;
 
-import java.io.Serializable;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -66,18 +65,24 @@ public class BoxProxy implements IClassRunnable, HibernateProxy {
 	 * @param id
 	 * @param session
 	 */
-	public BoxProxy( String entityName, Serializable id, SharedSessionContractImplementor session, PersistentClass mappingInfo ) {
+	public BoxProxy( String entityName, Object id, SharedSessionContractImplementor session, PersistentClass mappingInfo ) {
 		this.lazyInitializer = new BoxLazyInitializer( entityName, id, session );
 	}
 
 	/**
-	 * Private method to get the instantiated targer from the initializer.
+	 * The entity this lazy proxy stands for, loading it on first use. A load after the proxy's session was closed or
+	 * cleared raises a clear {@code orm.lazy.noSession} error instead of Hibernate's raw one.
 	 *
-	 * @return
+	 * @return The loaded BoxLang entity instance.
 	 */
 	public IClassRunnable getRunnable() {
 		if ( runnable == null ) {
-			runnable = lazyInitializer.getInstantiatedEntity();
+			try {
+				runnable = lazyInitializer.getInstantiatedEntity();
+			} catch ( org.hibernate.HibernateException e ) {
+				throw ortus.boxlang.modules.orm.errors.ORMErrors.translate( e,
+				    ortus.boxlang.modules.orm.errors.ORMErrors.Context.of( "lazy load" ) );
+			}
 		}
 		return runnable;
 	}

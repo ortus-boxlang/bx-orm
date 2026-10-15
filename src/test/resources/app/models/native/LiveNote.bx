@@ -1,0 +1,10 @@
+/**
+ * Fixture for soft delete with an active flag (Phase 3B): the column is true while the row is live.
+ */
+class persistent="true" table="live_notes" softDelete="active" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="title" ormType="string" length="100";
+
+}

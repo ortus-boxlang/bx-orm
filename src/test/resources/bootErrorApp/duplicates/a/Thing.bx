@@ -1,0 +1,3 @@
+class persistent="true" entityName="Thing" table="things_a" {
+	property name="id" fieldtype="id" generator="increment" ormtype="integer";
+}

@@ -1,0 +1,24 @@
+class {
+	this.name = "BXORMDerbyTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"DerbyTestDB": {
+			"connectionString": "jdbc:derby:memory:ormDerbyBootTest;create=true"
+		}
+	};
+	this.datasource = "DerbyTestDB";
+
+	this.ormSettings = {
+		"datasource"       : "DerbyTestDB",
+		"dialect"          : "Derby",
+		"entityPaths"      : [ "/root/models" ],
+		"saveMapping"      : "true",
+		"logSQL"           : "false",
+		"dbcreate"         : "dropcreate",
+		"cacheprovider"    : "ConcurrentHashMap",
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}

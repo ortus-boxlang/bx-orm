@@ -20,6 +20,7 @@ package ortus.boxlang.modules.orm.hibernate;
 import org.hibernate.EntityNameResolver;
 
 import ortus.boxlang.modules.orm.ORMService;
+import ortus.boxlang.modules.orm.hibernate.facade.BoxEntityFacade;
 
 /**
  * Determine entity names for a given entity/boxlang class.
@@ -30,6 +31,14 @@ public class BoxEntityNameResolver implements EntityNameResolver {
 
 	@Override
 	public String resolveEntityName( Object entity ) {
+		// Facade (POJO) mode: Hibernate registers the entity under the generated facade's fully-qualified class name
+		// (the modern mapping.xml `class` attribute binds via the annotation path, so the entity-name IS the FQN). The
+		// facade is a real Java class, so its class name is exactly that registered entity-name. Hibernate's
+		// assertInstanceOfEntityType calls this resolver on the facade instance and must get the FQN back, not the
+		// BoxLang short name, or it rejects the instance as "not an entity class".
+		if ( entity instanceof BoxEntityFacade ) {
+			return entity.getClass().getName();
+		}
 		return ORMService.getEntityName( entity );
 	}
 

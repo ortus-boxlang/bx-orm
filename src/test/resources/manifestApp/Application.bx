@@ -1,0 +1,23 @@
+class {
+	this.name = "BXORMManifestTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"ManifestTestDB": {
+			"connectionString": "jdbc:derby:memory:ormManifestBootTest;create=true"
+		}
+	};
+	this.datasource = "ManifestTestDB";
+
+	this.ormSettings = {
+		"datasource"       : "ManifestTestDB",
+		"dialect"          : "Derby",
+		"entityPaths"      : [ "/root/models" ],
+		"logSQL"           : "false",
+		"dbcreate"         : "dropcreate",
+		"ormManifest"      : "auto",
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}

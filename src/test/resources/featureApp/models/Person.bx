@@ -1,0 +1,15 @@
+/**
+ * Owning side of a shared-primary-key one-to-one.
+ */
+class accessors="true" persistent="true" entityname="Person" table="feat_person" {
+
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+	property name="fullName" ormType="string" notnull="true";
+
+	// Shared-PK one-to-one: Passport's PK is Person's PK (see Passport.foreign generator).
+	property
+		name     ="passport"
+		fieldtype="one-to-one"
+		cfc      ="Passport"
+		cascade  ="all";
+}

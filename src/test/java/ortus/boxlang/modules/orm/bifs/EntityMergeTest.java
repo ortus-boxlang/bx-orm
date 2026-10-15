@@ -27,6 +27,24 @@ import tools.BaseORMTest;
 
 public class EntityMergeTest extends BaseORMTest {
 
+	@DisplayName( "ormGetSession().getEntityName() on a new entity throws Hibernate 5's TransientObjectException" )
+	@Test
+	public void testGetEntityNameOfTransientEntity() {
+		// @formatter:off
+		instance.executeSource( """
+			try {
+				ormGetSession().getEntityName( entityNew( 'Vehicle' ) );
+				result = "no error";
+			} catch ( org.hibernate.TransientObjectException e ) {
+				result = "transient";
+			}
+			loaded = ormGetSession().getEntityName( entityLoadByPK( 'Vehicle', '1HGCM82633A123456' ) );
+		""", context );
+		// @formatter:on
+		assertThat( variables.get( result ) ).isEqualTo( "transient" );
+		assertThat( variables.getAsString( Key.of( "loaded" ) ) ).isNotEmpty();
+	}
+
 	@DisplayName( "It can merge an entity into the persistence context" )
 	@Test
 	public void testTestBIF() {

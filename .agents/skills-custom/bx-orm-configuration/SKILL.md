@@ -6,7 +6,7 @@ domain: bx-orm
 triggers: ORMConfig, ORM configuration, orm settings, hibernate configuration, connection provider, naming strategy, MacroCase, BoxLangClassNamingStrategy, ORMConnectionProvider, BootstrapServiceRegistry, AvailableSettings, ddl auto, hibernate properties, ORMKeys
 role: expert
 scope: bx-orm
-related-skills: bx-orm-session-management, bx-orm-entity-mapping, bx-orm-cache-integration
+related-skills: bx-orm-session-management, bx-orm-entity-mapping, bx-orm-cache-integration, bx-orm-transactions
 ---
 
 # BoxLang ORM — Configuration
@@ -29,7 +29,7 @@ flowchart LR
 ## Key Classes
 
 | Class | Package | Responsibility |
-|---|---|---|
+| --- | --- | --- |
 | `ORMConfig` | `ortus.boxlang.modules.orm.config` | Configuration manager, normalizer, validator; converts BoxLang settings to Hibernate props |
 | `ORMConnectionProvider` | `ortus.boxlang.modules.orm.config` | Hibernate `ConnectionProvider` backed by BoxLang's `ConnectionManager` |
 | `ORMKeys` | `ortus.boxlang.modules.orm.config` | Central constants: config keys, interception points, ORM metadata keys |
@@ -41,15 +41,23 @@ flowchart LR
 ### Property Categories
 
 | Category | Properties | Default |
-|---|---|---|
+| --- | --- | --- |
 | **Mapping** | `generateMappings`, `autoGenMap` (deprecated) | `true` |
 | **Session** | `autoManageSession` | `false` |
-| **Cache** | `cacheProvider`, `cacheConfigFile`, `cacheConfigProperties` | `BoxCacheProvider` |
+| **Cache** | `secondaryCacheEnabled`, `cacheProvider`, `cacheConfig` (parsed into `cacheRegions` / `cacheConfigFile`) | off, `BoxCacheProvider` |
 | **Schema** | `dialect`, `schema`, `catalog`, `ddl` (none/update/create/create-drop/validate) | auto-detect |
 | **Naming** | `namingStrategy`, `tablePrefix` | `MacroCaseNamingStrategy` |
-| **Paths** | `entityPaths`, `sqlScript` | `[ "/models" ]` |
+| **Paths** | `entityPaths`, `sqlScript` (runs only when `dbcreate` creates the tables; resolved like `expandPath()`) | `[ "/models" ]` |
 | **Logging** | `logSQL`, `logSQLFormat`, `logSQLParameters`, `logLevel` | `false` |
 | **Entity Defaults** | `useDBForMapping`, `eventHandler`, `datasource` | — |
+| **Entity classes** | `staticMethods` (static helper methods such as `User::get( 1 )`, see `statics/StaticEntityMethods`) | `true` |
+
+### Compatibility-only settings
+
+- `proxyLazyLoading` is parsed but has no effect (a lazy to-one is always a proxy); setting it logs a one-time warning
+  (`PROXY_LAZY_LOADING_WARNED`).
+- `sqlScript` and a `cacheConfig` path go through `resolveAppPath()`: used as written when the file exists, else expanded
+  like `expandPath()`, else kept as written. `createsSchema( dbcreate )` decides whether `hbm2ddl.import_files` is set.
 
 ### Configuration Parsing
 
@@ -59,8 +67,8 @@ public class ORMConfig {
     public boolean  generateMappings      = true;
     public boolean  autoManageSession     = false;
     public String   cacheProvider         = "BoxCacheProvider";
-    public String   cacheConfigFile;
-    public IStruct  cacheConfigProperties = CacheConfig.DEFAULTS;
+    public String              cacheConfigFile;                              // resolved cacheConfig path, else null
+    public CacheRegionSettings cacheRegions = CacheRegionSettings.EMPTY;     // BoxCache properties per region (see bx-orm-cache-integration)
     public String   dialect;
     public String   ddl                   = "none";
     public String   namingStrategy        = "MacroCaseNamingStrategy";
@@ -129,36 +137,45 @@ public PhysicalNamingStrategy resolveNamingStrategy() {
 
 ## ORMConnectionProvider — Datasource Bridge
 
-Bridges BoxLang's `ConnectionManager` / `DataSource` system to Hibernate's `ConnectionProvider` interface:
+Bridges BoxLang's `ConnectionManager` / `DataSource` system to Hibernate's `ConnectionProvider`
+interface. It is **transaction-aware**: inside a BoxLang `transaction{}` it hands Hibernate the
+transaction's shared connection so ORM writes ride the BoxLang transaction. **For the full
+transaction design, see the `bx-orm-transactions` skill.**
 
 ```java
 public class ORMConnectionProvider implements ConnectionProvider {
     private Key           datasourceName;
-    private DataSource    dataSource;
     private BoxLangLogger logger;
 
     @Override
     public Connection getConnection() throws SQLException {
-        // Get the current BoxLang context
-        RequestBoxContext context = RequestBoxContext.getCurrent();
-        // Obtain connection from BoxLang's ConnectionManager
-        Connection conn = ConnectionManager
-            .getConnection( context, datasourceName );
-        return conn;
+        ConnectionManager cm = getConnectionManager();       // RequestBoxContext → IJDBCCapableContext
+        DataSource        ds = resolveDatasource( cm );
+        // Transaction-aware: the transaction's shared connection inside a transaction{}, else a fresh pooled one.
+        return cm.getBoxConnection( ds );
     }
 
     @Override
     public void closeConnection( Connection conn ) throws SQLException {
-        // Return connection to BoxLang's connection pool
-        ConnectionManager.releaseConnection( conn, datasourceName );
+        // BoxLang owns the transaction connection (commit/rollback/close). Skip closing it here.
+        if ( isActiveTransactionConnection( conn ) ) {
+            return;
+        }
+        conn.close();  // fresh pooled connection → back to the pool
     }
 
     @Override
     public boolean supportsAggressiveRelease() {
-        return false;  // BoxLang manages connection lifecycle
+        // Required so Hibernate honors DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT (per-statement
+        // acquire/release), which is what lets each statement ride the current transaction connection.
+        return true;
     }
 }
 ```
+
+`SessionFactoryBuilder` pairs this with
+`CONNECTION_HANDLING = PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT`
+so the session never holds a single connection for its lifetime.
 
 **Important**: The `ORMConnectionProvider` is built once per datasource at ORM startup and registered with Hibernate via:
 
@@ -176,7 +193,7 @@ configuration.setProperty(
 Converts camelCase to MACRO_CASE:
 
 | Input | Output |
-|---|---|
+| --- | --- |
 | `authors` | `AUTHORS` |
 | `bookAuthors` | `BOOK_AUTHORS` |
 | `authorContact` | `AUTHOR_CONTACT` |
@@ -252,3 +269,9 @@ src/main/java/ortus/boxlang/modules/orm/config/
 4. **Connection provider is singleton per datasource** — it's created once and reused for all sessions on that datasource; don't hold per-session state.
 5. **`cacheProvider` defaults to `BoxCacheProvider`** — this uses BoxLang's internal cache service; custom providers must implement `ICacheProvider`.
 6. **BootstrapServiceRegistry must be closed on failure** — but not on success; see Session Management skill for details.
+7. **`sqlFunctions`** is parsed by `config/SqlFunctions` and registered with `Configuration.registerFunctionContributor()`;
+   `ormGetSQLFunctions()` and `ormDiagnostics()` read it from the booted app's `ORMConfig`.
+8. **`useDBForMapping`** (default false) runs `mapping/DatabaseMappingInspector` at mapping time: ormtypes and missing ids
+   from JDBC metadata, no foreign keys.
+9. **`hibernate.transaction.coordinator_class`** is set to a per-config `BoxTransactionCoordinatorBuilder` (see the
+   transactions skill) before `hibernateProperties` are applied, so an app can still choose JTA.

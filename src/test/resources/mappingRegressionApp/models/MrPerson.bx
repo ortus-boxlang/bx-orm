@@ -1,0 +1,5 @@
+class accessors="true" persistent="true" table="mr_people" {
+	property name="id" fieldtype="id" generator="assigned" ormType="integer";
+	property name="name" ormType="string";
+	property name="profile" fieldtype="one-to-one" cfc="MrProfile";
+}

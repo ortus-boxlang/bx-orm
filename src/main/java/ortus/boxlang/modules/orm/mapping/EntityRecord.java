@@ -62,6 +62,13 @@ public class EntityRecord {
 	 * The path to the generated XML file for this entity.
 	 */
 	private Path		xmlFilePath;
+
+	/**
+	 * The generated Hibernate {@code mapping.xml} for this entity, held in memory so the session factory can combine
+	 * mappings without a disk round-trip (and so the ORM manifest can store it). May be {@code null} when the mapping was
+	 * pre-generated on disk (i.e. {@code generateMappings=false}) and only its file path is known.
+	 */
+	private String		xmlMapping;
 	/**
 	 * Stores all generated entity metadata for a given entity.
 	 *
@@ -114,6 +121,21 @@ public class EntityRecord {
 	public EntityRecord setXmlFilePath( Path xmlFilePath ) {
 		this.xmlFilePath = xmlFilePath;
 		return this;
+	}
+
+	/**
+	 * Set the in-memory Hibernate {@code mapping.xml} for this entity.
+	 */
+	public EntityRecord setXmlMapping( String xmlMapping ) {
+		this.xmlMapping = xmlMapping;
+		return this;
+	}
+
+	/**
+	 * Retrieve the in-memory Hibernate {@code mapping.xml} for this entity, or {@code null} if only its file path is known.
+	 */
+	public String getXmlMapping() {
+		return xmlMapping;
 	}
 
 	/**
@@ -188,8 +210,17 @@ public class EntityRecord {
 		return resolverPrefix;
 	}
 
+	/**
+	 * The class resolver that loads the entity's class. BoxLang's {@code bx} resolver loads both {@code .bx} and
+	 * {@code .cfc} files; there is no {@code cfc} resolver, so a {@code .cfc} entity must not ask for one (its static
+	 * methods would not be installed).
+	 *
+	 * @param filePath The entity's file path (unused: every file type uses the same resolver).
+	 *
+	 * @return {@code bx}.
+	 */
 	private String parseResolverPrefix( String filePath ) {
-		return filePath.endsWith( "cfc" ) ? "cfc" : ClassLocator.BX_PREFIX;
+		return ClassLocator.BX_PREFIX;
 	}
 
 	/**

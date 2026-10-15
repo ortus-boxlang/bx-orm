@@ -1,0 +1,8 @@
+/**
+ * Exercises a read-only (immutable) entity: inserts persist, but updates are silently ignored by Hibernate.
+ */
+class accessors="true" persistent="true" entityname="Snapshot" table="feat_snapshot" readonly="true" {
+
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+	property name="label" ormType="string" notnull="true";
+}

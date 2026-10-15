@@ -1,0 +1,3 @@
+class accessors="true" persistent="true" table="savings_accounts" extends="Account" joinColumn="id" {
+	property name="rate" ormType="big_decimal";
+}

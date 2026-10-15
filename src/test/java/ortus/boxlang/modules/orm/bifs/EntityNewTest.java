@@ -20,7 +20,6 @@ package ortus.boxlang.modules.orm.bifs;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -44,27 +43,23 @@ public class EntityNewTest extends BaseORMTest {
 		assertThat( variables.get( result ) ).isInstanceOf( IClassRunnable.class );
 	}
 
-	@Disabled( "Can't get the test working." )
-	@DisplayName( "It emits events" )
+	@DisplayName( "It fires the postNew event on the global event handler when creating a new entity" )
 	@Test
 	public void testEntityNewEvent() {
-		variables.put( "post_new_fired", "false" );
-
-		// DynamicObject listener = DynamicObject.of( ( properties ) -> {
-		// variables.put( "post_new_fired", "true" );
-		// } );
-		// instance.getInterceptorService().register( listener, ORMKeys.EVENT_POST_NEW );
-
 		// @formatter:off
 		instance.executeSource(
 			"""
+				application.postNewFired = false;
+				application.postNewEntityName = "";
 				entityNew( "Manufacturer" );
+				fired     = application.postNewFired;
+				firedName = application.postNewEntityName;
 			""",
 			context
 		);
 		// @formatter:on
-		assertThat( variables.get( "post_new_fired" ) ).isEqualTo( "true" );
-		variables.put( "post_new_fired", "false" );
+		assertThat( variables.getAsBoolean( Key.of( "fired" ) ) ).isTrue();
+		assertThat( variables.getAsString( Key.of( "firedName" ) ) ).isEqualTo( "Manufacturer" );
 	}
 
 	@DisplayName( "It can populate new entities with data" )
@@ -83,6 +78,55 @@ public class EntityNewTest extends BaseORMTest {
 		assertInstanceOf( IClassRunnable.class, variables.get( result ) );
 		assertThat( variables.get( Key._NAME ) ).isEqualTo( "Bugatti Automobiles" );
 		assertThat( variables.get( Key.of( "address" ) ) ).isEqualTo( "101 Bugatti Way" );
+	}
+
+	@DisplayName( "It skips keys that are not declared properties, and matches property names in any case" )
+	@Test
+	public void testEntityNewSkipsExtraKeys() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+				result = entityNew( "Manufacturer", { NAME : "Lancia", address : "1 Lancia Way", notAProperty : "nope" } );
+				name   = result.getName();
+			""",
+			context
+		);
+		// @formatter:on
+		IClassRunnable entity = ( IClassRunnable ) variables.get( result );
+		assertThat( variables.get( Key._NAME ) ).isEqualTo( "Lancia" );
+		assertThat( entity.getVariablesScope().containsKey( Key.of( "notAProperty" ) ) ).isFalse();
+	}
+
+	@DisplayName( "An Adobe-style third argument (ignoreExtras) is accepted and ignored" )
+	@Test
+	public void testEntityNewIgnoresThirdArgument() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+				result = entityNew( "Manufacturer", { name : "Abarth", extra : 1 }, true );
+				name   = result.getName();
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.get( Key._NAME ) ).isEqualTo( "Abarth" );
+	}
+
+	@DisplayName( "It sets properties declared on a parent class" )
+	@Test
+	public void testEntityNewSetsInheritedProperties() {
+		// @formatter:off
+		instance.executeSource(
+			"""
+				store       = entityNew( "cbContentStore", { title : "Inherited title", description : "Own property" } );
+				title       = store.getTitle();
+				description = store.getDescription();
+			""",
+			context
+		);
+		// @formatter:on
+		assertThat( variables.get( Key.of( "title" ) ) ).isEqualTo( "Inherited title" );
+		assertThat( variables.get( Key.of( "description" ) ) ).isEqualTo( "Own property" );
 	}
 
 	@DisplayName( "It can populate new entities with association UDFs" )

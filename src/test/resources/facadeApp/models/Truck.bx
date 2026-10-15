@@ -1,0 +1,4 @@
+class accessors="true" persistent="true" table="fac_trucks" {
+	property name="plate" fieldtype="id" generator="uuid" ormType="string";
+	property name="model" ormType="string";
+}

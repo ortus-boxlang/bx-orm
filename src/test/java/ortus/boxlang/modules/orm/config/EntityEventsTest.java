@@ -105,6 +105,7 @@ public class EntityEventsTest extends BaseORMTest {
 					firstModifyDate = author.getModifiedDate();
 					println( "Effective Now: #effectiveNow#, Created: #author.getCreatedDate()#, Modified: #author.getModifiedDate()#, LastLogin: #author.getLastLogin()#" );
 					result = author.getCreatedDate() >= effectiveNow && author.getModifiedDate() >= effectiveNow && author.getLastLogin() >= effectiveNow;
+					sleep( 1000 ); // Ensure the second modifiedDate lands on a later second (DATETIME is second-precision)
 					author.setPassword( "password2" );
 					entitySave( author, true );
 					ormFlush();

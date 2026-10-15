@@ -1,0 +1,12 @@
+/**
+ * Fixture for defaultSort (Phase 4): loads without an order come back by lastName, then firstName descending.
+ */
+class persistent="true" table="sorted_people" defaultSort="lastName, firstName desc" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="firstName" ormType="string" length="50";
+
+	property name="lastName" ormType="string" length="50";
+
+}

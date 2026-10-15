@@ -1,0 +1,15 @@
+/**
+ * Inverse side of the shared-primary-key one-to-one. Its primary key is generated from the associated Person via the
+ * `foreign` generator, and `constrained=true` adds the shared-PK FK constraint.
+ */
+class accessors="true" persistent="true" entityname="Passport" table="feat_passport" {
+
+	property name="id" fieldtype="id" generator="foreign" params="{ property = 'owner' }" ormType="string";
+	property name="number" ormType="string" notnull="true";
+
+	property
+		name       ="owner"
+		fieldtype  ="one-to-one"
+		cfc        ="Person"
+		constrained="true";
+}

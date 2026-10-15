@@ -33,16 +33,17 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 
-import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.cache.providers.ICacheProvider;
+import ortus.boxlang.runtime.config.segments.CacheConfig;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.dynamic.Attempt;
 import ortus.boxlang.runtime.scopes.Key;
+import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.services.CacheService;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
 
@@ -59,7 +60,6 @@ public class BoxHibernateCache<K, V> implements Cache<K, V> {
 	private boolean						closed							= false;
 	private BoxHibernateCacheManager	cacheManager;
 	private MutableConfiguration<K, V>	configuration;
-	private ICacheProvider				cacheProvider;
 	private Key							cacheName;
 
 	private static final String			LEGACY_CACHE_PROVIDER_MAP		= "ConcurrentHashMap";
@@ -357,37 +357,59 @@ public class BoxHibernateCache<K, V> implements Cache<K, V> {
 	}
 
 	/**
-	 * Returns the configured cache provider in a lazy fashion
+	 * The BoxLang cache behind this region, found or created on first use:
+	 * <ol>
+	 * <li>a BoxLang cache that already exists with the region's name is used as is (for example one defined in
+	 * <code>boxlang.json</code>, with its own provider and properties);</li>
+	 * <li>otherwise a cache is created with the ORM <code>cacheProvider</code> (BoxCache by default) and the region's
+	 * properties from <code>cacheConfig</code> (see {@link CacheRegionSettings}).</li>
+	 * </ol>
+	 * The cache is looked up by name on each call (a map lookup), so a cache that BoxLang replaces is picked up.
 	 *
-	 * @return
+	 * @return The BoxLang cache.
 	 */
 	private ICacheProvider getCacheProvider() {
-		if ( this.cacheProvider == null ) {
+		if ( cacheService.hasCache( this.cacheName ) ) {
+			return cacheService.getCache( this.cacheName );
+		}
+		synchronized ( BoxHibernateCache.class ) {
+			if ( cacheService.hasCache( this.cacheName ) ) {
+				return cacheService.getCache( this.cacheName );
+			}
 			IBoxContext context = RequestBoxContext.getCurrent();
 			if ( context == null ) {
 				throw new BoxRuntimeException( "A Hibernate Cache may not be created outside of a BoxLang application context" );
 			}
-
-			ORMApp		ormApp				= ormService.getORMAppByContext( context );
-			ORMConfig	config				= ormApp.getConfig();
-			Key			cacheProviderKey	= Key.of( config.cacheProvider );
-
-			if ( cacheService.hasCache( this.cacheName ) ) {
-				return cacheService.getCache( this.cacheName );
-			} else if ( config.cacheProvider == null
-			    || config.cacheProvider.equalsIgnoreCase( LEGACY_CACHE_PROVIDER_MAP )
-			    || config.cacheProvider.equalsIgnoreCase( LEGACY_CACHE_PROVIDER_TABLE )
-			    || cacheProviderKey.equals( Key.of( ORMConfig.DEFAULT_CACHEPROVIDER ) ) ) {
-				return cacheService.createDefaultCache( this.cacheName );
-			} else if ( cacheService.hasProvider( cacheProviderKey ) ) {
-				return cacheService.createCache( this.cacheName, Key.of( config.cacheProvider ), config.cacheConfigProperties );
-			} else {
-				throw new BoxRuntimeException( "No BoxLang cache provider found with a name of [" + config.cacheProvider + "]." );
+			ORMConfig	config		= ormService.getORMAppByContext( context ).getConfig();
+			IStruct		properties	= config.cacheRegions.propertiesFor( this.cacheName.getName() );
+			String		provider	= config.cacheProvider;
+			if ( isBoxCache( provider ) ) {
+				return cacheService.createDefaultCache( this.cacheName, new CacheConfig( this.cacheName, properties ) );
 			}
+			Key providerKey = Key.of( provider );
+			if ( cacheService.hasProvider( providerKey ) ) {
+				return cacheService.createCache( this.cacheName, providerKey, properties );
+			}
+			throw new BoxRuntimeException( "No BoxLang cache provider found with a name of [" + provider + "]. Use BoxCacheProvider (the "
+			    + "default) or the name of a registered BoxLang cache provider." );
 		}
+	}
 
-		return this.cacheProvider;
-
+	/**
+	 * Whether a <code>cacheProvider</code> setting means BoxLang's own BoxCache: unset, <code>BoxCacheProvider</code>, or the
+	 * legacy aliases <code>ConcurrentHashMap</code>, <code>HashTable</code> and <code>ehcache</code>.
+	 *
+	 * @param provider The setting.
+	 *
+	 * @return True for BoxCache.
+	 */
+	static boolean isBoxCache( String provider ) {
+		return provider == null
+		    || provider.isBlank()
+		    || provider.equalsIgnoreCase( ORMConfig.DEFAULT_CACHEPROVIDER )
+		    || provider.equalsIgnoreCase( LEGACY_CACHE_PROVIDER_MAP )
+		    || provider.equalsIgnoreCase( LEGACY_CACHE_PROVIDER_TABLE )
+		    || provider.equalsIgnoreCase( LEGACY_CACHE_PROVIDER_EHCACHE );
 	}
 
 	/**

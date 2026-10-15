@@ -1,0 +1,15 @@
+/**
+ * A global event handler that must not run while eventHandling=false.
+ */
+class {
+
+	/**
+	 * Would record the call if events ran.
+	 *
+	 * @entity The entity being inserted.
+	 */
+	function preInsert( entity ) {
+		application.globalPreInsertCalls = ( application.globalPreInsertCalls ?: 0 ) + 1;
+	}
+
+}

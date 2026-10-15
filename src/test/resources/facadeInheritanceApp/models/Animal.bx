@@ -1,0 +1,16 @@
+/**
+ * Single-table inheritance root: a discriminator column decides which subclass each row hydrates to.
+ */
+class
+	accessors          ="true"
+	persistent         ="true"
+	entityname         ="Animal"
+	table              ="fac_animals"
+	discriminatorColumn="animalType"
+{
+	property name="id"   fieldtype="id" generator="uuid" ormType="string";
+	property name="name" ormType="string";
+
+	// A to-many on the inheritance root, so subclasses (Cat/Dog) inherit getToys()/addToy()/removeToy().
+	property name="toys" singularName="toy" fieldtype="one-to-many" cfc="Toy" fkcolumn="FK_animalId" cascade="all-delete-orphan";
+}

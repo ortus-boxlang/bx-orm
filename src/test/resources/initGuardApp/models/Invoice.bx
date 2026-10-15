@@ -1,0 +1,3 @@
+class persistent="true" table="invoice" extends="BaseDocument" joinColumn="id" {
+	property name="total" ormType="integer";
+}

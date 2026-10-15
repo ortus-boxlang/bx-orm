@@ -1,0 +1,18 @@
+/**
+ * Owning side of a many-to-many via a link table.
+ */
+class accessors="true" persistent="true" entityname="Student" table="feat_student" {
+
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+	property name="name" ormType="string" notnull="true";
+
+	property
+		name        ="courses"
+		singularName="course"
+		fieldtype   ="many-to-many"
+		cfc         ="Course"
+		linktable   ="feat_student_course"
+		fkcolumn    ="FK_studentId"
+		inversejoincolumn="FK_courseId"
+		cascade     ="save-update";
+}

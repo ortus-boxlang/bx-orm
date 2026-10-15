@@ -1,22 +1,22 @@
 class {
-	// App name and dialect come from system properties so one app can boot with an explicit dialect and with auto-detection
-	this.name = getSystemSetting( "PG_APP_NAME", "BXORMPostgreSQLTest" );
+	this.name = "BXORMPostgresTest";
 
 	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
 
 	this.datasources = {
 		"PostgresTestDB": {
-			"connectionString": "jdbc:postgresql://#getSystemSetting( "PG_HOST", "127.0.0.1" )#:#getSystemSetting( "PG_PORT", 5432 )#/#getSystemSetting( "PG_DATABASE", "bxorm_test" )#",
+			"connectionString": "jdbc:postgresql://#getSystemSetting( "PG_HOST", "127.0.0.1" )#:#getSystemSetting( "PG_PORT", 5432 )#/#getSystemSetting( "PG_DB", "ormtest" )#",
 			"username"        : "#getSystemSetting( "PG_USER", "postgres" )#",
-			"password"        : "#getSystemSetting( "PG_PASSWORD", "" )#"
+			"password"        : "#getSystemSetting( "PG_PASSWORD", "postgres" )#"
 		}
 	};
 	this.datasource = "PostgresTestDB";
 
 	this.ormSettings = {
 		"datasource"       : "PostgresTestDB",
+		"dialect"          : "PostgreSQL",
 		"entityPaths"      : [ "/root/models" ],
-		"dialect"          : "#getSystemSetting( "PG_ORM_DIALECT", "" )#",
+		"saveMapping"      : "true",
 		"logSQL"           : "false",
 		"dbcreate"         : "dropcreate",
 		"cacheprovider"    : "ConcurrentHashMap",

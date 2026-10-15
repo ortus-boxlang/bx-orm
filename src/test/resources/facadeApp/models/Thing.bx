@@ -1,0 +1,4 @@
+class accessors="true" persistent="true" table="things" {
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+	property name="name" ormType="string";
+}

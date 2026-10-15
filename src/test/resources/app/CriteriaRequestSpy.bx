@@ -1,0 +1,17 @@
+/**
+ * Test interceptor: records the condition types announced by entityCriteria() in the request scope, the way a
+ * framework listener (e.g. ColdBox's interceptor bridge) reads request-level state.
+ */
+class {
+
+	/**
+	 * Record an added condition.
+	 *
+	 * @data The event data: type and criteriaBuilder
+	 */
+	function onCriteriaBuilderAddition( data ){
+		request.criteriaSpyTypes = request.criteriaSpyTypes ?: [];
+		request.criteriaSpyTypes.append( arguments.data.type );
+	}
+
+}

@@ -1,0 +1,10 @@
+class accessors="true" persistent="true" table="fac_dealers" {
+
+	property name="id" fieldtype="id" generator="uuid" ormType="string";
+
+	property name="name" ormType="string";
+
+	function init() {
+		return this;
+	}
+}

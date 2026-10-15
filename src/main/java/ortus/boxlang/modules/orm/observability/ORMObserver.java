@@ -108,6 +108,17 @@ public final class ORMObserver {
 	}
 
 	/**
+	 * The connection behind an observed connection, or the connection itself when it was not wrapped.
+	 */
+	public static Connection unwrap( Connection connection ) {
+		if ( connection != null && Proxy.isProxyClass( connection.getClass() )
+		    && Proxy.getInvocationHandler( connection ) instanceof ConnectionHandler handler ) {
+			return handler.delegate;
+		}
+		return connection;
+	}
+
+	/**
 	 * Hint the HQL behind the statements run on this thread until {@link #clearHints()} is called.
 	 */
 	public static void hintHql( String hql ) {

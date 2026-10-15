@@ -1,0 +1,9 @@
+/**
+ * Exercises the `identity` id generator (Derby IDENTITY column), plus dynamicUpdate/dynamicInsert entity flags.
+ */
+class accessors="true" persistent="true" entityname="Counter" table="feat_counter" dynamicupdate="true" dynamicinsert="true" {
+
+	property name="id" fieldtype="id" generator="identity" ormType="integer";
+	property name="label" ormType="string" notnull="true";
+	property name="tally" ormType="integer" notnull="true" default="0";
+}

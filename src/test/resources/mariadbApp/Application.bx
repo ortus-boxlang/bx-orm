@@ -1,0 +1,26 @@
+class {
+	this.name = "BXORMMariaDBTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"MariaDBTestDB": {
+			"connectionString": "jdbc:mariadb://#getSystemSetting( "MARIADB_HOST", "127.0.0.1" )#:#getSystemSetting( "MARIADB_PORT", 3306 )#/#getSystemSetting( "MARIADB_DB", "ormtest" )#",
+			"username"        : "#getSystemSetting( "MARIADB_USER", "root" )#",
+			"password"        : "#getSystemSetting( "MARIADB_PASSWORD", "root" )#"
+		}
+	};
+	this.datasource = "MariaDBTestDB";
+
+	this.ormSettings = {
+		"datasource"       : "MariaDBTestDB",
+		"dialect"          : "MariaDB",
+		"entityPaths"      : [ "/root/models" ],
+		"saveMapping"      : "true",
+		"logSQL"           : "false",
+		"dbcreate"         : "dropcreate",
+		"cacheprovider"    : "ConcurrentHashMap",
+		"ignoreParseErrors": true
+	};
+	this.ormEnabled = "true";
+}

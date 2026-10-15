@@ -1,0 +1,84 @@
+/**
+ * Fixture for EventVetoTest: its own preInsert / preUpdate / preDelete return false when asked to, and it can ask the
+ * global event handler (models/events/EventHandler.bx) to veto an event instead.
+ */
+class persistent="true" table="veto_things" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="name" ormType="string" length="50";
+
+	/** Events this entity's own handlers veto, e.g. "preInsert,preUpdate". */
+	property name="vetoEvents" persistent="false" default="";
+
+	/** Events the global event handler should veto for this entity. */
+	property name="globalVetoEvents" persistent="false" default="";
+
+	/** How many times each pre-event reached this entity. */
+	property name="calls" persistent="false";
+
+	/**
+	 * Count a pre-event call and answer whether this entity vetoes it.
+	 *
+	 * @event The event name.
+	 *
+	 * @return False to veto, true to let the operation continue.
+	 */
+	private boolean function answer( required string event ) {
+		if ( isNull( variables.calls ) ) {
+			variables.calls = {};
+		}
+		variables.calls[ arguments.event ] = ( variables.calls[ arguments.event ] ?: 0 ) + 1;
+		return !listFindNoCase( variables.vetoEvents, arguments.event );
+	}
+
+	/**
+	 * Whether the global handler should veto an event for this entity.
+	 *
+	 * @event The event name.
+	 *
+	 * @return True when the global handler must return false.
+	 */
+	public boolean function wantsGlobalVeto( required string event ) {
+		return listFindNoCase( variables.globalVetoEvents, arguments.event ) > 0;
+	}
+
+	/**
+	 * How many times an event reached this entity's handler.
+	 *
+	 * @event The event name.
+	 *
+	 * @return The call count.
+	 */
+	public numeric function callCount( required string event ) {
+		return isNull( variables.calls ) ? 0 : ( variables.calls[ arguments.event ] ?: 0 );
+	}
+
+	/**
+	 * Entity preInsert: vetoes when "preInsert" is in vetoEvents.
+	 *
+	 * @return False to veto the insert.
+	 */
+	function preInsert() {
+		return answer( "preInsert" );
+	}
+
+	/**
+	 * Entity preUpdate: vetoes when "preUpdate" is in vetoEvents.
+	 *
+	 * @return False to veto the update.
+	 */
+	function preUpdate() {
+		return answer( "preUpdate" );
+	}
+
+	/**
+	 * Entity preDelete: vetoes when "preDelete" is in vetoEvents.
+	 *
+	 * @return False to veto the delete.
+	 */
+	function preDelete() {
+		return answer( "preDelete" );
+	}
+
+}

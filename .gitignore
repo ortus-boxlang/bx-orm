@@ -34,5 +34,6 @@ src/test/resources/sqliteApp/models/**/*.hbm*
 ### AI Files ###
 .agents/skills/**
 .agents/guidelines/**
-# Mappings generated while booting the PostgreSQL test app
-src/test/resources/postgresApp/models/*.hbm.xml
+# ORM manifest boot cache (regenerated; not committed in this repo)
+.bxorm/
+**/.bxorm/

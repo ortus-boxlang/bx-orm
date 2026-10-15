@@ -17,17 +17,14 @@
  */
 package ortus.boxlang.modules.orm.hibernate;
 
-import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 import org.hibernate.EntityNameResolver;
-import org.hibernate.collection.internal.PersistentBag;
+import org.hibernate.collection.spi.PersistentBag;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.tuple.Instantiator;
-import org.hibernate.tuple.entity.EntityMetamodel;
+import org.hibernate.metamodel.spi.EntityInstantiator;
 
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMContext;
@@ -46,6 +43,7 @@ import ortus.boxlang.runtime.runnables.IClassRunnable;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.scopes.VariablesScope;
 import ortus.boxlang.runtime.types.Argument;
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeCollectionView;
 import ortus.boxlang.runtime.types.Array;
 import ortus.boxlang.runtime.types.DynamicFunction;
 import ortus.boxlang.runtime.types.IStruct;
@@ -61,7 +59,7 @@ import ortus.boxlang.runtime.validation.Validator;
  *
  * @since 1.0.0
  */
-public class BoxClassInstantiator implements Instantiator {
+public class BoxClassInstantiator implements EntityInstantiator {
 
 	/**
 	 * Runtime
@@ -73,10 +71,8 @@ public class BoxClassInstantiator implements Instantiator {
 	 */
 	protected BoxLangLogger				logger;
 
-	private EntityMetamodel				entityMetamodel;
-	@SuppressWarnings( "unused" ) // This throws a warning but the declaratio is needed for compilation
-	private PersistentClass				mappingInfo;
 	private String						entityName;
+	private EntityRecord				entityRecord;
 	private List<String>				subclassClassNames	= new ArrayList<>();
 	private EntityNameResolver			entityNameResolver	= new BoxEntityNameResolver();
 
@@ -91,20 +87,16 @@ public class BoxClassInstantiator implements Instantiator {
 	/**
 	 * Constructor
 	 *
-	 * @param entityMetamodel The entity metamodel
-	 * @param mappingInfo
+	 * @param mappingInfo  The Hibernate boot-time descriptor of the entity
+	 * @param entityRecord The BoxLang entity record (class location and metadata) for the entity
 	 */
-	public BoxClassInstantiator( EntityMetamodel entityMetamodel, PersistentClass mappingInfo ) {
-		this.logger				= runtime.getLoggingService().getLogger( "orm" );
-		this.entityMetamodel	= entityMetamodel;
-		this.mappingInfo		= mappingInfo;
-		this.entityName			= mappingInfo.getEntityName();
+	public BoxClassInstantiator( PersistentClass mappingInfo, EntityRecord entityRecord ) {
+		this.logger			= runtime.getLoggingService().getLogger( "orm" );
+		this.entityName		= mappingInfo.getEntityName();
+		this.entityRecord	= entityRecord;
 
 		if ( mappingInfo.hasSubclasses() ) {
-			@SuppressWarnings( "unchecked" )
-			Iterator<PersistentClass> itr = mappingInfo.getSubclassClosureIterator();
-			while ( itr.hasNext() ) {
-				final PersistentClass subclassInfo = itr.next();
+			for ( PersistentClass subclassInfo : mappingInfo.getSubclassClosure() ) {
 				subclassClassNames.add( subclassInfo.getEntityName() );
 			}
 		}
@@ -158,6 +150,13 @@ public class BoxClassInstantiator implements Instantiator {
 					    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
 					    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
 				    }
+
+				    // getX() override for a managed to-many: reads from a snapshot (so getX().each( e => removeX(e) ) is safe)
+				    // while writes through the returned array persist. Replaces only BoxLang's generated accessor - a getter the
+				    // developer wrote is left alone (see installToManyGetter).
+				    if ( association.getAsString( Key.type ).endsWith( "to-many" ) ) {
+					    installToManyGetter( theEntity, getToManyGetMethod( association ) );
+				    }
 			    }
 		    } );
 
@@ -205,6 +204,12 @@ public class BoxClassInstantiator implements Instantiator {
 						    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
 						    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
 					    }
+
+					    // getX() snapshot override for an INHERITED to-many association - same safe-iteration guarantee as the
+					    // main loop above, which otherwise would not apply to associations declared on a persistent parent.
+					    if ( associationType.endsWith( "to-many" ) ) {
+						    installToManyGetter( theEntity, getToManyGetMethod( association ) );
+					    }
 				    }
 			    } );
 		}
@@ -233,20 +238,23 @@ public class BoxClassInstantiator implements Instantiator {
 	}
 
 	@Override
-	public Object instantiate( Serializable id ) {
-		IBoxContext	context	= RequestBoxContext.getCurrent();
-		ORMApp		ormApp	= ORMContext.getForContext( context ).getORMApp();
-		if ( ormApp == null ) {
-			throw new BoxRuntimeException( "ORM application is not initialized." );
-		}
-		EntityRecord entityRecord = ormApp.lookupEntity( this.entityName, true );
-		// TODO: Because we have an id we should be returning a loded entity. Any attempt to do so, however, creates stack overflows.
-		return instantiate( null, entityRecord, null );
+	public Object instantiate() {
+		return instantiate( RequestBoxContext.getCurrent(), this.entityRecord, null );
 	}
 
+	/**
+	 * Strict class check used by Hibernate to pick the concrete persister in an inheritance hierarchy: true only when
+	 * the object's entity name is exactly this instantiator's entity (subclasses do not match).
+	 */
 	@Override
-	public Object instantiate() {
-		return instantiate( null );
+	public boolean isSameClass( Object object ) {
+		if ( object instanceof IClassRunnable theClass ) {
+			// Accept either the Hibernate entity-name (the facade FQN this.entityName carries in the modern mapping) or the
+			// BoxLang short name, since the resolver may report either for a raw IClassRunnable.
+			String objectEntityName = entityNameResolver.resolveEntityName( theClass );
+			return this.entityName.equals( objectEntityName ) || entityRecord.getEntityName().equals( objectEntityName );
+		}
+		return false;
 	}
 
 	@Override
@@ -255,7 +263,9 @@ public class BoxClassInstantiator implements Instantiator {
 			logger.trace( "Checking to see if {} is an instance of {}", theClass.getClass().getName(), this.entityName );
 			String objectEntityName = entityNameResolver.resolveEntityName( theClass );
 			logger.trace( "Looking at annotations, found entity name {}", objectEntityName );
+			// Match on the Hibernate entity-name (facade FQN), the BoxLang short name, or any subclass entity name.
 			return this.entityName.equals( objectEntityName )
+			    || entityRecord.getEntityName().equals( objectEntityName )
 			    || subclassClassNames.contains( objectEntityName );
 		}
 		return false;
@@ -324,10 +334,11 @@ public class BoxClassInstantiator implements Instantiator {
 						    return bagCollection.size() > 0;
 					    }
 				    }
+				    // The scope collection is a plain Array (unmanaged entity) or a FacadeCollectionView (managed); both are List<Object>.
 				    if ( itemToCheck != null ) {
-					    return ( ( Array ) collection ).stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
+					    return ( ( List<Object> ) collection ).stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
 				    } else {
-					    return ( ( Array ) collection ).size() > 0;
+					    return ( ( List<Object> ) collection ).size() > 0;
 				    }
 			    } else {
 				    if ( itemToCheck != null ) {
@@ -354,6 +365,60 @@ public class BoxClassInstantiator implements Instantiator {
 	}
 
 	/**
+	 * Install the to-many getter on an entity instance, unless the developer wrote their own. The ORM getter replaces only
+	 * BoxLang's auto-generated accessor ({@code accessors="true"}); a hand-written {@code getX()} in the entity source is
+	 * the developer's code and is never overridden.
+	 *
+	 * @param theEntity The entity instance.
+	 * @param getUDF    The ORM to-many getter.
+	 */
+	private static void installToManyGetter( IClassRunnable theEntity, DynamicFunction getUDF ) {
+		Object existing = theEntity.getThisScope().get( getUDF.getName() );
+		if ( existing != null && ! ( existing instanceof ortus.boxlang.runtime.runnables.accessors.GeneratedGetter ) ) {
+			return;
+		}
+		theEntity.getThisScope().put( getUDF.getName(), getUDF );
+		theEntity.getVariablesScope().put( getUDF.getName(), getUDF );
+	}
+
+	/**
+	 * Create a `get*` accessor for a to-many association (e.g. {@code getVehicles()}) that, in facade (POJO) mode, returns
+	 * a stable snapshot of the collection rather than the live {@link FacadeCollectionView}.
+	 * <p>
+	 * The facade view is a live window over Hibernate's managed collection, so structurally modifying the association
+	 * while iterating what {@code getX()} returned (the common {@code getChildren().each( c => parent.removeChild( c ) )}
+	 * pattern) would shift indices under BoxLang's index-based iteration and drop or null elements. Returning a snapshot
+	 * (a copy of the current {@link IClassRunnable} elements) makes iteration stable while {@code addX}/{@code removeX}
+	 * keep mutating the live view underneath - matching BoxLang {@code Array} semantics. An unmanaged entity's scope
+	 * still holds a plain {@code Array}, which is returned as-is (live).
+	 *
+	 * @param associationMeta The metadata for the association.
+	 *
+	 * @return A DynamicFunction that overrides the generated accessor for this association.
+	 */
+	public DynamicFunction getToManyGetMethod( IStruct associationMeta ) {
+		String	propertyName	= associationMeta.getAsString( Key._NAME );
+		Key		collectionKey	= Key.of( propertyName );
+		Key		methodName		= Key.of( "get" + Character.toUpperCase( propertyName.charAt( 0 ) ) + propertyName.substring( 1 ) );
+		return new DynamicFunction(
+		    methodName,
+		    ( context, function ) -> {
+			    Object collection = context.getThisClass().getVariablesScope().get( collectionKey );
+			    if ( collection instanceof FacadeCollectionView view ) {
+				    // Managed collection: reads from a snapshot (safe to removeX() while iterating), writes made through the
+				    // returned array (append/arrayAppend/deleteAt/...) go to Hibernate's live collection so they persist.
+				    return Array.fromList( new ortus.boxlang.modules.orm.hibernate.facade.ToManyGetterView( view ) );
+			    }
+			    return collection;
+		    },
+		    new Argument[] {},
+		    "any",
+		    "Returns the [" + collectionKey.getName() + "] association collection.",
+		    Struct.EMPTY
+		);
+	}
+
+	/**
 	 * Create an `add*` method for the entity association, like `addManufacturer()`, which appends the provided entity to the association.
 	 * <p>
 	 * Supports both array and struct associations, or, in the Hibernate vernacular, "bag" and "map" collections.
@@ -363,6 +428,7 @@ public class BoxClassInstantiator implements Instantiator {
 	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
+	@SuppressWarnings( "unchecked" )
 	public DynamicFunction getAddMethod( String collectionType, IStruct associationMeta ) {
 		// uses the singular name, if it exists
 		Key	methodName		= getMethodName( "add", associationMeta );
@@ -390,12 +456,19 @@ public class BoxClassInstantiator implements Instantiator {
 				    if ( bag instanceof PersistentBag bagCollection ) {
 					    bagCollection.add( itemToAdd );
 				    } else {
-					    ( ( Array ) bag ).append( itemToAdd );
+					    // Plain Array (unmanaged entity) or FacadeCollectionView (managed); both are List<Object>. The view wraps
+					    // the added IClassRunnable into a facade and pushes it onto the managed Hibernate collection.
+					    ( ( List<Object> ) bag ).add( itemToAdd );
 				    }
 			    } else {
-				    // @TODO: implement/test this
+				    // Struct-typed collection: a BoxLang Struct (unmanaged entity) or a FacadeMapView over Hibernate's managed map.
 				    String structKey = StringCaster.cast( context.getArgumentsScope().get( Key.key ) );
-				    variablesScope.getAsStruct( collectionKey ).put( structKey, itemToAdd );
+				    Object map		= variablesScope.get( collectionKey );
+				    if ( map instanceof IStruct struct ) {
+					    struct.put( structKey, itemToAdd );
+				    } else {
+					    ( ( java.util.Map<Object, Object> ) map ).put( structKey, itemToAdd );
+				    }
 			    }
 
 			    // Return this for chainability.
@@ -421,6 +494,7 @@ public class BoxClassInstantiator implements Instantiator {
 	 *
 	 * @return A DynamicFunction that can be injected into the entity class.
 	 */
+	@SuppressWarnings( "unchecked" )
 	public DynamicFunction getRemoveMethod( String collectionType, IStruct associationMeta ) {
 		// uses the singular name, if it exists
 		Key	methodName		= getMethodName( "remove", associationMeta );
@@ -430,9 +504,6 @@ public class BoxClassInstantiator implements Instantiator {
 		    methodName,
 		    ( context, function ) -> {
 			    boolean		isArrayCollection	= collectionType == "bag";
-			    List<Key>	keys				= this.entityMetamodel.getIdentifierProperty().getName() != null
-			        ? List.of( Key.of( this.entityMetamodel.getIdentifierProperty().getName() ) )
-			        : new ArrayList<>();
 			    IClassRunnable itemToRemove		= ( IClassRunnable ) context.getArgumentsScope().get( collectionKey );
 			    VariablesScope variablesScope	= context.getThisClass().getVariablesScope();
 
@@ -449,29 +520,39 @@ public class BoxClassInstantiator implements Instantiator {
 				    if ( collection instanceof PersistentBag bagCollection ) {
 					    bagCollection.remove( itemToRemove );
 				    } else {
-					    Array arrayCollection = ( Array ) collection;
-					    arrayCollection.stream()
-					        .map( item -> ( IClassRunnable ) item )
-					        .filter( item -> {
-						        VariablesScope itemVariablesScope	= item.getVariablesScope();
-						        VariablesScope itemToRemoveVariablesScope = itemToRemove.getVariablesScope();
-						        for ( Key key : keys ) {
-							        if ( !itemVariablesScope.containsKey( key ) || !itemToRemoveVariablesScope.containsKey( key ) ) {
-								        return false;
-							        }
-							        if ( !itemVariablesScope.get( key ).equals( itemToRemoveVariablesScope.get( key ) ) ) {
-								        return false;
-							        }
-						        }
-						        return true;
-					        } )
-					        .findFirst()
-					        .ifPresent( arrayCollection::remove );
+					    // Remove the element the developer passed. It comes from iterating this same association, so it matches
+					    // regardless of the element's id property name (not necessarily the owner's - e.g. owner id "id", element
+					    // id "vin").
+					    List<Object> arrayCollection = ( List<Object> ) collection;
+					    if ( arrayCollection instanceof Array ) {
+						    // Unmanaged BoxLang Array of transients: prefer an exact identity match so a distinct-but-equal transient
+						    // (two content-equal, id-less instances) is not removed by mistake; fall back to equals().
+						    int identityIndex = indexOfIdentity( arrayCollection, itemToRemove );
+						    if ( identityIndex >= 0 ) {
+							    arrayCollection.remove( identityIndex );
+						    } else {
+							    arrayCollection.remove( itemToRemove );
+						    }
+					    } else {
+						    // Managed FacadeCollectionView: its remove()/equals() unwrap facades so an IClassRunnable argument matches
+						    // its managed facade in the backing collection.
+						    if ( !arrayCollection.remove( itemToRemove ) ) {
+							    arrayCollection.stream()
+							        .filter( item -> item == itemToRemove || java.util.Objects.equals( item, itemToRemove ) )
+							        .findFirst()
+							        .ifPresent( arrayCollection::remove );
+						    }
+					    }
 				    }
 			    } else {
 				    // @TODO: test this!
 				    String structKey = StringCaster.cast( context.getArgumentsScope().get( Key.key ) );
-				    variablesScope.getAsStruct( collectionKey ).remove( structKey );
+				    Object map		= variablesScope.get( collectionKey );
+				    if ( map instanceof IStruct struct ) {
+					    struct.remove( Key.of( structKey ) );
+				    } else if ( map instanceof java.util.Map<?, ?> javaMap ) {
+					    javaMap.remove( structKey );
+				    }
 			    }
 
 			    // Return this for chainability.
@@ -502,5 +583,17 @@ public class BoxClassInstantiator implements Instantiator {
 		)
 		    .invokeConstructor( context )
 		    .unWrapBoxLangClass();
+	}
+
+	/**
+	 * Index of the first element that is the exact same instance ({@code ==}) as {@code target}, or {@code -1} if none.
+	 */
+	private static int indexOfIdentity( List<Object> list, Object target ) {
+		for ( int i = 0; i < list.size(); i++ ) {
+			if ( list.get( i ) == target ) {
+				return i;
+			}
+		}
+		return -1;
 	}
 }

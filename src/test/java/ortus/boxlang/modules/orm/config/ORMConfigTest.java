@@ -20,9 +20,13 @@ package ortus.boxlang.modules.orm.config;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import ortus.boxlang.runtime.types.Array;
@@ -38,7 +42,7 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.dialect, "DerbyTenSeven"
 		), context ).toHibernateConfig();
 
-		assertEquals( "org.hibernate.dialect.DerbyTenSevenDialect", config.getProperty( AvailableSettings.DIALECT ) );
+		assertEquals( "org.hibernate.community.dialect.DerbyDialect", config.getProperty( AvailableSettings.DIALECT ) );
 	}
 
 	@Test
@@ -48,7 +52,36 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.dialect, "DerbyTenSevenDialect"
 		), context ).toHibernateConfig();
 
-		assertEquals( "org.hibernate.dialect.DerbyTenSevenDialect", config.getProperty( AvailableSettings.DIALECT ) );
+		assertEquals( "org.hibernate.community.dialect.DerbyDialect", config.getProperty( AvailableSettings.DIALECT ) );
+	}
+
+	@Test
+	public void testLegacyDialectClassNames() {
+		// Hibernate 5 dialect classes that Hibernate 7 removed resolve through the alias table
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "org.hibernate.dialect.MySQL5InnoDBDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "org.hibernate.dialect.MySQLDialect", config.getProperty( AvailableSettings.DIALECT ) );
+
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "org.hibernate.dialect.DerbyTenSevenDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "org.hibernate.community.dialect.DerbyDialect", config.getProperty( AvailableSettings.DIALECT ) );
+
+		// Current Hibernate 7 classes and custom dialects are used as is
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "org.hibernate.dialect.MySQLDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "org.hibernate.dialect.MySQLDialect", config.getProperty( AvailableSettings.DIALECT ) );
+
+		config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dialect, "com.example.MyDialect"
+		), context ).toHibernateConfig();
+		assertEquals( "com.example.MyDialect", config.getProperty( AvailableSettings.DIALECT ) );
 	}
 
 	@Test
@@ -57,7 +90,7 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.datasource, "TestDB"
 		), context ).toHibernateConfig();
 
-		assertEquals( "true", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+		assertEquals( "allow", config.getProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT ) );
 		assertEquals( SQLiteDialectResolver.class.getName(), config.getProperty( AvailableSettings.DIALECT_RESOLVERS ) );
 	}
 
@@ -68,7 +101,7 @@ public class ORMConfigTest extends BaseORMTest {
 		    ORMKeys.dialect, "DerbyTenSeven"
 		), context ).toHibernateConfig();
 
-		assertEquals( "false", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+		assertEquals( "disallow", config.getProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT ) );
 	}
 
 	@Test
@@ -123,7 +156,7 @@ public class ORMConfigTest extends BaseORMTest {
 
 		Configuration config = ormConfig.toHibernateConfig();
 
-		assertEquals( "true", config.getProperty( "hibernate.temp.use_jdbc_metadata_defaults" ) );
+		assertEquals( "allow", config.getProperty( AvailableSettings.ALLOW_METADATA_ON_BOOT ) );
 		assertThat( config.getProperty( AvailableSettings.DIALECT ) ).isNull();
 	}
 
@@ -268,6 +301,73 @@ public class ORMConfigTest extends BaseORMTest {
 		), context ).toHibernateConfig();
 
 		assertEquals( "false", config.getProperty( AvailableSettings.ALLOW_UPDATE_OUTSIDE_TRANSACTION ) );
+	}
+
+	@DisplayName( "proxyLazyLoading is accepted and has no effect on the Hibernate configuration" )
+	@Test
+	public void testProxyLazyLoadingIsAccepted() {
+		Configuration	withSetting	= new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.proxyLazyLoading, true
+		), context ).toHibernateConfig();
+		Configuration	without		= new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB"
+		), context ).toHibernateConfig();
+
+		assertEquals( hibernateSettings( without ), hibernateSettings( withSetting ) );
+	}
+
+	/**
+	 * The plain string Hibernate settings of a configuration, leaving out object instances (which differ per build).
+	 *
+	 * @param config The Hibernate configuration.
+	 *
+	 * @return The {@code hibernate.*} settings whose values are strings.
+	 */
+	private static java.util.Map<String, String> hibernateSettings( Configuration config ) {
+		java.util.Map<String, String> settings = new java.util.TreeMap<>();
+		config.getProperties().forEach( ( key, value ) -> {
+			if ( key.toString().startsWith( "hibernate." ) && value instanceof String text && !text.contains( "@" ) ) {
+				settings.put( key.toString(), text );
+			}
+		} );
+		return settings;
+	}
+
+	@DisplayName( "sqlScript is read and handed to Hibernate when dbcreate creates the tables" )
+	@Test
+	public void testSqlScriptRunsWithDropCreate() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dbcreate, "dropcreate",
+		    ORMKeys.sqlScript, "src/test/resources/app/sqlscript-test.sql"
+		), context ).toHibernateConfig();
+
+		assertEquals( "src/test/resources/app/sqlscript-test.sql", config.getProperty( AvailableSettings.HBM2DDL_IMPORT_FILES ) );
+	}
+
+	@DisplayName( "sqlScript is ignored when dbcreate does not create the tables" )
+	@Test
+	public void testSqlScriptIgnoredWithUpdate() {
+		Configuration config = new ORMConfig( Struct.of(
+		    ORMKeys.datasource, "TestDB",
+		    ORMKeys.dbcreate, "update",
+		    ORMKeys.sqlScript, "src/test/resources/app/sqlscript-test.sql"
+		), context ).toHibernateConfig();
+
+		assertNull( config.getProperty( AvailableSettings.HBM2DDL_IMPORT_FILES ) );
+	}
+
+	@DisplayName( "createsSchema is true only for dbcreate values that create the tables" )
+	@Test
+	public void testCreatesSchema() {
+		assertTrue( ORMConfig.createsSchema( "dropcreate" ) );
+		assertTrue( ORMConfig.createsSchema( "create" ) );
+		assertTrue( ORMConfig.createsSchema( "create-drop" ) );
+		assertTrue( ORMConfig.createsSchema( "drop-and-create" ) );
+		assertFalse( ORMConfig.createsSchema( "update" ) );
+		assertFalse( ORMConfig.createsSchema( "none" ) );
+		assertFalse( ORMConfig.createsSchema( null ) );
 	}
 
 	@Test

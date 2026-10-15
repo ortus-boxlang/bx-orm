@@ -1,0 +1,14 @@
+/**
+ * Fixture for automatic timestamps (Phase 3B): createdDate is set once on insert, updatedDate on every write.
+ */
+class persistent="true" table="stamped_notes" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="title" ormType="string" length="100";
+
+	property name="createdDate" ormType="timestamp" autoTimestamp="create";
+
+	property name="updatedDate" ormType="timestamp" autoTimestamp="update";
+
+}

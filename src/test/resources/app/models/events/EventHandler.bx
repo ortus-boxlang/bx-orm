@@ -37,7 +37,11 @@ class {
 	/**
 	 * preDelete called by hibernate which in turn announces a coldbox interception: ORMPreDelete
 	 */
-	public void function preDelete( any entity ) {
+	public function preDelete( any entity ) {
+		// Veto fixture (EventVetoTest): an entity that asks for a global veto of this event is refused here.
+		if ( !isNull( arguments.entity ) && structKeyExists( arguments.entity, "wantsGlobalVeto" ) && arguments.entity.wantsGlobalVeto( "preDelete" ) ) {
+			return false;
+		}
 		System.out.println(
 				"EventHandler action firing: ORMPreDelete"
 			);
@@ -46,7 +50,11 @@ class {
 	/**
 	 * preUpdate called by hibernate which in turn announces a coldbox interception: ORMPreUpdate
 	 */
-	public void function preUpdate( any entity, Struct oldData = {} ) {
+	public function preUpdate( any entity, Struct oldData = {} ) {
+		// Veto fixture (EventVetoTest): an entity that asks for a global veto of this event is refused here.
+		if ( !isNull( arguments.entity ) && structKeyExists( arguments.entity, "wantsGlobalVeto" ) && arguments.entity.wantsGlobalVeto( "preUpdate" ) ) {
+			return false;
+		}
 		System.out.println(
 				"EventHandler action firing: ORMPreUpdate"
 			);
@@ -66,7 +74,11 @@ class {
 	/**
 	 * preInsert called by hibernate which in turn announces a coldbox interception: ORMPreInsert
 	 */
-	public void function preInsert( any entity ) {
+	public function preInsert( any entity ) {
+		// Veto fixture (EventVetoTest): an entity that asks for a global veto of this event is refused here.
+		if ( !isNull( arguments.entity ) && structKeyExists( arguments.entity, "wantsGlobalVeto" ) && arguments.entity.wantsGlobalVeto( "preInsert" ) ) {
+			return false;
+		}
 		System.out.println(
 				"EventHandler action firing: ORMPreInsert"
 			);
@@ -120,12 +132,28 @@ class {
 	}
 
 	/**
-	 * postNew called by ColdBox which in turn announces a coldbox interception: ORMPostNew
+	 * postNew: core bx-orm event fired by entityNew() when a new entity is created.
 	 */
 	public void function postNew( any entity, any entityName ) {
 		// Process the announcement
 		System.out.println(
 				"EventHandler action firing: ORMPostNew"
 			);
+		application.postNewFired = true;
+		application.postNewEntityName = arguments.entityName;
+	}
+
+	/**
+	 * postCommit: records the committed writes of CommitNote entities (PostCommitTest).
+	 *
+	 * @entity     The entity.
+	 * @entityName The entity name.
+	 * @action     insert, update or delete.
+	 */
+	public void function postCommit( any entity, string entityName, string action ) {
+		if ( entityName == "CommitNote" ) {
+			request.globalCommitLog = request.globalCommitLog ?: [];
+			request.globalCommitLog.append( action & ":" & entity.getTitle() );
+		}
 	}
 }

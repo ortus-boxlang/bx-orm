@@ -1,0 +1,9 @@
+/**
+ * An entity whose id comes from a sequence-style generator. On MySQL/MariaDB (no native sequences) Hibernate emulates the
+ * sequence with a table and allocates ids through "isolated work" on its own connection - used by TransactionManagerTest
+ * to prove id allocation never commits the surrounding BoxLang transaction.
+ */
+class accessors="true" persistent="true" table="seq_gadgets" {
+	property name="id" fieldtype="id" generator="sequence" ormType="long";
+	property name="name" ormType="string";
+}

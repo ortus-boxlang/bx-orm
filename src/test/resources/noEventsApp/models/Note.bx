@@ -1,0 +1,24 @@
+/**
+ * An entity with event methods that must not run while eventHandling=false.
+ */
+class accessors="true" persistent="true" table="notes" {
+
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+
+	property name="title" ormType="string";
+
+	/**
+	 * Would rename the note on insert if events ran.
+	 */
+	function preInsert() {
+		setTitle( "changed by preInsert" );
+	}
+
+	/**
+	 * Would rename the note on entityNew() if events ran.
+	 */
+	function postNew() {
+		setTitle( "changed by postNew" );
+	}
+
+}
