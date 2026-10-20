@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-10-20
+
 ### ⭐ Added
 
 - [BL-2751](https://ortussolutions.atlassian.net/browse/BL-2751) - `fieldtype="collection"` (Adobe CF ORM "collection mapping") is now supported: a `type="array"` property becomes a Hibernate `<bag>` and a `type="struct"` property a `<map>` of simple values stored in their own table (`table`, `fkcolumn`, `elementcolumn`, `elementtype`, plus `structkeycolumn`/`structkeytype` for maps, `orderby`, `lazy`, `batchsize`). Previously the property was dropped from the mapping with only a warning in `orm.log`: the getter returned `null` and values set on it were never flushed. A collection without `elementcolumn` or `fkcolumn` now fails at mapping time instead of being ignored. The generated `hasX( value )`, `addX( value )` and `removeX( value )` helpers accept the scalar values of such a collection, and `fieldtype` is matched case-insensitively. Writing a BoxLang struct to a map collection (`type="struct"`, on a to-many association as well) no longer fails with a `ClassCastException` on the struct's `Key`s: the property getter hands Hibernate a map keyed by the original key values.
@@ -348,7 +350,8 @@ No significant changes.
 
 - First iteration of this module
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.1...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.2...HEAD
+[1.7.2]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.7...v1.7.0
 [1.6.7]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.6...v1.6.7
