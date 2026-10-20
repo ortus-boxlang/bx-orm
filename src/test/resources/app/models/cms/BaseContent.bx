@@ -10,6 +10,18 @@ class
 	cacheuse           ="read-write"
 	discriminatorColumn="contentType"
  {
+	// simple-value collection declared on the discriminator parent: the subclasses inherit the property and its generated helpers
+	property
+		name         ="tags"
+		singularname ="tag"
+		type         ="array"
+		fieldtype    ="collection"
+		elementtype  ="string"
+		elementcolumn="tag"
+		table        ="cb_content_tags"
+		fkcolumn     ="FK_contentID"
+		orderby      ="tag ASC";
+
 	property
 		name   ="createdDate"
 		column ="createdDate"

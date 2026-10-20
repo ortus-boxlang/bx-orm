@@ -81,14 +81,6 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( this.annotations.containsKey( ORMKeys.formula ) ) {
 			this.formula = this.annotations.getAsString( ORMKeys.formula );
 		}
-		if ( this.annotations.containsKey( ORMKeys.fieldtype ) ) {
-			String fieldType = this.annotations.getAsString( ORMKeys.fieldtype );
-			if ( fieldType == "collection" ) {
-				logger.warn( "Property '{}' on entity '{}' has fieldtype=collection, which is not yet supported. Please forward to your local Ortus agency.",
-				    this.name, entityName );
-			}
-		}
-
 		if ( this.annotations.containsKey( ORMKeys.cacheUse ) ) {
 			this.cache = new Struct();
 			this.cache.computeIfAbsent( ORMKeys.strategy, key -> this.annotations.getAsString( ORMKeys.cacheUse ) );
@@ -125,9 +117,14 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		// Update fieldtype annotation just in case we altered it.
 		annotations.put( ORMKeys.fieldtype, associationType );
 
-		final String finalAssociationType = associationType;
+		// Compare against the normalized (lower-cased, trimmed) type: the annotation itself may be mixed case,
+		// e.g. fieldtype="Collection" or fieldtype="One-To-Many", and FIELDTYPE.fromString() accepts that.
+		final String	finalAssociationType	= association.getAsString( Key.type );
+		// to-many associations and simple-value collections (`fieldtype="collection"`, a <bag>/<map> of
+		// scalars in a link table) share the collection annotations: type, batchsize, structKey*, element*
+		final boolean	isCollection			= finalAssociationType.endsWith( "-to-many" ) || finalAssociationType.equals( "collection" );
 
-		if ( finalAssociationType.endsWith( "-to-many" ) ) {
+		if ( isCollection ) {
 			// IS A COLLECTION
 			association.compute( ORMKeys.collectionType, ( key, object ) -> {
 				String propertyType = annotations.getAsString( Key.type );
@@ -169,6 +166,16 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 					    this.name, this.entityName );
 				}
 				association.put( ORMKeys.elementType, StringCaster.cast( annotations.getOrDefault( ORMKeys.elementType, "string" ) ) );
+			} else if ( finalAssociationType.equals( "collection" ) ) {
+				logger.error( "Missing required `elementColumn` annotation for collection property '{}' on entity '{}'", this.name, this.entityName );
+				// @TODO: Respect ignoreParseErrors setting and only log an error.
+				throw new BoxRuntimeException( String.format( "Missing required 'elementColumn' annotation for collection property [%s] on entity [%s]",
+				    this.name, this.entityName ) );
+			}
+			if ( finalAssociationType.equals( "collection" ) && !annotations.containsKey( ORMKeys.fkcolumn ) ) {
+				logger.error( "Missing required `fkcolumn` annotation for collection property '{}' on entity '{}'", this.name, this.entityName );
+				throw new BoxRuntimeException( String.format( "Missing required 'fkcolumn' annotation for collection property [%s] on entity [%s]",
+				    this.name, this.entityName ) );
 			}
 		}
 		if ( annotations.containsKey( ORMKeys.lazy ) ) {
@@ -177,7 +184,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 				// helpx.adobe.com/coldfusion/developing-applications/coldfusion-orm/performance-optimization/lazy-loading.html
 				String lazy = StringCaster.cast( annotations.get( ORMKeys.lazy ) ).trim().toLowerCase();
 				if ( "true".equals( lazy ) ) {
-					lazy = finalAssociationType.endsWith( "-to-many" )
+					lazy = isCollection
 					    && ( association.get( ORMKeys.collectionType ).equals( "map" ) || association.get( ORMKeys.collectionType ).equals( "bag" ) )
 					        ? "true"
 					        : "proxy";

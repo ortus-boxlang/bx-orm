@@ -22,6 +22,7 @@ import java.sql.SQLException;
 
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
 
+import ortus.boxlang.modules.orm.observability.ORMObserver;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -58,9 +59,25 @@ public class ORMConnectionProvider implements ConnectionProvider {
 	 */
 	private Key						datasourceName;
 
+	/**
+	 * The unique name of the ORM application this provider serves, reported on observability events.
+	 */
+	private String					appName;
+
+	/**
+	 * Whether bound parameter values are included in the onORMQuery event.
+	 */
+	private boolean					announceQueryParams;
+
 	public ORMConnectionProvider( Key datasourceName ) {
-		this.logger			= runtime.getLoggingService().getLogger( "orm" );
-		this.datasourceName	= datasourceName;
+		this( datasourceName, null, false );
+	}
+
+	public ORMConnectionProvider( Key datasourceName, String appName, boolean announceQueryParams ) {
+		this.logger					= runtime.getLoggingService().getLogger( "orm" );
+		this.datasourceName			= datasourceName;
+		this.appName				= appName;
+		this.announceQueryParams	= announceQueryParams;
 	}
 
 	@Override
@@ -76,7 +93,8 @@ public class ORMConnectionProvider implements ConnectionProvider {
 		DataSource	datasource	= getDatasourceForKey( datasourceName );
 		Connection	connection	= datasource.getBoxConnection();
 		logger.trace( "Getting connection {} for datasource: {}", connection, datasourceName.getOriginalValue() );
-		return connection;
+		// A no-op unless somebody is listening for ORM observability events
+		return ORMObserver.wrap( connection, datasourceName, appName, announceQueryParams );
 	}
 
 	/**

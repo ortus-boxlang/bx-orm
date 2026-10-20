@@ -21,6 +21,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.hibernate.EntityNameResolver;
@@ -126,7 +127,7 @@ public class BoxClassInstantiator implements Instantiator {
 			    // hasX(), used on all associations
 			    DynamicFunction hasUDF		= null;
 			    String		associationType	= association.getAsString( Key.type );
-			    if ( associationType.endsWith( "to-many" ) ) {
+			    if ( hasCollectionSemantics( associationType ) ) {
 				    hasUDF = getToManyHasMethod( collectionType, association );
 			    } else {
 				    hasUDF = getSimpleHasMethod( collectionType, association );
@@ -168,12 +169,12 @@ public class BoxClassInstantiator implements Instantiator {
 			    .filter( prop -> prop.getAsStruct( Key.annotations ).get( ORMKeys.fkcolumn ) != null )
 			    .forEach( prop -> {
 				    DynamicFunction hasUDF		= null;
-				    IStruct		annotations		= prop.getAsStruct( Key.annotations );
-				    String		associationType	= annotations.getAsString( ORMKeys.fieldtype );
 				    IPropertyMeta tempMeta		= new ClassicPropertyMeta( entityRecord.getEntityName(), prop, entityRecord.getEntityMeta() );
 				    IStruct		association		= tempMeta.getAssociation();
 				    String		collectionType	= association.getAsString( ORMKeys.collectionType );
-				    if ( associationType.endsWith( "to-many" ) ) {
+				    // the parsed association carries the normalized type; the raw annotation may be mixed case
+				    String		associationType	= association.getAsString( Key.type );
+				    if ( hasCollectionSemantics( associationType ) ) {
 					    hasUDF = getToManyHasMethod( collectionType, association );
 				    } else {
 					    hasUDF = getSimpleHasMethod( collectionType, association );
@@ -230,6 +231,18 @@ public class BoxClassInstantiator implements Instantiator {
 			methodName = associationMeta.getAsString( ORMKeys.singularName );
 		}
 		return Key.of( operationPrefix + methodName.substring( 0, 1 ).toUpperCase() + methodName.substring( 1 ) );
+	}
+
+	/**
+	 * Whether the association holds a bag or map of items and therefore gets the collection-aware `hasX( item )` helper:
+	 * to-many associations and simple-value collections (`fieldtype="collection"`).
+	 *
+	 * @param associationType The normalized association type (the `type` key of the parsed association meta)
+	 *
+	 * @return true for to-many associations and simple-value collections
+	 */
+	private static boolean hasCollectionSemantics( String associationType ) {
+		return associationType != null && ( associationType.endsWith( "to-many" ) || associationType.equals( "collection" ) );
 	}
 
 	@Override
@@ -330,10 +343,13 @@ public class BoxClassInstantiator implements Instantiator {
 					    return ( ( Array ) collection ).size() > 0;
 				    }
 			    } else {
+				    // a BoxLang struct until Hibernate wraps it, a PersistentMap (String keys) once loaded or flushed
+				    Map<?, ?> mapCollection = ( Map<?, ?> ) collection;
 				    if ( itemToCheck != null ) {
-					    return scope.getAsStruct( collectionKey ).containsKey( itemToCheck );
+					    Object lookupKey = collection instanceof IStruct ? Key.of( StringCaster.cast( itemToCheck ) ) : itemToCheck;
+					    return mapCollection.containsKey( lookupKey );
 				    } else {
-					    return scope.getAsStruct( collectionKey ).size() > 0;
+					    return mapCollection.size() > 0;
 				    }
 			    }
 		    },
@@ -414,7 +430,8 @@ public class BoxClassInstantiator implements Instantiator {
 	 * Create an `remove*` method for the entity association, like `removeManufacturer()`, which removes the provided entity from the association, if
 	 * found.
 	 * <p>
-	 * Supports both array and struct associations, or, in the Hibernate vernacular, "bag" and "map" collections.
+	 * Supports both array and struct associations, or, in the Hibernate vernacular, "bag" and "map" collections. Entities are matched by their
+	 * identifier property; scalar values from a simple-value collection (`fieldtype="collection"`) are matched by equality.
 	 *
 	 * @param collectionType  The type of collection, like 'bag' or 'map'.
 	 * @param associationMeta The metadata for the association.
@@ -433,7 +450,7 @@ public class BoxClassInstantiator implements Instantiator {
 			    List<Key>	keys				= this.entityMetamodel.getIdentifierProperty().getName() != null
 			        ? List.of( Key.of( this.entityMetamodel.getIdentifierProperty().getName() ) )
 			        : new ArrayList<>();
-			    IClassRunnable itemToRemove		= ( IClassRunnable ) context.getArgumentsScope().get( collectionKey );
+			    Object		itemToRemove		= context.getArgumentsScope().get( collectionKey );
 			    VariablesScope variablesScope	= context.getThisClass().getVariablesScope();
 
 			    // return early if the collection doesn't exist - possibly throw an error for compat?
@@ -448,13 +465,17 @@ public class BoxClassInstantiator implements Instantiator {
 				    Object collection = variablesScope.get( collectionKey );
 				    if ( collection instanceof PersistentBag bagCollection ) {
 					    bagCollection.remove( itemToRemove );
+				    } else if ( ! ( itemToRemove instanceof IClassRunnable entityToRemove ) ) {
+					    // simple-value collection (fieldtype="collection"): scalars are removed by equality
+					    ( ( Array ) collection ).remove( itemToRemove );
 				    } else {
 					    Array arrayCollection = ( Array ) collection;
 					    arrayCollection.stream()
-					        .map( item -> ( IClassRunnable ) item )
+					        .filter( IClassRunnable.class::isInstance )
+					        .map( IClassRunnable.class::cast )
 					        .filter( item -> {
 						        VariablesScope itemVariablesScope	= item.getVariablesScope();
-						        VariablesScope itemToRemoveVariablesScope = itemToRemove.getVariablesScope();
+						        VariablesScope itemToRemoveVariablesScope = entityToRemove.getVariablesScope();
 						        for ( Key key : keys ) {
 							        if ( !itemVariablesScope.containsKey( key ) || !itemToRemoveVariablesScope.containsKey( key ) ) {
 								        return false;

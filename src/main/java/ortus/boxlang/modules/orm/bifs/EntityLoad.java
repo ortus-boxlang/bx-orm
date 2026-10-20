@@ -18,6 +18,7 @@
 package ortus.boxlang.modules.orm.bifs;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.observability.ORMObserver;
 import ortus.boxlang.runtime.bifs.BoxBIF;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
@@ -103,6 +104,16 @@ public class EntityLoad extends BaseORMBIF {
 	 * @argument.options A struct of options to modify the load operation. See below for supported options.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
+		// Lets onORMQuery report which entity the statements belong to
+		ORMObserver.hintEntity( arguments.getAsString( ORMKeys.entityName ) );
+		try {
+			return invokeLoad( context, arguments );
+		} finally {
+			ORMObserver.clearHints();
+		}
+	}
+
+	private Object invokeLoad( IBoxContext context, ArgumentsScope arguments ) {
 		IBoxContext jdbcBoxContext = context.getParentOfType( IJDBCCapableContext.class );
 		if ( arguments.get( ORMKeys.uniqueOrOrder ) != null && arguments.get( ORMKeys.options ) == null
 		    && arguments.get( ORMKeys.uniqueOrOrder ) instanceof IStruct ) {

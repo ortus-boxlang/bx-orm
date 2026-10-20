@@ -62,6 +62,26 @@ public class EntityToQueryTest extends BaseORMTest {
 		assertThat( row.get( "model" ) ).isEqualTo( "Accord" );
 	}
 
+	@DisplayName( "It excludes simple-value collections (fieldtype=collection) from the query, like associations" )
+	@Test
+	public void testEntityToQueryExcludesElementCollections() {
+		// @formatter:off
+		instance.executeSource( """
+			result = entityToQuery( entityLoadByPK( 'Manufacturer', 42 ) );
+		""", context );
+		// @formatter:on
+		assertThat( variables.getAsQuery( result ).size() ).isEqualTo( 1 );
+		IStruct row = variables.getAsQuery( result ).getRowAsStruct( 0 );
+		assertThat( row.containsKey( "id" ) ).isTrue();
+		assertThat( row.containsKey( "name" ) ).isTrue();
+		assertThat( row.containsKey( "address" ) ).isTrue();
+		// neither the to-many association nor the element collections become columns
+		assertThat( row.containsKey( "vehicles" ) ).isFalse();
+		assertThat( row.containsKey( "aliases" ) ).isFalse();
+		assertThat( row.containsKey( "plantCodes" ) ).isFalse();
+		assertThat( row.get( "name" ) ).isEqualTo( "Honda Motor Co." );
+	}
+
 	@DisplayName( "It can convert an entity array into a multi-row query" )
 	@Test
 	public void testEntityToQueryArray() {

@@ -279,6 +279,11 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		return this.fieldType.isAssociationType();
 	}
 
+	@Override
+	public boolean isCollectionType() {
+		return this.fieldType.isCollectionType();
+	}
+
 	/**
 	 * Get the association metadata for this property.
 	 */

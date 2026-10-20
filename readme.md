@@ -24,6 +24,10 @@
 * [Source Code](https://github.com/ortus-boxlang/bx-orm)
 * [Issue Tracker](https://ortussolutions.atlassian.net/browse/BLMODULES)
 
+## Observability
+
+bx-orm announces `onORMQuery`, `onORMFlush` and `onORMException` events for SQL and flush activity, and exposes Hibernate statistics through `ORMService.getStatistics()`. See [ORM Observability Events](docs/observability-events.md).
+
 ## Development
 
 To get started hacking on bx-orm:

@@ -231,6 +231,25 @@ public class ORMKeys {
 	public static final Key	EVENT_POST_LOAD				= Key.of( "post_load" );
 	public static final Key	EVENT_ORM_PRE_CONFIG_LOAD	= Key.of( "ORMPreConfigLoad" );
 	public static final Key	EVENT_ORM_POST_CONFIG_LOAD	= Key.of( "ORMPostConfigLoad" );
+	public static final Key	EVENT_ORM_QUERY				= Key.of( "onORMQuery" );
+	public static final Key	EVENT_ORM_FLUSH				= Key.of( "onORMFlush" );
+	public static final Key	EVENT_ORM_EXCEPTION			= Key.of( "onORMException" );
+
+	/**
+	 * Observability settings and event payload keys
+	 */
+	public static final Key	announceQueryParams			= Key.of( "announceQueryParams" );
+	public static final Key	generateStatistics			= Key.of( "generateStatistics" );
+	public static final Key	sql							= Key.of( "sql" );
+	public static final Key	kind						= Key.of( "kind" );
+	public static final Key	elapsedNanos				= Key.of( "elapsedNanos" );
+	public static final Key	rows						= Key.of( "rows" );
+	public static final Key	appName						= Key.of( "appName" );
+	public static final Key	error						= Key.of( "error" );
+	public static final Key	params						= Key.of( "params" );
+	public static final Key	inserts						= Key.of( "inserts" );
+	public static final Key	updates						= Key.of( "updates" );
+	public static final Key	deletes						= Key.of( "deletes" );
 
 	/**
 	 * BoxLang Naming Strategy method names

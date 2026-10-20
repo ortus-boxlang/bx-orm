@@ -202,6 +202,16 @@ public class ORMConfig {
 	public boolean						logSQL					= false;
 
 	/**
+	 * Include bound parameter values in the <code>onORMQuery</code> event. Off by default, since values may be sensitive.
+	 */
+	public boolean						announceQueryParams		= false;
+
+	/**
+	 * Collect Hibernate statistics, which are exposed by <code>ORMService.getStatistics()</code>. Off by default, as collection has a small cost.
+	 */
+	public boolean						generateStatistics		= false;
+
+	/**
 	 * Defines the naming convention to use on table and column names.
 	 *
 	 * - default : Uses the table or column names as is
@@ -436,6 +446,12 @@ public class ORMConfig {
 		if ( properties.containsKey( ORMKeys.logSQL ) && properties.get( ORMKeys.logSQL ) != null ) {
 			logSQL = BooleanCaster.cast( properties.get( ORMKeys.logSQL ) );
 		}
+		if ( properties.containsKey( ORMKeys.announceQueryParams ) && properties.get( ORMKeys.announceQueryParams ) != null ) {
+			announceQueryParams = BooleanCaster.cast( properties.get( ORMKeys.announceQueryParams ) );
+		}
+		if ( properties.containsKey( ORMKeys.generateStatistics ) && properties.get( ORMKeys.generateStatistics ) != null ) {
+			generateStatistics = BooleanCaster.cast( properties.get( ORMKeys.generateStatistics ) );
+		}
 		if ( properties.containsKey( ORMKeys.secondaryCacheEnabled ) && properties.get( ORMKeys.secondaryCacheEnabled ) != null ) {
 			secondaryCacheEnabled = BooleanCaster.cast( properties.get( ORMKeys.secondaryCacheEnabled ) );
 		}
@@ -655,6 +671,10 @@ public class ORMConfig {
 			}
 		}
 
+		if ( this.generateStatistics ) {
+			configuration.setProperty( AvailableSettings.GENERATE_STATISTICS, "true" );
+		}
+
 		if ( this.logSQL ) {
 			configuration.setProperty( AvailableSettings.SHOW_SQL, "true" );
 			configuration.setProperty( AvailableSettings.FORMAT_SQL, "true" );
@@ -669,7 +689,15 @@ public class ORMConfig {
 			// https://docs.jboss.org/hibernate/orm/6.4/javadocs/org/hibernate/cfg/JdbcSettings.html#DIALECT
 			// configuration.setProperty(AvailableSettings.DIALECT, dialect);
 
-			configuration.setProperty( AvailableSettings.DIALECT, toFullHibernateDialectName( dialect ) );
+			String fullDialectName = toFullHibernateDialectName( dialect );
+			configuration.setProperty( AvailableSettings.DIALECT, fullDialectName );
+
+			// With an explicit dialect Hibernate skips the JDBC metadata, so it no longer learns that the driver can return generated keys. It then reads
+			// an identity back with `select currval('<table>_<column>_seq')`, which PostgreSQL rejects when the table name is quoted, as it is for reserved
+			// words like `comment`. Declare the driver capability ourselves, as auto-detection does. The PostgreSQL driver always supports it.
+			if ( isPostgreSQLDialect( fullDialectName ) ) {
+				configuration.setProperty( AvailableSettings.USE_GET_GENERATED_KEYS, "true" );
+			}
 		}
 
 		if ( this.schema != null ) {
@@ -835,6 +863,16 @@ public class ORMConfig {
 		properties.setProperty( "hibernate.cache.region_prefix", datasource.getName() + "_" );
 		properties.setProperty( "hibernate.javax.cache.provider", getJCacheProviderClassPath() );
 		return properties;
+	}
+
+	/**
+	 * Whether the given full Hibernate dialect class name is a PostgreSQL dialect, such as {@code org.hibernate.dialect.PostgreSQL10Dialect}.
+	 *
+	 * @param fullDialectName The full dialect class name, as returned by {@link #toFullHibernateDialectName(String)}.
+	 */
+	private static boolean isPostgreSQLDialect( String fullDialectName ) {
+		String simpleName = fullDialectName.substring( fullDialectName.lastIndexOf( '.' ) + 1 );
+		return simpleName.toLowerCase().startsWith( "postgre" );
 	}
 
 	/**
