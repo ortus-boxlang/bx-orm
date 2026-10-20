@@ -7,5 +7,9 @@ class accessors ="#true#" persistent="true" table     ="manufacturers" {
 
 	property name="vehicles" fieldtype="one-to-many" singularname="Vehicle" fkcolumn="FK_manufacturer" cfc="Vehicle";
 
+	// simple-value collections (fieldtype="collection"): one link-table row per element, no entity on the other side
+	property name="aliases" singularname="alias" type="array" fieldtype="collection" elementtype="string" elementcolumn="alias" table="manufacturer_aliases" fkcolumn="FK_manufacturer" orderby="alias ASC";
+
+	property name="plantCodes" type="array" fieldtype="collection" elementtype="integer" elementcolumn="plant_code" table="manufacturer_plants" fkcolumn="FK_manufacturer" orderby="plant_code ASC";
 
 }
