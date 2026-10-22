@@ -922,6 +922,23 @@ public final class CriteriaBuilder implements IReferenceable {
 	}
 
 	/**
+	 * Resolve a path for a projection or aggregate. Hibernate 7 only averages numbers, while Hibernate 5 (cborm 5)
+	 * averaged a boolean column as 0/1, so {@code avg} of a boolean property is {@code avg(cast(path as Integer))}.
+	 *
+	 * @param function The projection function, e.g. {@code avg}.
+	 * @param path     The property path.
+	 *
+	 * @return The HQL expression.
+	 */
+	private String aggregatePath( String function, String path ) {
+		Path resolved = resolve( path, JoinKind.LEFT );
+		if ( function.equals( "avg" ) && resolved.attr() != null && resolved.attr().isBoolean() ) {
+			return "cast(" + resolved.hql() + " as Integer)";
+		}
+		return resolved.hql();
+	}
+
+	/**
 	 * Resolve a path for a condition (inner joins, left joins inside anyOf/not).
 	 *
 	 * @param path The property path.
@@ -1903,7 +1920,7 @@ public final class CriteriaBuilder implements IReferenceable {
 			expr			= resolve( "id", JoinKind.LEFT ).hql();
 			defaultAlias	= root.model().singleIdName() == null ? "id" : root.model().singleIdName();
 		} else {
-			expr = selectPath( property );
+			expr = aggregatePath( function, property );
 			String[] parts = property.split( "\\." );
 			defaultAlias = parts[ parts.length - 1 ];
 		}
@@ -3019,7 +3036,7 @@ public final class CriteriaBuilder implements IReferenceable {
 	 */
 	public Object aggregate( IBoxContext context, String function, String property ) {
 		requireTopLevel();
-		List<?> rows = run( context, compile( Mode.EXPRESSION, function + "(" + selectPath( property ) + ")" ), null, null );
+		List<?> rows = run( context, compile( Mode.EXPRESSION, function + "(" + aggregatePath( function, property ) + ")" ), null, null );
 		return rows.isEmpty() ? null : toBox( rows.get( 0 ) );
 	}
 

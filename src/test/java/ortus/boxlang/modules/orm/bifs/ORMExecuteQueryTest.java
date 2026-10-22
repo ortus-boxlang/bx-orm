@@ -92,6 +92,24 @@ public class ORMExecuteQueryTest extends BaseORMTest {
 		assertThat( a.size() ).isEqualTo( 4 );
 	}
 
+	@DisplayName( "A plain array param value is a list, as in bx-orm 1 (Hibernate 5)" )
+	@Test
+	public void testArrayParamIsAList() {
+		// @formatter:off
+		instance.executeSource( """
+		named = ormExecuteQuery( "FROM Vehicle WHERE model IN (:model)", { model : [ 'Civic', 'Accord' ] } ).len();
+		positional = ormExecuteQuery( "FROM Vehicle WHERE model IN (?)", [ [ 'Civic', 'Accord' ] ] ).len();
+		// An association compared with a one-entity array, like cborm's delete( [ entity ] ) passing it on
+		association = ormExecuteQuery( "FROM Vehicle WHERE manufacturer = :maker", { maker : [ entityLoadByPK( "Manufacturer", 42 ) ] } ).len();
+		result = [ named, positional, association ];
+		""", context );
+		// @formatter:on
+		Array a = ( Array ) variables.get( result );
+		assertThat( a.get( 0 ) ).isEqualTo( 2 );
+		assertThat( a.get( 1 ) ).isEqualTo( 2 );
+		assertThat( a.get( 2 ) ).isEqualTo( 3 );
+	}
+
 	@DisplayName( "It can run an HQL query with HQL, params, and unique boolean" )
 	@Test
 	public void testHQLParamsAndUnique() {

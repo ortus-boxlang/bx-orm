@@ -727,7 +727,8 @@ creation order when two match). An alias it cannot place, and anything in quotes
 returns entities, as in cborm 5 (`asDistinct()` and `DISTINCT_ROOT_ENTITY` stay). In `where( struct )` and the
 services' `deleteWhere()`, an array value is an `in` list. `EntityInspector.idProperties()` returns the id a subclass
 entity inherits from its parent (cached per meta), which `entityGetId()`, `ORMApp.getPropertyNames()`, memento
-projections and struct loads use.
+projections and struct loads use. `avg` of a boolean property is `avg(cast(x as Integer))` (`EntityModel.Attr.isBoolean()`
+knows a converted boolean by its JDBC type), the 0/1 average Hibernate 5 gave.
 
 **`getSQL()`** compiles, prepares the query with flushing off, and runs it while `SqlCapture` (the session factory's
 `StatementInspector`, a public SPI) records the first statement and stops it before a connection is used. Nothing

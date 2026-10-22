@@ -343,6 +343,27 @@ public class CriteriaCbormCompatTest extends CriteriaTestSupport {
 	}
 
 	/**
+	 * Test: avg of a boolean property averages it as 0/1 (Hibernate 5 did; Hibernate 7 only averages numbers), in
+	 * withProjections(), project() and the avg() terminal. The compat versions are inactive, active, active, active.
+	 */
+	@DisplayName( "avg() of a boolean property averages it as 0/1" )
+	@Test
+	public void testAvgOfBoolean() {
+		Array result = ( Array ) run( """
+		                              c = entityCriteria( 'cbContentVersion' ).isLike( 'contentVersionID', 'compat-%' );
+		                              row = c.withProjections( avg = "isActive:share", sum = "version:versions" ).asStruct().get();
+		                              projected = entityCriteria( 'cbContentVersion' ).isLike( 'contentVersionID', 'compat-%' )
+		                                  .project( ( p ) => p.avg( 'isActive', 'share' ) ).get();
+		                              total = entityCriteria( 'cbContentVersion' ).isLike( 'contentVersionID', 'compat-%' ).avg( 'isActive' );
+		                              result = [ row.share, row.versions, projected, total ];
+		                              """ );
+		assertThat( Double.parseDouble( result.get( 0 ).toString() ) ).isEqualTo( 0.75 );
+		assertThat( Long.parseLong( result.get( 1 ).toString() ) ).isEqualTo( 4 );
+		assertThat( Double.parseDouble( result.get( 2 ).toString() ) ).isEqualTo( 0.75 );
+		assertThat( Double.parseDouble( result.get( 3 ).toString() ) ).isEqualTo( 0.75 );
+	}
+
+	/**
 	 * Test: an array value in a where() struct is an in-list, for ids and for entities (cborm deleteWhere/findWhere).
 	 */
 	@DisplayName( "where( struct ) treats an array value as in (...)" )

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ⚡ Changed
 
+- A plain array param value in `ormExecuteQuery()` (and cborm `executeQuery()`) is a list param, as in bx-orm 1: `id in (:ids)` with `{ ids : [ 1, 2 ] }`, and `approver = :employee` with `[ employee ]`, work without `list : true`.
 - `unique=true` on `ormExecuteQuery()` and `entityLoad()` (filter form) is strict: more than one matching row raises `orm.query.nonUnique` instead of silently returning the first. Pass `{ uniqueFirst : true }` for the old behavior. `unique` given inside the options struct is now honored.
 - ORM errors are `orm.*` exceptions instead of raw Hibernate/JPA exceptions. Code catching Hibernate class names should catch `"orm"` instead.
 - Unused named HQL parameters are logged as a warning.
