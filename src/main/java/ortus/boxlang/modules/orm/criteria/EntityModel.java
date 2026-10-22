@@ -17,12 +17,14 @@
  */
 package ortus.boxlang.modules.orm.criteria;
 
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.metamodel.mapping.JdbcMapping;
 import org.hibernate.metamodel.model.domain.EmbeddableDomainType;
 import org.hibernate.metamodel.model.domain.EntityDomainType;
 import org.hibernate.metamodel.model.domain.ManagedDomainType;
@@ -62,7 +64,8 @@ final class EntityModel {
 	 * @param name     The declared attribute name (declared casing).
 	 * @param kind     What kind of attribute it is.
 	 * @param target   The model of the associated entity or component; null for basic values.
-	 * @param javaType The Java type of a basic value (used to know text properties); null otherwise.
+	 * @param javaType The Java type of a basic value (used to know text and boolean properties); null otherwise. A
+	 *                 converted boolean (whose domain type is {@code Object}) is {@code Boolean}.
 	 */
 	record Attr( String name, Kind kind, EntityModel target, Class<?> javaType ) {
 
@@ -73,6 +76,15 @@ final class EntityModel {
 		 */
 		boolean isText() {
 			return javaType == String.class || javaType == Character.class || javaType == char.class;
+		}
+
+		/**
+		 * Whether this is a boolean value (averaged as 0/1 by criteria {@code avg}).
+		 *
+		 * @return True for a boolean value.
+		 */
+		boolean isBoolean() {
+			return javaType == Boolean.class || javaType == boolean.class;
 		}
 
 		/**
@@ -265,6 +277,18 @@ final class EntityModel {
 	}
 
 	/**
+	 * Whether a basic type is stored as a boolean column ({@code BOOLEAN}, or {@code BIT} as on MySQL).
+	 *
+	 * @param type The attribute's value type.
+	 *
+	 * @return True for a boolean column.
+	 */
+	private static boolean isBooleanColumn( Type<?> type ) {
+		return type instanceof JdbcMapping mapping
+		    && ( mapping.getJdbcType().isBoolean() || mapping.getJdbcType().getDefaultSqlTypeCode() == Types.BIT );
+	}
+
+	/**
 	 * Classify one attribute.
 	 *
 	 * @param attribute The JPA attribute.
@@ -288,7 +312,8 @@ final class EntityModel {
 				return new Attr( attribute.getName(), Kind.COMPONENT, new EntityModel( factory, component ), null );
 			}
 			// The mapped (Hibernate) type, not the facade field type, which is Object for untyped BoxLang properties.
-			return new Attr( attribute.getName(), Kind.BASIC, null, valueType.getJavaType() );
+			// bx-orm's converters make the domain type Object, so a boolean is known by its JDBC type.
+			return new Attr( attribute.getName(), Kind.BASIC, null, isBooleanColumn( valueType ) ? Boolean.class : valueType.getJavaType() );
 		}
 		return new Attr( attribute.getName(), Kind.BASIC, null, attribute.getJavaType() );
 	}

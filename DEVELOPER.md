@@ -56,6 +56,7 @@ end-user docs.
 | Case-insensitive HQL names | `ormExecuteQuery()` HQL resolves entity and property names in any case: a name Hibernate cannot resolve is rewritten to its one case-insensitive match and compiled again; the corrected HQL is cached per `ORMApp`. | `HQLCaseResolver` |
 | cborm criteria extras | `c.restrictions.*` condition objects for `add()`/`or()`/`and()`/`not()`, quantified subqueries (`subGeAll`, `propertyLtSome`, ...), and the SQL log (`startSqlLog()`, `logSQL()`, `getSqlLog()`). | [§10c](#10c-entitycriteria-the-fluent-query-builder) |
 | cborm 4/5 criteria compatibility | `joinTo( assoc, alias, joinType, withClause )` (restriction or closure, rendered as `join ... on`), `resultTransformer( c.DISTINCT_ROOT_ENTITY )` and the other transformer constants, sorting by a projection alias, subclass properties on a base entity, and the `class` pseudo-property (`isEq( "class", "Entry" )` → `type(x) = cbEntry`). | [§10c](#10c-entitycriteria-the-fluent-query-builder) |
+| cborm 5 criteria compatibility (TimeBox) | `sqlProjection` in `withProjections()`, Hibernate 5 aliases (`this_.col`, `<alias><n>_.col`) in `sql()`, array values as `in` in `where( struct )` / `deleteWhere()`, `count()` dropping projections, and inherited ids on subclass entities (`entityGetId()`, `UniqueValidator`). | [§10c](#10c-entitycriteria-the-fluent-query-builder) |
 
 ### Hibernate-native features (Phase 3B)
 
@@ -717,7 +718,17 @@ works), and an association accepts an id or an entity. `ORMApp.referenceFor` now
 `distinct` and `count()` count distinct roots.
 
 **`sql( fragment, params )`** embeds native SQL through Hibernate's `sql()` HQL function: `{alias}.column` and
-`{property}` become typed arguments, `?` takes the params.
+`{property}` become typed arguments, `?` takes the params. `nativeSql()` also reads the Hibernate 5 aliases cborm users
+wrote by hand: `this_.col` is the root, `<alias><n>_.col` is a joined alias (cut to 10 characters, `n` the join's
+creation order when two match). An alias it cannot place, and anything in quotes, is left as written.
+`withProjections( sqlProjection = { sql, alias, property } )` goes through the same parser (no `?` there).
+
+**cborm compatibility notes.** `count()` clears the projections and the result shape after it runs, so a later `list()`
+returns entities, as in cborm 5 (`asDistinct()` and `DISTINCT_ROOT_ENTITY` stay). In `where( struct )` and the
+services' `deleteWhere()`, an array value is an `in` list. `EntityInspector.idProperties()` returns the id a subclass
+entity inherits from its parent (cached per meta), which `entityGetId()`, `ORMApp.getPropertyNames()`, memento
+projections and struct loads use. `avg` of a boolean property is `avg(cast(x as Integer))` (`EntityModel.Attr.isBoolean()`
+knows a converted boolean by its JDBC type), the 0/1 average Hibernate 5 gave.
 
 **`getSQL()`** compiles, prepares the query with flushing off, and runs it while `SqlCapture` (the session factory's
 `StatementInspector`, a public SPI) records the first statement and stops it before a connection is used. Nothing

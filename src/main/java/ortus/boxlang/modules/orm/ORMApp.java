@@ -596,7 +596,7 @@ public class ORMApp {
 		}
 		var				meta	= record.getEntityMeta();
 		List<String>	names	= new ArrayList<>();
-		meta.getIdProperties().forEach( p -> names.add( p.getName() ) );
+		EntityInspector.idProperties( meta ).forEach( p -> names.add( p.getName() ) );
 		if ( meta.getVersionProperty() != null ) {
 			names.add( meta.getVersionProperty().getName() );
 		}

@@ -170,6 +170,22 @@ public class HQLQuery {
 	}
 
 	/**
+	 * Build one query parameter. A non-empty array value is a list parameter, as in bx-orm 1: Hibernate 5 bound a
+	 * collection value with {@code setParameterList()}, so {@code approver = :employee} with {@code [ employee ]} and
+	 * {@code id in (:ids)} with a plain array both worked. {@code { value : ..., list : true }} still works.
+	 *
+	 * @param value The parameter value: a value, an array, or a {@code { value, sqltype, list, ... }} struct.
+	 *
+	 * @return The parameter.
+	 */
+	private static QueryParameter toParameter( Object value ) {
+		if ( value instanceof Array array && !array.isEmpty() ) {
+			return QueryParameter.fromAny( Struct.of( "value", array, "list", true ) );
+		}
+		return QueryParameter.fromAny( value );
+	}
+
+	/**
 	 * Process a struct of named query bindings into a list of
 	 * {@link QueryParameter} instances.
 	 * <p>
@@ -229,7 +245,7 @@ public class HQLQuery {
 													    "Use a struct for named parameters, e.g. { " + finalParamName.getName() + " : value }." );
 												} else {
 													if ( namedParameters.containsKey( finalParamName ) ) {
-														QueryParameter newParam = QueryParameter.fromAny( namedParameters.get( finalParamName ) );
+														QueryParameter newParam = toParameter( namedParameters.get( finalParamName ) );
 														foundNamedParams.add( finalParamName );
 														params.add( newParam );
 														// List params add ?1, ?2, ?3 etc. to the HQL string
@@ -262,7 +278,7 @@ public class HQLQuery {
 												}
 												HQLWithParamTokens.add( HQLWithParamToken.toString() );
 												HQLWithParamToken.setLength( 0 );
-												var newParam = QueryParameter.fromAny( positionalParameters.get( paramsEncountered[ 0 ] - 1 ) );
+												var newParam = toParameter( positionalParameters.get( paramsEncountered[ 0 ] - 1 ) );
 												params.add( newParam );
 												// List params add ?1, ?2, ?3 etc. to the HQL string
 												if ( newParam.isListParam() ) {
