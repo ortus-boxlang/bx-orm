@@ -478,7 +478,7 @@ final class MementoProjection {
 	private static Map<String, MementoSpec.Include> withPlain( EntityRecord record, Map<String, MementoSpec.Include> includes ) {
 		Map<String, MementoSpec.Include> result = new LinkedHashMap<>();
 		if ( record.getEntityMeta() != null ) {
-			record.getEntityMeta().getIdProperties()
+			ortus.boxlang.modules.orm.EntityInspector.idProperties( record.getEntityMeta() )
 			    .forEach( p -> result.put( p.getName().toLowerCase(), new MementoSpec.Include( p.getName(), null, new ArrayList<>() ) ) );
 			for ( IPropertyMeta p : record.getEntityMeta().getAllPersistentProperties() ) {
 				if ( EntityMemento.isPlain( p ) ) {
@@ -502,9 +502,10 @@ final class MementoProjection {
 	 * @return The id property name, or null for a composite id.
 	 */
 	private static String singleId( EntityRecord record ) {
-		if ( record.getEntityMeta() == null || record.getEntityMeta().getIdProperties().size() != 1 ) {
+		if ( record.getEntityMeta() == null ) {
 			return null;
 		}
-		return record.getEntityMeta().getIdProperties().iterator().next().getName();
+		List<IPropertyMeta> ids = ortus.boxlang.modules.orm.EntityInspector.idProperties( record.getEntityMeta() );
+		return ids.size() == 1 ? ids.get( 0 ).getName() : null;
 	}
 }

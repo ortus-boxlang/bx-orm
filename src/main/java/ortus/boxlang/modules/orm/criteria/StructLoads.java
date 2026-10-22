@@ -82,7 +82,7 @@ public final class StructLoads {
 				throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.ARGUMENT,
 				    "entityLoadAsStruct() needs an id or a filter struct.", "Pass an id, or a struct such as { active : true }." );
 			}
-			IPropertyMeta id = record.getEntityMeta().getIdProperties().iterator().next();
+			IPropertyMeta id = ortus.boxlang.modules.orm.EntityInspector.idProperties( record.getEntityMeta() ).get( 0 );
 			criteria.compare( id.getName(), "=", idOrFilter );
 			single = true;
 		}

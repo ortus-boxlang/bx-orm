@@ -1282,16 +1282,53 @@ public final class CriteriaBuilder implements IReferenceable {
 	}
 
 	/**
-	 * A native SQL condition. {@code ?} placeholders take the params in order; {@code {alias}.column} and
-	 * {@code {property}} reference the root entity. Values are always bound, never concatenated.
+	 * A native SQL fragment turned into the arguments of HQL's {@code sql()} function: the text with a {@code ?} per
+	 * argument, and the arguments in order (a {@link Param} for a bound value, a {@code String} for an HQL path).
 	 *
-	 * @param fragment The SQL condition, e.g. {@code "upper({alias}.first_name) = ?"}.
-	 * @param params   The values for the {@code ?} placeholders.
-	 *
-	 * @return This builder.
+	 * @param sql  The SQL text, single quotes not yet escaped for an HQL string literal.
+	 * @param args The arguments.
 	 */
-	CriteriaBuilder sql( String fragment, Object params ) {
-		List<Object>	values	= params == null ? List.of() : toList( params );
+	private record NativeSql( String sql, List<Object> args ) {
+
+		/**
+		 * The HQL {@code sql('...', args...)} call, for fragments whose arguments are all paths.
+		 *
+		 * @return The HQL expression.
+		 */
+		String call() {
+			StringBuilder hql = new StringBuilder( "sql('" ).append( sql.replace( "'", "''" ) ).append( "'" );
+			for ( Object arg : args ) {
+				hql.append( ", " ).append( arg );
+			}
+			return hql.append( ")" ).toString();
+		}
+	}
+
+	/**
+	 * A Hibernate 5 generated SQL alias followed by a column: {@code this_.col} for the root, {@code <alias><n>_.col} for
+	 * the n-th {@code createAlias()} (the alias lower-cased and cut to 10 characters).
+	 */
+	private static final java.util.regex.Pattern LEGACY_SQL_ALIAS = java.util.regex.Pattern
+	    .compile( "([A-Za-z_][A-Za-z0-9_]*?)(\\d*)_\\.([A-Za-z_][A-Za-z0-9_]*)" );
+
+	/**
+	 * Parse a native SQL fragment written for cborm's Hibernate 5 criteria.
+	 * <ul>
+	 * <li>{@code ?} takes the next value of {@code values} (bound, never concatenated).</li>
+	 * <li>{@code {alias}.column} is a column of the root entity; {@code {property}} is a property path.</li>
+	 * <li>{@code this_.column} and {@code <alias><n>_.column} are the table aliases Hibernate 5 generated for the root and
+	 * for each {@code createAlias()}; cborm code wrote them by hand, so they resolve like {@code {alias}.column} (an
+	 * unknown alias stays as written).</li>
+	 * <li>Text in single quotes is copied as is.</li>
+	 * </ul>
+	 *
+	 * @param fragment The SQL fragment.
+	 * @param values   The values for {@code ?}, or null when the fragment may not have any.
+	 * @param what     The method name, for error messages.
+	 *
+	 * @return The SQL text and its arguments.
+	 */
+	private NativeSql nativeSql( String fragment, List<Object> values, String what ) {
 		List<Object>	args	= new ArrayList<>();
 		StringBuilder	sql		= new StringBuilder();
 		int				next	= 0;
@@ -1303,8 +1340,12 @@ public final class CriteriaBuilder implements IReferenceable {
 				sql.append( fragment, i, end + 1 );
 				i = end;
 			} else if ( c == '?' ) {
+				if ( values == null ) {
+					throw new ORMException( ORMErrorType.QUERY_PARAMETER, what + " takes no ? placeholders.",
+					    "Write the value into the SQL, or use a condition with params: " + fragment );
+				}
 				if ( next >= values.size() ) {
-					throw new ORMException( ORMErrorType.QUERY_PARAMETER, "The sql() condition has more ? placeholders than params.",
+					throw new ORMException( ORMErrorType.QUERY_PARAMETER, "The " + what + " condition has more ? placeholders than params.",
 					    "Pass one value per ?: " + fragment );
 				}
 				sql.append( '?' );
@@ -1322,21 +1363,93 @@ public final class CriteriaBuilder implements IReferenceable {
 					end		= stop - 1;
 				}
 				sql.append( '?' );
-				args.add( column != null ? root.hql() + "." + propertyForColumn( column ) : resolve( token, JoinKind.INNER ).hql() );
+				args.add( column != null ? root.hql() + "." + propertyForColumn( getEntityName(), column ) : resolve( token, JoinKind.INNER ).hql() );
 				i = end;
+			} else if ( ( Character.isLetter( c ) || c == '_' )
+			    && ( i == 0
+			        || ! ( Character.isLetterOrDigit( fragment.charAt( i - 1 ) ) || fragment.charAt( i - 1 ) == '_' || fragment.charAt( i - 1 ) == '.' ) ) ) {
+				java.util.regex.Matcher	legacy	= LEGACY_SQL_ALIAS.matcher( fragment ).region( i, fragment.length() );
+				String					path	= legacy.lookingAt() ? legacyAliasColumn( legacy.group( 1 ), legacy.group( 2 ), legacy.group( 3 ) ) : null;
+				if ( path != null ) {
+					sql.append( '?' );
+					args.add( path );
+					i = legacy.end() - 1;
+				} else {
+					// Copy the whole word so a later position inside it is never read as an alias.
+					int stop = i;
+					while ( stop < fragment.length() && ( Character.isLetterOrDigit( fragment.charAt( stop ) ) || fragment.charAt( stop ) == '_' ) ) {
+						stop++;
+					}
+					sql.append( fragment, i, stop );
+					i = stop - 1;
+				}
 			} else {
 				sql.append( c );
 			}
 		}
-		if ( next < values.size() ) {
+		if ( values != null && next < values.size() ) {
 			throw new ORMException( ORMErrorType.QUERY_PARAMETER,
-			    "The sql() condition received " + values.size() + " params but has only " + next + " ? placeholders.",
+			    "The " + what + " condition received " + values.size() + " params but has only " + next + " ? placeholders.",
 			    "Pass one value per ?: " + fragment );
 		}
-		List<Object> parts = new ArrayList<>();
+		return new NativeSql( sql.toString(), args );
+	}
+
+	/**
+	 * The HQL path of a column written with a Hibernate 5 table alias ({@code this_.col}, {@code project2_.col}).
+	 *
+	 * @param name   The alias without its number and trailing underscore ({@code this}, {@code project}).
+	 * @param number The number Hibernate 5 appended (empty for {@code this_}).
+	 * @param column The column name.
+	 *
+	 * @return The HQL path, or null when the alias is not one of this criteria's aliases.
+	 */
+	private String legacyAliasColumn( String name, String number, String column ) {
+		if ( number.isEmpty() ) {
+			return name.equalsIgnoreCase( "this" ) ? root.hql() + "." + propertyForColumn( getEntityName(), column ) : null;
+		}
+		// Hibernate 5 numbered the createAlias() aliases from 1 in the order they were created, from the alias cut to 10
+		// lower-case characters.
+		List<Alias>	matches	= new ArrayList<>();
+		Alias		byIndex	= null;
+		int			index	= 0;
+		for ( Map.Entry<String, Alias> entry : aliases.entrySet() ) {
+			if ( entry.getValue() == root ) {
+				continue;
+			}
+			index++;
+			String key = entry.getKey().length() > 10 ? entry.getKey().substring( 0, 10 ) : entry.getKey();
+			if ( key.equalsIgnoreCase( name ) ) {
+				matches.add( entry.getValue() );
+				if ( String.valueOf( index ).equals( number ) ) {
+					byIndex = entry.getValue();
+				}
+			}
+		}
+		Alias alias = matches.size() == 1 ? matches.get( 0 ) : byIndex;
+		if ( alias == null || !alias.model().isEntity() ) {
+			return null;
+		}
+		return alias.hql() + "." + propertyForColumn( alias.model().name(), column );
+	}
+
+	/**
+	 * A native SQL condition. {@code ?} placeholders take the params in order; {@code {alias}.column} and
+	 * {@code {property}} reference the root entity, and the Hibernate 5 table aliases {@code this_} and
+	 * {@code <alias><n>_} that cborm code wrote by hand reference the root and the {@code createAlias()} aliases. Values
+	 * are always bound, never concatenated.
+	 *
+	 * @param fragment The SQL condition, e.g. {@code "upper({alias}.first_name) = ?"}.
+	 * @param params   The values for the {@code ?} placeholders.
+	 *
+	 * @return This builder.
+	 */
+	CriteriaBuilder sql( String fragment, Object params ) {
+		NativeSql		parsed	= nativeSql( fragment, params == null ? List.of() : toList( params ), "sql()" );
+		List<Object>	parts	= new ArrayList<>();
 		// sql() returns an untyped value, so cast it to compare with 1.
-		parts.add( "cast(sql('(case when " + sql.toString().replace( "'", "''" ) + " then 1 else 0 end)'" );
-		for ( Object arg : args ) {
+		parts.add( "cast(sql('(case when " + parsed.sql().replace( "'", "''" ) + " then 1 else 0 end)'" );
+		for ( Object arg : parsed.args() ) {
 			parts.add( ", " );
 			parts.add( arg );
 		}
@@ -1345,14 +1458,16 @@ public final class CriteriaBuilder implements IReferenceable {
 	}
 
 	/**
-	 * The root property mapped to a column, for {@code {alias}.column} in {@link #sql(String, Object)}.
+	 * The property of an entity mapped to a column, for {@code {alias}.column} and the Hibernate 5 table aliases in
+	 * native SQL.
 	 *
-	 * @param column The column name.
+	 * @param entityName The entity.
+	 * @param column     The column name.
 	 *
-	 * @return The property name.
+	 * @return The property path (an association's foreign key column gives {@code assoc.id}).
 	 */
-	private String propertyForColumn( String column ) {
-		IStruct meta = app.getEntityMetadata( getEntityName() );
+	private String propertyForColumn( String entityName, String column ) {
+		IStruct meta = app.getEntityMetadata( entityName );
 		for ( Object item : meta.getAsArray( Key.of( "properties" ) ) ) {
 			IStruct prop = ( IStruct ) item;
 			if ( column.equalsIgnoreCase( prop.getAsString( Key.of( "column" ) ) ) || column.equalsIgnoreCase( prop.getAsString( Key._NAME ) ) ) {
@@ -1370,19 +1485,28 @@ public final class CriteriaBuilder implements IReferenceable {
 				return assoc.getAsString( Key._NAME ) + "." + EntityModel.of( factory, assoc.getAsString( Key.of( "target" ) ) ).singleIdName();
 			}
 		}
-		throw new ORMException( ORMErrorType.PROPERTY_UNKNOWN, "No property of [" + getEntityName() + "] is mapped to the column [" + column + "].",
+		throw new ORMException( ORMErrorType.PROPERTY_UNKNOWN, "No property of [" + entityName + "] is mapped to the column [" + column + "].",
 		    "Use {alias}.<column> with a mapped column, or {property} with a property name." );
 	}
 
 	/**
-	 * Add conditions from a struct: each key is a property, a null value means {@code is null}.
+	 * Add conditions from a struct: each key is a property, a null value means {@code is null}, and an array (or Java
+	 * list) value means {@code in}. cborm built these filters (for {@code deleteWhere()}, {@code findWhere()}, ...) as
+	 * {@code prop = :prop} HQL, and bx-orm 1 bound an array to it as a parameter list, so {@code deleteWhere( user =
+	 * [ entity ] )} matched its entities.
 	 *
 	 * @param filter The property/value pairs.
 	 *
 	 * @return This builder.
 	 */
 	CriteriaBuilder whereStruct( IStruct filter ) {
-		filter.forEach( ( key, value ) -> compare( key.getName(), "=", value ) );
+		filter.forEach( ( key, value ) -> {
+			if ( value instanceof List<?> || value instanceof Object[] ) {
+				in( key.getName(), value, false );
+			} else {
+				compare( key.getName(), "=", value );
+			}
+		} );
 		return this;
 	}
 
@@ -1795,8 +1919,12 @@ public final class CriteriaBuilder implements IReferenceable {
 
 	/**
 	 * cborm {@code withProjections()}: projections given as a struct, each value a list of {@code property[:alias]}.
+	 * {@code sqlProjection} takes a struct (or an array of structs) {@code { sql, alias, property }}: a native SQL column,
+	 * e.g. {@code { sql : "GROUP_CONCAT(description)", alias : "descriptions", property : "description" }}. The SQL may
+	 * use {@code {alias}.column} and the Hibernate 5 table aliases, like {@link #sql(String, Object)}, but no {@code ?}.
 	 *
-	 * @param spec Keys: property, groupProperty, sum, avg, min, max, count, countDistinct, distinct, rowCount, id.
+	 * @param spec Keys: property, groupProperty, sum, avg, min, max, count, countDistinct, distinct, rowCount, id,
+	 *             sqlProjection.
 	 *
 	 * @return This builder.
 	 */
@@ -1825,8 +1953,21 @@ public final class CriteriaBuilder implements IReferenceable {
 						project( function, pair[ 0 ].trim(), pair.length > 1 ? pair[ 1 ].trim() : "" );
 					}
 				}
+				case "sqlprojection" -> {
+					for ( Object item : value instanceof IStruct ? List.of( value ) : toList( value ) ) {
+						if ( ! ( item instanceof IStruct column ) || column.get( Key.of( "sql" ) ) == null ) {
+							throw new ORMException( ORMErrorType.ARGUMENT, "sqlProjection needs a struct with an sql key.",
+							    "Example: sqlProjection : { sql : \"SUM(hours)\", alias : \"totalHours\", property : \"hours\" }." );
+						}
+						String	alias		= column.getAsString( Key.of( "alias" ) );
+						String	property	= column.getAsString( Key.of( "property" ) );
+						String	name		= alias != null && !alias.isBlank() ? alias : ( property != null && !property.isBlank() ? property : "value" );
+						projections.add(
+						    new Projection( "sql", nativeSql( StringCaster.cast( column.get( Key.of( "sql" ) ) ), null, "sqlProjection" ).call(), name ) );
+					}
+				}
 				default -> throw new ORMException( ORMErrorType.ARGUMENT, "Unknown projection [" + key.getName() + "].",
-				    "Use property, groupProperty, sum, avg, min, max, count, countDistinct, distinct, rowCount or id." );
+				    "Use property, groupProperty, sum, avg, min, max, count, countDistinct, distinct, rowCount, id or sqlProjection." );
 			}
 		} );
 		return this;
@@ -2644,7 +2785,13 @@ public final class CriteriaBuilder implements IReferenceable {
 	}
 
 	/**
-	 * Count the matching root entities (terminal).
+	 * Count the matching root entities (terminal). Projections are ignored for the count.
+	 * <p>
+	 * Unlike the other terminals, {@code count()} then clears the projections and returns the builder to entity results
+	 * ({@code asStruct()}/{@code asQuery()} and their includes are dropped), as cborm's Hibernate 5 builder did
+	 * ({@code setProjection( null )} and {@code ROOT_ENTITY} "so we can reuse this criteria object"). Code written for cborm
+	 * reads a projected total, counts, then lists the same criteria and expects entities. {@code asDistinct()} and
+	 * {@code DISTINCT_ROOT_ENTITY} are kept.
 	 *
 	 * @param context  The context.
 	 * @param property Count the distinct values of this property instead (empty for rows).
@@ -2659,6 +2806,10 @@ public final class CriteriaBuilder implements IReferenceable {
 		    : compile( Mode.EXPRESSION, "count(distinct " + selectPath( property ) + ")" );
 		List<?>		rows	= run( context, c, null, null );
 		long		count	= rows.isEmpty() || rows.get( 0 ) == null ? 0 : ( ( Number ) rows.get( 0 ) ).longValue();
+		// cborm compatibility: a count leaves the criteria ready to list entities.
+		projections.clear();
+		shape	= Shape.ENTITY;
+		memento	= null;
 		announce( ORMKeys.EVENT_AFTER_CRITERIA_COUNT, () -> Struct.of( Key.of( "criteriaBuilder" ), this, Key.of( "count" ), count ) );
 		return count;
 	}

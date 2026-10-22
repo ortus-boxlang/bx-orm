@@ -277,4 +277,99 @@ public class CriteriaCbormCompatTest extends CriteriaTestSupport {
 		                 result = rows[ 1 ][ 1 ].getSlug();
 		                 """ ) ).isEqualTo( "e-one" );
 	}
+
+	/**
+	 * Test: cborm's sqlProjection adds a native SQL column, with {alias}/this_ references, as a struct or an array.
+	 */
+	@DisplayName( "withProjections( sqlProjection ) adds a native SQL column" )
+	@Test
+	public void testSqlProjection() {
+		IStruct row = ( IStruct ) run(
+		    """
+		    result = entityCriteria( 'cbComment' ).isLike( 'commentID', 'compat-%' )
+		        .withProjections( sqlProjection = { sql : "count(distinct this_.FK_contentID)", alias : "contents", property : "content" } )
+		        .asStruct().get();
+		    """ );
+		assertThat( Long.parseLong( row.get( Key.of( "contents" ) ).toString() ) ).isEqualTo( 2 );
+		IStruct both = ( IStruct ) run(
+		    """
+		    result = entityCriteria( 'cbComment' ).isLike( 'commentID', 'compat-%' )
+		        .withProjections( sqlProjection = [ { sql : "count(*)", alias : "total" }, { sql : "max({alias}.author)", property : "author" } ] )
+		        .asStruct().get();
+		    """ );
+		assertThat( Long.parseLong( both.get( Key.of( "total" ) ).toString() ) ).isEqualTo( 3 );
+		assertThat( both.getAsString( Key.of( "author" ) ) ).isEqualTo( "Bob" );
+		IStruct err = error( "entityCriteria( 'cbComment' ).withProjections( sqlProjection = { sql : 'count(*) + ?' } ).asStruct().get();" );
+		assertThat( type( err ) ).isEqualTo( "orm.query.parameter" );
+	}
+
+	/**
+	 * Test: the Hibernate 5 table aliases cborm code wrote in sqlRestriction (this_, alias1_) resolve.
+	 */
+	@DisplayName( "sqlRestriction() resolves the Hibernate 5 aliases this_ and <alias><n>_" )
+	@Test
+	public void testLegacySqlAliases() {
+		assertThat( list( """
+		                  result = entityCriteria( 'cbContent' ).createAlias( 'creator', 'creator' ).isLike( 'contentID', 'compat-%' )
+		                      .sqlRestriction( "this_.slug <> ? and creator1_.firstName = ?", [ 'e-two', 'Ada' ] )
+		                      .order( 'slug' ).list().map( ( e ) => e.getSlug() );
+		                  """ ) ).containsExactly( "e-one", "p-one" ).inOrder();
+		// the second alias is numbered 2, as Hibernate 5 did
+		assertThat( number( """
+		                    c = entityCriteria( 'cbComment' ).createAlias( 'relatedContent', 'content' ).createAlias( 'content.creator', 'creator' );
+		                    result = c.isLike( 'commentID', 'compat-%' ).sql( "creator2_.lastName = 'Lovelace' and content1_.slug = 'e-one'" ).count();
+		                    """ ) ).isEqualTo( 2 );
+		// a name that is not one of the criteria's aliases is left as written
+		assertThat( ( String ) run( "result = entityCriteria( 'cbContent' ).sql( 'other3_.x = 1' ).getHQL();" ) ).contains( "other3_.x = 1" );
+	}
+
+	/**
+	 * Test: count() clears projections and struct results, so the same criteria lists entities afterwards (cborm).
+	 */
+	@DisplayName( "count() leaves the criteria ready to list entities" )
+	@Test
+	public void testCountResetsProjections() {
+		Array result = ( Array ) run( """
+		                              c = entityCriteria( 'cbContent' ).isLike( 'contentID', 'compat-%' );
+		                              total = c.withProjections( count = "contentID:n" ).asStruct().get();
+		                              n = c.count();
+		                              rows = c.order( 'slug' ).list();
+		                              result = [ total.n, n, rows.len(), rows[ 1 ].getSlug() ];
+		                              """ );
+		assertThat( Long.parseLong( result.get( 0 ).toString() ) ).isEqualTo( 3 );
+		assertThat( Long.parseLong( result.get( 1 ).toString() ) ).isEqualTo( 3 );
+		assertThat( Long.parseLong( result.get( 2 ).toString() ) ).isEqualTo( 3 );
+		assertThat( result.get( 3 ) ).isEqualTo( "e-one" );
+	}
+
+	/**
+	 * Test: an array value in a where() struct is an in-list, for ids and for entities (cborm deleteWhere/findWhere).
+	 */
+	@DisplayName( "where( struct ) treats an array value as in (...)" )
+	@Test
+	public void testWhereStructArray() {
+		assertThat( number( "result = entityCriteria( 'cbComment' ).where( { commentID : [ 'compat-c1', 'compat-c3' ] } ).count();" ) ).isEqualTo( 2 );
+		assertThat(
+		    number( """
+		            result = entityCriteria( 'cbComment' )
+		                .where( { relatedContent : [ entityLoadByPK( 'cbContent', 'compat-e1' ), entityLoadByPK( 'cbContent', 'compat-p1' ) ] } ).count();
+		            """ ) ).isEqualTo( 3 );
+		assertThat( number( "result = entityCriteria( 'cbComment' ).where( { commentID : [] } ).count();" ) ).isEqualTo( 0 );
+		assertThat( number( """
+		                    result = entityCriteria( 'cbComment' ).where( { relatedContent : [ entityLoadByPK( 'cbEntry', 'compat-e1' ) ] } ).deleteAll();
+		                    """ ) ).isEqualTo( 2 );
+		assertThat( number( "result = entityCriteria( 'cbComment' ).isLike( 'commentID', 'compat-%' ).count();" ) ).isEqualTo( 1 );
+	}
+
+	/**
+	 * Test: a subclass entity's id is the inherited one, for entityGetId, entityGetMetadata and idEq/notIdEq.
+	 */
+	@DisplayName( "A subclass entity uses its inherited id" )
+	@Test
+	public void testSubclassInheritedId() {
+		assertThat( run( "result = entityGetId( entityLoadByPK( 'cbEntry', 'compat-e1' ) );" ) ).isEqualTo( "compat-e1" );
+		assertThat( list( "result = entityGetMetadata( 'cbEntry' ).idProperties;" ) ).containsExactly( "contentID" );
+		assertThat( run( "result = entityCriteria( 'cbEntry' ).isEq( 'slug', 'e-one' ).notIdEq( 'compat-e1' ).exists();" ) ).isEqualTo( false );
+		assertThat( run( "result = entityCriteria( 'cbEntry' ).isEq( 'slug', 'e-one' ).idEq( 'compat-e1' ).exists();" ) ).isEqualTo( true );
+	}
 }

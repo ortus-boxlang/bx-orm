@@ -18,8 +18,11 @@
 package ortus.boxlang.modules.orm;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 import org.hibernate.Session;
 import org.hibernate.engine.spi.CollectionKey;
@@ -37,6 +40,7 @@ import ortus.boxlang.modules.orm.hibernate.BoxProxy;
 import ortus.boxlang.modules.orm.hibernate.facade.BoxEntityFacade;
 import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
@@ -189,7 +193,7 @@ public final class EntityInspector {
 
 		Array	idProperties	= new Array();
 		Array	idTypes			= new Array();
-		for ( IPropertyMeta id : meta.getIdProperties() ) {
+		for ( IPropertyMeta id : idProperties( meta ) ) {
 			idProperties.append( id.getName() );
 			idTypes.append( nullToEmpty( id.getORMType() ) );
 		}
@@ -361,6 +365,27 @@ public final class EntityInspector {
 	 */
 
 	/**
+	 * Inherited id properties of subclass entities, by entity metadata (computed once per entity).
+	 */
+	private static final Map<IEntityMeta, List<IPropertyMeta>> INHERITED_IDS = Collections.synchronizedMap( new WeakHashMap<>() );
+
+	/**
+	 * An entity's id properties. A subclass entity (joined or single-table inheritance) declares no id of its own: its id
+	 * is the one of the nearest persistent parent, so it is read from the parent's metadata.
+	 *
+	 * @param meta The entity metadata.
+	 *
+	 * @return The id properties, in declaration order; empty when the entity has none.
+	 */
+	public static List<IPropertyMeta> idProperties( IEntityMeta meta ) {
+		if ( !meta.getIdProperties().isEmpty() || !meta.isSubclass() || meta.getParentMeta() == null || meta.getParentMeta().isEmpty() ) {
+			return new ArrayList<>( meta.getIdProperties() );
+		}
+		return INHERITED_IDS.computeIfAbsent( meta,
+		    key -> List.copyOf( idProperties( AbstractEntityMeta.autoDiscoverMetaType( key.getParentMeta() ) ) ) );
+	}
+
+	/**
 	 * The primary key of an entity, read from the instance (a lazy reference answers without being loaded).
 	 *
 	 * @param record The entity record.
@@ -376,7 +401,7 @@ public final class EntityInspector {
 		if ( record.getEntityMeta() == null ) {
 			return null;
 		}
-		List<IPropertyMeta> ids = new ArrayList<>( record.getEntityMeta().getIdProperties() );
+		List<IPropertyMeta> ids = idProperties( record.getEntityMeta() );
 		if ( ids.isEmpty() ) {
 			return null;
 		}

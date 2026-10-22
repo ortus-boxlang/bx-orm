@@ -67,6 +67,11 @@ and never change the builder; `copy()` branches it.
 - `resultTransformer( name )` maps cborm's Hibernate 5 constants (`c.DISTINCT_ROOT_ENTITY` etc. are strings from
   `dereference`): `DISTINCT_ROOT_ENTITY` sets `distinctRoots` (repeats dropped in `shapeRows` by identity, no SQL
   `distinct`), `ROOT_ENTITY` entities, `ALIAS_TO_ENTITY_MAP` structs, `PROJECTION` no-op.
+- `sql()` and `sqlProjection` go through `nativeSql()`: `?`, `{alias}.col`, `{prop}`, and the Hibernate 5 aliases
+  `this_.col` / `<alias><n>_.col` (`legacyAliasColumn()`, alias cut to 10 chars, `n` = creation index). Unknown aliases
+  and quoted text are left as written. `sqlProjection` takes no `?`.
+- cborm 5 parity: `count()` clears `projections`, `shape` and `memento` after running; `whereStruct()` turns a
+  `List`/array value into `in`; subclass ids come from `EntityInspector.idProperties()`.
 - `order()` falls back to a projection alias (`projectionAlias()`) when the name is not a property; properties win.
 - `EntityModel.find()` falls back to attributes declared only by subclass entities (`subtypeAttributes()`); HQL resolves
   them on the subtype (Hibernate's implicit treat).
