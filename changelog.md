@@ -98,6 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 
+- `entityCriteria()` on a base entity failed (`User has no property [costRate]`) for a property that several subclass entities declare, such as `costRate` on both `Employee` and `Contractor` under `User`: Hibernate 7 refuses the ambiguous name. It is now read as `coalesce(treat(x as Employee).costRate, treat(x as Contractor).costRate)`, so projections, conditions and ordering use each row's own value (Hibernate 5 silently read only one subclass's column, so the other subclass's rows were null). When the subclasses declare it with different types, or a path continues through it, the error is `orm.property.ambiguous`, naming the subclasses. Found by TimeBox's daily timesheet (`GET /api/v1/users` with a `propertyList`).
 - HQL rows of `select new map( ... )`, `select new list( ... )` and tuples (`select a, count(b)`) held Hibernate facades instead of BoxLang entities, so calling an entity method on them failed (`No such method [getSiteID] in cbEntryFacade`).
 - Static entity methods were not added to `.cfc` entities: they asked for a `cfc` class resolver, which BoxLang does not have.
 - Hibernate's end-of-transaction work (second-level cache updates, bulk `update`/`delete` clean-up) never ran, because the ORM rides the BoxLang transaction and Hibernate never saw it end. It now runs when a `transaction{}` ends or rolls back, and before a session closes, so cache entries are released on time and Hibernate no longer warns `HHH90010101` / `HHH90010108` on close.

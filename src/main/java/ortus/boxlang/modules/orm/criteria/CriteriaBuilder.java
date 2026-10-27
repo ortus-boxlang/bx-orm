@@ -23,7 +23,9 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
@@ -713,6 +715,10 @@ public final class CriteriaBuilder implements IReferenceable {
 				}
 				throw ORMErrors.propertyNotFound( model.name(), segment, model.attributeNames(), OPERATION );
 			}
+			List<EntityModel.SubtypeDeclaration> declarations = model.subtypesDeclaring( segment );
+			if ( declarations.size() > 1 ) {
+				return new Path( subtypeCoalesce( expr, model, declarations, last, path ), attr, model );
+			}
 			if ( last ) {
 				return new Path( expr + "." + attr.name(), attr, model );
 			}
@@ -742,6 +748,42 @@ public final class CriteriaBuilder implements IReferenceable {
 			}
 		}
 		throw new IllegalStateException( "unreachable" );
+	}
+
+	/**
+	 * The HQL of a property the base entity does not have but several subclass entities declare (e.g. {@code costRate} on
+	 * both {@code Employee} and {@code Contractor}, queried from {@code User}). Hibernate 7 refuses the implicit
+	 * {@code user.costRate}, and Hibernate 5 silently read only one subtype's column. Each row is a single subtype, so
+	 * {@code coalesce(treat(x as Employee).costRate, treat(x as Contractor).costRate)} reads every row's own value, in a
+	 * projection, a condition or an ordering alike.
+	 *
+	 * @param expr         The HQL alias of the base entity.
+	 * @param model        The base entity's model.
+	 * @param declarations The subclass declarations (more than one).
+	 * @param last         Whether the property ends the path (a path cannot continue through it).
+	 * @param path         The whole path, for errors.
+	 *
+	 * @return The coalesce expression.
+	 *
+	 * @throws ORMException {@code orm.property.ambiguous} when the subtypes declare it with different types, or as an
+	 *                      association, or the path continues past it.
+	 */
+	private static String subtypeCoalesce( String expr, EntityModel model, List<EntityModel.SubtypeDeclaration> declarations, boolean last,
+	    String path ) {
+		EntityModel.Attr	first		= declarations.get( 0 ).attr();
+		List<String>		entities	= declarations.stream().map( EntityModel.SubtypeDeclaration::entityName ).toList();
+		boolean				combinable	= last && declarations.stream()
+		    .allMatch( d -> d.attr().kind() == EntityModel.Kind.BASIC && Objects.equals( d.attr().javaType(), first.javaType() ) );
+		if ( !combinable ) {
+			throw new ORMException( ORMErrorType.PROPERTY_AMBIGUOUS,
+			    "[" + first.name() + "] is not a property of [" + model.name() + "]; the subclass entities " + entities
+			        + " each declare it, " + ( last ? "with different types or as associations" :"so the path [" + path + "] cannot continue through it" ) + ".",
+			    "Query the subclass entity, e.g. entityCriteria( \"" + entities.get( 0 ) + "\" ), or give the property one declaration on ["
+			        + model.name() + "]." );
+		}
+		return "coalesce(" + declarations.stream()
+		    .map( d -> "treat(" + expr + " as " + d.entityName() + ")." + d.attr().name() )
+		    .collect( Collectors.joining( ", " ) ) + ")";
 	}
 
 	/** A function call in a path, e.g. {@code year(createdDate)} or {@code coalesce(nickName, firstName)}. */

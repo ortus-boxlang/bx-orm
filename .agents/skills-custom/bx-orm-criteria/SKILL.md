@@ -75,6 +75,9 @@ and never change the builder; `copy()` branches it.
 - `order()` falls back to a projection alias (`projectionAlias()`) when the name is not a property; properties win.
 - `EntityModel.find()` falls back to attributes declared only by subclass entities (`subtypeAttributes()`); HQL resolves
   them on the subtype (Hibernate's implicit treat).
+- A name declared by several subtypes (`EntityModel.subtypesDeclaring()` > 1) resolves to
+  `coalesce(treat(x as A).p, treat(x as B).p)` (`subtypeCoalesce()`); Hibernate 7 refuses the implicit path. Different
+  types, an association, or a path continuing through it: `orm.property.ambiguous`.
 - `class` / `alias.class` / `assoc.class` (when no real `class` property exists) compares `type(alias)` with entity
   names written into the HQL (`classPath()`, `compareClass()`); values are entity names or discriminator values
   (`hierarchyEntityNames()` + the persister's discriminator), an unknown value matches no row (Hibernate 5 behavior).
