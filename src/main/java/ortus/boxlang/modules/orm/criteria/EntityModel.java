@@ -169,6 +169,46 @@ final class EntityModel {
 	}
 
 	/**
+	 * One subclass entity that declares an attribute its base entity does not have.
+	 *
+	 * @param entityName The subclass entity's JPA (BoxLang) name, as HQL {@code treat()} takes it.
+	 * @param attr       The attribute as that subclass declares it.
+	 */
+	record SubtypeDeclaration( String entityName, Attr attr ) {
+	}
+
+	/**
+	 * The subclass entities (at any depth) that declare an attribute this model does not have, the nearest subtype first.
+	 * Each is listed where the attribute is declared, not again in its own subclasses. More than one entry means the name
+	 * is ambiguous on this model: Hibernate 7 then cannot resolve it implicitly (Hibernate 5 silently used one subtype's
+	 * column, so the other subtypes' rows read null).
+	 *
+	 * @param attributeName The attribute name, any casing.
+	 *
+	 * @return The declarations, empty when the model has the attribute itself or no subtype declares it.
+	 */
+	List<SubtypeDeclaration> subtypesDeclaring( String attributeName ) {
+		String						lower	= attributeName.toLowerCase();
+		List<SubtypeDeclaration>	result	= new ArrayList<>();
+		if ( !entity || attributes().containsKey( lower ) ) {
+			return result;
+		}
+		java.util.Deque<ManagedDomainType<?>> pending = new java.util.ArrayDeque<>( type.getSubTypes() );
+		while ( !pending.isEmpty() ) {
+			ManagedDomainType<?> sub = pending.removeFirst();
+			if ( sub instanceof EntityDomainType<?> subEntity ) {
+				for ( Attribute<?, ?> attribute : sub.getDeclaredAttributes() ) {
+					if ( attribute.getName().equalsIgnoreCase( attributeName ) ) {
+						result.add( new SubtypeDeclaration( subEntity.getName(), toAttr( attribute ) ) );
+					}
+				}
+			}
+			pending.addAll( sub.getSubTypes() );
+		}
+		return result;
+	}
+
+	/**
 	 * The entities of this entity's hierarchy: this one and every subclass entity below it, this one first (empty for a
 	 * component).
 	 *

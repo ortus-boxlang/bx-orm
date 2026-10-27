@@ -41,6 +41,11 @@ public enum ORMErrorType {
 	ENTITY_NOT_FOUND( "orm.entity.notFound" ),
 	/** A property name that does not exist on the entity. */
 	PROPERTY_UNKNOWN( "orm.property.unknown" ),
+	/**
+	 * A property the base entity does not have that several subclass entities declare in ways that cannot be combined
+	 * (different types, or an association).
+	 */
+	PROPERTY_AMBIGUOUS( "orm.property.ambiguous" ),
 	/** A property value that cannot be converted to its column type. */
 	PROPERTY_TYPE( "orm.property.type" ),
 	/** A BIF received the wrong kind of value. */

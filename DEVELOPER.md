@@ -727,7 +727,10 @@ creation order when two match). An alias it cannot place, and anything in quotes
 returns entities, as in cborm 5 (`asDistinct()` and `DISTINCT_ROOT_ENTITY` stay). In `where( struct )` and the
 services' `deleteWhere()`, an array value is an `in` list. `EntityInspector.idProperties()` returns the id a subclass
 entity inherits from its parent (cached per meta), which `entityGetId()`, `ORMApp.getPropertyNames()`, memento
-projections and struct loads use. `avg` of a boolean property is `avg(cast(x as Integer))` (`EntityModel.Attr.isBoolean()`
+projections and struct loads use. A property several subclass entities declare (`costRate` on `Employee` and
+`Contractor`, queried from `User`) resolves to `coalesce(treat(x as Employee).costRate, treat(x as Contractor).costRate)`
+(`EntityModel.subtypesDeclaring()`, `CriteriaBuilder.subtypeCoalesce()`), since Hibernate 7 refuses the ambiguous
+implicit path; different types or a path through it are `orm.property.ambiguous`. `avg` of a boolean property is `avg(cast(x as Integer))` (`EntityModel.Attr.isBoolean()`
 knows a converted boolean by its JDBC type), the 0/1 average Hibernate 5 gave.
 
 **`getSQL()`** compiles, prepares the query with flushing off, and runs it while `SqlCapture` (the session factory's
