@@ -777,7 +777,8 @@ public final class CriteriaBuilder implements IReferenceable {
 		if ( !combinable ) {
 			throw new ORMException( ORMErrorType.PROPERTY_AMBIGUOUS,
 			    "[" + first.name() + "] is not a property of [" + model.name() + "]; the subclass entities " + entities
-			        + " each declare it, " + ( last ? "with different types or as associations" :"so the path [" + path + "] cannot continue through it" ) + ".",
+			        + " each declare it, " + ( last ? "with different types or as associations" : "so the path [" + path + "] cannot continue through it" )
+			        + ".",
 			    "Query the subclass entity, e.g. entityCriteria( \"" + entities.get( 0 ) + "\" ), or give the property one declaration on ["
 			        + model.name() + "]." );
 		}
