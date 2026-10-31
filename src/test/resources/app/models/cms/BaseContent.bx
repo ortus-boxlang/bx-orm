@@ -2,12 +2,12 @@
  * Test Base Content!
  */
 class
-	persistent         ="true"
-	entityname         ="cbContent"
-	table              ="cb_content"
-	extends            ="BaseEntityMethods"
-	cachename          ="cbContent"
-	cacheuse           ="read-write"
+	persistent="true"
+	entityname="cbContent"
+	table="cb_content"
+	extends="BaseEntityMethods"
+	cachename="cbContent"
+	cacheuse="read-write"
 	discriminatorColumn="contentType"
  {
 	property

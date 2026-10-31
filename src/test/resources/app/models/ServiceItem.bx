@@ -1,4 +1,4 @@
-class entityName="ServiceItem" table     ="service_items" persistent="true" {
+class entityName="ServiceItem" table="service_items" persistent="true" {
 	property
 	    name="id"
 	    column="id"

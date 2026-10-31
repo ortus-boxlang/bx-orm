@@ -25,7 +25,7 @@ jobs:
   # Format PR
   format_check:
     name: Checks Source Code Formatting
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
@@ -41,10 +41,13 @@ jobs:
       - name: Verify Code Formatting
         run: ./gradlew spotlessCheck
 
+      # Pinned to the BoxLang version the module builds against (gradle.properties), so the formatter matches local runs.
       - name: Setup BoxLang
         uses: ortus-boxlang/setup-boxlang@1.6.0
         with:
-          with-commandbox: true
+          version: 1.18.0
 
       - name: Format BoxLang Source
-        run: boxlang format --check --source ./src/test/resources/app
+        # StaticThing.bx is excluded: the BoxLang 1.18.0 formatter drops the `static` modifier from its `static function`,
+        # which would change what the static entity method tests test.
+        run: boxlang format --check --source ./src/test/resources/app --excludes ./src/test/resources/app/models/StaticThing.bx

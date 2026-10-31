@@ -31,7 +31,7 @@ class {
 	this.ormSettings = {
 		"datasource"           : "TestDB",
 		// we use the mapping here to make sure class resolver issues and path walking are handled
-		"entityPaths"          : [ "/root/models"],
+		"entityPaths"          : [ "/root/models" ],
 		"saveMapping"          : "true",
 		"logSQL"               : "false",
 		"dialect"              : "MySQLDialect",
@@ -39,14 +39,17 @@ class {
 		"cacheprovider"        : "ConcurrentHashMap",
 		"secondarycacheenabled": true,
 		// per-region BoxCache properties; see SecondaryCacheTest
-		"cacheConfig"          : { "regions" : { "cachedOwner" : { "maxObjects" : 777 } } },
+		"cacheConfig"          : { "regions": { "cachedOwner": { "maxObjects": 777 } } },
 		"eventHandling"        : true,
 		"sqlFunctions"         : {
-			"nameLen" : { "sql" : "char_length(?1)", "returns" : "integer" },
-			"shout"   : "upper(?1)"
+			"nameLen": {
+				"sql"    : "char_length(?1)",
+				"returns": "integer"
+			},
+			"shout": "upper(?1)"
 		},
-		"eventHandler"         : "root.models.events.EventHandler",
-		"ignoreParseErrors"    : true
+		"eventHandler"     : "root.models.events.EventHandler",
+		"ignoreParseErrors": true
 	};
 	this.ormEnabled = "true";
 }

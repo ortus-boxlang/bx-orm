@@ -1,4 +1,4 @@
-class entityName="Feature" table     ="features" persistent="true" {
+class entityName="Feature" table="features" persistent="true" {
 	property
         name="id"
         fieldtype="id"

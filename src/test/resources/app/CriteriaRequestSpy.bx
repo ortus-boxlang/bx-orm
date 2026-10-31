@@ -9,9 +9,8 @@ class {
 	 *
 	 * @data The event data: type and criteriaBuilder
 	 */
-	function onCriteriaBuilderAddition( data ){
+	function onCriteriaBuilderAddition( data ) {
 		request.criteriaSpyTypes = request.criteriaSpyTypes ?: [];
 		request.criteriaSpyTypes.append( arguments.data.type );
 	}
-
 }
