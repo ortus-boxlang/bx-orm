@@ -1,8 +1,8 @@
 component
-	persistent        ="true"
-	table             ="clientContact"
-	extends           ="User"
-	joinColumn        ="userId"
+	persistent="true"
+	table="clientContact"
+	extends="User"
+	joinColumn="userId"
 	discriminatorValue="clientContact"
 {
 	property

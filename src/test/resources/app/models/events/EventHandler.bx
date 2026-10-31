@@ -10,8 +10,8 @@ class {
 	 */
 	public void function preLoad( any entity ) {
 		System.out.println(
-				"EventHandler action firing: ORMPreLoad"
-			);
+			"EventHandler action firing: ORMPreLoad"
+		);
 	}
 
 	/**
@@ -19,8 +19,8 @@ class {
 	 */
 	public void function postLoad( any entity ) {
 		System.out.println(
-				"EventHandler action firing: ORMPostLoad"
-			);
+			"EventHandler action firing: ORMPostLoad"
+		);
 	}
 
 	/**
@@ -39,12 +39,15 @@ class {
 	 */
 	public function preDelete( any entity ) {
 		// Veto fixture (EventVetoTest): an entity that asks for a global veto of this event is refused here.
-		if ( !isNull( arguments.entity ) && structKeyExists( arguments.entity, "wantsGlobalVeto" ) && arguments.entity.wantsGlobalVeto( "preDelete" ) ) {
+		if (
+			!isNull( arguments.entity ) && structKeyExists( arguments.entity, "wantsGlobalVeto" ) &&
+				arguments.entity.wantsGlobalVeto( "preDelete" )
+		) {
 			return false;
 		}
 		System.out.println(
-				"EventHandler action firing: ORMPreDelete"
-			);
+			"EventHandler action firing: ORMPreDelete"
+		);
 	}
 
 	/**
@@ -52,12 +55,15 @@ class {
 	 */
 	public function preUpdate( any entity, Struct oldData = {} ) {
 		// Veto fixture (EventVetoTest): an entity that asks for a global veto of this event is refused here.
-		if ( !isNull( arguments.entity ) && structKeyExists( arguments.entity, "wantsGlobalVeto" ) && arguments.entity.wantsGlobalVeto( "preUpdate" ) ) {
+		if (
+			!isNull( arguments.entity ) && structKeyExists( arguments.entity, "wantsGlobalVeto" ) &&
+				arguments.entity.wantsGlobalVeto( "preUpdate" )
+		) {
 			return false;
 		}
 		System.out.println(
-				"EventHandler action firing: ORMPreUpdate"
-			);
+			"EventHandler action firing: ORMPreUpdate"
+		);
 	}
 
 	/**
@@ -76,12 +82,15 @@ class {
 	 */
 	public function preInsert( any entity ) {
 		// Veto fixture (EventVetoTest): an entity that asks for a global veto of this event is refused here.
-		if ( !isNull( arguments.entity ) && structKeyExists( arguments.entity, "wantsGlobalVeto" ) && arguments.entity.wantsGlobalVeto( "preInsert" ) ) {
+		if (
+			!isNull( arguments.entity ) && structKeyExists( arguments.entity, "wantsGlobalVeto" ) &&
+				arguments.entity.wantsGlobalVeto( "preInsert" )
+		) {
 			return false;
 		}
 		System.out.println(
-				"EventHandler action firing: ORMPreInsert"
-			);
+			"EventHandler action firing: ORMPreInsert"
+		);
 	}
 
 	/**
@@ -100,8 +109,8 @@ class {
 	 */
 	public void function preSave( any entity ) {
 		System.out.println(
-				"EventHandler action firing: ORMPreSave"
-			);
+			"EventHandler action firing: ORMPreSave"
+		);
 	}
 
 	/**
@@ -109,8 +118,8 @@ class {
 	 */
 	public void function postSave( any entity ) {
 		System.out.println(
-				"EventHandler action firing: ORMPostSave"
-			);
+			"EventHandler action firing: ORMPostSave"
+		);
 	}
 
 	/**
@@ -118,8 +127,8 @@ class {
 	 */
 	public void function preFlush( any entities ) {
 		System.out.println(
-				"EventHandler action firing: ORMPreFlush"
-			);
+			"EventHandler action firing: ORMPreFlush"
+		);
 	}
 
 	/**
@@ -127,8 +136,8 @@ class {
 	 */
 	public void function postFlush( any entities ) {
 		System.out.println(
-				"EventHandler action firing: ORMPostFlush"
-			);
+			"EventHandler action firing: ORMPostFlush"
+		);
 	}
 
 	/**
@@ -137,8 +146,8 @@ class {
 	public void function postNew( any entity, any entityName ) {
 		// Process the announcement
 		System.out.println(
-				"EventHandler action firing: ORMPostNew"
-			);
+			"EventHandler action firing: ORMPostNew"
+		);
 		application.postNewFired = true;
 		application.postNewEntityName = arguments.entityName;
 	}
@@ -150,10 +159,16 @@ class {
 	 * @entityName The entity name.
 	 * @action     insert, update or delete.
 	 */
-	public void function postCommit( any entity, string entityName, string action ) {
+	public void function postCommit(
+		any entity,
+		string entityName,
+		string action
+	) {
 		if ( entityName == "CommitNote" ) {
 			request.globalCommitLog = request.globalCommitLog ?: [];
-			request.globalCommitLog.append( action & ":" & entity.getTitle() );
+			request
+				.globalCommitLog
+				.append( action & ":" & entity.getTitle() );
 		}
 	}
 }

@@ -1,7 +1,7 @@
 /**
  * This is the base class for all persistent entities
  */
-component mappedsuperclass="true" accessors       ="true" {
+component mappedsuperclass="true" accessors="true" {
 	/**********************************************************************
 	 * **							PROPERTIES
 	 **********************************************************************/

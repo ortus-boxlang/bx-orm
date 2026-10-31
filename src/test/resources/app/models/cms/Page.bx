@@ -2,14 +2,14 @@
  * Test Page!
  */
 class
-	persistent        ="true"
-	entityname        ="cbPage"
-	table             ="cb_page"
-	batchsize         ="25"
-	cachename         ="cbPage"
-	cacheuse          ="read-write"
-	extends           ="BaseContent"
-	joinColumn        ="contentID"
+	persistent="true"
+	entityname="cbPage"
+	table="cb_page"
+	batchsize="25"
+	cachename="cbPage"
+	cacheuse="read-write"
+	extends="BaseContent"
+	joinColumn="contentID"
 	discriminatorValue="Page"
  {
 	/**********************************************************************

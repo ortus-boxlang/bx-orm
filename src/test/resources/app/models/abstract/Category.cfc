@@ -1,9 +1,9 @@
 component
 	persistent="true"
-	table     ="abstract_categories"
-	extends   ="Abstract"
-	cachename ="abstract_categories"
-	cacheuse  ="read-write"
+	table="abstract_categories"
+	extends="Abstract"
+	cachename="abstract_categories"
+	cacheuse="read-write"
 {
 	property
 		name     ="catid"

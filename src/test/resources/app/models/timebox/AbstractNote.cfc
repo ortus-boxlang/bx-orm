@@ -1,7 +1,7 @@
 /**
  * This is the base class for all note types
  */
-component mappedsuperclass="true" accessors       ="true" extends         ="BaseEntity" {
+component mappedsuperclass="true" accessors="true" extends="BaseEntity" {
 	property
         name="noteId"
         fieldtype="id"

@@ -1,4 +1,4 @@
-component persistent="true" table     ="compositeGames" accessors ="#true#" {
+component persistent="true" table="compositeGames" accessors="#true#" {
 	property name="teamGameNum" column="teamGameNum" type="string" ormtype="string" fieldtype="id";
 
 	property name="gameUserID" column="gameUserID" type="string" ormtype="string";

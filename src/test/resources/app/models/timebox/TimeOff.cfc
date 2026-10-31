@@ -4,7 +4,7 @@
  * ---
  * A TimeBox TimeOff representation for users
  */
-component persistent="true" table     ="timeOff" extends   ="BaseEntity" {
+component persistent="true" table="timeOff" extends="BaseEntity" {
 	/**********************************************************************
 	 * **						DI
 	 **********************************************************************/

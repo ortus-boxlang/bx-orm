@@ -2,13 +2,13 @@
  * Test Entry!
  */
 class
-	persistent        ="true"
-	entityname        ="cbEntry"
-	table             ="cb_entry"
-	batchsize         ="25"
-	cachename         ="cbEntry"
-	cacheuse          ="read-write"
-	extends           ="BaseContent"
+	persistent="true"
+	entityname="cbEntry"
+	table="cb_entry"
+	batchsize="25"
+	cachename="cbEntry"
+	cacheuse="read-write"
+	extends="BaseContent"
 	discriminatorValue="Entry"
  {
 	// We are leaving the join column off of this entity to ensure no regresions related to BLMODULES-18
