@@ -135,6 +135,22 @@ public PhysicalNamingStrategy resolveNamingStrategy() {
 }
 ```
 
+## Boot Cache Settings (`ormManifest`)
+
+| Setting | Values | Effect |
+| --- | --- | --- |
+| `ormManifest` | `off` (default), `auto`, `trust` | `auto` boots normally and writes `.bxorm/` (manifest + `facades-{app}.jar`); `trust` boots from it with no discovery or parsing and fails closed when it is missing or stale. |
+| `ormManifestLocation` | path | Moves the folder holding `.bxorm/` (relative to the app root, or absolute). |
+
+- Build the cache without a server for Docker/CI: `boxlang --bx-config <server boxlang.json> module:orm generate`
+  (`ManifestGenerator`). It loads the Application class without starting it, so `ORMConfig` is built from the same
+  `this.ormSettings` the server uses.
+- The settings fingerprint a `trust` boot checks covers dialect, datasource, naming strategy, application name,
+  `dbcreate`, `quoteIdentifiers` and `entityPaths` (`ManifestService.configFingerprint`). Adding a setting that changes
+  the generated mappings means adding it there too.
+- Entity sources are recorded as BoxLang paths under their entity roots (`MappingGenerator.resolveEntityRoots`), never
+  machine paths, so a cache built in one place verifies wherever it is deployed.
+
 ## ORMConnectionProvider — Datasource Bridge
 
 Bridges BoxLang's `ConnectionManager` / `DataSource` system to Hibernate's `ConnectionProvider`

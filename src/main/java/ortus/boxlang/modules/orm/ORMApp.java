@@ -276,12 +276,13 @@ public class ORMApp {
 			// Fail closed on a stale manifest: booting old mappings against changed entities or settings would silently
 			// persist to the wrong columns/tables. Regenerate it with an auto-mode boot.
 			List<String>											stale		= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
-			    .verify( manifest, this.config, moduleVersion() );
+			    .verify( manifest, this.config, moduleVersion(),
+			        ortus.boxlang.modules.orm.mapping.manifest.ManifestService.sourceResolver( context.getRequestContext() ) );
 			if ( !stale.isEmpty() ) {
 				throw new BoxRuntimeException( "ORM manifest mode is [trust] but the manifest at ["
 				    + ortus.boxlang.modules.orm.mapping.manifest.ManifestService.manifestFile( folder, this.config.appName ) + "] is stale: "
 				    + String.join( "; ", stale )
-				    + ". Regenerate it by booting once with ormManifest=\"auto\", then switch back to [trust]." );
+				    + ". Regenerate it with `boxlang module:orm generate` (or by booting once with ormManifest=\"auto\"), then switch back to [trust]." );
 			}
 			// Load pre-generated facade bytecode (if a facades-{app}.jar was shipped) so the session factory build injects those
 			// classes instead of re-running ByteBuddy. Best-effort: a missing jar just means facades are regenerated.
@@ -300,7 +301,9 @@ public class ORMApp {
 				java.nio.file.Path folder = ortus.boxlang.modules.orm.mapping.manifest.ManifestService
 				    .resolveFolder( context.getRequestContext(), this.config.manifestLocation );
 				ortus.boxlang.modules.orm.mapping.manifest.ManifestService.write(
-				    ortus.boxlang.modules.orm.mapping.manifest.ManifestService.build( map, this.config, moduleVersion() ), folder );
+				    ortus.boxlang.modules.orm.mapping.manifest.ManifestService.build( map, this.config, moduleVersion(),
+				        ortus.boxlang.modules.orm.mapping.manifest.ManifestService.portablePaths( context.getRequestContext(), this.config ) ),
+				    folder );
 				if ( logger.isDebugEnabled() ) {
 					logger.debug( "ORM manifest [auto] mode: wrote manifest to [{}]", folder );
 				}
@@ -315,8 +318,10 @@ public class ORMApp {
 	/**
 	 * The ORM module version stamp recorded in a manifest (the module record's version, as the CLI reports it). Falls back
 	 * to {@code "dev"} when the module record carries no version.
+	 *
+	 * @return The module version stamp.
 	 */
-	private static String moduleVersion() {
+	public static String moduleVersion() {
 		ModuleRecord record = runtime.getModuleService().getModuleRecord( Key.of( "orm" ) );
 		return record == null || record.version == null || record.version.isBlank() ? "dev" : record.version;
 	}

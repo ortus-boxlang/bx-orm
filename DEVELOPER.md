@@ -22,10 +22,10 @@ end-user docs.
 | Generated entity facades | Each entity maps to a generated Java class, unlocking `uuid` and other id generators, composite ids, `byte[]` and full metamodel access. Facades are namespaced per ORM application. | [§5](#5-the-facade-concretely) |
 | Modern `mapping.xml` | Hibernate 7 mapping format, fed to Hibernate in memory. | [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
 | Composite ids, inheritance, value collections | Composite primary keys, single-table and joined inheritance, `fieldtype="collection"` (array and struct). | [§5](#5-the-facade-concretely), [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
-| Boot cache (`.bxorm/`) | `ormManifest="auto"` writes the resolved boot model and facade bytecode (`manifest-{app}.json`, `facades-{app}.jar`, so several apps can share one folder); `trust` boots straight from it. `ormManifestLocation` moves it. In `auto`, editing an entity reloads the ORM on the next request. | [§11](#11-the-orm-manifest-boot-cache-bxorm) |
+| Boot cache (`.bxorm/`) | `ormManifest="auto"` writes the resolved boot model and facade bytecode (`manifest-{app}.json`, `facades-{app}.jar`, so several apps can share one folder); `trust` boots straight from it. `module:orm generate` builds the same cache from the CLI with no server or database (for Docker/CI builds). `ormManifestLocation` moves it. In `auto`, editing an entity reloads the ORM on the next request. | [§11](#11-the-orm-manifest-boot-cache-bxorm) |
 | Faster boot | Every id and version tells Hibernate its "unsaved" value, so Hibernate never builds a throwaway instance of an entity (or runs its `init()`) at startup. Mappings are joined as text, and large models add static methods in parallel. `unsavedValue` on an id is honored. | [§11](#boot-performance-measured) |
 | BoxCache second-level cache | Every Hibernate cache region is a BoxLang cache. `cacheConfig` sets BoxCache properties for all regions or per region (struct, JSON file or an old `ehcache.xml`); a BoxLang cache that already exists with a region's name is used as is; `cacheUse` on a collection caches it. | [§10g](#10g-second-level-cache-boxcache) |
-| `bxorm` CLI | `boxlang module:orm <verb> [--app=<name>]` inspects the boot cache: `info`, `validate`, `entities`, `entity`, `mappings`, `clear`. | [§11](#the-bxorm-cli) |
+| `bxorm` CLI | `boxlang module:orm <verb> [--app=<name>]` builds the boot cache (`generate`) and inspects it: `info`, `validate`, `entities`, `entity`, `mappings`, `clear`. A failing verb exits non-zero. | [§11](#the-bxorm-cli) |
 | Transactions ride BoxLang | ORM work inside `transaction{}` uses the same JDBC connection as `queryExecute()`; BoxLang owns commit and rollback. Queries inside a transaction see pending ORM writes. | [§8](#8-transactions-riding-the-boxlang-connection) |
 | `uniquekey` / `index` | Property annotations become unique constraints and indexes, including multi-column ones. | [§6](#6-mapping-generation-modern-mappingxml-not-hbmxml) |
 
@@ -494,8 +494,8 @@ when the runtime enables that experimental flag.
   context classloader) and leave a lock held. The next boot's `dbcreate="dropcreate"` schema drop
   then waits on that lock (60s per table), and in CI the second class ran without its tables. Each
   Derby test app has its own `jdbc:derby:memory:<name>` (for example `facadeSemanticsApp` reuses the
-  `mappingRegressionApp` entities under its own app name and DB); `ManifestLifecycleBootTest` uses a
-  fresh DB name per test.
+  `mappingRegressionApp` entities under its own app name and DB); `ManifestLifecycleBootTest` and
+  `ManifestGenerateTest` use a fresh DB name per test.
 - **Transaction tests** use a unique row value per test (`uniqueName(...)`) and check commits from a
   separate pooled connection (`committedCount(...)`), so they never depend on test order and never
   pass without asserting anything.
@@ -1029,7 +1029,7 @@ cut boot by roughly a third to a half on a large model, not to collapse it to a 
 **What the manifest stores** (`OrmManifest`, serialized as JSON via BoxLang's own `JSONUtil` so it
 round-trips through BoxLang types): a format version, an ORM version stamp, a config fingerprint,
 and per entity its name, class FQN, datasource, a source-file fingerprint (`path`/`hash`/`mtime`/
-`size`), the **normalized metadata struct** (exactly what `AbstractEntityMeta.autoDiscoverMetaType`
+`size`, where `path` is portable, see below), the **normalized metadata struct** (exactly what `AbstractEntityMeta.autoDiscoverMetaType`
 consumes), and its generated `<entity>` mapping XML. Rehydration rebuilds each `IEntityMeta` from
 the stored metadata and produces a **byte-identical** mapping — this invariant is the core test.
 
@@ -1048,20 +1048,53 @@ compares the running app against the manifest and fails closed, naming every cha
 - each entity source file still at its recorded path (same size and mtime are trusted, otherwise it
   is re-hashed).
 
-A source that is not at its recorded path (manifest generated on a build machine with a different
-checkout) cannot be checked and is skipped, and newly added entity files are not detected (trust mode
-does no discovery). Regenerate the manifest with an `auto` boot after changing entities.
+**Portable source paths (format 2).** A source `path` is never a machine path: it is the BoxLang path under the
+entity root the file was discovered in (`/timebox/models/projects/Task.cfc` for the entity path `/timebox/models`, or
+`/models/Task.cfc` under the app root when `entityPaths` is unset). `MappingGenerator.resolveEntityRoots` is the one
+source of those roots, for discovery and for `ManifestService.portablePaths( context, config )`, which records the
+paths. A `trust` boot resolves them back through the running application's mappings with
+`ManifestService.sourceResolver( context )`, so a cache built on a CI runner, in a Docker build stage or in another
+folder still checks the deployed files. Format 1 manifests (absolute paths) fail the format check and must be
+regenerated. A source that cannot be found where its path resolves is skipped, and newly added entity files are not
+detected (trust mode does no discovery). Regenerate the cache after changing entities.
 
 **Integrity guard (v1).** `write()` is atomic (temp + move) and emits a `manifest-{app}.sha256` sidecar;
 `read()` recomputes and compares it, failing closed on mismatch (detects corruption / naive edits).
 Stronger tamper-resistance (an HMAC/signature keyed by a deploy secret) is a documented v2 option.
 
-**`facades-{app}.jar` bytecode cache.** In `auto`, the ByteBuddy-generated facade bytecode is captured into
+**`facades-{app}.jar` bytecode cache.** Facades are generated from entity metadata alone by
+`EntityFacadeGenerator.generate( ormConfig, entities )`: no Hibernate and no database. `SessionFactoryBuilder` calls it
+before Hibernate parses the mappings; `module:orm generate` calls it directly. In `auto`, the ByteBuddy-generated facade bytecode is captured into
 `.bxorm/facades-{app}.jar` after the session factories build (only facades with no live class initializer
 are captured, see "Self-contained accessors" in §5); in `trust`, the jar's bytes are handed to that
 build's `FacadeClassLoader`, which defines them instead of re-running codegen, with a transparent
 ByteBuddy fallback if a class cannot be defined. ByteBuddy stays a dependency (it is only skipped at
 runtime, not removed).
+
+### Building the cache at build time (`module:orm generate`)
+
+`ManifestGenerator` (the `generate` verb) builds the whole cache from the command line, so a Docker build or CI step
+can ship a `trust`-ready image without starting a server or reaching a database:
+
+```bash
+cd /app && boxlang --bx-config runtime/boxlang.json module:orm generate
+```
+
+1. It loads `Application.bx` (else `Application.cfc`) with `ApplicationService.loadDescriptorTemplate` and wraps it in
+   an `ApplicationClassListener`. That runs the pseudo-constructor (`this.name`, `this.mappings`, `this.ormSettings`)
+   and nothing else: `defineApplication()` is never called, so neither the ORM's `onApplicationStart` interceptor nor
+   the app's own `onApplicationStart()` runs.
+2. The request context (`GenerateContext`) answers the web scopes a CLI run lacks (`cgi`, `url`, `form`, `cookie`),
+   empty, because Application classes commonly read them in the pseudo-constructor.
+3. The `/` mapping points at the app root (`--dir`, default the working directory) for the run and is restored after,
+   so default and app-relative entity paths resolve as they do under the web root.
+4. It discovers the entities (`MappingGenerator.discoverEntities`), writes the manifest with portable paths, generates
+   the facades (`EntityFacadeGenerator`) and writes `facades-{app}.jar`.
+
+`appName`, `facadeNamespace` and the module version are derived as `ORMApp.startup()` derives them, so the settings
+fingerprint matches the running app. Mappings, datasources and modules declared in `boxlang.json` come from the
+runtime config, so pass the server's `--bx-config`. Because the module runner ignores `main()`'s return value,
+`ModuleConfig.main()` calls `cliExit()` with the verb's exit code when it fails.
 
 ### Boot performance (measured)
 
@@ -1119,10 +1152,11 @@ is not the problem; the class volume is. A JVM class-data-sharing (CDS) archive 
 
 ### The `bxorm` CLI
 
-`box.json` declares the `bxorm` executable and `ModuleConfig.main()` dispatches to the Java
-`ManifestCli`. Every verb inspects the on-disk `.bxorm/` boot cache **without booting Hibernate**.
-The folder is resolved against the working directory, overridable with `--dir=<path>`. `main()` only strips
-`--dir`; every other argument, including `--app` and `--all`, reaches `ManifestCli`.
+`box.json` declares the `bxorm` executable and `ModuleConfig.main()` dispatches `generate` to the Java
+`ManifestGenerator` and every other verb to `ManifestCli`. No verb boots Hibernate.
+The app root (which holds `.bxorm/`) is the working directory, overridable with `--dir=<path>`. `main()` only strips
+`--dir`; every other argument, including `--app` and `--all`, reaches `ManifestCli`. A failing verb exits with its
+non-zero code through `cliExit()`.
 
 ```text
 boxlang module:orm <verb> [args] [--app=<name>] [--dir=<path>]   # or:  bxorm <verb> [args] ...
@@ -1130,6 +1164,7 @@ boxlang module:orm <verb> [args] [--app=<name>] [--dir=<path>]   # or:  bxorm <v
 
 | Verb | What it does |
 | --- | --- |
+| `generate` | Build the cache (manifest + facade jar) from the Application class; no server, database or app start |
 | `info` (default) | Manifest header (versions, config fingerprint, integrity, facade jar) + entity count, for each application |
 | `validate` | Integrity- and format-check each application's manifest; non-zero exit when any fails |
 | `entities` | List the entities recorded in the manifest |
@@ -1143,13 +1178,10 @@ boxlang module:orm <verb> [args] [--app=<name>] [--dir=<path>]   # or:  bxorm <v
 | --- | --- |
 | `--app=<name>` | The application to work on: its `this.name` or its key (both go through `ManifestService.appKey`). Optional when the folder holds one application. |
 | `--all` | With `clear`: remove every application's cache (the whole folder). |
-| `--dir=<path>` | The folder that holds `.bxorm/`; handled by `ModuleConfig.main()`. |
+| `--dir=<path>` | The app root, which holds `.bxorm/`; handled by `ModuleConfig.main()`. |
 
 Without `--app`, `info`, `validate` and `version` cover every application in the folder, and `entities`, `entity`,
 `mappings` and `clear` use the only application, or exit `1` asking for `--app` when there are several.
-
-Generation is intentionally **not** a verb: `auto` mode writes the manifest on every boot, which is
-the supported generation path.
 
 #### Example output
 
@@ -1159,7 +1191,7 @@ two-entity manifest (`Person`, `Passport`) and no facade jar. Paths are shown as
 ```text
 $ boxlang module:orm info
 📦 ORM manifest [admin] in [/app/.bxorm]
-  format version   : 1
+  format version   : 2
   built by ORM     : 2.0.0
   config fingerprint: 20ccab44a96d
   entities         : 2
@@ -1167,7 +1199,7 @@ $ boxlang module:orm info
   facade jar       : ➖ absent
 
 📦 ORM manifest [shop] in [/app/.bxorm]
-  format version   : 1
+  format version   : 2
   built by ORM     : 2.0.0
   config fingerprint: 20ccab44a96d
   entities         : 2

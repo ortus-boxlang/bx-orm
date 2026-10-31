@@ -137,11 +137,14 @@ class {
 	 * --------------------------------------------------------------------------
 	 * CLI Entry Point
 	 * --------------------------------------------------------------------------
-	 * Invoked via `boxlang module:orm <verb> [args]`. A thin dispatcher over the
-	 * Java `ManifestCli`, which reads/validates/clears the `.bxorm/` boot cache.
-	 * The `.bxorm/` folder is resolved against the current working directory,
-	 * overridable with `--dir=<path>`. Every other argument, including
+	 * Invoked via `boxlang module:orm <verb> [args]`. A thin dispatcher: `generate`
+	 * goes to the Java `ManifestGenerator`, which builds the `.bxorm/` boot cache from
+	 * the application's Application class with no server or database; every other
+	 * verb goes to `ManifestCli`, which reads/validates/clears the cache.
+	 * The application root (and its `.bxorm/` folder) is the current working
+	 * directory, overridable with `--dir=<path>`. Every other argument, including
 	 * `--app=<name>` and `--all`, is passed through to `ManifestCli`.
+	 * A failing verb exits the process with its non-zero exit code.
 	 *
 	 * @args The CLI arguments (verb + its arguments and options, plus an optional --dir flag).
 	 *
@@ -165,10 +168,21 @@ class {
 
 		var folder	= appRoot & "/.bxorm";
 		var version	= isNull( variables.moduleRecord ) ? "unknown" : variables.moduleRecord.version;
-		var result	= createObject( "java", "ortus.boxlang.modules.orm.mapping.manifest.ManifestCli" )
-			.run( javacast( "string", folder ), javacast( "string", version ), verbArgs );
+		var result	= "";
+		// generate loads the Application class (without starting it) and writes the cache; every other verb reads it.
+		if( verbArgs.len() && verbArgs[ 1 ] == "generate" ){
+			result = createObject( "java", "ortus.boxlang.modules.orm.mapping.manifest.ManifestGenerator" )
+				.run( javacast( "string", appRoot ) );
+		} else {
+			result = createObject( "java", "ortus.boxlang.modules.orm.mapping.manifest.ManifestCli" )
+				.run( javacast( "string", folder ), javacast( "string", version ), verbArgs );
+		}
 
 		systemOutput( result.message() );
+		// The CLI runner ignores main()'s return value, so a failure must exit explicitly for scripts and CI to see it.
+		if( result.exitCode() != 0 ){
+			cliExit( result.exitCode() );
+		}
 		return result.exitCode();
 	}
 }
