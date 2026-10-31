@@ -45,8 +45,10 @@ public class OrmManifest {
 
 	/**
 	 * Manifest schema version. Bump when the on-disk shape changes incompatibly; a mismatch invalidates a manifest.
+	 * <p>
+	 * Version 2 records entity sources as BoxLang paths (relative to their entity root) instead of absolute paths.
 	 */
-	public static final int		FORMAT_VERSION			= 1;
+	public static final int		FORMAT_VERSION			= 2;
 
 	// Struct keys (also the JSON field names).
 	private static final Key	FORMAT_VERSION_KEY		= Key.of( "formatVersion" );

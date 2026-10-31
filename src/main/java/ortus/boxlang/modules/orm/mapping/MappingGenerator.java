@@ -162,28 +162,49 @@ public class MappingGenerator {
 			new File( this.saveDirectory ).mkdirs();
 		}
 
-		for ( String entityPath : config.entityPaths ) {
-			// Contract the mapping path if it coming in as absolute drive path
-			if ( Path.of( entityPath ).isAbsolute() && FileSystemUtil.exists( entityPath ) ) {
-				entityPath = FileSystemUtil.contractPath( context, entityPath ).relativePath().toString();
-			}
-			this.entityPaths.add( Struct.of(
-			    ORMKeys.mappedPath, entityPath,
-			    ORMKeys.expandedPath, FileSystemUtil.expandPath( context, entityPath ).absolutePath().toString()
-			) );
-		}
+		this.entityPaths.addAll( resolveEntityRoots( context, config ) );
 
-		if ( this.entityPaths.isEmpty() ) {
-			this.entityPaths.add(
-			    Struct.of(
-			        ORMKeys.mappedPath, "/",
-			        ORMKeys.expandedPath, FileSystemUtil.expandPath( context, "." ).absolutePath().toString()
-			    )
-			);
+		if ( config.entityPaths == null || config.entityPaths.length == 0 ) {
 			logger.warn(
 			    "No entity paths found in ORM configuration; defaulting to app root. Which makes things REAALLLLYYYY SLOW!! (You should STRONGLY consider setting an 'entityPaths' array in your ORM settings.)"
 			);
 		}
+	}
+
+	/**
+	 * The folders entities are discovered in, each as its BoxLang path ({@code mappedPath}, e.g. {@code /timebox/models})
+	 * and its absolute folder ({@code expandedPath}). An absolute {@code entityPaths} entry is contracted to its mapping
+	 * path; with no {@code entityPaths} the application root ({@code /}) is used.
+	 * <p>
+	 * The boot cache records entity sources relative to these roots, so the paths stay valid wherever the application is
+	 * deployed.
+	 *
+	 * @param context The request context the paths are expanded in.
+	 * @param config  The ORM configuration.
+	 *
+	 * @return The entity roots, in {@code entityPaths} order.
+	 */
+	public static List<IStruct> resolveEntityRoots( IBoxContext context, ORMConfig config ) {
+		List<IStruct> roots = new ArrayList<>();
+		if ( config.entityPaths != null ) {
+			for ( String entityPath : config.entityPaths ) {
+				// Contract the mapping path if it coming in as absolute drive path
+				if ( Path.of( entityPath ).isAbsolute() && FileSystemUtil.exists( entityPath ) ) {
+					entityPath = FileSystemUtil.contractPath( context, entityPath ).relativePath().toString();
+				}
+				roots.add( Struct.of(
+				    ORMKeys.mappedPath, entityPath,
+				    ORMKeys.expandedPath, FileSystemUtil.expandPath( context, entityPath ).absolutePath().toString()
+				) );
+			}
+		}
+		if ( roots.isEmpty() ) {
+			roots.add( Struct.of(
+			    ORMKeys.mappedPath, "/",
+			    ORMKeys.expandedPath, FileSystemUtil.expandPath( context, "." ).absolutePath().toString()
+			) );
+		}
+		return roots;
 	}
 
 	/**

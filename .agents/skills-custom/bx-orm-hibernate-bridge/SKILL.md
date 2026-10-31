@@ -163,6 +163,9 @@ Hibernate manages a generated POJO **facade** per entity, never the `IClassRunna
   define a name only once, so the per-build loader is what lets `ormReload()` pick up a changed entity.
   In trust mode the loader is seeded with `facades-{app}.jar` bytes (`ManifestService.facadesJar( folder, app )`) (`EntityFacadeFactory.readFacadeJar`) and
   defines from them, falling back to ByteBuddy.
+- **Generation**: `EntityFacadeGenerator.generate( ormConfig, entities )` builds the facades from entity metadata only
+  (parents first, by `SessionFactoryBuilder.inheritanceDepth`). It needs no session factory or database, which is why
+  `module:orm generate` (`ManifestGenerator`) can write `facades-{app}.jar` from the CLI. Keep it free of Hibernate.
 - **Wrap/unwrap**: `FacadeSupport.wrap(namespace, entityName, instance)` memoizes the facade on the
   instance. Get the namespace from `ORMContext.getFacadeNamespace()` (the booted `ORMApp`'s config), never
   `ormContext.getConfig().facadeNamespace` (the per-request config always holds the default).

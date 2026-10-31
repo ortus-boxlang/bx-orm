@@ -23,15 +23,16 @@ import java.util.List;
 import java.util.Map;
 
 import ortus.boxlang.modules.orm.ORMApp;
-import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory;
-import ortus.boxlang.modules.orm.hibernate.facade.FacadeClassLoader;
+import ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeGenerator;
 import ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming;
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeClassLoader;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.application.ApplicationClassListener;
+import ortus.boxlang.runtime.config.Configuration;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.IBoxContext.ScopeSearchResult;
 import ortus.boxlang.runtime.context.RequestBoxContext;
@@ -49,14 +50,17 @@ import ortus.boxlang.runtime.services.ApplicationService.ApplicationDescriptorTe
  * It loads the application's {@code Application.bx} (or {@code Application.cfc}) the way BoxLang does for a request,
  * which runs its pseudo-constructor ({@code this.name}, {@code this.mappings}, {@code this.ormSettings}, ...), but it
  * never defines or starts the application: neither the ORM's {@code onApplicationStart} interceptor nor the
- * application's own {@code onApplicationStart()} runs. It then discovers the entities and writes
- * {@code manifest-{app}.json} exactly as an {@code auto}-mode boot would.
- * <p>
- * Runtime-level settings (mappings, datasources and modules declared in {@code boxlang.json} rather than in the
- * Application class) come from the BoxLang runtime config, so run it with the same {@code --bx-config} the server uses.
- * <p>
- * It also writes the entity facade classes to {@code facades-{app}.jar}: they are generated from entity metadata
- * alone, so this needs no Hibernate session factory and no database.
+ * application's own {@code onApplicationStart()} runs. It then discovers the entities and writes everything an
+ * {@code auto}-mode boot writes:
+ * <ul>
+ * <li>{@code manifest-{app}.json} and its {@code manifest-{app}.sha256} checksum;</li>
+ * <li>{@code facades-{app}.jar}, the entity facade classes. They are generated from entity metadata alone, so this
+ * needs no Hibernate session factory and no database.</li>
+ * </ul>
+ * The application root is treated as the web root: the {@code /} mapping points at it while the cache is built, as it
+ * does on the server, so default and app-relative entity paths resolve the same way. Runtime-level settings (mappings,
+ * datasources and modules declared in {@code boxlang.json} rather than in the Application class) come from the BoxLang
+ * runtime config, so run it with the same {@code --bx-config} the server uses.
  *
  * @since 2.0.0
  */
@@ -67,6 +71,21 @@ public final class ManifestGenerator {
 
 	/** The CGI scope name; core BoxLang declares no constant for it (the web runtimes provide the scope). */
 	private static final Key			CGI			= Key.of( "cgi" );
+
+	/** The root mapping, pointed at the application root while the cache is built. */
+	private static final Key			ROOT		= Key.of( "/" );
+
+	/**
+	 * What a generation wrote.
+	 *
+	 * @param manifest The manifest file.
+	 * @param facades  The facade jar.
+	 * @param appName  The application name ({@code this.name}).
+	 * @param entities The number of entities in the manifest.
+	 * @param millis   How long loading, discovery and writing took.
+	 */
+	public record Result( Path manifest, Path facades, String appName, int entities, long millis ) {
+	}
 
 	/**
 	 * The request context the descriptor loads in: a scripting context that also answers the web scopes ({@code cgi},
@@ -81,6 +100,12 @@ public final class ManifestGenerator {
 		    Key.of( "form" ), new BaseScope( Key.of( "form" ) ),
 		    Key.of( "cookie" ), new BaseScope( Key.of( "cookie" ) ) );
 
+		/**
+		 * Create the context with no application descriptor loaded: loading one through the constructor would define
+		 * and start the application.
+		 *
+		 * @param parent The parent (runtime) context.
+		 */
 		GenerateContext( IBoxContext parent ) {
 			super( parent, false );
 		}
@@ -121,18 +146,6 @@ public final class ManifestGenerator {
 		}
 	}
 
-	/**
-	 * What a generation produced.
-	 *
-	 * @param manifest The manifest file written.
-	 * @param facades  The facade jar written.
-	 * @param appName  The application name ({@code this.name}).
-	 * @param entities The number of entities in the manifest.
-	 * @param millis   How long discovery and writing took.
-	 */
-	public record Result( Path manifest, Path facades, String appName, int entities, long millis ) {
-	}
-
 	private ManifestGenerator() {
 	}
 
@@ -140,17 +153,17 @@ public final class ManifestGenerator {
 	 * BoxLang-friendly entry point for {@code ModuleConfig.main()}: generates the cache and maps the outcome to a CLI
 	 * message and exit code.
 	 *
-	 * @param appRootPath   The application root (the folder holding {@code Application.bx} or {@code Application.cfc}).
-	 * @param moduleVersion The running ORM module version, recorded in the manifest.
+	 * @param appRootPath The application root (the folder holding {@code Application.bx} or {@code Application.cfc}).
 	 *
 	 * @return The CLI result: 0 on success, 1 on failure.
 	 */
-	public static ManifestCli.CliResult run( String appRootPath, String moduleVersion ) {
+	public static ManifestCli.CliResult run( String appRootPath ) {
 		try {
-			Result result = generate( Path.of( appRootPath ).toAbsolutePath().normalize(), moduleVersion );
+			Result result = generate( Path.of( appRootPath ).toAbsolutePath().normalize() );
 			return new ManifestCli.CliResult(
-			    "✅ Wrote the ORM boot cache for [" + result.appName() + "]: " + result.entities() + " entities in " + result.millis()
-			        + "ms\n   " + result.manifest() + "\n   " + result.facades(),
+			    "✅ Wrote the ORM boot cache for [" + result.appName() + "]: " + result.entities() + " entities in " + result.millis() + "ms\n"
+			        + "   " + result.manifest() + "\n"
+			        + "   " + result.facades(),
 			    0 );
 		} catch ( RuntimeException e ) {
 			return new ManifestCli.CliResult( "❌ Could not generate the ORM boot cache: " + e.getMessage(), 1 );
@@ -158,19 +171,21 @@ public final class ManifestGenerator {
 	}
 
 	/**
-	 * Load the application descriptor without starting the application, discover its entities and write the manifest.
+	 * Load the application descriptor without starting the application, discover its entities and write the manifest
+	 * and the facade jar.
 	 *
-	 * @param appRoot       The application root.
-	 * @param moduleVersion The running ORM module version, recorded in the manifest.
+	 * @param appRoot The application root, treated as the web root.
 	 *
 	 * @return What was written.
 	 */
-	public static Result generate( Path appRoot, String moduleVersion ) {
-		long						start		= System.currentTimeMillis();
-		Path						descriptor	= findDescriptor( appRoot );
-		BoxRuntime					runtime		= BoxRuntime.getInstance();
-		// No application descriptor yet: loading one through the constructor would define and start the application.
-		ScriptingRequestBoxContext	context		= new GenerateContext( runtime.getRuntimeContext() );
+	public static Result generate( Path appRoot ) {
+		long			start		= System.currentTimeMillis();
+		Path			descriptor	= findDescriptor( appRoot );
+		BoxRuntime		runtime		= BoxRuntime.getInstance();
+		Configuration	config		= runtime.getConfiguration();
+		Object			rootMapping	= config.mappings.get( ROOT );
+		config.registerMapping( ROOT.getName(), appRoot.toString() );
+		ScriptingRequestBoxContext context = new GenerateContext( runtime.getRuntimeContext() );
 		RequestBoxContext.setCurrent( context );
 		try {
 			// Runs the pseudo-constructor only. Attaching the listener makes this.* (ormSettings, mappings, ...) visible
@@ -182,39 +197,44 @@ public final class ManifestGenerator {
 			ApplicationClassListener listener = new ApplicationClassListener( loaded.runnable(), context, loaded.path() );
 			context.setApplicationListener( listener );
 
-			ORMConfig config = ORMConfig.loadFromContext( context );
-			if ( config == null ) {
+			ORMConfig ormConfig = ORMConfig.loadFromContext( context );
+			if ( ormConfig == null ) {
 				throw new IllegalStateException( "ORM is not enabled in [" + descriptor + "] (this.ormEnabled and this.ormSettings)" );
 			}
-			// Same derivation as ORMApp.startup(), so the manifest name and settings fingerprint match the running app.
-			config.appName				= StringCaster.cast( listener.getSettings().get( Key._NAME ) );
-			config.facadeNamespace		= EntityFacadeNaming.sanitizeNamespace( config.appName );
+			// Same derivation as ORMApp.startup(), so the cache names and the settings fingerprint match the running app.
+			ormConfig.appName			= StringCaster.cast( listener.getSettings().get( Key._NAME ) );
+			ormConfig.facadeNamespace	= EntityFacadeNaming.sanitizeNamespace( ormConfig.appName );
+			// The facades go into a fresh loader, as each server build does, so this generation's bytecode is the one written.
+			ormConfig.facadeClassLoader	= new FacadeClassLoader( ORMApp.moduleClassLoader() );
 
-			// The facades go into a fresh loader, as each server build does, so their bytecode can be captured below.
-			config.facadeClassLoader	= new FacadeClassLoader( ORMApp.moduleClassLoader() );
-
-			Map<Key, List<EntityRecord>>	entityMap	= MappingGenerator.discoverEntities( context, config );
-			Path							folder		= resolveFolder( appRoot, config.manifestLocation );
-			OrmManifest						manifest	= ManifestService.build( entityMap, config, moduleVersion,
-			    ManifestService.portablePaths( context, config ) );
+			Map<Key, List<EntityRecord>>	entityMap	= MappingGenerator.discoverEntities( context, ormConfig );
+			Path							folder		= resolveFolder( appRoot, ormConfig.manifestLocation );
+			OrmManifest						manifest	= ManifestService.build( entityMap, ormConfig, ORMApp.moduleVersion(),
+			    ManifestService.portablePaths( context, ormConfig ) );
 			ManifestService.write( manifest, folder );
 
-			// The facades depend only on entity metadata, never on Hibernate or the database: generate them exactly as a
-			// session factory build does, then write their bytecode for trust mode to inject instead of regenerating.
-			List<EntityRecord> allEntities = entityMap.values().stream().flatMap( List::stream ).toList();
-			SessionFactoryBuilder.generateEntityFacades( config, allEntities );
-			Path jar = ManifestService.facadesJar( folder, config.appName );
-			EntityFacadeFactory.writeFacadeJar( jar, config.facadeNamespace );
+			EntityFacadeGenerator.generate( ormConfig, entityMap.values().stream().flatMap( List::stream ).toList() );
+			Path jar = ManifestService.facadesJar( folder, ormConfig.appName );
+			EntityFacadeFactory.writeFacadeJar( jar, ormConfig.facadeNamespace );
 
-			return new Result( ManifestService.manifestFile( folder, config.appName ), jar, config.appName, manifest.getEntities().size(),
-			    System.currentTimeMillis() - start );
+			return new Result( ManifestService.manifestFile( folder, ormConfig.appName ), jar, ormConfig.appName,
+			    manifest.getEntities().size(), System.currentTimeMillis() - start );
 		} finally {
 			RequestBoxContext.removeCurrent();
+			if ( rootMapping != null ) {
+				config.mappings.put( ROOT, rootMapping );
+			} else {
+				config.unregisterMapping( ROOT );
+			}
 		}
 	}
 
 	/**
 	 * The application's descriptor file: {@code Application.bx}, else {@code Application.cfc}.
+	 *
+	 * @param appRoot The application root.
+	 *
+	 * @return The descriptor file.
 	 */
 	private static Path findDescriptor( Path appRoot ) {
 		for ( String name : DESCRIPTORS ) {
@@ -229,6 +249,11 @@ public final class ManifestGenerator {
 	/**
 	 * The {@code .bxorm/} folder, resolved against the application root the way a request from the root resolves it:
 	 * blank means the root, a relative {@code ormManifestLocation} is under the root, an absolute one is used as is.
+	 *
+	 * @param appRoot  The application root.
+	 * @param location The {@code ormManifestLocation} setting.
+	 *
+	 * @return The {@code .bxorm/} folder.
 	 */
 	private static Path resolveFolder( Path appRoot, String location ) {
 		if ( location == null || location.isBlank() ) {

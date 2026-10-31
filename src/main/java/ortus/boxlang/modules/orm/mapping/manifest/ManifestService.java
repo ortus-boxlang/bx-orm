@@ -29,7 +29,9 @@ import java.util.Map;
 import java.util.function.Function;
 
 import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
+import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -471,23 +473,22 @@ public final class ManifestService {
 	}
 
 	/**
-	 * The portable form of entity source paths: the BoxLang path under the {@code entityPaths} entry the file was found
-	 * in ({@code /timebox/models/projects/Task.cfc} for an entity path {@code /timebox/models}). Mapping paths and
-	 * app-relative paths mean the same file wherever the application is deployed; a machine's absolute path does not. A
-	 * file outside every entity path keeps its absolute path.
+	 * The portable form of entity source paths: the BoxLang path under the entity root the file was discovered in
+	 * ({@code /timebox/models/projects/Task.cfc} for an entity path {@code /timebox/models}; {@code /models/Task.cfc}
+	 * with no {@code entityPaths}, where the root is {@code /}). A machine's absolute path means nothing on another
+	 * machine or in a container; a BoxLang path means the same file wherever the application is deployed. A file outside
+	 * every entity root (not expected, since discovery only walks those roots) is contracted against the mappings.
 	 *
-	 * @param context The request context the entity paths are expanded in.
+	 * @param context The request context the entity roots are expanded in.
 	 * @param config  The ORM configuration (its {@code entityPaths}).
 	 *
 	 * @return The translator from an absolute source path to its recorded path.
 	 */
 	public static Function<String, String> portablePaths( IBoxContext context, ORMConfig config ) {
 		List<String[]> roots = new ArrayList<>();
-		if ( config.entityPaths != null ) {
-			for ( String entityPath : config.entityPaths ) {
-				String logical = entityPath.trim().replace( '\\', '/' ).replaceAll( "/+$", "" );
-				roots.add( new String[] { FileSystemUtil.expandPath( context, entityPath ).absolutePath().normalize().toString(), logical } );
-			}
+		for ( IStruct root : MappingGenerator.resolveEntityRoots( context, config ) ) {
+			String mapped = root.getAsString( ORMKeys.mappedPath ).trim().replace( '\\', '/' ).replaceAll( "/+$", "" );
+			roots.add( new String[] { Path.of( root.getAsString( ORMKeys.expandedPath ) ).normalize().toString(), mapped } );
 		}
 		return absolute -> {
 			Path file = Path.of( absolute ).normalize();
@@ -497,7 +498,7 @@ public final class ManifestService {
 					return root[ 1 ] + "/" + rootPath.relativize( file ).toString().replace( '\\', '/' );
 				}
 			}
-			return absolute;
+			return FileSystemUtil.contractPath( context, absolute ).relativePath().toString().replace( '\\', '/' );
 		};
 	}
 
