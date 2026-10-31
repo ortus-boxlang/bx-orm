@@ -276,7 +276,8 @@ public class ORMApp {
 			// Fail closed on a stale manifest: booting old mappings against changed entities or settings would silently
 			// persist to the wrong columns/tables. Regenerate it with an auto-mode boot.
 			List<String>											stale		= ortus.boxlang.modules.orm.mapping.manifest.ManifestService
-			    .verify( manifest, this.config, moduleVersion() );
+			    .verify( manifest, this.config, moduleVersion(),
+			        ortus.boxlang.modules.orm.mapping.manifest.ManifestService.sourceResolver( context.getRequestContext() ) );
 			if ( !stale.isEmpty() ) {
 				throw new BoxRuntimeException( "ORM manifest mode is [trust] but the manifest at ["
 				    + ortus.boxlang.modules.orm.mapping.manifest.ManifestService.manifestFile( folder, this.config.appName ) + "] is stale: "
@@ -300,7 +301,9 @@ public class ORMApp {
 				java.nio.file.Path folder = ortus.boxlang.modules.orm.mapping.manifest.ManifestService
 				    .resolveFolder( context.getRequestContext(), this.config.manifestLocation );
 				ortus.boxlang.modules.orm.mapping.manifest.ManifestService.write(
-				    ortus.boxlang.modules.orm.mapping.manifest.ManifestService.build( map, this.config, moduleVersion() ), folder );
+				    ortus.boxlang.modules.orm.mapping.manifest.ManifestService.build( map, this.config, moduleVersion(),
+				        ortus.boxlang.modules.orm.mapping.manifest.ManifestService.portablePaths( context.getRequestContext(), this.config ) ),
+				    folder );
 				if ( logger.isDebugEnabled() ) {
 					logger.debug( "ORM manifest [auto] mode: wrote manifest to [{}]", folder );
 				}

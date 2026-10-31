@@ -224,7 +224,7 @@ public class SessionFactoryBuilder {
 
 		// Generate one real POJO facade class per entity (into the module classloader Hibernate resolves against) BEFORE the
 		// session factory parses the mapping XML, which references those facade FQNs via <entity class=...>.
-		generateEntityFacades( entityMap.values() );
+		generateEntityFacades( ormConfig, entityMap.values() );
 
 		// Route every entity persister through the BoxLang representation strategy (Hibernate 6+/7+ replacement for the
 		// Hibernate 5 tuplizer). See BoxPersisterFactory for why this goes through the persister factory service.
@@ -385,9 +385,14 @@ public class SessionFactoryBuilder {
 	 * {@code <class name=...>} and id {@code type} the mapping XML writer emits. The facade is injected into the ORM
 	 * module classloader (the one Hibernate resolves mapped classes against).
 	 *
-	 * @param entities The discovered entity records for this session factory.
+	 * Static so the CLI {@code generate} verb can build the same facades with no session factory (and write them to the
+	 * {@code .bxorm/} facade jar).
+	 *
+	 * @param ormConfig The ORM configuration (facade namespace, facade classloader, ignoreParseErrors).
+	 * @param entities  The discovered entity records for this session factory.
 	 */
-	private void generateEntityFacades( Collection<EntityRecord> entities ) {
+	public static void generateEntityFacades( ORMConfig ormConfig, Collection<EntityRecord> entities ) {
+		BoxLangLogger					logger		= BoxRuntime.getInstance().getLoggingService().getLogger( "orm" );
 		ClassLoader						loader		= ormConfig.facadeClassLoader != null ? ormConfig.facadeClassLoader
 		    : ORMApp.moduleClassLoader();
 

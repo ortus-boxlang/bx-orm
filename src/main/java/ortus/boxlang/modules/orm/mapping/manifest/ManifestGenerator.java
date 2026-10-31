@@ -22,7 +22,11 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import ortus.boxlang.modules.orm.ORMApp;
+import ortus.boxlang.modules.orm.SessionFactoryBuilder;
 import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory;
+import ortus.boxlang.modules.orm.hibernate.facade.FacadeClassLoader;
 import ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeNaming;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
@@ -51,8 +55,8 @@ import ortus.boxlang.runtime.services.ApplicationService.ApplicationDescriptorTe
  * Runtime-level settings (mappings, datasources and modules declared in {@code boxlang.json} rather than in the
  * Application class) come from the BoxLang runtime config, so run it with the same {@code --bx-config} the server uses.
  * <p>
- * SPIKE: the facade jar ({@code facades-{app}.jar}) is not written. It needs a Hibernate session factory build; a
- * {@code trust} boot without it regenerates the facades, which is slower but correct.
+ * It also writes the entity facade classes to {@code facades-{app}.jar}: they are generated from entity metadata
+ * alone, so this needs no Hibernate session factory and no database.
  *
  * @since 2.0.0
  */
@@ -121,11 +125,12 @@ public final class ManifestGenerator {
 	 * What a generation produced.
 	 *
 	 * @param manifest The manifest file written.
+	 * @param facades  The facade jar written.
 	 * @param appName  The application name ({@code this.name}).
 	 * @param entities The number of entities in the manifest.
 	 * @param millis   How long discovery and writing took.
 	 */
-	public record Result( Path manifest, String appName, int entities, long millis ) {
+	public record Result( Path manifest, Path facades, String appName, int entities, long millis ) {
 	}
 
 	private ManifestGenerator() {
@@ -145,7 +150,7 @@ public final class ManifestGenerator {
 			Result result = generate( Path.of( appRootPath ).toAbsolutePath().normalize(), moduleVersion );
 			return new ManifestCli.CliResult(
 			    "✅ Wrote the ORM boot cache for [" + result.appName() + "]: " + result.entities() + " entities in " + result.millis()
-			        + "ms\n   " + result.manifest(),
+			        + "ms\n   " + result.manifest() + "\n   " + result.facades(),
 			    0 );
 		} catch ( RuntimeException e ) {
 			return new ManifestCli.CliResult( "❌ Could not generate the ORM boot cache: " + e.getMessage(), 1 );
@@ -182,14 +187,26 @@ public final class ManifestGenerator {
 				throw new IllegalStateException( "ORM is not enabled in [" + descriptor + "] (this.ormEnabled and this.ormSettings)" );
 			}
 			// Same derivation as ORMApp.startup(), so the manifest name and settings fingerprint match the running app.
-			config.appName			= StringCaster.cast( listener.getSettings().get( Key._NAME ) );
-			config.facadeNamespace	= EntityFacadeNaming.sanitizeNamespace( config.appName );
+			config.appName				= StringCaster.cast( listener.getSettings().get( Key._NAME ) );
+			config.facadeNamespace		= EntityFacadeNaming.sanitizeNamespace( config.appName );
+
+			// The facades go into a fresh loader, as each server build does, so their bytecode can be captured below.
+			config.facadeClassLoader	= new FacadeClassLoader( ORMApp.moduleClassLoader() );
 
 			Map<Key, List<EntityRecord>>	entityMap	= MappingGenerator.discoverEntities( context, config );
 			Path							folder		= resolveFolder( appRoot, config.manifestLocation );
-			OrmManifest						manifest	= ManifestService.build( entityMap, config, moduleVersion );
+			OrmManifest						manifest	= ManifestService.build( entityMap, config, moduleVersion,
+			    ManifestService.portablePaths( context, config ) );
 			ManifestService.write( manifest, folder );
-			return new Result( ManifestService.manifestFile( folder, config.appName ), config.appName, manifest.getEntities().size(),
+
+			// The facades depend only on entity metadata, never on Hibernate or the database: generate them exactly as a
+			// session factory build does, then write their bytecode for trust mode to inject instead of regenerating.
+			List<EntityRecord> allEntities = entityMap.values().stream().flatMap( List::stream ).toList();
+			SessionFactoryBuilder.generateEntityFacades( config, allEntities );
+			Path jar = ManifestService.facadesJar( folder, config.appName );
+			EntityFacadeFactory.writeFacadeJar( jar, config.facadeNamespace );
+
+			return new Result( ManifestService.manifestFile( folder, config.appName ), jar, config.appName, manifest.getEntities().size(),
 			    System.currentTimeMillis() - start );
 		} finally {
 			RequestBoxContext.removeCurrent();
