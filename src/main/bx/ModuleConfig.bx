@@ -165,8 +165,15 @@ class {
 
 		var folder	= appRoot & "/.bxorm";
 		var version	= isNull( variables.moduleRecord ) ? "unknown" : variables.moduleRecord.version;
-		var result	= createObject( "java", "ortus.boxlang.modules.orm.mapping.manifest.ManifestCli" )
-			.run( javacast( "string", folder ), javacast( "string", version ), verbArgs );
+		var result	= "";
+		// generate loads the Application class (without starting it) and writes the cache; every other verb reads it.
+		if( verbArgs.len() && verbArgs[ 1 ] == "generate" ){
+			result = createObject( "java", "ortus.boxlang.modules.orm.mapping.manifest.ManifestGenerator" )
+				.run( javacast( "string", appRoot ), javacast( "string", version ) );
+		} else {
+			result = createObject( "java", "ortus.boxlang.modules.orm.mapping.manifest.ManifestCli" )
+				.run( javacast( "string", folder ), javacast( "string", version ), verbArgs );
+		}
 
 		systemOutput( result.message() );
 		return result.exitCode();
