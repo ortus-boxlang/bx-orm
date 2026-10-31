@@ -176,6 +176,10 @@ class {
 		}
 
 		systemOutput( result.message() );
+		// The CLI runner ignores main()'s return value, so a failure must exit explicitly for scripts and CI to see it.
+		if( result.exitCode() != 0 ){
+			cliExit( result.exitCode() );
+		}
 		return result.exitCode();
 	}
 }
