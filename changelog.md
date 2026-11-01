@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- [BLMODULES-306](https://ortussolutions.atlassian.net/browse/BLMODULES-306) `<cfquery dbtype="hql">` / `<bx:query dbtype="hql">` and `queryExecute( hql, params, { dbtype : "hql" } )` run HQL and return the same array as `ormExecuteQuery()`, as in Adobe ColdFusion and Lucee. Before, `dbtype` was ignored and the HQL ran as SQL, returning a query. `<cfqueryparam>` binds positional parameters (cast to its `cfsqltype`), and `ormoptions`, `maxrows`, `timeout`, `datasource` and `result` apply.
+
 ## [1.7.2] - 2026-10-20
 
 ### ⭐ Added
