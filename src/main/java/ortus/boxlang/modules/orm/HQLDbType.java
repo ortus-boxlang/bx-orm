@@ -38,7 +38,7 @@ import ortus.boxlang.runtime.types.util.ListUtil;
 
 /**
  * Support for HQL run through the query component and BIF: {@code <bx:query dbtype="hql">} (and {@code <cfquery>}) and
- * {@code queryExecute( hql, params, { dbtype : "hql" } )}. As in Adobe ColdFusion and Lucee, these run the HQL like
+ * {@code queryExecute( hql, params, { dbtype : "hql" } )}. These run the HQL like
  * {@code ormExecuteQuery()} and return the same result, an array, rather than a query.
  */
 public final class HQLDbType {
@@ -60,7 +60,7 @@ public final class HQLDbType {
 	/**
 	 * The ORM query options for a query run with {@code dbtype="hql"}: {@code datasource}, {@code timeout} and
 	 * {@code maxrows} carry over, and the {@code ormoptions} struct (offset, maxResults, cacheable, cacheName, readOnly,
-	 * unique...) is applied on top, as in Adobe ColdFusion.
+	 * unique...) is applied on top.
 	 *
 	 * @param source The query component attributes or the queryExecute options.
 	 *

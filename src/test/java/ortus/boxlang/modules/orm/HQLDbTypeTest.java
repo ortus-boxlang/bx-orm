@@ -32,7 +32,7 @@ import tools.BaseORMTest;
 
 /**
  * BLMODULES-306: {@code <cfquery dbtype="hql">} and {@code queryExecute( hql, params, { dbtype : "hql" } )} run HQL and
- * return the same array as {@code ormExecuteQuery()}, as in Adobe ColdFusion and Lucee.
+ * return the same array as {@code ormExecuteQuery()}.
  */
 @DisplayName( "dbtype=\"hql\" queries" )
 public class HQLDbTypeTest extends BaseORMTest {
