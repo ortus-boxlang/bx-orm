@@ -112,16 +112,31 @@ public class ORMExecuteQuery extends BaseORMBIF {
 	 * @argument.options Optional struct of additional query options.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IStruct	options		= arguments.containsKey( Key.options ) && arguments.get( Key.options ) != null
+		IStruct options = arguments.containsKey( Key.options ) && arguments.get( Key.options ) != null
 		    ? StructCaster.cast( arguments.getOrDefault( Key.options, Struct.EMPTY ) )
 		    : new Struct();
+		// "params" arg could positionally be either params (an array or struct) or unique.
+		// "unique" arg could positionally be either unique (boolean or string boolean representation) or a struct of options.
+		return execute( context, arguments.getAsString( ORMKeys.hql ), arguments.get( Key.params ), arguments.get( ORMKeys.unique ), options,
+		    "ormExecuteQuery" );
+	}
+
+	/**
+	 * Runs an HQL query the way {@code ormExecuteQuery()} does. Also used by {@code <bx:query dbtype="hql">} and
+	 * {@code queryExecute( hql, params, { dbtype : "hql" } )}, so all three return the same result.
+	 *
+	 * @param context   The context running the query.
+	 * @param hql       The HQL.
+	 * @param paramsArg Named (struct) or positional (array) parameters, or the unique flag when given in its place.
+	 * @param uniqueArg The unique flag, or a struct of options when given in its place.
+	 * @param options   The query options (unique, uniqueFirst, offset, maxResults, readOnly, cacheable, datasource...).
+	 * @param caller    The name of the caller, for error messages.
+	 *
+	 * @return An array of results, a single result (unique), a stream (asStream), or the update count (update/delete).
+	 */
+	public static Object execute( IBoxContext context, String hql, Object paramsArg, Object uniqueArg, IStruct options, String caller ) {
 		Object	params		= null;
 		Boolean	isUnique	= false;
-
-		// "params" arg could positionally be either params (an array or struct) or unique.
-		Object	paramsArg	= arguments.get( Key.params );
-		// "unique" arg could positionally be either unique (boolean or string boolean representation) or a struct of options.
-		Object	uniqueArg	= arguments.get( ORMKeys.unique );
 
 		if ( paramsArg != null ) {
 			if ( paramsArg instanceof Boolean || paramsArg instanceof String ) {
@@ -160,7 +175,7 @@ public class ORMExecuteQuery extends BaseORMBIF {
 		if ( isUnique ) {
 			options.put( ORMKeys.maxResults, uniqueFirst ? 1 : 2 );
 		}
-		HQLQuery query = new HQLQuery( context, arguments.getAsString( ORMKeys.hql ), params, options );
+		HQLQuery query = new HQLQuery( context, hql, params, options );
 		if ( BooleanCaster.cast( options.getOrDefault( ORMKeys.asStream, false ) ) ) {
 			if ( isUnique || query.isUpdate() ) {
 				throw new ortus.boxlang.modules.orm.errors.ORMException( ortus.boxlang.modules.orm.errors.ORMErrorType.ARGUMENT,
@@ -173,8 +188,7 @@ public class ORMExecuteQuery extends BaseORMBIF {
 		if ( results instanceof List<?> castList ) {
 			if ( isUnique ) {
 				if ( castList.size() > 1 ) {
-					throw ortus.boxlang.modules.orm.errors.ORMErrors.nonUniqueResult( 0, "ormExecuteQuery",
-					    arguments.getAsString( ORMKeys.hql ) );
+					throw ortus.boxlang.modules.orm.errors.ORMErrors.nonUniqueResult( 0, caller, hql );
 				}
 				return castList.isEmpty() ? null : castList.getFirst();
 			}
@@ -184,7 +198,7 @@ public class ORMExecuteQuery extends BaseORMBIF {
 		}
 	}
 
-	private Object castParam( Object param, IBoxContext context ) {
+	private static Object castParam( Object param, IBoxContext context ) {
 		if ( param instanceof String ) {
 			CastAttempt<LocalTime> timeCastAttempt = TimeCaster.attempt( param );
 			if ( timeCastAttempt.wasSuccessful() ) {
