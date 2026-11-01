@@ -34,7 +34,7 @@ import ortus.boxlang.runtime.types.IStruct;
 /**
  * The query component with HQL support. {@code <bx:query dbtype="hql">} (and {@code <cfquery dbtype="hql">}) runs its
  * body as HQL, like {@code ormExecuteQuery()}, and sets the variable to the same result: an array of entities, or an
- * array of rows for a projection, as in Adobe ColdFusion and Lucee. {@code <bx:queryparam>} in the body binds positional
+ * array of rows for a projection. {@code <bx:queryparam>} in the body binds positional
  * parameters, and {@code ormoptions} takes the {@code ormExecuteQuery()} options. Every other query runs through the core
  * query component unchanged.
  */

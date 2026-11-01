@@ -28,8 +28,8 @@ import ortus.boxlang.runtime.types.IStruct;
 
 /**
  * {@code queryExecute()} with HQL support. With {@code options.dbtype = "hql"} it runs the HQL like
- * {@code ormExecuteQuery()} and returns the same result, an array of entities or of projection rows, as in Adobe
- * ColdFusion and Lucee. Every other query runs through the core {@code queryExecute()} unchanged.
+ * {@code ormExecuteQuery()} and returns the same result, an array of entities or of projection rows. Every other query runs through the core
+ * {@code queryExecute()} unchanged.
  */
 @BoxBIF( description = "Execute a SQL query, or an HQL query with dbtype=\"hql\"" )
 public class QueryExecute extends ortus.boxlang.runtime.bifs.global.jdbc.QueryExecute {
