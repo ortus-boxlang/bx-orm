@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- [BLMODULES-306](https://ortussolutions.atlassian.net/browse/BLMODULES-306) `<cfquery dbtype="hql">` / `<bx:query dbtype="hql">` and `queryExecute( hql, params, { dbtype : "hql" } )` run HQL and return the same array as `ormExecuteQuery()`. Before, `dbtype` was ignored and the HQL ran as SQL, returning a query. `<cfqueryparam>` binds positional parameters (cast to its `cfsqltype`), and `ormoptions`, `maxrows`, `timeout`, `datasource` and `result` apply.
+- [BLMODULES-307](https://ortussolutions.atlassian.net/browse/BLMODULES-307) A string or decimal value for a typed property no longer fails with `String cannot be cast to Integer`. `entityLoad()` filters and HQL parameters (`ormExecuteQuery()`, `dbtype="hql"` queries, untyped `<cfqueryparam>`, list parameters) convert the value to the property's type, so a form or URL id such as `"1"` works. Integer types only take whole numbers, and a value that cannot be converted is passed to Hibernate unchanged.
+
 ## [1.7.2] - 2026-10-20
 
 ### ⭐ Added

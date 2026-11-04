@@ -99,16 +99,29 @@ public class ORMExecuteQuery extends BaseORMBIF {
 	 * @argument.options Optional struct of additional query options.
 	 */
 	public Object _invoke( IBoxContext context, ArgumentsScope arguments ) {
-		IStruct	options		= arguments.containsKey( Key.options ) && arguments.get( Key.options ) != null
+		IStruct options = arguments.containsKey( Key.options ) && arguments.get( Key.options ) != null
 		    ? StructCaster.cast( arguments.getOrDefault( Key.options, Struct.EMPTY ) )
 		    : new Struct();
+		// "params" arg could positionally be either params (an array or struct) or unique.
+		// "unique" arg could positionally be either unique (boolean or string boolean representation) or a struct of options.
+		return execute( context, arguments.getAsString( ORMKeys.hql ), arguments.get( Key.params ), arguments.get( ORMKeys.unique ), options );
+	}
+
+	/**
+	 * Runs an HQL query the way {@code ormExecuteQuery()} does. Also used by {@code <bx:query dbtype="hql">} and
+	 * {@code queryExecute( hql, params, { dbtype : "hql" } )}, so all three return the same result.
+	 *
+	 * @param context   The context running the query.
+	 * @param hql       The HQL.
+	 * @param paramsArg Named (struct) or positional (array) parameters, or the unique flag when given in its place.
+	 * @param uniqueArg The unique flag, or a struct of options when given in its place.
+	 * @param options   The query options (unique, offset, maxResults, readOnly, cacheable, datasource...).
+	 *
+	 * @return An array of results, a single result (unique), or the update count (update/delete).
+	 */
+	public static Object execute( IBoxContext context, String hql, Object paramsArg, Object uniqueArg, IStruct options ) {
 		Object	params		= null;
 		Boolean	isUnique	= false;
-
-		// "params" arg could positionally be either params (an array or struct) or unique.
-		Object	paramsArg	= arguments.get( Key.params );
-		// "unique" arg could positionally be either unique (boolean or string boolean representation) or a struct of options.
-		Object	uniqueArg	= arguments.get( ORMKeys.unique );
 
 		if ( paramsArg != null ) {
 			if ( paramsArg instanceof Boolean || paramsArg instanceof String ) {
@@ -138,7 +151,7 @@ public class ORMExecuteQuery extends BaseORMBIF {
 		if ( isUnique ) {
 			options.put( ORMKeys.maxResults, 1 );
 		}
-		Object results = new HQLQuery( context, arguments.getAsString( ORMKeys.hql ), params, options ).execute();
+		Object results = new HQLQuery( context, hql, params, options ).execute();
 		if ( results instanceof List<?> castList ) {
 			if ( options.getAsBoolean( ORMKeys.unique ) ) {
 				return castList.isEmpty() ? null : castList.getFirst();
@@ -149,7 +162,7 @@ public class ORMExecuteQuery extends BaseORMBIF {
 		}
 	}
 
-	private Object castParam( Object param, IBoxContext context ) {
+	private static Object castParam( Object param, IBoxContext context ) {
 		if ( param instanceof String ) {
 			CastAttempt<LocalTime> timeCastAttempt = TimeCaster.attempt( param );
 			if ( timeCastAttempt.wasSuccessful() ) {

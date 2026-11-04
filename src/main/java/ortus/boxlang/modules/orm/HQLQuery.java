@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.hibernate.Session;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
+import ortus.boxlang.modules.orm.hibernate.ParameterCoercer;
 import ortus.boxlang.modules.orm.observability.ORMObserver;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
@@ -369,10 +370,12 @@ public class HQLQuery {
 				if ( param.isListParam() ) {
 					Array list = ( Array ) param.getValue();
 					for ( Object value : list ) {
-						hqlQuery.setParameter( parameterIndex++, value );
+						hqlQuery.setParameter( parameterIndex, coerce( hqlQuery, parameterIndex, value ) );
+						parameterIndex++;
 					}
 				} else {
-					hqlQuery.setParameter( parameterIndex++, param.getValue() );
+					hqlQuery.setParameter( parameterIndex, coerce( hqlQuery, parameterIndex, param.getValue() ) );
+					parameterIndex++;
 				}
 			}
 		}
@@ -387,6 +390,30 @@ public class HQLQuery {
 			ORMObserver.clearHints();
 		}
 
+	}
+
+	/**
+	 * Convert a value to the type Hibernate expects for a positional parameter, so a string id ({@code "1"}) or a
+	 * BoxLang decimal binds to an integer property (BLMODULES-307). Values that cannot be converted, and parameters
+	 * whose type Hibernate cannot infer, are bound unchanged.
+	 *
+	 * @param hqlQuery The query.
+	 * @param position The 1-based parameter position.
+	 * @param value    The value to bind.
+	 *
+	 * @return The value to bind.
+	 */
+	private static Object coerce( org.hibernate.query.Query<?> hqlQuery, int position, Object value ) {
+		if ( value == null ) {
+			return null;
+		}
+		org.hibernate.type.Type type;
+		try {
+			type = hqlQuery.getParameterMetadata().getQueryParameter( position ).getHibernateType();
+		} catch ( RuntimeException e ) {
+			return value;
+		}
+		return ParameterCoercer.coerce( value, type );
 	}
 
 	/**

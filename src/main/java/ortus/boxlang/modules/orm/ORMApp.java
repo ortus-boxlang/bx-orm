@@ -36,6 +36,7 @@ import ch.qos.logback.classic.LoggerContext;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.hibernate.BoxProxy;
+import ortus.boxlang.modules.orm.hibernate.ParameterCoercer;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.MappingGenerator;
 import ortus.boxlang.runtime.BoxRuntime;
@@ -356,18 +357,18 @@ public class ORMApp {
 				        "No persistent filter property found with the name of '" + key.getName() + "' in entity '" + entityName + "'" );
 			    } );
 
+			ClassMetadata metadata = session.getSessionFactory().getClassMetadata( entityRecord.getEntityName() );
 			for ( Key entryKey : filter.keySet() ) {
 				int		propertyIndex	= properties.indexOf( KeyCaster.cast( entryKey ) );
+				String	propertyName	= KeyCaster.cast( properties.get( propertyIndex ) ).getName();
 				Object	propertyValue	= filter.get( entryKey );
 				criteria.add(
 				    propertyValue != null
 				        ? org.hibernate.criterion.Restrictions.eq(
-				            KeyCaster.cast( properties.get( propertyIndex ) ).getName(),
-				            propertyValue
+				            propertyName,
+				            ParameterCoercer.coerce( propertyValue, filterPropertyType( metadata, propertyName ) )
 				        )
-				        : org.hibernate.criterion.Restrictions.isNull(
-				            KeyCaster.cast( properties.get( propertyIndex ) ).getName()
-				        )
+				        : org.hibernate.criterion.Restrictions.isNull( propertyName )
 				);
 			}
 		}
@@ -378,6 +379,28 @@ public class ORMApp {
 		        .map( entity -> ( IClassRunnable ) entity )
 		        .toArray()
 		);
+	}
+
+	/**
+	 * The Hibernate type of an entityLoad filter property, so its value can be converted to it (BLMODULES-307).
+	 *
+	 * @param metadata     The entity's class metadata, or null.
+	 * @param propertyName The filter property.
+	 *
+	 * @return The type, or null when it cannot be found.
+	 */
+	private static org.hibernate.type.Type filterPropertyType( ClassMetadata metadata, String propertyName ) {
+		if ( metadata == null ) {
+			return null;
+		}
+		if ( propertyName.equalsIgnoreCase( metadata.getIdentifierPropertyName() ) ) {
+			return metadata.getIdentifierType();
+		}
+		try {
+			return metadata.getPropertyType( propertyName );
+		} catch ( RuntimeException e ) {
+			return null;
+		}
 	}
 
 	/**
