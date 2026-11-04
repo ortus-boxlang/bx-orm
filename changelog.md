@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.3] - 2026-11-04
+
 ### 🐛 Fixed
 
 - [BLMODULES-306](https://ortussolutions.atlassian.net/browse/BLMODULES-306) `<cfquery dbtype="hql">` / `<bx:query dbtype="hql">` and `queryExecute( hql, params, { dbtype : "hql" } )` run HQL and return the same array as `ormExecuteQuery()`. Before, `dbtype` was ignored and the HQL ran as SQL, returning a query. `<cfqueryparam>` binds positional parameters (cast to its `cfsqltype`), and `ormoptions`, `maxrows`, `timeout`, `datasource` and `result` apply.
@@ -355,7 +357,8 @@ No significant changes.
 
 - First iteration of this module
 
-[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.2...HEAD
+[unreleased]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.3...HEAD
+[1.7.3]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/ortus-boxlang/bx-orm/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/ortus-boxlang/bx-orm/compare/v1.6.7...v1.7.0
