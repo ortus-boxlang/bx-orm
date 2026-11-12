@@ -289,8 +289,14 @@ public class ORMApp {
 			this.config.facadeClassLoader = new ortus.boxlang.modules.orm.hibernate.facade.FacadeClassLoader( moduleClassLoader(),
 			    ortus.boxlang.modules.orm.hibernate.facade.EntityFacadeFactory
 			        .readFacadeJar( ortus.boxlang.modules.orm.mapping.manifest.ManifestService.facadesJar( folder, this.config.appName ) ) );
-			logger.info( "ORM manifest [trust] mode: booting application [{}] from [{}] with {} entities; discovery/parsing/generation skipped.",
-			    this.config.appName, folder, manifest.getEntities().size() );
+			// Discovery writes the normalized metadata (entityName, table, default fieldtype/ormType, ...) into each entity
+			// class's metadata, and code reads it back (ColdBox's ObjectPopulator resolves relationships by entityName). The
+			// manifest holds the same normalized metadata, so publish it onto the classes: every mode exposes the same metadata.
+			int published = ortus.boxlang.modules.orm.mapping.manifest.EntityMetadataPublisher.publish( context.getRequestContext(), manifest,
+			    this.config );
+			logger.info(
+			    "ORM manifest [trust] mode: booting application [{}] from [{}] with {} entities ({} classes published); discovery/parsing/generation skipped.",
+			    this.config.appName, folder, manifest.getEntities().size(), published );
 			return ortus.boxlang.modules.orm.mapping.manifest.ManifestService.toEntityMap( manifest );
 		}
 

@@ -125,4 +125,28 @@ public class FacadeRepresentationBootTest {
 		// ormExecuteQuery returned the entity too.
 		assertThat( variables.getAsArray( Key.of( "hqlResult" ) ).size() ).isEqualTo( 1 );
 	}
+
+	@DisplayName( "The raw session factory and session report BoxLang entity names, as in Hibernate 5 (BOX-178)" )
+	@Test
+	public void testRawApiReportsBoxLangEntityNames() {
+		// @formatter:off
+		instance.executeSource( """
+			names      = arrayToList( ormGetSessionFactory().getMetaModel().getAllEntityNames() ).listToArray();
+			mapped     = arrayToList( ormGetSessionFactory().getMappingMetamodel().getAllEntityNames() ).listToArray();
+			thing      = entityNew( "Thing", { name : "Named" } );
+			transaction {
+				entitySave( thing );
+			}
+			entityName = ormGetSession().getEntityName( thing );
+			// A BoxLang name the raw API returned is accepted back by it.
+			descriptor = ormGetSessionFactory().getMappingMetamodel().getEntityDescriptor( names.filter( ( n ) => n == "Thing" ).first() );
+		""", context );
+		// @formatter:on
+
+		assertThat( variables.getAsArray( Key.of( "names" ) ) ).containsAtLeast( "Thing", "Manufacturer", "Vehicle", "Truck" );
+		assertThat( variables.getAsArray( Key.of( "names" ) ).stream().map( String::valueOf ).filter( n -> n.contains( "Facade" ) ).toList() ).isEmpty();
+		assertThat( variables.getAsArray( Key.of( "mapped" ) ) ).containsExactlyElementsIn( variables.getAsArray( Key.of( "names" ) ) );
+		assertThat( variables.getAsString( Key.of( "entityName" ) ) ).isEqualTo( "Thing" );
+		assertThat( variables.get( Key.of( "descriptor" ) ) ).isNotNull();
+	}
 }

@@ -247,6 +247,14 @@ public final class FacadeAwareHibernate {
 			if ( unwrapped != result ) {
 				return unwrapped;
 			}
+			// Hibernate entity-names are the facade class names; callers get the BoxLang entity names, as in Hibernate 5
+			// (e.g. getAllEntityNames(), getEntityName( entity )). Those names map back on the way in (see the resolver).
+			if ( result instanceof String name ) {
+				return boxLangEntityName( name );
+			}
+			if ( result instanceof String[] names ) {
+				return boxLangEntityNames( names );
+			}
 			// Chainable Hibernate objects: re-wrap so their calls keep translating.
 			if ( result instanceof Session session ) {
 				return wrap( session );
@@ -272,36 +280,72 @@ public final class FacadeAwareHibernate {
 				return unwrapCollection( collection );
 			}
 			if ( result instanceof java.util.Optional<?> optional ) {
-				return optional.map( FacadeSupport::unwrapIfFacade );
+				return optional.map( Handler::translateElement );
 			}
 			if ( result instanceof java.util.stream.Stream<?> stream ) {
-				return stream.map( FacadeSupport::unwrapIfFacade );
+				return stream.map( Handler::translateElement );
 			}
 			return result;
 		}
 
 		/**
-		 * Unwrap any managed facades held in a query-result collection back to their BoxLang instances. Returns the original
-		 * collection untouched when it holds no facades, so scalar/projection results (and their identity) are preserved.
+		 * Unwrap any managed facades held in a query-result collection back to their BoxLang instances, and map any facade
+		 * entity-name back to its BoxLang entity name. Returns the original collection untouched when nothing changes, so
+		 * scalar/projection results (and their identity) are preserved.
 		 */
 		private Object unwrapCollection( java.util.Collection<?> collection ) {
-			boolean hasFacade = false;
+			boolean changed = false;
 			for ( Object element : collection ) {
-				if ( FacadeSupport.unwrapIfFacade( element ) != element ) {
-					hasFacade = true;
+				if ( translateElement( element ) != element ) {
+					changed = true;
 					break;
 				}
 			}
-			if ( !hasFacade ) {
+			if ( !changed ) {
 				return collection;
 			}
 			java.util.Collection<Object> unwrapped = ( collection instanceof java.util.Set )
 			    ? new java.util.LinkedHashSet<>()
 			    : new java.util.ArrayList<>( collection.size() );
 			for ( Object element : collection ) {
-				unwrapped.add( FacadeSupport.unwrapIfFacade( element ) );
+				unwrapped.add( translateElement( element ) );
 			}
 			return unwrapped;
+		}
+
+		/**
+		 * A collection element as callers see it: a facade as its BoxLang instance, a facade entity-name as its BoxLang name.
+		 */
+		private static Object translateElement( Object element ) {
+			if ( element instanceof String name ) {
+				return boxLangEntityName( name );
+			}
+			return FacadeSupport.unwrapIfFacade( element );
+		}
+
+		/**
+		 * The BoxLang entity name of a facade entity-name, or the string unchanged (the same instance) when it is not one.
+		 */
+		private static String boxLangEntityName( String name ) {
+			String entityName = FacadeSupport.entityNameForFacade( name );
+			return entityName != null ? entityName : name;
+		}
+
+		/**
+		 * The BoxLang entity names of an array of entity-names, or the array unchanged when none is a facade entity-name.
+		 */
+		private static String[] boxLangEntityNames( String[] names ) {
+			String[] translated = names;
+			for ( int i = 0; i < names.length; i++ ) {
+				String entityName = boxLangEntityName( names[ i ] );
+				if ( entityName != names[ i ] ) {
+					if ( translated == names ) {
+						translated = names.clone();
+					}
+					translated[ i ] = entityName;
+				}
+			}
+			return translated;
 		}
 	}
 }
