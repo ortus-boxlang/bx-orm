@@ -150,6 +150,12 @@ public PhysicalNamingStrategy resolveNamingStrategy() {
   the generated mappings means adding it there too.
 - Entity sources are recorded as BoxLang paths under their entity roots (`MappingGenerator.resolveEntityRoots`), never
   machine paths, so a cache built in one place verifies wherever it is deployed.
+- An app must see the same entity in every mode. Discovery normalizes annotations in the class's own metadata structs
+  (`entityName`, `table`, default `fieldtype`/`ormType`, ...), and code reads them back (ColdBox's `ObjectPopulator`
+  resolves relationships by `entityName`). A `trust` boot replays the manifest's normalized metadata onto each entity
+  class (`EntityMetadataPublisher`), so a new normalization in the inspectors is published in `trust` mode with no extra
+  work. `ManifestLifecycleBootTest` compares `getClassMetadata()` after an `auto` and a `trust` boot (sources touched in
+  between so BoxLang recompiles the classes).
 
 ## ORMConnectionProvider — Datasource Bridge
 

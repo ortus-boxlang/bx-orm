@@ -178,6 +178,11 @@ Hibernate manages a generated POJO **facade** per entity, never the `IClassRunna
   `AssocKind.TO_MANY_ENTITY_MAP`). The BoxLang getter returns a `ToManyGetterView`: reads come from a
   snapshot (safe removal while iterating), writes through it reach the live collection. A developer-written
   getter (not a `GeneratedGetter`) is never replaced.
+- **Raw API names**: Hibernate's entity-name of each entity is its facade FQN (`...generated.{app}.EmployeeFacade`);
+  the BoxLang name is only the HQL import. `ormGetSession()` / `ormGetSessionFactory()` return
+  `FacadeAwareHibernate` proxies that map BoxLang names to facade names on the way in and back on the way out
+  (`String`, `String[]`, collections), so `getAllEntityNames()` and `getEntityName( entity )` report `Employee`
+  as in Hibernate 5, and ColdBox's populator matches relationship classes against them.
 
 - **Java annotations**: `FacadeAnnotations` turns BoxLang annotations into Hibernate annotations on the
   facade (entity `softDelete` / `softDeleteColumn` → class `@SoftDelete`; property `autoTimestamp` →

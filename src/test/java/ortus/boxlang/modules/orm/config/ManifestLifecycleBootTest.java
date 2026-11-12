@@ -328,6 +328,139 @@ public class ManifestLifecycleBootTest {
 		}
 	}
 
+	@DisplayName( "a trust boot publishes the same class metadata as an auto boot (BOX-178)" )
+	@Test
+	public void testTrustBootPublishesEntityMetadata() throws IOException {
+		String	probe		= """
+		                      owner = getClassMetadata( "lifecycleModels.Owner" );
+		                      pet   = getClassMetadata( "lifecycleModels.Pet" );
+		                      meta  = {
+		                          owner : { annotations : owner.annotations, properties : owner.properties },
+		                          pet   : { annotations : pet.annotations, properties : pet.properties }
+		                      };
+		                      """;
+		IScope	autoVars	= runRequest( "auto", probe );
+		instance.getApplicationService().shutdownApplication( APP_NAME );
+
+		// Same content, newer mtime: BoxLang recompiles the classes, so the trust boot starts from fresh class metadata
+		// that discovery never touched (as in a fresh JVM, where BOX-178 was reported).
+		touchModels();
+
+		IScope trustVars = runRequest( "trust", probe );
+		assertThat( canonical( trustVars.get( Key.of( "meta" ) ) ) ).isEqualTo( canonical( autoVars.get( Key.of( "meta" ) ) ) );
+		assertThat( trustVars.getAsStruct( Key.of( "meta" ) ).getAsStruct( Key.of( "owner" ) ).getAsStruct( Key.annotations )
+		    .getAsString( ORMKeys.entityName ) ).isEqualTo( "Owner" );
+	}
+
+	@DisplayName( "after a trust boot, ColdBox's populator finds the entity of a relationship named differently from it (BOX-178)" )
+	@Test
+	public void testTrustBootResolvesRelationshipEntityLikeColdBox() throws IOException {
+		// A relationship whose property name is not the entity name, like TimeBox's clientManager -> Employee.
+		Files.writeString( modelsDir.resolve( "Pet.bx" ),
+		    """
+		    class accessors="true" persistent="true" table="lc_pets" {
+		    	property name="id" fieldtype="id" generator="uuid" ormType="string";
+		    	property name="name" ormType="string";
+		    	property name="owner" fieldtype="many-to-one" cfc="Owner" fkcolumn="ownerId";
+		    	property name="caretaker" fieldtype="many-to-one" cfc="lifecycleModels.Owner" fkcolumn="caretakerId";
+		    }
+		    """, StandardCharsets.UTF_8 );
+		runRequest( "auto", AUTO_SAVE );
+		instance.getApplicationService().shutdownApplication( APP_NAME );
+		touchModels();
+
+		// The two lookups ObjectPopulator.discoverEntityName() makes for property "caretaker" with cfc "lifecycleModels.Owner":
+		// the last segment of the class against the session factory's entity names, then the class's entityName annotation.
+		IScope vars = runRequest( "trust", """
+		                                   names       = arrayToList( ormGetSessionFactory().getMetaModel().getAllEntityNames() ).listToArray();
+		                                   byName      = names.findNoCase( listLast( "lifecycleModels.Owner", "." ) ) > 0;
+		                                   annotations = getClassMetadata( "lifecycleModels.Owner" ).annotations;
+		                                   byClass     = annotations.keyExists( "entityName" ) ? annotations.entityName : "";
+		                                   o = entityNew( "Owner", { name : "Keeper" } );
+		                                   entitySave( o );
+		                                   p = entityNew( "Pet", { name : "Rex" } );
+		                                   p.setCaretaker( entityLoadByPK( "Owner", o.getId() ) );
+		                                   entitySave( p );
+		                                   ormFlush();
+		                                   ormClearSession();
+		                                   caretaker = entityLoad( "Pet", { name : "Rex" }, true ).getCaretaker().getName();
+		                                   """ );
+		assertThat( vars.getAsBoolean( Key.of( "byName" ) ) ).isTrue();
+		assertThat( vars.getAsString( Key.of( "byClass" ) ) ).isEqualTo( "Owner" );
+		assertThat( vars.getAsString( Key.of( "caretaker" ) ) ).isEqualTo( "Keeper" );
+	}
+
+	@DisplayName( "a trust boot publishes the same metadata as an auto boot through inheritance (mapped superclass, joined subclass)" )
+	@Test
+	public void testTrustBootPublishesInheritedEntityMetadata() throws IOException {
+		Files.writeString( modelsDir.resolve( "Audited.bx" ), """
+		                                                      class mappedSuperClass="true" {
+		                                                      	property name="createdBy" ormType="string";
+		                                                      }
+		                                                      """, StandardCharsets.UTF_8 );
+		Files.writeString( modelsDir.resolve( "Member.bx" ),
+		    """
+		    class accessors="true" persistent="true" table="lc_members" extends="Audited" discriminatorColumn="memberType" {
+		    	property name="id" fieldtype="id" generator="increment" ormType="integer";
+		    	property name="name" ormType="string";
+		    }
+		    """, StandardCharsets.UTF_8 );
+		Files.writeString( modelsDir.resolve( "Staff.bx" ),
+		    """
+		    class accessors="true" persistent="true" table="lc_staff" extends="Member" joinColumn="memberId" discriminatorValue="staff" {
+		    	property name="badge" ormType="string";
+		    	property name="mentor" fieldtype="many-to-one" cfc="Member" fkcolumn="mentorId";
+		    }
+		    """, StandardCharsets.UTF_8 );
+		String	probe		= """
+		                      staff = getClassMetadata( "lifecycleModels.Staff" );
+		                      meta  = {
+		                          annotations : staff.annotations,
+		                          properties  : staff.properties,
+		                          parent      : { annotations : staff.extends.annotations, properties : staff.extends.properties },
+		                          grandparent : { annotations : staff.extends.extends.annotations, properties : staff.extends.extends.properties }
+		                      };
+		                      s = entityNew( "Staff", { name : "Ada", badge : "A1", createdBy : "test" } );
+		                      entitySave( s );
+		                      ormFlush();
+		                      ormClearSession();
+		                      badge = entityLoad( "Member", { name : "Ada" }, true ).getBadge();
+		                      """;
+		IScope	autoVars	= runRequest( "auto", probe );
+		instance.getApplicationService().shutdownApplication( APP_NAME );
+		touchModels();
+
+		IScope trustVars = runRequest( "trust", probe );
+		assertThat( canonical( trustVars.get( Key.of( "meta" ) ) ) ).isEqualTo( canonical( autoVars.get( Key.of( "meta" ) ) ) );
+		assertThat( trustVars.getAsString( Key.of( "badge" ) ) ).isEqualTo( "A1" );
+	}
+
+	/**
+	 * Give every entity source file a newer mtime (same content), so BoxLang recompiles the classes on the next load.
+	 */
+	private void touchModels() throws IOException {
+		try ( var files = Files.list( modelsDir ) ) {
+			for ( Path file : files.toList() ) {
+				Files.setLastModifiedTime( file, FileTime.fromMillis( Files.getLastModifiedTime( file ).toMillis() + 60_000 ) );
+			}
+		}
+	}
+
+	/**
+	 * A canonical, order-independent form of BoxLang metadata (struct keys sorted, values as strings) for comparison.
+	 */
+	private static Object canonical( Object value ) {
+		if ( value instanceof ortus.boxlang.runtime.types.IStruct struct ) {
+			java.util.TreeMap<String, Object> sorted = new java.util.TreeMap<>( String.CASE_INSENSITIVE_ORDER );
+			struct.forEach( ( key, item ) -> sorted.put( key.getName(), canonical( item ) ) );
+			return sorted;
+		}
+		if ( value instanceof java.util.List<?> list ) {
+			return list.stream().map( ManifestLifecycleBootTest::canonical ).toList();
+		}
+		return value == null ? null : String.valueOf( value );
+	}
+
 	/**
 	 * Boot the lifecycle app in the given mode, expecting startup to fail, and return the failure's full message chain.
 	 */
