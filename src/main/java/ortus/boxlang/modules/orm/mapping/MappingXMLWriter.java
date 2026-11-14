@@ -1050,13 +1050,6 @@ public class MappingXMLWriter {
 			theNode.setAttribute( "optional", trueFalse( association.getAsBoolean( ORMKeys.nullable ) ) );
 		}
 
-		// on-delete: the database cascades the delete (FK declared ON DELETE CASCADE). Hibernate then removes the loaded
-		// children from the session when the parent is deleted, instead of failing at flush.
-		if ( type.equals( "many-to-one" ) && association.containsKey( ORMKeys.onDelete )
-		    && "cascade".equals( association.getAsString( ORMKeys.onDelete ) ) ) {
-			theNode.setAttribute( "on-delete", "CASCADE" );
-		}
-
 		// not-found (missing row ignored)
 		if ( association.containsKey( ORMKeys.missingRowIgnored ) && !type.equals( "one-to-one" ) ) {
 			Object mri = association.get( ORMKeys.missingRowIgnored );
@@ -1103,6 +1096,15 @@ public class MappingXMLWriter {
 		Element cascade = buildCascadeElement( association );
 		if ( cascade != null ) {
 			theNode.appendChild( cascade );
+		}
+
+		// on-delete (must follow cascade in the mapping-7.0 XSD): the database cascades the delete (the FK is declared ON
+		// DELETE CASCADE). Hibernate then removes the loaded children from the session when the parent is deleted, instead
+		// of failing at flush, and emits ON DELETE CASCADE in the generated schema.
+		if ( type.equals( "many-to-one" ) && "cascade".equals( association.getAsString( ORMKeys.onDelete ) ) ) {
+			Element onDelete = createEl( "on-delete" );
+			onDelete.setTextContent( "CASCADE" );
+			theNode.appendChild( onDelete );
 		}
 
 		return theNode;

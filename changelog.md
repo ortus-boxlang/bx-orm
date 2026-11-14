@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ⚡ Changed
 
+- Deleting an entity with `entityDelete()` (also `entity.delete()` and cborm) no longer fails at flush with `orm.transient` when children that point at it through a `many-to-one` are still loaded in the session. This restores the bx-orm 1.x behavior for apps whose database cascades the delete: `entityDelete()` evicts the loaded children that already exist in the database and reference the deleted entity, so the flush succeeds and the database removes their rows. If the database does not cascade, its own foreign key constraint still fails the delete. Pending changes on an evicted child are discarded. Declare `onDelete="cascade"` on the association to make the cascade explicit and have it in the generated schema.
+- The `orm.transient` error says when the referenced entity was deleted in the same session (`ContentBlockVersion.contentBlock points to a ContentBlock that was deleted in this session.`) instead of claiming it was never saved, names both entities, and tells you to delete the children first or declare `onDelete="cascade"`. A reference to an entity that really was never saved keeps the "never saved" message. The error type is unchanged.
+
 - Boot cache manifests record entity sources as BoxLang paths under their entity root (for example `/models/Task.cfc`) instead of absolute machine paths, so a cache built on a CI runner, in a Docker build stage or in another folder still detects changed entities where it is deployed. The manifest format is now 2: regenerate existing caches (`module:orm generate` or one `auto` boot); a `trust` boot refuses a format 1 manifest.
 - A plain array param value in `ormExecuteQuery()` (and cborm `executeQuery()`) is a list param, as in bx-orm 1: `id in (:ids)` with `{ ids : [ 1, 2 ] }`, and `approver = :employee` with `[ employee ]`, work without `list : true`.
 - `unique=true` on `ormExecuteQuery()` and `entityLoad()` (filter form) is strict: more than one matching row raises `orm.query.nonUnique` instead of silently returning the first. Pass `{ uniqueFirst : true }` for the old behavior. `unique` given inside the options struct is now honored.
@@ -41,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The secondary cache is BoxLang's BoxCache: every Hibernate cache region is a BoxLang cache. A BoxLang cache that already exists with a region's name (for example one defined in `boxlang.json`) is used as that region, and `cacheProvider` can name any registered BoxLang cache provider.
 
 ### 🚀 Added
+
+- `onDelete="cascade"` on a `many-to-one` property declares that the database cascades the delete (`FOREIGN KEY ... ON DELETE CASCADE`). It maps to Hibernate's `@OnDelete( action = CASCADE )`: the generated schema gets `ON DELETE CASCADE`, and deleting the parent removes its loaded children from the session instead of failing at flush. Use it when the parent has no ORM `cascade` and no collection back to the child. `onDelete="noaction"` is the default; any other value fails at mapping time.
 
 - `cacheConfig` configures the second-level cache regions: a struct of BoxCache properties (`maxObjects`, `defaultTimeout`, ...) with an optional `regions` struct of per-region overrides, a JSON file of the same shape, or an EHCache 2 or 3 `ehcache.xml` whose settings are mapped to BoxCache properties.
 - `cacheUse` and `cacheName` on a collection property (`one-to-many`, `many-to-many`, `collection`) cache the collection in the second-level cache.

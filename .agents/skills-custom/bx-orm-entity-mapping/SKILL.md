@@ -182,6 +182,7 @@ apps keep their behavior. Keep them when changing the writer:
 | hierarchy root with `discriminatorValue` | `<discriminator-value>` on the root too | JPA defaults it to the entity name |
 | `one-to-one` without `fkcolumn`/`mappedBy` | `<primary-key-join-column/>`; `constrained` side: `optional="false"` + FK; unconstrained side: `NO_CONSTRAINT`, or `mapped-by` when the target has a `constrained` one-to-one back | hbm shared the primary key, FK only on the constrained side |
 | owning `one-to-many` without `fkcolumn` | `<join-column>` borrowed from the target's back-reference to-one (`resolveBackReferenceColumn`) | JPA would create a join table |
+| `many-to-one` with `onDelete="cascade"` | `<on-delete>CASCADE</on-delete>` after `<cascade>` | the database cascades the delete; Hibernate removes loaded children instead of failing at flush |
 | collection `where` | `<sql-restriction>` (entity and element collections) | |
 | `type="struct"` to-many | `map-key-class` + `map-key-column`/`map-key-formula` (`structKeyColumn`, `structKeyType`) | |
 | `fieldtype="timestamp"` version | version typed `java.time.Instant` | |

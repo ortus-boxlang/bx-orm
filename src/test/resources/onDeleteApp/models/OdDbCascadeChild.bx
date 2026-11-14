@@ -1,0 +1,7 @@
+// Many-to-one to OdParent with NO onDelete attribute. The test recreates this table with a database-level
+// ON DELETE CASCADE foreign key, as an app with a hand-written schema would have.
+class accessors="true" persistent="true" table="od_db_children" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="label" ormType="string";
+	property name="parent" fieldtype="many-to-one" cfc="OdParent" fkcolumn="parentId";
+}
