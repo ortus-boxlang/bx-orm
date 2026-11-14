@@ -1,0 +1,24 @@
+/**
+ * Test app for OnDeleteCascadeTest: a parent with no collection, children with a many-to-one to it, on their own
+ * in-memory Derby database (one application per Derby DB, see FacadeSemanticsBootTest).
+ */
+class {
+	this.name = "BXORMOnDeleteTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"OnDeleteDB" : { "connectionString" : "jdbc:derby:memory:ormOnDelete;create=true" }
+	};
+	this.datasource = "OnDeleteDB";
+
+	this.ormSettings = {
+		"datasource"  : "OnDeleteDB",
+		"dialect"     : "Derby",
+		"entityPaths" : [ "/root/models" ],
+		"logSQL"      : "false",
+		"dbcreate"    : "dropcreate",
+		"saveMapping" : false
+	};
+	this.ormEnabled = "true";
+}
