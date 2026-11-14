@@ -180,8 +180,8 @@ final class CriteriaMethods {
 		def( "isGe|ge|isGte|gte", P + "," + V, true, ( c, x, a ) -> c.compare( str( a[ 0 ] ), ">=", a[ 1 ] ) );
 		def( "isLt|lt", P + "," + V, true, ( c, x, a ) -> c.compare( str( a[ 0 ] ), "<", a[ 1 ] ) );
 		def( "isLe|le|isLte|lte", P + "," + V, true, ( c, x, a ) -> c.compare( str( a[ 0 ] ), "<=", a[ 1 ] ) );
-		def( "like|whereLike|isLike", P + "," + V, true, ( c, x, a ) -> c.like( str( a[ 0 ] ), a[ 1 ], false ) );
-		def( "ilike|whereIlike|isIlike", P + "," + V, true, ( c, x, a ) -> c.like( str( a[ 0 ] ), a[ 1 ], true ) );
+		def( "like|whereLike|isLike", P + "," + V + ",escapeChar|escape", true, ( c, x, a ) -> c.like( str( a[ 0 ] ), a[ 1 ], false, str( a[ 2 ] ) ) );
+		def( "ilike|whereIlike|isIlike", P + "," + V + ",escapeChar|escape", true, ( c, x, a ) -> c.like( str( a[ 0 ] ), a[ 1 ], true, str( a[ 2 ] ) ) );
 		def( "between|whereBetween|isBetween", P + ",min|minValue,max|maxValue", true, ( c, x, a ) -> c.between( str( a[ 0 ] ), a[ 1 ], a[ 2 ] ) );
 		def( "isIn|in|whereIn", P + ",values|" + V, true, ( c, x, a ) -> c.in( str( a[ 0 ] ), a[ 1 ], false ) );
 		def( "isNotIn|whereNotIn", P + ",values|" + V, true, ( c, x, a ) -> c.in( str( a[ 0 ] ), a[ 1 ], true ) );
