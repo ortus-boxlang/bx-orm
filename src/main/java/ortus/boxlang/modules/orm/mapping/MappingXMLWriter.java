@@ -1098,6 +1098,15 @@ public class MappingXMLWriter {
 			theNode.appendChild( cascade );
 		}
 
+		// on-delete (must follow cascade in the mapping-7.0 XSD): the database cascades the delete (the FK is declared ON
+		// DELETE CASCADE). Hibernate then removes the loaded children from the session when the parent is deleted, instead
+		// of failing at flush, and emits ON DELETE CASCADE in the generated schema.
+		if ( type.equals( "many-to-one" ) && "cascade".equals( association.getAsString( ORMKeys.onDelete ) ) ) {
+			Element onDelete = createEl( "on-delete" );
+			onDelete.setTextContent( "CASCADE" );
+			theNode.appendChild( onDelete );
+		}
+
 		return theNode;
 	}
 

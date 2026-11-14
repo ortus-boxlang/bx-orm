@@ -104,7 +104,8 @@ public final class ORMErrors {
 	    String hql,
 	    Object params,
 	    Collection<String> entityNames,
-	    Function<String, Collection<String>> propertyLookup ) {
+	    Function<String, Collection<String>> propertyLookup,
+	    Collection<String> removedEntityNames ) {
 
 		/**
 		 * A context that only knows the operation name.
@@ -114,7 +115,7 @@ public final class ORMErrors {
 		 * @return A context with no entity, query or names.
 		 */
 		public static Context of( String operation ) {
-			return new Context( operation, null, null, null, List.of(), e -> List.of() );
+			return new Context( operation, null, null, null, List.of(), e -> List.of(), List.of() );
 		}
 
 		/**
@@ -125,7 +126,7 @@ public final class ORMErrors {
 		 * @return A new context with the entity set.
 		 */
 		public Context withEntity( String entity ) {
-			return new Context( operation, entity, hql, params, entityNames, propertyLookup );
+			return new Context( operation, entity, hql, params, entityNames, propertyLookup, removedEntityNames );
 		}
 
 		/**
@@ -137,7 +138,7 @@ public final class ORMErrors {
 		 * @return A new context with the HQL and parameters set.
 		 */
 		public Context withQuery( String theHql, Object theParams ) {
-			return new Context( operation, entityName, theHql, theParams, entityNames, propertyLookup );
+			return new Context( operation, entityName, theHql, theParams, entityNames, propertyLookup, removedEntityNames );
 		}
 
 		/**
@@ -150,7 +151,19 @@ public final class ORMErrors {
 		 */
 		public Context withNames( Collection<String> entities, Function<String, Collection<String>> properties ) {
 			return new Context( operation, entityName, hql, params, entities == null ? List.of() : entities,
-			    properties == null ? e -> List.of() : properties );
+			    properties == null ? e -> List.of() : properties, removedEntityNames );
+		}
+
+		/**
+		 * A copy of this context that knows which entity types have instances removed in the session, so a flush failure
+		 * can tell "points to a deleted entity" from "points to an entity that was never saved".
+		 *
+		 * @param removed Hibernate entity names that have a removed instance in the session; may be null.
+		 *
+		 * @return A new context with the removed entity names set.
+		 */
+		public Context withRemovedEntities( Collection<String> removed ) {
+			return new Context( operation, entityName, hql, params, entityNames, propertyLookup, removed == null ? List.of() : removed );
 		}
 	}
 
@@ -207,6 +220,17 @@ public final class ORMErrors {
 			put( info, "entityName", owner );
 			put( info, "property", prop );
 			put( info, "targetEntity", target );
+			if ( ctx.removedEntityNames().contains( tpv.getTransientEntityName() ) ) {
+				// The target was saved and then deleted in this session: it is not "never saved".
+				put( info, "deletedTarget", true );
+				return new ORMException( ORMErrorType.TRANSIENT,
+				    String.format( "%s.%s points to a %s that was deleted in this session.", owner, prop, target ),
+				    String.format(
+				        "A %s still references the deleted %s. Delete the %s rows with entityDelete() before the %s, or point %s at another %s. "
+				            + "If the database cascades the delete (ON DELETE CASCADE), declare onDelete=\"cascade\" on the %s property of %s.",
+				        owner, target, owner, target, prop, target, prop, owner ),
+				    info, ormCause );
+			}
 			return new ORMException( ORMErrorType.TRANSIENT,
 			    String.format( "%s.%s points to a %s that was never saved.", owner, prop, target ),
 			    String.format( "Save the %s first with entitySave(), or add cascade=\"save-update\" (or \"all\") to the %s property on %s.",

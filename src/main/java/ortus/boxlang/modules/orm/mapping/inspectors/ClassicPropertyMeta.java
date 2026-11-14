@@ -254,6 +254,9 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		if ( annotations.containsKey( ORMKeys.inverse ) ) {
 			association.put( ORMKeys.inverse, BooleanCaster.cast( annotations.get( ORMKeys.inverse ) ) );
 		}
+		if ( annotations.containsKey( ORMKeys.onDelete ) ) {
+			association.put( ORMKeys.onDelete, translateOnDelete( annotations.getAsString( ORMKeys.onDelete ) ) );
+		}
 		if ( annotations.containsKey( ORMKeys.linkTable ) ) {
 			association.putIfAbsent( Key.table, annotations.getAsString( ORMKeys.linkTable ) );
 			// if there's a linkTable, we need to set the schema and catalog
@@ -388,6 +391,28 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 		} );
 
 		return params;
+	}
+
+	/**
+	 * Normalize the {@code onDelete} property attribute: the database's own {@code ON DELETE} action for the foreign key.
+	 * <p>
+	 * Only {@code cascade} (the database deletes the child rows with the parent row) and {@code noaction} (the default) are
+	 * supported.
+	 *
+	 * @param onDelete The attribute value.
+	 *
+	 * @return "cascade" or "noaction".
+	 *
+	 * @throws ortus.boxlang.runtime.types.exceptions.BoxRuntimeException For any other value.
+	 */
+	private static String translateOnDelete( String onDelete ) {
+		String value = onDelete == null ? "" : onDelete.trim().toLowerCase().replace( "-", "" ).replace( "_", "" ).replace( " ", "" );
+		return switch ( value ) {
+			case "cascade" -> "cascade";
+			case "", "noaction", "none" -> "noaction";
+			default -> throw new ortus.boxlang.runtime.types.exceptions.BoxRuntimeException(
+			    "Invalid onDelete value [" + onDelete + "]. Supported values are [cascade] and [noaction]." );
+		};
 	}
 
 	/**
