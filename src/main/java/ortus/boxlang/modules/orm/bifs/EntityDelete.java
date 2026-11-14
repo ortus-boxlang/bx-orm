@@ -19,9 +19,15 @@ package ortus.boxlang.modules.orm.bifs;
 
 import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
 
+import java.util.Map;
 import java.util.Set;
 
 import org.hibernate.Session;
+import org.hibernate.engine.spi.EntityEntry;
+import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.engine.spi.Status;
+import org.hibernate.type.ManyToOneType;
+import org.hibernate.type.Type;
 
 import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMContext;
@@ -84,12 +90,59 @@ public class EntityDelete extends BaseORMBIF {
 			// re-associated via merge first, since Hibernate 6+ rejects removing an unmanaged instance).
 			String			hbName			= ORMApp.hibernateEntityName( session, entityName );
 			Object			facade			= FacadeSupport.wrap( ormContext.getFacadeNamespace(), entityName, entity );
-			session.remove( session.contains( facade ) ? facade : session.merge( hbName, facade ) );
+			Object			managed			= session.contains( facade ) ? facade : session.merge( hbName, facade );
+			session.remove( managed );
+			evictLoadedChildren( session, managed, hbName );
 			touched.add( session );
 		}
 		if ( flushRequested( arguments.get( ORMKeys.options ) ) ) {
 			touched.forEach( session -> ORMContext.flush( session, "entityDelete" ) );
 		}
 		return null;
+	}
+
+	/**
+	 * Evict the children that are still loaded in the session and point at the entity that was just removed through a
+	 * many-to-one, so the delete does not fail at flush.
+	 * <p>
+	 * Hibernate 7 refuses to flush a managed child that references a removed entity. Hibernate 5 (bx-orm 1.x) tolerated
+	 * it, and apps rely on that when the database cascades the delete ({@code FOREIGN KEY ... ON DELETE CASCADE}) and the
+	 * parent maps no collection. Evicting those children gives the same outcome: the database removes their rows, and
+	 * the session forgets them. When the database does <em>not</em> cascade, its own foreign key constraint still fails the
+	 * delete, as before.
+	 * <p>
+	 * Only children that already exist in the database are evicted. A child that is still waiting for its insert keeps
+	 * failing at flush with the {@code orm.transient} error, because inserting it would be a genuine mistake. Children the
+	 * delete already cascaded to (or that {@code onDelete="cascade"} removed) are not managed any more and are skipped.
+	 *
+	 * @param session    The session the entity was removed from.
+	 * @param removed    The removed (managed) entity.
+	 * @param entityName The Hibernate entity name of the removed entity.
+	 */
+	private static void evictLoadedChildren( Session session, Object removed, String entityName ) {
+		SessionImplementor	impl		= session.unwrap( SessionImplementor.class );
+		Object				removedId	= impl.getContextEntityIdentifier( removed );
+		if ( removedId == null ) {
+			return;
+		}
+		for ( Map.Entry<Object, EntityEntry> loaded : impl.getPersistenceContextInternal().reentrantSafeEntityEntries() ) {
+			EntityEntry entry = loaded.getValue();
+			if ( loaded.getKey() == removed || !entry.isExistsInDatabase()
+			    || ( entry.getStatus() != Status.MANAGED && entry.getStatus() != Status.READ_ONLY ) ) {
+				continue;
+			}
+			Type[]		types		= entry.getPersister().getPropertyTypes();
+			Object[]	values		= entry.getPersister().getValues( loaded.getKey() );
+			boolean		referencing	= false;
+			for ( int i = 0; i < types.length && !referencing; i++ ) {
+				referencing = types[ i ] instanceof ManyToOneType toOne
+				    && entityName.equals( toOne.getAssociatedEntityName() )
+				    && values[ i ] != null
+				    && removedId.equals( impl.getContextEntityIdentifier( values[ i ] ) );
+			}
+			if ( referencing ) {
+				session.evict( loaded.getKey() );
+			}
+		}
 	}
 }

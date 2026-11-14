@@ -324,6 +324,8 @@ writer states them explicitly to keep existing apps behaving the same:
   (`mapped-by`) so the rows insert in the right order.
 - An owning `one-to-many` without `fkcolumn` reuses the target's back-reference `fkcolumn` (the
   target's to-one pointing at this entity) instead of JPA's default join table.
+- A `many-to-one` with `onDelete="cascade"` writes `<on-delete>CASCADE</on-delete>` after `<cascade>`
+  (see "Deleting a parent whose children are loaded" below).
 - A collection `where` becomes `<sql-restriction>`; a struct to-many writes `map-key-class` +
   `map-key-column`/`map-key-formula`. Both follow the XSD element order (order-by, map-key,
   batch-size, sql-restriction, join).
@@ -335,6 +337,27 @@ writer states them explicitly to keep existing apps behaving the same:
   `<table>` just to carry them.
 
 ---
+
+### Deleting a parent whose children are loaded
+
+A common model: the child maps a `many-to-one` to the parent (`fkcolumn`), the parent maps no collection and
+no ORM `cascade`, and the database declares the foreign key `ON DELETE CASCADE`. Hibernate 7 refuses to flush a
+managed child that still points at a removed parent (it surfaces as `orm.transient`); Hibernate 5 (bx-orm 1.x)
+tolerated it.
+
+- **Declare the cascade** with `onDelete="cascade"` on the `many-to-one` property. It maps to Hibernate's
+  `@OnDelete( action = CASCADE )`: the generated schema gets `ON DELETE CASCADE`, and deleting the parent removes
+  the loaded children from the session instead of failing. `onDelete="noaction"` (the default) leaves things
+  as they are; any other value fails at mapping time. It applies to `many-to-one` only.
+- **Default without the attribute (1.x compatibility).** `entityDelete()` (and so `entity.delete()` and cborm's
+  delete) evicts the children that are loaded in the session, already exist in the database and point at the
+  deleted entity through a `many-to-one`. The flush then succeeds and the database removes the rows when it
+  cascades. If the database does not cascade, its own foreign key constraint fails the delete, as before. Pending
+  changes on an evicted child are discarded, and the evicted child object is detached. Only deletes through
+  `entityDelete()` do this: HQL `delete` statements never touch the session.
+- **Still an error.** A child that is waiting for its insert, or a never saved parent, keeps failing at flush with
+  `orm.transient`. When the target was deleted in the same session the message says so
+  (`OdChild.parent points to a OdParent that was deleted in this session.`); otherwise it says it was never saved.
 
 ## 7. Events
 

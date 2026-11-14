@@ -436,8 +436,35 @@ public class ORMContext {
 		try {
 			session.flush();
 		} catch ( RuntimeException e ) {
-			throw ortus.boxlang.modules.orm.errors.ORMErrors.translate( e, ortus.boxlang.modules.orm.errors.ORMErrors.Context.of( operation ) );
+			throw ortus.boxlang.modules.orm.errors.ORMErrors.translate( e,
+			    ortus.boxlang.modules.orm.errors.ORMErrors.Context.of( operation ).withRemovedEntities( removedEntityNames( session ) ) );
 		}
+	}
+
+	/**
+	 * The Hibernate entity names that have an instance removed (deleted, awaiting or past the flush) in the session.
+	 * Used to explain a flush failure on a reference to such an entity.
+	 *
+	 * @param session The session.
+	 *
+	 * @return The distinct entity names; empty when the session is closed or holds no removed entity.
+	 */
+	private static java.util.Set<String> removedEntityNames( Session session ) {
+		java.util.Set<String> names = new java.util.HashSet<>();
+		try {
+			if ( session != null && session.isOpen() ) {
+				for ( var loaded : session.unwrap( org.hibernate.engine.spi.SessionImplementor.class ).getPersistenceContextInternal()
+				    .reentrantSafeEntityEntries() ) {
+					org.hibernate.engine.spi.Status status = loaded.getValue().getStatus();
+					if ( status == org.hibernate.engine.spi.Status.DELETED || status == org.hibernate.engine.spi.Status.GONE ) {
+						names.add( loaded.getValue().getPersister().getEntityName() );
+					}
+				}
+			}
+		} catch ( RuntimeException ignored ) {
+			// Best effort: the failure being translated is the one that matters.
+		}
+		return names;
 	}
 
 	/**

@@ -1,0 +1,4 @@
+class accessors="true" persistent="true" table="od_parents" {
+	property name="id" fieldtype="id" generator="increment" ormType="integer";
+	property name="name" ormType="string";
+}
