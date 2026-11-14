@@ -732,6 +732,19 @@ or `not()`, where an inner join would drop rows that match another branch, so a 
 projections use left joins. A path is joined once and reused. `assoc.id` reads the foreign key without a join. The root
 alias is `this`; HQL aliases are internal (`bx_this`, `bx_jN`, `bx_sN`).
 
+**LIKE escape character.** `like( property, value [, escapeChar] )` and `ilike( ... )` (and `c.restrictions.like()` /
+`c.restrictions.ilike()`, the `isLike` / `whereLike` / `notLike` aliases and `where( property, "like", value )`) take an
+optional one-character escape, rendered as an inline literal: `like( "tags", "%50!%-off%", "!" )` produces
+`like ? escape '!'` and matches a literal `%`. With no escape given, `CriteriaBuilder.defaultLikeEscape( Dialect )`
+decides. Hibernate 7's translators for MySQL and MariaDB, PostgreSQL, CockroachDB and H2 render an empty `escape ''` for a
+`like` with no escape, and on those databases an empty escape switches the escape character off, so a backslash would
+match literally. bx-orm 1 and cborm 5 rendered a plain `like`, where the database default (a backslash) applies and `\%`,
+`\_` and `\\` are escapes. So on those dialects the default escape is a backslash (except MySQL with
+`NO_BACKSLASH_ESCAPES`, where Hibernate's rendering stays). Every other dialect renders no `escape` clause when none is
+given, so the database default applies and nothing is added. The escape is a literal, not a parameter: a bound escape makes
+the MySQL translator wrap the pattern in `replace( ?, '\\', '\\\\' )`, which doubles the backslashes the caller wrote.
+Tests: `CriteriaLikeEscapeTest`.
+
 **Values** are always bound, never concatenated. Hibernate coerces them to the property type (`"42"` for an integer
 works), and an association accepts an id or an entity. `ORMApp.referenceFor` now unwraps a lazy proxy that
 `session.get()` can return when the session already holds one; this also fixes `ormExecuteQuery()`.

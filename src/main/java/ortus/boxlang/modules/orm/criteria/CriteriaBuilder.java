@@ -29,6 +29,11 @@ import java.util.stream.Collectors;
 
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
+import org.hibernate.dialect.CockroachDialect;
+import org.hibernate.dialect.Dialect;
+import org.hibernate.dialect.H2Dialect;
+import org.hibernate.dialect.MySQLDialect;
+import org.hibernate.dialect.PostgreSQLDialect;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 
 import ortus.boxlang.modules.orm.EntityInspector;
@@ -1161,11 +1166,82 @@ public final class CriteriaBuilder implements IReferenceable {
 	 * @return This builder.
 	 */
 	CriteriaBuilder like( String property, Object value, boolean ignoreCase ) {
-		String expr = wherePath( property );
-		if ( ignoreCase ) {
-			return add( Frag.of( "lower(", expr, ") like lower(", new Param( StringCaster.cast( value ) ), ")" ) );
+		return like( property, value, ignoreCase, null );
+	}
+
+	/**
+	 * {@code property like value escape char}; the value carries its own wildcards.
+	 *
+	 * @param property   The property path.
+	 * @param value      The pattern, e.g. {@code "Ford%"}.
+	 * @param ignoreCase True to compare lower-cased.
+	 * @param escapeChar The single character that escapes {@code %}, {@code _} and itself in the pattern, or null or
+	 *                   empty for the database default (see {@link #defaultLikeEscape()}).
+	 *
+	 * @return This builder.
+	 *
+	 * @throws ORMException {@code orm.argument} when the escape is longer than one character.
+	 */
+	CriteriaBuilder like( String property, Object value, boolean ignoreCase, String escapeChar ) {
+		String	expr	= wherePath( property );
+		String	escape	= escapeChar == null || escapeChar.isEmpty() ? defaultLikeEscape() : escapeChar;
+		if ( escape != null && escape.length() != 1 ) {
+			throw new ORMException( ORMErrorType.ARGUMENT,
+			    "entityCriteria like() expected a single escape character but received [" + escape + "].",
+			    "Pass one character, e.g. like( \"tags\", \"%50!%%\", \"!\" )." );
 		}
-		return add( Frag.of( expr, " like ", new Param( StringCaster.cast( value ) ) ) );
+		Param			pattern	= new Param( StringCaster.cast( value ) );
+		List<Object>	parts	= new ArrayList<>();
+		if ( ignoreCase ) {
+			parts.addAll( List.of( "lower(", expr, ") like lower(", pattern, ")" ) );
+		} else {
+			parts.addAll( List.of( expr, " like ", pattern ) );
+		}
+		if ( escape != null ) {
+			// A literal, not a parameter: with a bound escape Hibernate cannot tell it is a backslash, and on MySQL it
+			// wraps the pattern in replace( ?, '\\', '\\\\' ), which doubles every backslash the caller wrote.
+			parts.add( " escape " + hqlCharLiteral( escape.charAt( 0 ) ) );
+		}
+		return add( Frag.of( parts.toArray() ) );
+	}
+
+	/**
+	 * An HQL string literal holding one character.
+	 *
+	 * @param c The character.
+	 *
+	 * @return The quoted literal, with a single quote doubled.
+	 */
+	private static String hqlCharLiteral( char c ) {
+		return c == '\'' ? "''''" : "'" + c + "'";
+	}
+
+	/**
+	 * The escape character a {@code like} without an explicit one uses on this builder's database.
+	 *
+	 * @return See {@link #defaultLikeEscape(Dialect)}.
+	 */
+	private String defaultLikeEscape() {
+		return defaultLikeEscape( factory.getJdbcServices().getDialect() );
+	}
+
+	/**
+	 * The escape character a {@code like} without an explicit one uses. Hibernate 7 renders an empty {@code escape ''}
+	 * for it on MySQL and MariaDB, PostgreSQL, CockroachDB and H2, and on those databases an empty escape switches the
+	 * escape character off. Their own default (and bx-orm 1.x and cborm 5, which rendered a plain {@code like}) is a
+	 * backslash, so a backslash is the default here. MySQL with {@code NO_BACKSLASH_ESCAPES} has no backslash escape, so
+	 * Hibernate's rendering stays. Every other dialect renders no {@code escape} clause when none is given, so the
+	 * database default applies and nothing is added.
+	 *
+	 * @param dialect The Hibernate dialect.
+	 *
+	 * @return {@code "\\"} for the dialects above, otherwise null.
+	 */
+	static String defaultLikeEscape( Dialect dialect ) {
+		if ( dialect instanceof MySQLDialect mysql ) {
+			return mysql.isNoBackslashEscapesEnabled() ? null : "\\";
+		}
+		return dialect instanceof PostgreSQLDialect || dialect instanceof CockroachDialect || dialect instanceof H2Dialect ? "\\" : null;
 	}
 
 	/**

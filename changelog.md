@@ -45,8 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🚀 Added
 
+- Criteria `like()` and `ilike()` (and `c.restrictions.like()` / `c.restrictions.ilike()`, their aliases and `notLike()`) take an optional third argument, a one-character escape: `like( "tags", "%50!%-off%", "!" )` or `like( property = "tags", value = "%50!%-off%", escapeChar = "!" )`. The two-argument form is unchanged, so cborm's `like( property, value )` keeps working. An escape of more than one character raises `orm.argument`.
 - `onDelete="cascade"` on a `many-to-one` property declares that the database cascades the delete (`FOREIGN KEY ... ON DELETE CASCADE`). It maps to Hibernate's `@OnDelete( action = CASCADE )`: the generated schema gets `ON DELETE CASCADE`, and deleting the parent removes its loaded children from the session instead of failing at flush. Use it when the parent has no ORM `cascade` and no collection back to the child. `onDelete="noaction"` is the default; any other value fails at mapping time.
-
 - `cacheConfig` configures the second-level cache regions: a struct of BoxCache properties (`maxObjects`, `defaultTimeout`, ...) with an optional `regions` struct of per-region overrides, a JSON file of the same shape, or an EHCache 2 or 3 `ehcache.xml` whose settings are mapped to BoxCache properties.
 - `cacheUse` and `cacheName` on a collection property (`one-to-many`, `many-to-many`, `collection`) cache the collection in the second-level cache.
 - The `unsavedValue` property annotation on an id is honored: it is the id value that marks an entity as new (not yet saved), for example `unsavedValue="0"` on an assigned numeric id.
@@ -104,6 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `generateStatistics` ORM setting (default `false`), plus `ORMService.getStatistics( appName )` and `ORMService.setStatisticsEnabled( appName, enabled )` for a plain-struct view of Hibernate statistics.
 
 ### 🐛 Fixed
+
+- Criteria `like()` and `ilike()` treat a backslash as the escape character again on MySQL and MariaDB, PostgreSQL, CockroachDB and H2, as bx-orm 1.x and cborm 5 did. Hibernate 7 renders `like ... escape ''` there when no escape is given, and an empty escape turns the escape character off, so `like( "tags", "%50\%-off%" )` matched nothing. The default escape on those databases is now a backslash, so `\%`, `\_` and `\\` match literally. Other databases (Oracle, SQL Server, Derby, DB2, ...) are unchanged: no `escape` clause is rendered, so the database default applies. MySQL with `NO_BACKSLASH_ESCAPES` is unchanged too. Pass an explicit third argument to use another escape character on any database.
 
 - [BOX-178](https://ortussolutions.atlassian.net/browse/BOX-178) After a `trust` boot, entity classes kept their raw annotations, so code reading entity metadata saw a different entity than after an `off` or `auto` boot. ColdBox's `populate()` then failed on every relationship (`The class [models.users.Employee] could not be found`), because it reads the `entityName` that discovery adds. A `trust` boot now publishes the manifest's normalized metadata (`entityName`, `table`, default `fieldtype` and `ormType`, normalized association types, inherited classes included) onto each entity class at boot, so `getClassMetadata()` and `getMetadata()` return the same values in every mode.
 - `ormGetSessionFactory().getMetamodel().getAllEntityNames()` and `ormGetSession().getEntityName( entity )` returned the generated facade class names (`...EmployeeFacade`) instead of the entity names. They return the entity names again (`Employee`), as in bx-orm 1, and the raw API accepts those names back.
