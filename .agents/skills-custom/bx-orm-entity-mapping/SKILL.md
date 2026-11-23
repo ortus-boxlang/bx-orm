@@ -138,6 +138,11 @@ Translates traditional CFML annotations into the normalized interface:
 | `discriminatorColumn="type"`, `discriminatorValue="car"` | `getDiscriminator()` |
 | `extends="BaseEntity"` | `isExtended()`, `getParentEntityName()` |
 
+The same keys arrive from BoxLang annotations (`@table( "vehicles" )`). A switch annotation may have no value
+(`@persistent`, `@unique`): BoxLang stores it as `""`. Read every switch through `AnnotationFlags` (`isTrue()`,
+`normalize()` with `ENTITY_FLAGS` / `PROPERTY_FLAGS`) so a valueless switch means `true`; never call
+`BooleanCaster.cast()` on the raw value, and add any new switch annotation to those sets.
+
 ### `IPropertyMeta` — Property Normalization
 
 ```java

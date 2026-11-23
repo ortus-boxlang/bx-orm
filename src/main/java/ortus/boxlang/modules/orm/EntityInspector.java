@@ -41,6 +41,7 @@ import ortus.boxlang.modules.orm.hibernate.facade.BoxEntityFacade;
 import ortus.boxlang.modules.orm.hibernate.facade.FacadeSupport;
 import ortus.boxlang.modules.orm.mapping.EntityRecord;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
+import ortus.boxlang.modules.orm.mapping.inspectors.AnnotationFlags;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
 import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
@@ -136,8 +137,13 @@ public final class EntityInspector {
 	 * @return True when its {@code persistent} annotation is true.
 	 */
 	private static boolean isPersistent( IClassRunnable runnable ) {
-		Object persistent = runnable.getAnnotations().get( ORMKeys.persistent );
-		return persistent != null && BooleanCaster.attempt( persistent ).getOrDefault( false );
+		IStruct annotations = runnable.getAnnotations();
+		if ( annotations == null || !annotations.containsKey( ORMKeys.persistent ) ) {
+			return false;
+		}
+		Object persistent = annotations.get( ORMKeys.persistent );
+		// a valueless @persistent is on
+		return AnnotationFlags.isValueless( persistent ) || BooleanCaster.attempt( persistent ).getOrDefault( false );
 	}
 
 	/**

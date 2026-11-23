@@ -45,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🚀 Added
 
+- Switch annotations can be written as BoxLang annotations without a value, and the switch is on: `@persistent`, `@readOnly`, `@dynamicInsert`, `@dynamicUpdate`, `@mappedSuperClass` and `@softDelete` on an entity, and `@persistent`, `@unique`, `@notNull`, `@insert`, `@update`, `@readOnly`, `@optimisticLock`, `@inverse`, `@constrained`, `@missingRowIgnored` and `@lazy` on a property. Before, a valueless `@persistent` stopped the ORM from starting (`String [] cannot be cast to a boolean`), and a valueless `@softDelete` was ignored. An explicit value still wins: `@persistent( false )` turns the switch off, and `@softDelete( "timestamp" )` and `@lazy( "extra" )` keep their meaning.
+
 - Criteria `like()` and `ilike()` (and `c.restrictions.like()` / `c.restrictions.ilike()`, their aliases and `notLike()`) take an optional third argument, a one-character escape: `like( "tags", "%50!%-off%", "!" )` or `like( property = "tags", value = "%50!%-off%", escapeChar = "!" )`. The two-argument form is unchanged, so cborm's `like( property, value )` keeps working. An escape of more than one character raises `orm.argument`.
 - `onDelete="cascade"` on a `many-to-one` property declares that the database cascades the delete (`FOREIGN KEY ... ON DELETE CASCADE`). It maps to Hibernate's `@OnDelete( action = CASCADE )`: the generated schema gets `ON DELETE CASCADE`, and deleting the parent removes its loaded children from the session instead of failing at flush. Use it when the parent has no ORM `cascade` and no collection back to the child. `onDelete="noaction"` is the default; any other value fails at mapping time.
 - `cacheConfig` configures the second-level cache regions: a struct of BoxCache properties (`maxObjects`, `defaultTimeout`, ...) with an optional `regions` struct of per-region overrides, a JSON file of the same shape, or an EHCache 2 or 3 `ehcache.xml` whose settings are mapped to BoxCache properties.
@@ -104,6 +106,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `generateStatistics` ORM setting (default `false`), plus `ORMService.getStatistics( appName )` and `ORMService.setStatisticsEnabled( appName, enabled )` for a plain-struct view of Hibernate statistics.
 
 ### 🐛 Fixed
+
+- `dynamicInsert` and `dynamicUpdate` on an entity work again. Hibernate 7 ignores them in the generated `mapping.xml`, so they had no effect in 2.0; they are now put on the generated entity class as Hibernate's `@DynamicInsert` and `@DynamicUpdate`. `selectBeforeUpdate` has no Hibernate 7 equivalent: it still has no effect, and an entity that sets it now logs a warning.
+- `constrained` given as a boolean (`@constrained( true )`) no longer fails the mapping with a `ClassCastException`.
 
 - Criteria `like()` and `ilike()` treat a backslash as the escape character again on MySQL and MariaDB, PostgreSQL, CockroachDB and H2, as bx-orm 1.x and cborm 5 did. Hibernate 7 renders `like ... escape ''` there when no escape is given, and an empty escape turns the escape character off, so `like( "tags", "%50\%-off%" )` matched nothing. The default escape on those databases is now a backslash, so `\%`, `\_` and `\\` match literally. Other databases (Oracle, SQL Server, Derby, DB2, ...) are unchanged: no `escape` clause is rendered, so the database default applies. MySQL with `NO_BACKSLASH_ESCAPES` is unchanged too. Pass an explicit third argument to use another escape character on any database.
 

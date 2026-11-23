@@ -42,11 +42,11 @@ import ortus.boxlang.modules.orm.ORMService;
 import ortus.boxlang.modules.orm.config.ORMConfig;
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
+import ortus.boxlang.modules.orm.mapping.inspectors.AnnotationFlags;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ThreadBoxContext;
-import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.StructCaster;
 import ortus.boxlang.runtime.interop.DynamicObject;
 import ortus.boxlang.runtime.loader.ClassLocator;
@@ -384,8 +384,7 @@ public class MappingGenerator {
 		}
 		IStruct annotations = entityMeta.getAsStruct( Key.annotations );
 		if ( annotations.containsKey( ORMKeys.entity ) ||
-		    ( annotations.containsKey( ORMKeys.persistent ) &&
-		        BooleanCaster.cast( annotations.getOrDefault( ORMKeys.persistent, "false" ) ) ) ) {
+		    AnnotationFlags.isTrue( annotations, ORMKeys.persistent, false ) ) {
 			if ( logger.isDebugEnabled() )
 				logger.debug(
 				    "Class is 'persistent'; generating XML: [{}] ",

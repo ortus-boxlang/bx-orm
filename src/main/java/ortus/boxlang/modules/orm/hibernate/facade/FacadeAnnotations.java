@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.SoftDelete;
 import org.hibernate.annotations.SoftDeleteType;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -70,7 +72,14 @@ public final class FacadeAnnotations {
 	public static List<AnnotationDescription> forEntity( IEntityMeta meta ) {
 		List<AnnotationDescription>	result		= new ArrayList<>();
 		IStruct						annotations	= annotations( meta );
-		Object						softDelete	= annotations.get( SOFT_DELETE );
+		// Hibernate 7 does not read <dynamic-insert>/<dynamic-update> from mapping.xml, only the Java annotations
+		if ( meta.isDynamicInsert() ) {
+			result.add( AnnotationDescription.Builder.ofType( DynamicInsert.class ).build() );
+		}
+		if ( meta.isDynamicUpdate() ) {
+			result.add( AnnotationDescription.Builder.ofType( DynamicUpdate.class ).build() );
+		}
+		Object softDelete = annotations.get( SOFT_DELETE );
 		if ( softDelete != null && !softDelete.toString().isBlank() && !"false".equalsIgnoreCase( softDelete.toString().trim() )
 		    && !"no".equalsIgnoreCase( softDelete.toString().trim() ) ) {
 			if ( meta.isSubclass() ) {

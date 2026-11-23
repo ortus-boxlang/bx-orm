@@ -23,7 +23,6 @@ import java.util.Set;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.BoxRuntime;
-import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.KeyCaster;
 import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.dynamic.casters.StructCaster;
@@ -129,6 +128,8 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		if ( this.annotations == null ) {
 			this.annotations = Struct.of();
 		}
+		// a switch written without a value (@persistent, @dynamicUpdate) means true
+		AnnotationFlags.normalize( this.annotations, AnnotationFlags.ENTITY_FLAGS );
 
 		this.datasource				= StringCaster.cast( this.meta.getOrDefault( Key.datasource, "" ) );
 
@@ -136,14 +137,16 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		this.isExtended				= this.meta.containsKey( Key._EXTENDS )
 		    && !this.meta.getAsStruct( Key._EXTENDS ).isEmpty();
 
-		this.isDynamicInsert		= this.annotations.containsKey( ORMKeys.dynamicInsert )
-		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.dynamicInsert, false ) );
+		this.isDynamicInsert		= AnnotationFlags.isTrue( this.annotations, ORMKeys.dynamicInsert, false );
 
-		this.isDynamicUpdate		= this.annotations.containsKey( ORMKeys.dynamicUpdate )
-		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.dynamicUpdate, false ) );
+		this.isDynamicUpdate		= AnnotationFlags.isTrue( this.annotations, ORMKeys.dynamicUpdate, false );
 
-		this.isSelectBeforeUpdate	= this.annotations.containsKey( ORMKeys.selectBeforeUpdate )
-		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.selectBeforeUpdate, false ) );
+		this.isSelectBeforeUpdate	= AnnotationFlags.isTrue( this.annotations, ORMKeys.selectBeforeUpdate, false );
+		if ( this.isSelectBeforeUpdate ) {
+			this.logger.warn(
+			    "Entity [{}] sets selectBeforeUpdate, which Hibernate 7 no longer supports. It has no effect; remove it.",
+			    this.meta.getOrDefault( Key._NAME, "" ) );
+		}
 
 		this.associations			= new LinkedHashSet<>();
 		this.inheritedProperties	= new LinkedHashSet<>();
@@ -168,13 +171,10 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		IStruct						parentAnnotations				= superMeta.getAsStruct( Key.annotations );
 		// @Entity
 		boolean						isParentPersistent				= parentAnnotations.containsKey( ORMKeys.entity )
-		    // persistent="false"
-		    || ( parentAnnotations.containsKey( ORMKeys.persistent )
-		        && BooleanCaster.cast( parentAnnotations.getOrDefault( ORMKeys.persistent, false ) ) );
-		// @mappedSuperClass
-		boolean						isParentMappedSuperClass		= parentAnnotations.containsKey( ORMKeys.mappedSuperClass )
-		    // Default to true to support @mappedSuperClass without a value. Otherwise, mappedSuperClass=false will be parsed as boolean.
-		    && BooleanCaster.cast( parentAnnotations.getOrDefault( ORMKeys.mappedSuperClass, true ) );
+		    // persistent="true" or a valueless @persistent; persistent="false" is off
+		    || AnnotationFlags.isTrue( parentAnnotations, ORMKeys.persistent, false );
+		// @mappedSuperClass, with or without a value
+		boolean						isParentMappedSuperClass		= AnnotationFlags.isTrue( parentAnnotations, ORMKeys.mappedSuperClass, false );
 
 		Array						parentProperties				= superMeta.getAsArray( Key.properties );
 
@@ -183,7 +183,7 @@ public abstract class AbstractEntityMeta implements IEntityMeta {
 		    .stream()
 		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), ( IStruct ) prop, this ) )
 		    // exclude properties explicitly marked as persistent="false"
-		    .filter( prop -> BooleanCaster.cast( prop.getAnnotations().getOrDefault( ORMKeys.persistent, true ) ) )
+		    .filter( prop -> AnnotationFlags.isTrue( prop.getAnnotations(), ORMKeys.persistent, true ) )
 		    .toList();
 		if ( !isParentPersistent && isParentMappedSuperClass ) {
 			// recurse upwards first
