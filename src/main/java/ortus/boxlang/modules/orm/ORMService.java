@@ -467,7 +467,32 @@ public class ORMService extends BaseService {
 		    && !annotations.getAsString( ORMKeys.entityName ).isBlank() ) {
 			return annotations.getAsString( ORMKeys.entityName );
 		} else {
-			return getClassNameFromFQN( entity.bxGetName().getName() );
+			String	className	= getClassNameFromFQN( entity.bxGetName().getName() );
+			// A class no mapping reaches (a relative entityPaths folder in a CLI script) is named after its whole folder
+			// path; its entity is named after the file, as at startup (see MappingGenerator.withFileClassNames()).
+			String	fileName	= sourceFileBaseName( entity );
+			return fileName != null && !fileName.equalsIgnoreCase( className ) ? fileName : className;
+		}
+	}
+
+	/**
+	 * The file name of a class's source, without its extension.
+	 *
+	 * @param entity The class instance.
+	 *
+	 * @return The base name, like {@code User} for {@code models/User.bx}, or null when the source is unknown.
+	 */
+	private static String sourceFileBaseName( IClassRunnable entity ) {
+		try {
+			var path = entity.getRunnablePath();
+			if ( path == null || path.absolutePath() == null || path.absolutePath().getFileName() == null ) {
+				return null;
+			}
+			String	fileName	= path.absolutePath().getFileName().toString();
+			int		dot			= fileName.lastIndexOf( '.' );
+			return dot > 0 ? fileName.substring( 0, dot ) : fileName;
+		} catch ( RuntimeException e ) {
+			return null;
 		}
 	}
 

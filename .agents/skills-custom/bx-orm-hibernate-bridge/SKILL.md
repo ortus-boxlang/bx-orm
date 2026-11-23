@@ -102,6 +102,12 @@ public class BoxClassInstantiator implements EntityInstantiator {
 
 `isSameClass` (strict, subclasses excluded) is what Hibernate uses to pick the concrete persister in an inheritance hierarchy; `isInstance` accepts subclasses.
 
+`instantiate( context, record, properties )` also adds the relationship methods through `installAssociationMethods()`:
+`hasX()` on every association, `addX()` / `removeX()` and the snapshot `getX()` on collections. With a `singularName`
+both sets exist (`hasPost()` and `hasPosts()`), built by calling the same builders on a copy of the association without
+`singularName`. `installMethod()` never replaces a method the entity already has. Compare collection types with
+`"bag".equals( collectionType )`, never `==`.
+
 ## BoxProxy / BoxProxyFactory / BoxLazyInitializer — lazy loading
 
 Identifiers are plain `Object` in Hibernate 7 (the `Serializable` requirement was dropped in 6.0).

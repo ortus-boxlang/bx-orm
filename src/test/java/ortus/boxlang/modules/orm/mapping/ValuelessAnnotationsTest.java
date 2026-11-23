@@ -140,7 +140,8 @@ public class ValuelessAnnotationsTest extends BaseORMTest {
 		// @formatter:off
 		instance.executeSource(
 		    """
-		    meta       = getClassMetadata( "models.native.BareFlagNote" );
+		    // The class the ORM loaded, through the test app's /root mapping
+		    meta       = getClassMetadata( "root.models.native.BareFlagNote" );
 		    persistent = meta.annotations.persistent;
 		    softDelete = meta.annotations.softDelete;
 		    code       = meta.properties.filter( ( p ) => p.name == "code" ).first().annotations;

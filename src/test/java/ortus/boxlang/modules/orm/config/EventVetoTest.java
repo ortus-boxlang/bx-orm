@@ -428,4 +428,75 @@ public class EventVetoTest extends BaseORMTest {
 		                           """ );
 		assertThat( r.get( "rows" ).toString() ).isEqualTo( "1" );
 	}
+
+	/* ----------------------------------------------------------------------------------------------------------- */
+	/* post-events after a veto */
+	/* ----------------------------------------------------------------------------------------------------------- */
+
+	/**
+	 * Test: Hibernate calls the post-insert listeners even after a veto; a vetoed insert must not fire postInsert.
+	 */
+	@DisplayName( "A vetoed insert does not fire postInsert; a saved one does" )
+	@Test
+	public void testVetoedInsertFiresNoPostInsert() {
+		IStruct r = runRolledBack( """
+		                           saved = entityNew( "VetoThing", { name : "veto-post-insert-ok" } );
+		                           entitySave( saved );
+		                           vetoed = entityNew( "VetoThing", { name : "veto-post-insert", vetoEvents : "preInsert" } );
+		                           entitySave( vetoed );
+		                           ormFlush();
+		                           result = { saved : saved.callCount( "postInsert" ), vetoed : vetoed.callCount( "postInsert" ) };
+		                           """ );
+		assertThat( r.get( "saved" ).toString() ).isEqualTo( "1" );
+		assertThat( r.get( "vetoed" ).toString() ).isEqualTo( "0" );
+	}
+
+	/**
+	 * Test: a vetoed delete keeps the row and must not fire postDelete.
+	 */
+	@DisplayName( "A vetoed delete does not fire postDelete" )
+	@Test
+	public void testVetoedDeleteFiresNoPostDelete() {
+		IStruct r = runRolledBack( """
+		                           e = entityNew( "VetoThing", { name : "veto-post-delete" } );
+		                           entitySave( e );
+		                           ormFlush();
+		                           e.setVetoEvents( "preDelete" );
+		                           entityDelete( e );
+		                           ormFlush();
+		                           result = { rows : %s, postDelete : e.callCount( "postDelete" ) };
+		                           """.formatted( countRows( "veto_things", "veto-post-delete" ) ) );
+		assertThat( r.get( "rows" ).toString() ).isEqualTo( "1" );
+		assertThat( r.get( "postDelete" ).toString() ).isEqualTo( "0" );
+	}
+
+	/**
+	 * Test: postCommit fires only for writes that really happened: the insert, not the vetoed delete.
+	 */
+	@DisplayName( "postCommit fires for the committed insert, not for a vetoed delete" )
+	@Test
+	public void testPostCommitSkipsVetoedDelete() {
+		// @formatter:off
+		instance.executeSource( """
+			transaction {
+				e = entityNew( "VetoThing", { name : "veto-post-commit" } );
+				entitySave( e );
+			}
+			transaction {
+				e.setVetoEvents( "preDelete" );
+				entityDelete( e );
+			}
+			result = {
+				inserted : e.callCount( "postCommit:insert" ),
+				deleted  : e.callCount( "postCommit:delete" ),
+				rows     : %s
+			};
+			queryExecute( "delete from veto_things where name = 'veto-post-commit'" );
+		""".formatted( countRows( "veto_things", "veto-post-commit" ) ), context );
+		// @formatter:on
+		IStruct r = variables.getAsStruct( result );
+		assertThat( r.get( "inserted" ).toString() ).isEqualTo( "1" );
+		assertThat( r.get( "deleted" ).toString() ).isEqualTo( "0" );
+		assertThat( r.get( "rows" ).toString() ).isEqualTo( "1" );
+	}
 }

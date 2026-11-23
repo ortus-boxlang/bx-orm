@@ -258,6 +258,10 @@ public class EventListener
 
 	@Override
 	public void onPostDelete( PostDeleteEvent event ) {
+		// Hibernate calls the post-delete listeners even when preDelete vetoed the delete: the row is still there.
+		if ( VetoTracker.consume( event.getSession(), event.getEntity() ) ) {
+			return;
+		}
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
 		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
@@ -275,11 +279,19 @@ public class EventListener
 		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
 		);
 		// A handler that returns false cancels the delete.
-		return announceVetoable( ORMKeys.preDelete, event, FacadeSupport.unwrap( event.getEntity() ), args );
+		if ( announceVetoable( ORMKeys.preDelete, event, FacadeSupport.unwrap( event.getEntity() ), args ) ) {
+			VetoTracker.mark( event.getSession(), event.getEntity() );
+			return true;
+		}
+		return false;
 	}
 
 	@Override
 	public void onPostInsert( PostInsertEvent event ) {
+		// Hibernate calls the post-insert listeners even when preInsert vetoed the insert: no row was written.
+		if ( VetoTracker.consume( event.getSession(), event.getEntity() ) ) {
+			return;
+		}
 		IStruct args = Struct.of(
 		    ORMKeys.event, event,
 		    ORMKeys.entity, FacadeSupport.unwrap( event.getEntity() )
@@ -311,6 +323,7 @@ public class EventListener
 				    Struct.of( "entityName", name, "event", "preInsert" ),
 				    null );
 			}
+			VetoTracker.mark( event.getSession(), event.getEntity() );
 			return true;
 		}
 		// update our entity state to ensure changes persist
