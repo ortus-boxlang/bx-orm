@@ -140,11 +140,9 @@ public class BoxClassInstantiator implements EntityInstantiator {
 
 	/**
 	 * Add the relationship methods of one association to an entity instance: {@code hasX()} on every association, plus
-	 * {@code addX()}, {@code removeX()} and the snapshot {@code getX()} on a collection.
-	 * <p>
-	 * With a {@code singularName}, the methods are named after it ({@code hasPost()}, {@code addPost()},
-	 * {@code removePost()}), and the ones named after the property ({@code hasPosts()}, {@code addPosts()},
-	 * {@code removePosts()}) are added too, so both spellings work. A method the entity already has is never replaced.
+	 * {@code addX()}, {@code removeX()} and the snapshot {@code getX()} on a collection. They are named after the
+	 * {@code singularName} when there is one ({@code addPost()}), else after the property ({@code addPosts()}), as in
+	 * Adobe ColdFusion and Lucee. A method the entity already has is never replaced.
 	 *
 	 * @param theEntity       The entity instance.
 	 * @param association     The association metadata.
@@ -153,27 +151,6 @@ public class BoxClassInstantiator implements EntityInstantiator {
 	 * @param entityName      The entity name, for logging.
 	 */
 	private void installAssociationMethods( IClassRunnable theEntity, IStruct association, String associationType, String propertyName,
-	    String entityName ) {
-		installAssociationMethodSet( theEntity, association, associationType, propertyName, entityName );
-		String singularName = association.getAsString( ORMKeys.singularName );
-		if ( singularName != null && !singularName.equalsIgnoreCase( association.getAsString( Key._NAME ) ) ) {
-			// The property-named methods, alongside the singular ones.
-			IStruct pluralAssociation = new Struct( association );
-			pluralAssociation.remove( ORMKeys.singularName );
-			installAssociationMethodSet( theEntity, pluralAssociation, associationType, propertyName, entityName );
-		}
-	}
-
-	/**
-	 * Add one set of relationship methods, named by {@link #getMethodName(String, IStruct)}.
-	 *
-	 * @param theEntity       The entity instance.
-	 * @param association     The association metadata.
-	 * @param associationType The association type, like {@code one-to-many}.
-	 * @param propertyName    The property name, for logging.
-	 * @param entityName      The entity name, for logging.
-	 */
-	private void installAssociationMethodSet( IClassRunnable theEntity, IStruct association, String associationType, String propertyName,
 	    String entityName ) {
 		String			collectionType	= association.getAsString( ORMKeys.collectionType );
 		boolean			isToMany		= associationType != null && associationType.endsWith( "to-many" );

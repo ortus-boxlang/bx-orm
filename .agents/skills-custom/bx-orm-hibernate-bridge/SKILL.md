@@ -104,9 +104,8 @@ public class BoxClassInstantiator implements EntityInstantiator {
 
 `instantiate( context, record, properties )` also adds the relationship methods through `installAssociationMethods()`:
 `hasX()` on every association, `addX()` / `removeX()` and the snapshot `getX()` on collections. With a `singularName`
-both sets exist (`hasPost()` and `hasPosts()`), built by calling the same builders on a copy of the association without
-`singularName`. `installMethod()` never replaces a method the entity already has. Compare collection types with
-`"bag".equals( collectionType )`, never `==`.
+they are named after it only (`hasPost()`, no `hasPosts()`), as in Adobe ColdFusion and Lucee. `installMethod()` never
+replaces a method the entity already has. Compare collection types with `"bag".equals( collectionType )`, never `==`.
 
 ## BoxProxy / BoxProxyFactory / BoxLazyInitializer — lazy loading
 

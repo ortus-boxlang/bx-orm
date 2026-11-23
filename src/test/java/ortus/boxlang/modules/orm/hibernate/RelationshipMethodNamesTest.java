@@ -29,8 +29,8 @@ import tools.BaseORMTest;
 /**
  * The generated relationship methods: {@code hasX()}, {@code addX()} and {@code removeX()}.
  * <p>
- * Without a {@code singularName} they are named after the property ({@code hasNotes()}). With one, the singular names
- * ({@code hasVehicle()}) and the property names ({@code hasVehicles()}) both exist and act on the same collection.
+ * Without a {@code singularName} they are named after the property ({@code hasNotes()}). With one, they are named after
+ * it only ({@code hasVehicle()}), as in Adobe ColdFusion and Lucee: there is no {@code hasVehicles()}.
  * Fixtures: models/Manufacturer.bx ({@code vehicles}, singularName {@code Vehicle}) and models/native/BareFlagFolder.bx
  * ({@code notes}, no singularName).
  */
@@ -55,28 +55,28 @@ public class RelationshipMethodNamesTest extends BaseORMTest {
 		assertThat( variables.get( Key.of( "singular" ) ) ).isEqualTo( false );
 	}
 
-	@DisplayName( "With a singularName, both the singular and the property names exist" )
+	@DisplayName( "With a singularName, the methods are named after it only" )
 	@Test
-	public void testSingularAndPluralExist() {
+	public void testSingularOnly() {
 		// @formatter:off
 		instance.executeSource( """
-			m        = entityNew( "Manufacturer", { name : "Both" } );
+			m        = entityNew( "Manufacturer", { name : "Singular" } );
 			singular = isCustomFunction( m.hasVehicle ) && isCustomFunction( m.addVehicle ) && isCustomFunction( m.removeVehicle );
-			plural   = isCustomFunction( m.hasVehicles ) && isCustomFunction( m.addVehicles ) && isCustomFunction( m.removeVehicles );
+			plural   = structKeyExists( m, "hasVehicles" ) || structKeyExists( m, "addVehicles" ) || structKeyExists( m, "removeVehicles" );
 			""", context );
 		// @formatter:on
 		assertThat( variables.get( Key.of( "singular" ) ) ).isEqualTo( true );
-		assertThat( variables.get( Key.of( "plural" ) ) ).isEqualTo( true );
+		assertThat( variables.get( Key.of( "plural" ) ) ).isEqualTo( false );
 	}
 
-	@DisplayName( "Singular and plural names act on the same collection" )
+	@DisplayName( "The singular methods add, find and remove items" )
 	@Test
-	public void testSingularAndPluralShareTheCollection() {
+	public void testSingularMethods() {
 		// @formatter:off
 		instance.executeSource( """
 			transaction {
 				try {
-					m = entityNew( "Manufacturer", { name : "Shared" } );
+					m = entityNew( "Manufacturer", { name : "Singular" } );
 					entitySave( m );
 					v1 = entityNew( "Vehicle", { vin : "SINGPLUR000000001", model : "One" } );
 					v2 = entityNew( "Vehicle", { vin : "SINGPLUR000000002", model : "Two" } );
@@ -84,14 +84,13 @@ public class RelationshipMethodNamesTest extends BaseORMTest {
 					v2.setManufacturer( m );
 					entitySave( [ v1, v2 ] );
 
-					m.addVehicle( v1 ).addVehicles( v2 );
-					emptyHas   = m.hasVehicle() && m.hasVehicles();
-					hasBoth    = m.hasVehicle( v2 ) && m.hasVehicles( v1 );
-					afterAdd   = m.getVehicles().len();
+					m.addVehicle( v1 ).addVehicle( v2 );
+					anyHas      = m.hasVehicle();
+					hasBoth     = m.hasVehicle( v1 ) && m.hasVehicle( v2 );
+					afterAdd    = m.getVehicles().len();
 
-					m.removeVehicles( v1 );
-					m.removeVehicle( v2 );
-					stillHasV1 = m.hasVehicle( v1 ) || m.hasVehicles( v1 );
+					m.removeVehicle( v1 );
+					stillHasV1  = m.hasVehicle( v1 );
 					afterRemove = m.getVehicles().len();
 				} finally {
 					transactionRollback();
@@ -99,10 +98,10 @@ public class RelationshipMethodNamesTest extends BaseORMTest {
 			}
 			""", context );
 		// @formatter:on
-		assertThat( variables.get( Key.of( "emptyHas" ) ) ).isEqualTo( true );
+		assertThat( variables.get( Key.of( "anyHas" ) ) ).isEqualTo( true );
 		assertThat( variables.get( Key.of( "hasBoth" ) ) ).isEqualTo( true );
 		assertThat( ( ( Number ) variables.get( Key.of( "afterAdd" ) ) ).intValue() ).isEqualTo( 2 );
 		assertThat( variables.get( Key.of( "stillHasV1" ) ) ).isEqualTo( false );
-		assertThat( ( ( Number ) variables.get( Key.of( "afterRemove" ) ) ).intValue() ).isEqualTo( 0 );
+		assertThat( ( ( Number ) variables.get( Key.of( "afterRemove" ) ) ).intValue() ).isEqualTo( 1 );
 	}
 }
