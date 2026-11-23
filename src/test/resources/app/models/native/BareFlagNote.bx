@@ -1,0 +1,36 @@
+/**
+ * Fixture for valueless BoxLang annotations: a switch written without a value (@persistent, @unique) means true.
+ */
+@persistent
+@table( "bare_flag_notes" )
+@softDelete
+@dynamicUpdate
+@selectBeforeUpdate
+class {
+
+	@fieldtype( "id" )
+	@generator( "increment" )
+	@ormType( "integer" )
+	property id;
+
+	@ormType( "string" )
+	@length( 40 )
+	@unique
+	@notNull
+	property code;
+
+	@persistent
+	@ormType( "string" )
+	@length( 100 )
+	property title;
+
+	@persistent( false )
+	property scratch;
+
+	@fieldtype( "many-to-one" )
+	@cfc( "BareFlagFolder" )
+	@fkcolumn( "folderId" )
+	@lazy
+	property folder;
+
+}

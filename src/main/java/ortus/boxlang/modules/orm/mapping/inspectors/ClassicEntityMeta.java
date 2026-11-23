@@ -21,7 +21,6 @@ import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
 import ortus.boxlang.modules.orm.config.ORMKeys;
-import ortus.boxlang.runtime.dynamic.casters.BooleanCaster;
 import ortus.boxlang.runtime.dynamic.casters.IntegerCaster;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
@@ -60,8 +59,7 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		if ( this.annotations.containsKey( ORMKeys.where ) && !this.annotations.getAsString( ORMKeys.where ).isBlank() ) {
 			this.where = this.annotations.getAsString( ORMKeys.where ).trim();
 		}
-		this.isImmutable = this.annotations.containsKey( ORMKeys.readOnly )
-		    && BooleanCaster.cast( this.annotations.getOrDefault( ORMKeys.readOnly, "false" ), false );
+		this.isImmutable = AnnotationFlags.isTrue( this.annotations, ORMKeys.readOnly, false );
 
 		if ( this.annotations.containsKey( ORMKeys.discriminatorColumn ) || this.annotations.containsKey( ORMKeys.discriminatorValue ) ) {
 			this.discriminator = new Struct();
@@ -85,9 +83,7 @@ public class ClassicEntityMeta extends AbstractEntityMeta {
 		    .map( IStruct.class::cast )
 		    .filter( ( IStruct prop ) -> {
 											    var annotations = prop.getAsStruct( Key.annotations );
-											    return BooleanCaster.cast(
-											        annotations.getOrDefault( ORMKeys.persistent, true )
-											    );
+											    return AnnotationFlags.isTrue( annotations, ORMKeys.persistent, true );
 										    } )
 		    .map( prop -> new ClassicPropertyMeta( this.getEntityName(), prop, this ) )
 		    .collect( Collectors.toCollection( LinkedHashSet::new ) );

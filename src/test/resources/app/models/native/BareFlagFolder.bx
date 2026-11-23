@@ -1,0 +1,24 @@
+/**
+ * Fixture for valueless BoxLang annotations on an association: @inverse and @lazy without a value.
+ */
+@persistent
+@table( "bare_flag_folders" )
+class {
+
+	@fieldtype( "id" )
+	@generator( "increment" )
+	@ormType( "integer" )
+	property id;
+
+	@ormType( "string" )
+	@length( 100 )
+	property name;
+
+	@fieldtype( "one-to-many" )
+	@cfc( "BareFlagNote" )
+	@fkcolumn( "folderId" )
+	@inverse
+	@lazy
+	property notes;
+
+}

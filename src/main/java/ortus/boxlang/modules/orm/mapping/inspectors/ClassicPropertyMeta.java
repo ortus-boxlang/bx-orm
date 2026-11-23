@@ -232,7 +232,7 @@ public class ClassicPropertyMeta extends AbstractPropertyMeta {
 			    ( key, object ) -> BooleanCaster.cast( annotations.get( ORMKeys.missingRowIgnored ) ) ? "ignore" : "exception" );
 		}
 		if ( annotations.containsKey( ORMKeys.constrained ) ) {
-			association.put( ORMKeys.constrained, BooleanCaster.cast( annotations.getAsString( ORMKeys.constrained ) ) );
+			association.put( ORMKeys.constrained, BooleanCaster.cast( annotations.get( ORMKeys.constrained ) ) );
 		}
 		if ( annotations.containsKey( ORMKeys.cascade ) ) {
 			/*

@@ -26,11 +26,13 @@ import ortus.boxlang.compiler.parser.Parser;
 import ortus.boxlang.compiler.parser.ParsingResult;
 import ortus.boxlang.compiler.ast.visitor.ClassMetadataVisitor;
 import ortus.boxlang.modules.orm.config.ORMConfig;
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.modules.orm.hibernate.converters.DateTimeConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.IntegerConverter;
 import ortus.boxlang.modules.orm.hibernate.converters.StringConverter;
 import ortus.boxlang.modules.orm.mapping.inspectors.AbstractEntityMeta;
 import ortus.boxlang.modules.orm.mapping.inspectors.IEntityMeta;
+import ortus.boxlang.modules.orm.mapping.inspectors.IPropertyMeta;
 import ortus.boxlang.runtime.BoxRuntime;
 import ortus.boxlang.runtime.context.RequestBoxContext;
 import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
@@ -775,6 +777,213 @@ public class MappingGeneratorTest {
 		assertThat( doc.getElementsByTagName( "index" ).getLength() ).isEqualTo( 0 );
 	}
 
+	/*
+	 * ------------------------------------------------------------------------------------------------------------------
+	 * BoxLang annotations: a switch written without a value means true
+	 * ------------------------------------------------------------------------------------------------------------------
+	 */
+
+	@DisplayName( "Valueless entity switches (@dynamicInsert, @dynamicUpdate, @selectBeforeUpdate, @readOnly) are on" )
+	@Test
+	public void testValuelessEntitySwitches() {
+		Document	doc		= writeXML(
+		    """
+		    @persistent
+		    @dynamicInsert
+		    @dynamicUpdate
+		    @selectBeforeUpdate
+		    @readOnly
+		    class {
+		    	@fieldtype( "id" )
+		    	property id;
+		    }
+		    """ );
+		Element		entity	= first( doc, "entity" );
+		assertThat( childText( entity, "dynamic-insert" ) ).isEqualTo( "true" );
+		assertThat( childText( entity, "dynamic-update" ) ).isEqualTo( "true" );
+		assertThat( childText( entity, "select-before-update" ) ).isEqualTo( "true" );
+		assertThat( childText( entity, "mutable" ) ).isEqualTo( "false" );
+	}
+
+	@DisplayName( "An explicit false still turns an entity switch off" )
+	@Test
+	public void testExplicitFalseEntitySwitches() {
+		Document	doc		= writeXML(
+		    """
+		    @persistent( true )
+		    @dynamicUpdate( false )
+		    @readOnly( false )
+		    class {
+		    	@fieldtype( "id" )
+		    	property id;
+		    }
+		    """ );
+		Element		entity	= first( doc, "entity" );
+		assertThat( childElement( entity, "dynamic-update" ) ).isNull();
+		assertThat( childElement( entity, "mutable" ) ).isNull();
+	}
+
+	@DisplayName( "Valueless column switches (@unique, @notNull, @insert, @update) are on, explicit false is off" )
+	@Test
+	public void testValuelessColumnSwitches() {
+		Document	doc		= writeXML(
+		    """
+		    @persistent
+		    class {
+		    	@fieldtype( "id" )
+		    	property id;
+
+		    	@unique
+		    	@notNull
+		    	@insert
+		    	@update
+		    	property code;
+
+		    	@insert( false )
+		    	@update( false )
+		    	property frozen;
+		    }
+		    """ );
+		Element		code	= childElement( byName( doc, "basic", "code" ), "column" );
+		assertThat( code.getAttribute( "unique" ) ).isEqualTo( "true" );
+		assertThat( code.getAttribute( "nullable" ) ).isEqualTo( "false" );
+		assertThat( code.getAttribute( "insertable" ) ).isEqualTo( "true" );
+		assertThat( code.getAttribute( "updatable" ) ).isEqualTo( "true" );
+		Element frozen = childElement( byName( doc, "basic", "frozen" ), "column" );
+		assertThat( frozen.getAttribute( "insertable" ) ).isEqualTo( "false" );
+		assertThat( frozen.getAttribute( "updatable" ) ).isEqualTo( "false" );
+	}
+
+	@DisplayName( "A valueless @persistent property is mapped; @persistent( false ) is not" )
+	@Test
+	public void testValuelessPersistentProperty() {
+		Document doc = writeXML(
+		    """
+		    @persistent
+		    class {
+		    	@fieldtype( "id" )
+		    	property id;
+
+		    	@persistent
+		    	property title;
+
+		    	@persistent( false )
+		    	property scratch;
+		    }
+		    """ );
+		assertThat( byName( doc, "basic", "title" ) ).isNotNull();
+		assertThat( byName( doc, "basic", "scratch" ) ).isNull();
+	}
+
+	@DisplayName( "Valueless property switches (@readOnly, @optimisticLock) are on" )
+	@Test
+	public void testValuelessPropertySwitches() {
+		IEntityMeta		entity	= entityMeta(
+		    """
+		    @persistent
+		    class {
+		    	@fieldtype( "id" )
+		    	property id;
+
+		    	@readOnly
+		    	@optimisticLock
+		    	property code;
+
+		    	@optimisticLock( false )
+		    	property hits;
+		    }
+		    """ );
+		IPropertyMeta	code	= property( entity, "code" );
+		assertThat( code.isImmutable() ).isTrue();
+		assertThat( code.isOptimisticLock() ).isTrue();
+		assertThat( property( entity, "hits" ).isOptimisticLock() ).isFalse();
+	}
+
+	@DisplayName( "Valueless association switches (@lazy, @missingRowIgnored, @notNull, @inverse) are on" )
+	@Test
+	public void testValuelessAssociationSwitches() {
+		BiFunction<String, Key, EntityRecord>	lookup	= ( a, b ) -> new EntityRecord( "Person", "models.Person" );
+		Document								doc		= writeXML(
+		    """
+		    @persistent
+		    class {
+		    	@fieldtype( "id" )
+		    	property id;
+
+		    	@fieldtype( "many-to-one" )
+		    	@cfc( "Person" )
+		    	@fkcolumn( "FK_owner" )
+		    	@lazy
+		    	@missingRowIgnored
+		    	@notNull
+		    	property owner;
+		    }
+		    """, lookup );
+		Element									m2o		= first( doc, "many-to-one" );
+		assertThat( m2o.getAttribute( "fetch" ) ).isEqualTo( "LAZY" );
+		assertThat( m2o.getAttribute( "not-found" ) ).isEqualTo( "IGNORE" );
+		assertThat( m2o.getAttribute( "optional" ) ).isEqualTo( "false" );
+
+		IEntityMeta	entity	= entityMeta(
+		    """
+		    @persistent
+		    class {
+		    	@fieldtype( "id" )
+		    	property id;
+
+		    	@fieldtype( "one-to-many" )
+		    	@cfc( "Person" )
+		    	@fkcolumn( "FK_owner" )
+		    	@inverse
+		    	@lazy
+		    	property people;
+
+		    	@fieldtype( "one-to-one" )
+		    	@cfc( "Person" )
+		    	@constrained
+		    	property twin;
+		    }
+		    """ );
+		IStruct		people	= property( entity, "people" ).getAssociation();
+		assertThat( people.get( ORMKeys.inverse ) ).isEqualTo( true );
+		assertThat( people.getAsString( ORMKeys.lazy ) ).isEqualTo( "true" );
+		assertThat( property( entity, "twin" ).getAssociation().get( ORMKeys.constrained ) ).isEqualTo( true );
+	}
+
+	@DisplayName( "A valueless @softDelete and @mappedSuperClass are on" )
+	@Test
+	public void testValuelessSoftDeleteAndMappedSuperClass() {
+		IEntityMeta entity = entityMeta(
+		    """
+		    @persistent
+		    @softDelete
+		    class {
+		    	@fieldtype( "id" )
+		    	property id;
+		    }
+		    """ );
+		assertThat( entity.getMeta().getAsStruct( Key.annotations ).get( ORMKeys.softDelete ) ).isEqualTo( true );
+
+		IStruct	parent	= getClassMetaFromCode(
+		    """
+		    @mappedSuperClass
+		    class {
+		    	property name="createdBy";
+		    }
+		    """ );
+		IStruct	child	= getClassMetaFromCode(
+		    """
+		    @persistent
+		    class {
+		    	@fieldtype( "id" )
+		    	property id;
+		    }
+		    """ );
+		child.put( Key._EXTENDS, parent );
+		IEntityMeta withParent = AbstractEntityMeta.autoDiscoverMetaType( child );
+		assertThat( withParent.getPropertyNamesArray().toList().toString() ).contains( "createdBy" );
+	}
+
 	/**
 	 * ------------------------------------------------------------------------------------------------------------------
 	 * Writer test helpers
@@ -819,6 +1028,15 @@ public class MappingGeneratorTest {
 	private static String childText( Element parent, String tag ) {
 		Element el = childElement( parent, tag );
 		return el == null ? null : el.getTextContent();
+	}
+
+	private IEntityMeta entityMeta( String sourceCode ) {
+		return AbstractEntityMeta.autoDiscoverMetaType( getClassMetaFromCode( sourceCode ) );
+	}
+
+	private static IPropertyMeta property( IEntityMeta entity, String name ) {
+		return entity.getAllPersistentProperties().stream().filter( p -> p.getName().equalsIgnoreCase( name ) ).findFirst()
+		    .orElseThrow( () -> new AssertionError( "No property " + name ) );
 	}
 
 	private IStruct getClassMetaFromCode( String code ) {

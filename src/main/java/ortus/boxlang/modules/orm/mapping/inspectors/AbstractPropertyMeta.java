@@ -108,7 +108,9 @@ public abstract class AbstractPropertyMeta implements IPropertyMeta {
 		this.meta			= meta;
 		this.definingEntity	= definingEntity;
 		this.annotations	= this.meta.getAsStruct( Key.annotations );
-		this.name			= this.meta.getAsString( Key._NAME );
+		// a switch written without a value (@unique, @notNull, @inverse) means true
+		AnnotationFlags.normalize( this.annotations, AnnotationFlags.PROPERTY_FLAGS );
+		this.name = this.meta.getAsString( Key._NAME );
 
 		if ( annotations.containsKey( Key.sqltype ) ) {
 			this.sqlType = annotations.getAsString( Key.sqltype );

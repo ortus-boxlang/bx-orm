@@ -1,0 +1,19 @@
+/**
+ * Fixture for valueless BoxLang annotations: a read-only entity (@readOnly) and @dynamicInsert without a value.
+ */
+@persistent
+@table( "bare_flag_read_only" )
+@readOnly
+@dynamicInsert
+class {
+
+	@fieldtype( "id" )
+	@generator( "increment" )
+	@ormType( "integer" )
+	property id;
+
+	@ormType( "string" )
+	@length( 100 )
+	property name;
+
+}
