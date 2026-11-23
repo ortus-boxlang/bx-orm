@@ -113,51 +113,9 @@ public class BoxClassInstantiator implements EntityInstantiator {
 
 		entityRecord.getEntityMeta().getAssociations().stream()
 		    .forEach( prop -> {
-			    IStruct		association		= prop.getAssociation();
-			    String		collectionType	= association.getAsString( ORMKeys.collectionType );
-			    // hasX(), used on all associations
-			    DynamicFunction hasUDF		= null;
-			    String		associationType	= association.getAsString( Key.type );
-			    if ( associationType.endsWith( "to-many" ) ) {
-				    hasUDF = getToManyHasMethod( collectionType, association );
-			    } else {
-				    hasUDF = getSimpleHasMethod( collectionType, association );
-			    }
-			    if ( !theEntity.getThisScope().containsKey( hasUDF.getName() ) ) {
-				    logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
-				        prop.getName(), entityRecord.getEntityName() );
-				    theEntity.getThisScope().put( hasUDF.getName(), hasUDF );
-				    theEntity.getVariablesScope().put( hasUDF.getName(), hasUDF );
-			    }
-
-			    // @TODO: I'm not sure this conditional is correct at all... but without more & better testing, I don't want to change it.
-			    boolean isCollectionType = association.containsKey( ORMKeys.collectionType );
-			    if ( isCollectionType ) {
-				    // addX(), used on to-many associations
-				    DynamicFunction addUDF = getAddMethod( collectionType, association );
-				    if ( !theEntity.getThisScope().containsKey( addUDF.getName() ) ) {
-					    logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getName(),
-					        entityRecord.getEntityName() );
-					    theEntity.getThisScope().put( addUDF.getName(), addUDF );
-					    theEntity.getVariablesScope().put( addUDF.getName(), addUDF );
-				    }
-
-				    // removeX(), used on to-many associations
-				    DynamicFunction removeUDF = getRemoveMethod( collectionType, association );
-				    if ( !theEntity.getThisScope().containsKey( removeUDF.getName() ) ) {
-					    logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
-					        prop.getName(), entityRecord.getEntityName() );
-					    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
-					    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
-				    }
-
-				    // getX() override for a managed to-many: reads from a snapshot (so getX().each( e => removeX(e) ) is safe)
-				    // while writes through the returned array persist. Replaces only BoxLang's generated accessor - a getter the
-				    // developer wrote is left alone (see installToManyGetter).
-				    if ( association.getAsString( Key.type ).endsWith( "to-many" ) ) {
-					    installToManyGetter( theEntity, getToManyGetMethod( association ) );
-				    }
-			    }
+			    IStruct association = prop.getAssociation();
+			    installAssociationMethods( theEntity, association, association.getAsString( Key.type ), prop.getName(),
+			        entityRecord.getEntityName() );
 		    } );
 
 		if ( entityRecord.getEntityMeta().isSubclass() ) {
@@ -166,51 +124,10 @@ public class BoxClassInstantiator implements EntityInstantiator {
 			    .map( StructCaster::cast )
 			    .filter( prop -> prop.getAsStruct( Key.annotations ).get( ORMKeys.fkcolumn ) != null )
 			    .forEach( prop -> {
-				    DynamicFunction hasUDF		= null;
-				    IStruct		annotations		= prop.getAsStruct( Key.annotations );
-				    String		associationType	= annotations.getAsString( ORMKeys.fieldtype );
-				    IPropertyMeta tempMeta		= new ClassicPropertyMeta( entityRecord.getEntityName(), prop, entityRecord.getEntityMeta() );
-				    IStruct		association		= tempMeta.getAssociation();
-				    String		collectionType	= association.getAsString( ORMKeys.collectionType );
-				    if ( associationType.endsWith( "to-many" ) ) {
-					    hasUDF = getToManyHasMethod( collectionType, association );
-				    } else {
-					    hasUDF = getSimpleHasMethod( collectionType, association );
-				    }
-				    if ( !theEntity.getThisScope().containsKey( hasUDF.getName() ) ) {
-					    logger.trace( "Adding '{}' method for property '{}' on entity '{}", hasUDF.getName().getName(),
-					        prop.getAsString( Key._name ), entityRecord.getEntityName() );
-					    theEntity.getThisScope().put( hasUDF.getName(), hasUDF );
-					    theEntity.getVariablesScope().put( hasUDF.getName(), hasUDF );
-				    }
-
-				    // @TODO: I'm not sure this conditional is correct at all... but without more & better testing, I don't want to change it.
-				    boolean isCollectionType = association.containsKey( ORMKeys.collectionType );
-				    if ( isCollectionType ) {
-					    // addX(), used on to-many associations
-					    DynamicFunction addUDF = getAddMethod( collectionType, association );
-					    if ( !theEntity.getThisScope().containsKey( addUDF.getName() ) ) {
-						    logger.trace( "Adding '{}' method for property '{}' on entity '{}", addUDF.getName().getName(), prop.getAsString( Key._name ),
-						        entityRecord.getEntityName() );
-						    theEntity.getThisScope().put( addUDF.getName(), addUDF );
-						    theEntity.getVariablesScope().put( addUDF.getName(), addUDF );
-					    }
-
-					    // removeX(), used on to-many associations
-					    DynamicFunction removeUDF = getRemoveMethod( collectionType, association );
-					    if ( !theEntity.getThisScope().containsKey( removeUDF.getName() ) ) {
-						    logger.trace( "Adding '{}' method for property '{}' on entity '{}", removeUDF.getName().getName(),
-						        prop.getAsString( Key._name ), entityRecord.getEntityName() );
-						    theEntity.getThisScope().put( removeUDF.getName(), removeUDF );
-						    theEntity.getVariablesScope().put( removeUDF.getName(), removeUDF );
-					    }
-
-					    // getX() snapshot override for an INHERITED to-many association - same safe-iteration guarantee as the
-					    // main loop above, which otherwise would not apply to associations declared on a persistent parent.
-					    if ( associationType.endsWith( "to-many" ) ) {
-						    installToManyGetter( theEntity, getToManyGetMethod( association ) );
-					    }
-				    }
+				    IStruct		annotations	= prop.getAsStruct( Key.annotations );
+				    IPropertyMeta tempMeta	= new ClassicPropertyMeta( entityRecord.getEntityName(), prop, entityRecord.getEntityMeta() );
+				    installAssociationMethods( theEntity, tempMeta.getAssociation(), annotations.getAsString( ORMKeys.fieldtype ),
+				        prop.getAsString( Key._name ), entityRecord.getEntityName() );
 			    } );
 		}
 
@@ -219,6 +136,59 @@ public class BoxClassInstantiator implements EntityInstantiator {
 		}
 
 		return theEntity;
+	}
+
+	/**
+	 * Add the relationship methods of one association to an entity instance: {@code hasX()} on every association, plus
+	 * {@code addX()}, {@code removeX()} and the snapshot {@code getX()} on a collection. They are named after the
+	 * {@code singularName} when there is one ({@code addPost()}), else after the property ({@code addPosts()}), as in
+	 * Adobe ColdFusion and Lucee. A method the entity already has is never replaced.
+	 *
+	 * @param theEntity       The entity instance.
+	 * @param association     The association metadata.
+	 * @param associationType The association type, like {@code one-to-many}.
+	 * @param propertyName    The property name, for logging.
+	 * @param entityName      The entity name, for logging.
+	 */
+	private void installAssociationMethods( IClassRunnable theEntity, IStruct association, String associationType, String propertyName,
+	    String entityName ) {
+		String			collectionType	= association.getAsString( ORMKeys.collectionType );
+		boolean			isToMany		= associationType != null && associationType.endsWith( "to-many" );
+		// hasX(), used on all associations
+		DynamicFunction	hasUDF			= isToMany ? getToManyHasMethod( collectionType, association )
+		    : getSimpleHasMethod( collectionType, association );
+		installMethod( theEntity, hasUDF, propertyName, entityName );
+
+		// @TODO: I'm not sure this conditional is correct at all... but without more & better testing, I don't want to change it.
+		if ( association.containsKey( ORMKeys.collectionType ) ) {
+			// addX() and removeX(), used on to-many associations
+			installMethod( theEntity, getAddMethod( collectionType, association ), propertyName, entityName );
+			installMethod( theEntity, getRemoveMethod( collectionType, association ), propertyName, entityName );
+
+			// getX() override for a managed to-many: reads from a snapshot (so getX().each( e => removeX(e) ) is safe)
+			// while writes through the returned array persist. Replaces only BoxLang's generated accessor - a getter the
+			// developer wrote is left alone (see installToManyGetter).
+			if ( isToMany ) {
+				installToManyGetter( theEntity, getToManyGetMethod( association ) );
+			}
+		}
+	}
+
+	/**
+	 * Add a generated method to an entity instance, unless the entity already has a method with that name.
+	 *
+	 * @param theEntity    The entity instance.
+	 * @param udf          The method.
+	 * @param propertyName The property name, for logging.
+	 * @param entityName   The entity name, for logging.
+	 */
+	private void installMethod( IClassRunnable theEntity, DynamicFunction udf, String propertyName, String entityName ) {
+		if ( theEntity.getThisScope().containsKey( udf.getName() ) ) {
+			return;
+		}
+		logger.trace( "Adding '{}' method for property '{}' on entity '{}", udf.getName().getName(), propertyName, entityName );
+		theEntity.getThisScope().put( udf.getName(), udf );
+		theEntity.getVariablesScope().put( udf.getName(), udf );
 	}
 
 	/**
@@ -326,7 +296,7 @@ public class BoxClassInstantiator implements EntityInstantiator {
 				    return false;
 			    }
 
-			    if ( collectionType == "bag" ) {
+			    if ( "bag".equals( collectionType ) ) {
 				    if ( collection instanceof PersistentBag bagCollection ) {
 					    if ( itemToCheck != null ) {
 						    return bagCollection.stream().filter( item -> item.equals( itemToCheck ) ).findFirst().isPresent();
@@ -437,7 +407,7 @@ public class BoxClassInstantiator implements EntityInstantiator {
 		return new DynamicFunction(
 		    methodName,
 		    ( context, function ) -> {
-			    boolean		isArrayCollection	= collectionType == "bag";
+			    boolean		isArrayCollection	= "bag".equals( collectionType );
 
 			    Object		itemToAdd			= context.getArgumentsScope().get( collectionKey );
 			    VariablesScope variablesScope	= context.getThisClass().getVariablesScope();
@@ -503,7 +473,7 @@ public class BoxClassInstantiator implements EntityInstantiator {
 		return new DynamicFunction(
 		    methodName,
 		    ( context, function ) -> {
-			    boolean		isArrayCollection	= collectionType == "bag";
+			    boolean		isArrayCollection	= "bag".equals( collectionType );
 			    IClassRunnable itemToRemove		= ( IClassRunnable ) context.getArgumentsScope().get( collectionKey );
 			    VariablesScope variablesScope	= context.getThisClass().getVariablesScope();
 

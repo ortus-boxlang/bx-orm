@@ -107,6 +107,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 
+- A `preInsert` or `preDelete` handler that vetoes the operation no longer fires `postInsert` / `postDelete` and `postCommit` for it. Hibernate calls its post-event listeners even after a veto, so a vetoed delete announced a committed `delete` for a row that was never removed.
+- An entity reached through no mapping (a relative `entityPaths` folder in a CLI script, `boxlang app.bxs`, or in `module:orm generate`) is named after its file again. BoxLang named its class after the whole folder path, so the entity was called `tmpappmodelsUser` instead of `User` and loads by name failed; the boot cache recorded the same wrong name.
+- In `off` and `auto` mode, switch annotations written without a value (`@persistent`, `@unique`, ...) now read `true` in the entity class's metadata (`getClassMetadata()`), as they already did after a `trust` boot, so code that reads the metadata as booleans works.
 - `dynamicInsert` and `dynamicUpdate` on an entity work again. Hibernate 7 ignores them in the generated `mapping.xml`, so they had no effect in 2.0; they are now put on the generated entity class as Hibernate's `@DynamicInsert` and `@DynamicUpdate`. `selectBeforeUpdate` has no Hibernate 7 equivalent: it still has no effect, and an entity that sets it now logs a warning.
 - `constrained` given as a boolean (`@constrained( true )`) no longer fails the mapping with a `ClassCastException`.
 

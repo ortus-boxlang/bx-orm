@@ -478,6 +478,72 @@ public class MappingGenerator {
 	}
 
 	/**
+	 * Store {@code true} for every switch annotation written without a value on a class's live metadata: the class
+	 * annotations, each property's annotations, and the same for its parents. Only a valueless switch changes, and only
+	 * to {@code true}, which is what it means; a trust boot publishes the same values from the boot cache.
+	 *
+	 * @param classMeta The class's live metadata.
+	 */
+	static void publishSwitches( IStruct classMeta ) {
+		IStruct current = classMeta;
+		while ( current != null ) {
+			if ( current.get( Key.annotations ) instanceof IStruct annotations ) {
+				ortus.boxlang.modules.orm.mapping.inspectors.AnnotationFlags.normalize( annotations,
+				    ortus.boxlang.modules.orm.mapping.inspectors.AnnotationFlags.ENTITY_FLAGS );
+			}
+			if ( current.get( Key.properties ) instanceof ortus.boxlang.runtime.types.Array properties ) {
+				for ( Object property : properties ) {
+					if ( property instanceof IStruct prop && prop.get( Key.annotations ) instanceof IStruct propAnnotations ) {
+						ortus.boxlang.modules.orm.mapping.inspectors.AnnotationFlags.normalize( propAnnotations,
+						    ortus.boxlang.modules.orm.mapping.inspectors.AnnotationFlags.PROPERTY_FLAGS );
+					}
+				}
+			}
+			current = current.get( Key._EXTENDS ) instanceof IStruct parent && !parent.isEmpty() ? parent : null;
+		}
+	}
+
+	/**
+	 * Name a class, and each parent in its {@code extends} chain, after its file.
+	 * <p>
+	 * BoxLang names a class after the mapping that reaches it: {@code /blog/models/User.bx} through a {@code /blog}
+	 * mapping is {@code blog.models.User}, simple name {@code User}. A class no mapping reaches, such as an entity in a
+	 * relative {@code entityPaths} folder of a CLI script ({@code boxlang app.bxs}) or of {@code module:orm generate}, is
+	 * named after its whole folder path instead, so its simple name is {@code tmpappmodelsUser}. The entity name, the
+	 * Hibernate mapping and the generated facade all come from the simple name, so it is set back to the file name
+	 * ({@code User}) here, where the metadata is read.
+	 *
+	 * @param meta The class metadata (a copy: it is changed in place).
+	 *
+	 * @return The same metadata.
+	 */
+	static IStruct withFileClassNames( IStruct meta ) {
+		IStruct current = meta;
+		while ( current != null ) {
+			String	path		= current.getAsString( Key.path );
+			String	simpleName	= current.getAsString( Key.simpleName );
+			if ( path != null && !path.isBlank() && simpleName != null ) {
+				String	fileName	= Path.of( path ).getFileName().toString();
+				int		dot			= fileName.lastIndexOf( '.' );
+				String	baseName	= dot > 0 ? fileName.substring( 0, dot ) : fileName;
+				if ( !baseName.equalsIgnoreCase( simpleName ) ) {
+					current.put( Key.simpleName, baseName );
+				}
+			}
+			// Walk up the parents, copying each one before it is changed: the nested structs are shared too.
+			Object parent = current.get( Key._EXTENDS );
+			if ( parent instanceof IStruct parentMeta && !parentMeta.isEmpty() ) {
+				IStruct parentCopy = new Struct( parentMeta );
+				current.put( Key._EXTENDS, parentCopy );
+				current = parentCopy;
+			} else {
+				current = null;
+			}
+		}
+		return meta;
+	}
+
+	/**
 	 * Determine the entity name from the given entity metadata.
 	 *
 	 * @param meta The entity metadata.
@@ -527,9 +593,12 @@ public class MappingGenerator {
 			if ( classObj.hasMethodNoCase( "getMetaStatic" ) ) {
 				Object metaObj = classObj.invokeStatic( context, "getMetaStatic" );
 				if ( metaObj instanceof IStruct classMeta ) {
+					// Switches written without a value (@persistent, @unique) mean true: say so on the class's own metadata
+					// too, so code that reads it (getClassMetadata(), framework populators) sees true, as after a trust boot.
+					publishSwitches( classMeta );
 					// Defensive copy: getMetaStatic() returns a shared class-level struct.
 					// We must not mutate it, or altered values will leak across applications.
-					return new Struct( classMeta );
+					return withFileClassNames( new Struct( classMeta ) );
 				}
 			}
 		} catch ( Exception e ) {

@@ -273,7 +273,7 @@ src/main/java/ortus/boxlang/modules/orm/mapping/
 
 1. **Always work through `IEntityMeta`** — never depend on `ClassicEntityMeta` directly in the writer. This enables future annotation styles.
 2. **Respect `MAX_SYNCHRONOUS_ENTITIES`** — the 20-entity threshold exists because large synchronous processing blocks the BoxLang runtime.
-3. **`entityName` is NOT `classFQN`** — the entity name comes from the `entityname` annotation or simple class name; the FQN is the dot-delimited path.
+3. **`entityName` is NOT `classFQN`** — the entity name comes from the `entityname` annotation or simple class name; the FQN is the dot-delimited path. A class no mapping reaches (a relative `entityPaths` folder in a CLI script or `module:orm generate`) gets a `simpleName` built from its whole folder path; `MappingGenerator.withFileClassNames()` sets it back to the file name when the metadata is read, and `ORMService.getEntityName()` does the same for a live instance.
 4. **Validate early** — catch invalid entity configurations before Hibernate gets them; throw `BoxRuntimeException` with descriptive messages.
 5. **Temp file cleanup** — mapping files in `orm_mappings/` should be cleaned up on ORM shutdown when `saveAlongsideEntity` is `false`.
 6. **Building metadata mutates the raw annotations**: `AbstractPropertyMeta` writes defaults (e.g. `ormtype="string"`) back into the

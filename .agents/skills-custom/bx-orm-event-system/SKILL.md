@@ -130,6 +130,10 @@ public boolean onPreInsert( PreInsertEvent event ) {
 - Vetoed update: no SQL, the change stays, the entity stays dirty, and the update (and `preUpdate`) repeat on every flush. `entityReload()` discards it.
 - Vetoed delete: the row stays; the entity leaves the session.
 - Identity-id insert: cannot be vetoed; `orm.event.veto` error.
+- Hibernate still calls the post-insert / post-delete listeners after a veto. `onPreInsert` / `onPreDelete` mark the
+  entity in `VetoTracker` (per session, by identity); `onPostInsert` / `onPostDelete` consume the mark and return, so a
+  vetoed operation fires no `postInsert` / `postDelete` and records no `postCommit`. A vetoed update needs no mark:
+  Hibernate skips `postUpdate` itself.
 - Tests: `config/EventVetoTest`, fixtures `VetoThing.bx`, `VetoIdentityThing.bx`, global veto in `events/EventHandler.bx`.
 
 ### Entity Unwrapping

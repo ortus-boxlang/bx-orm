@@ -25,11 +25,20 @@ class persistent="true" table="veto_things" {
 	 * @return False to veto, true to let the operation continue.
 	 */
 	private boolean function answer( required string event ) {
+		record( arguments.event );
+		return !listFindNoCase( variables.vetoEvents, arguments.event );
+	}
+
+	/**
+	 * Count an event call.
+	 *
+	 * @event The event name.
+	 */
+	private void function record( required string event ) {
 		if ( isNull( variables.calls ) ) {
 			variables.calls = {};
 		}
 		variables.calls[ arguments.event ] = ( variables.calls[ arguments.event ] ?: 0 ) + 1;
-		return !listFindNoCase( variables.vetoEvents, arguments.event );
 	}
 
 	/**
@@ -79,6 +88,37 @@ class persistent="true" table="veto_things" {
 	 */
 	function preDelete() {
 		return answer( "preDelete" );
+	}
+
+	/**
+	 * Entity postInsert: counted, so a test can check it does not fire for a vetoed insert.
+	 */
+	function postInsert() {
+		record( "postInsert" );
+	}
+
+	/**
+	 * Entity postUpdate: counted.
+	 */
+	function postUpdate() {
+		record( "postUpdate" );
+	}
+
+	/**
+	 * Entity postDelete: counted, so a test can check it does not fire for a vetoed delete.
+	 */
+	function postDelete() {
+		record( "postDelete" );
+	}
+
+	/**
+	 * Entity postCommit: counted per action, as postCommit:insert, postCommit:update and postCommit:delete.
+	 *
+	 * @entity The entity.
+	 * @action insert, update or delete.
+	 */
+	function postCommit( entity, action ) {
+		record( "postCommit:" & arguments.action );
 	}
 
 }
