@@ -112,6 +112,15 @@ flowchart TD
 
 ## TransactionManager — session sync only
 
+Every event acts only on the ORM context already attached to the request or thread
+(`ORMContext.findForContext()`: never creates one, never throws) and only on the sessions it has already
+opened (`ormContext.getSessions()`, open ones). A transaction with no ORM work in its request or thread
+(native queries only, or a context whose application settings lack `ormEnabled`, such as cbq's
+`runThreadInContext()` pollers) is a no-op for the ORM: no context, no session, no `orm.notEnabled`
+(BLMODULES-320). Do not reintroduce `ORMContext.getForContext()` / `getSession( datasource )` here: they create
+state and open one Hibernate session per ORM datasource on every transaction. Covered by
+`TransactionManagerTest.testTransactionInContextWithoutOrmEnabled` and `testNativeOnlyTransactionOpensNoSession`.
+
 The interceptor listens to BoxLang transaction interception points and only flushes/clears the
 Hibernate session. **It never calls `beginTransaction`/`commit`/`rollback` on Hibernate.**
 

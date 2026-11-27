@@ -191,29 +191,32 @@ Separate from the Hibernate event listener above, these are announced through Bo
 flushes/clears the Hibernate session accordingly — it does **not** call
 `beginTransaction()`/`commit()`/`rollback()` on the Hibernate transaction:
 
+Every event starts from the ORM context **already attached** to the request or thread
+(`ORMContext.findForContext()`, which never creates one and never throws) and touches only the sessions
+it has **already opened**. No ORM work in that request or thread means nothing to do: no ORM context is
+created, no session is opened, and no `orm.notEnabled` is raised, even where the context's application
+settings lack `ormEnabled` (BLMODULES-320). Never call `ORMContext.getForContext()` or
+`ormContext.getSession( datasource )` from these events: both create state, and `getSession()` opens a
+Hibernate session per datasource.
+
 ```java
 public class TransactionManager extends BaseInterceptor {
 
     @InterceptionPoint
     public void onTransactionCommit( IStruct args ) {
+        ORMContext ormContext = ORMContext.findForContext( args.getAs( IBoxContext.class, Key.context ) );
+        if ( ormContext == null ) {
+            return; // no ORM work ran in this request or thread
+        }
         // Flush pending SQL onto the shared transaction connection; BoxLang performs the JDBC commit.
-        ormApp.getDatasources().forEach( datasource -> {
-            Session session = ormContext.getSession( datasource );
-            if ( session.isOpen() ) {
-                session.flush();
-            }
-        } );
+        forEachOpenSession( ormContext, ( datasource, session ) -> ORMContext.flush( session, "transaction commit" ) );
+        ormContext.getPostCommits().markCommitted();
     }
 
     @InterceptionPoint
     public void onTransactionRollback( IStruct args ) {
-        // Clear the session so it drops state BoxLang rolls back at the JDBC level (always, not gated on autoManageSession).
-        ormApp.getDatasources().forEach( datasource -> {
-            Session session = ormContext.getSession( datasource );
-            if ( session.isOpen() ) {
-                session.clear();
-            }
-        } );
+        // Clear the open sessions so they drop state BoxLang rolls back at the JDBC level (always, not gated on autoManageSession).
+        ...
     }
 }
 ```
