@@ -1,0 +1,34 @@
+/**
+ * Test app for BLMODULES-318 with autoManageSession on: SQL inside a transaction must see earlier ORM writes in this
+ * mode too, and SQL run from an entity event during a flush must not start a second flush.
+ */
+class {
+
+	this.name = "BXORMAutoSessionTest";
+
+	this.mappings[ "/autoSessionApp" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"AutoSessionDB" : {
+			"driver"   : "mysql",
+			"database" : "test",
+			"host"     : "#getSystemSetting( "DB_HOST", "127.0.0.1" )#",
+			"port"     : "#getSystemSetting( "DB_PORT", 3306 )#",
+			"username" : "#getSystemSetting( "DB_USER", "root" )#",
+			"password" : "#getSystemSetting( "DB_PASSWORD", "root" )#"
+		}
+	};
+	this.datasource = "AutoSessionDB";
+
+	this.ormEnabled  = true;
+	this.ormSettings = {
+		"datasource"        : "AutoSessionDB",
+		"entityPaths"       : [ "/autoSessionApp/models" ],
+		"dialect"           : "MySQLDialect",
+		"dbcreate"          : "dropcreate",
+		"eventHandling"     : true,
+		"flushAtRequestEnd" : false,
+		"autoManageSession" : true
+	};
+
+}

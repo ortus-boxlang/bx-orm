@@ -384,6 +384,43 @@ public class ORMContext {
 	}
 
 	/**
+	 * Flush the open session of a datasource before a SQL query ({@code queryExecute()}, {@code bx:query}, and so qb) runs
+	 * inside a BoxLang transaction on that datasource, so the query sees the transaction's earlier ORM writes
+	 * (BLMODULES-318). Hibernate never sees these queries, so neither AUTO nor MANUAL flush mode covers them.
+	 * <p>
+	 * The flush only sends the pending SQL on the transaction's own connection: nothing is committed, and a rollback still
+	 * discards it. It does nothing when:
+	 * <ul>
+	 * <li>no transaction is active: the ORM's connection is then not the query's, and a flush could commit the writes;</li>
+	 * <li>the query runs on another datasource than the transaction's: BoxLang gives such a query its own connection;</li>
+	 * <li>the ORM has not opened a session for the datasource: there is nothing pending, and no session is opened;</li>
+	 * <li>the session is already flushing: the query runs from an entity event during a flush, and a second flush would
+	 * corrupt the one in progress.</li>
+	 * </ul>
+	 *
+	 * @param datasource The datasource the query runs on.
+	 */
+	public void flushForSQL( DataSource datasource ) {
+		if ( datasource == null || this.sessions.isEmpty() ) {
+			return;
+		}
+		ConnectionManager connectionManager = getConnectionManager();
+		if ( !connectionManager.isInTransaction() ) {
+			return;
+		}
+		ortus.boxlang.runtime.jdbc.ITransaction transaction = connectionManager.getTransaction();
+		if ( transaction == null || !datasource.equals( transaction.getDataSource() ) ) {
+			return;
+		}
+		Session session = this.sessions.get( Key.of( datasource.getOriginalName() ) );
+		if ( session == null || !session.isOpen()
+		    || session.unwrap( org.hibernate.engine.spi.SessionImplementor.class ).getPersistenceContextInternal().isFlushing() ) {
+			return;
+		}
+		flush( session, "flush before query" );
+	}
+
+	/**
 	 * Get the datasource for a given name, falling back to the default datasource if the name is null.
 	 *
 	 * @param datasourceName The name of the datasource to retrieve, or null to retrieve the default datasource.

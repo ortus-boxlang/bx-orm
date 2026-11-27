@@ -1,0 +1,18 @@
+/**
+ * A uuid id, so entitySave() only queues the insert. preInsert runs SQL while Hibernate is flushing.
+ */
+@persistent
+@table( "auto_probes" )
+class {
+
+	@fieldtype( "id" )
+	@generator( "uuid" )
+	property id;
+
+	property name;
+
+	function preInsert() {
+		request.rowsAtInsert = queryExecute( "SELECT count(*) AS c FROM auto_probes" ).c;
+	}
+
+}

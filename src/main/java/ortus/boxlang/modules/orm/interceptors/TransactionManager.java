@@ -25,6 +25,7 @@ import ortus.boxlang.modules.orm.ORMContext;
 import ortus.boxlang.runtime.context.IBoxContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
+import ortus.boxlang.runtime.jdbc.PendingQuery;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.types.IStruct;
 
@@ -74,6 +75,28 @@ public class TransactionManager extends BaseInterceptor {
 	 * demarcation unit unless the runtime's experimental enableNestedTransactions is on); this
 	 * interceptor treats every event uniformly and lets BoxLang decide what actually commits.
 	 */
+
+	/**
+	 * Before a SQL query ({@code queryExecute()}, {@code bx:query}, and so qb) runs inside a transaction, flush the open ORM
+	 * session of the query's datasource, so the query sees the ORM writes made earlier in the transaction (BLMODULES-318).
+	 * The flush sends the pending SQL on the transaction's connection; BoxLang still decides the commit or rollback. See
+	 * {@link ORMContext#flushForSQL(ortus.boxlang.runtime.jdbc.DataSource)} for when it does nothing.
+	 * <p>
+	 * BoxLang announces this point for every query in the runtime, so a request or thread with no ORM context returns at
+	 * once, and no ORM context or session is ever created here.
+	 *
+	 * @param args The interception data: {@code pendingQuery}, {@code sql}, {@code bindings} and {@code context}.
+	 */
+	@InterceptionPoint
+	public void preQueryExecute( IStruct args ) {
+		ORMContext ormContext = ORMContext.findForContext( args.getAs( IBoxContext.class, Key.context ) );
+		if ( ormContext == null ) {
+			return;
+		}
+		if ( args.get( Key.pendingQuery ) instanceof PendingQuery pendingQuery ) {
+			ormContext.flushForSQL( pendingQuery.getDataSource() );
+		}
+	}
 
 	@InterceptionPoint
 	public void onTransactionBegin( IStruct args ) {
