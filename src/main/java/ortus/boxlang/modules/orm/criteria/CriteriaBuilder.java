@@ -2216,13 +2216,18 @@ public final class CriteriaBuilder implements IReferenceable {
 	 * @return The compiled query.
 	 */
 	Compiled compileColumns( List<String> expressions, String orderBy ) {
+		List<Order> ordering = orders.isEmpty()
+		    ? app.defaultSort( record ).stream().map( d -> new Order( root.hql() + "." + d.property(), d.ascending() ) ).toList()
+		    : orders;
+		// A collection condition would repeat each root's row: read the columns of the roots matched by id instead.
+		if ( rootsById() && expressions.stream().noneMatch( this::readsCollection ) ) {
+			List<Order> withFallback = ordering.isEmpty() && orderBy != null ? List.of( new Order( orderBy, true ) ) : ordering;
+			return compileRootsById( expressions, withFallback, false, List.of(), false );
+		}
 		RenderContext	ctx	= new RenderContext();
 		StringBuilder	hql	= new StringBuilder( "select " ).append( String.join( ", ", expressions ) );
 		renderFrom( hql, ctx, false );
-		List<Order>		ordering	= orders.isEmpty()
-		    ? app.defaultSort( record ).stream().map( d -> new Order( root.hql() + "." + d.property(), d.ascending() ) ).toList()
-		    : orders;
-		List<String>	clauses		= new ArrayList<>();
+		List<String> clauses = new ArrayList<>();
 		ordering.forEach( o -> clauses.add( o.expr() + ( o.asc() ? " asc" : " desc" ) ) );
 		if ( clauses.isEmpty() && orderBy != null ) {
 			clauses.add( orderBy );
@@ -2485,6 +2490,171 @@ public final class CriteriaBuilder implements IReferenceable {
 		return joins.values().stream().anyMatch( j -> j.plural && j.referenced );
 	}
 
+	/** The root alias of the outer query when root entities are matched by id ({@link #rootsById()}). */
+	private static final String						OUTER_ROOT	= "bx_o";
+
+	/** An alias of this criteria's own query: the root ({@code bx_this}) or a join ({@code bx_j3}). */
+	private static final java.util.regex.Pattern	INNER_ALIAS	= java.util.regex.Pattern.compile( "\\bbx_(?:this|j\\d+)\\b" );
+
+	/**
+	 * Whether entity rows are listed by matching the root's id in a subquery: a condition uses a collection join (so a
+	 * plain join would repeat the root once per matching element), there are no projections and {@code asDistinct()}
+	 * was not asked for.
+	 * <p>
+	 * The alternative, {@code select distinct root}, makes the database compare every column of the root, which fails
+	 * on types it cannot compare (PostgreSQL {@code json}, SQL Server {@code text}, Oracle {@code CLOB}) and on
+	 * PostgreSQL also rejects an {@code order by} on a joined property. Removing repeats in memory instead would break
+	 * paging, since {@code limit} and {@code offset} would count join rows. Matching ids keeps one row per root on every
+	 * database, so paging counts root entities (BLMODULES-319).
+	 *
+	 * @return True when the list query matches root ids in a subquery.
+	 */
+	private boolean rootsById() {
+		return !distinct && projections.isEmpty() && hasPluralJoin();
+	}
+
+	/**
+	 * The outer query's alias for one of this criteria's aliases: {@code bx_this} becomes {@code bx_o} and
+	 * {@code bx_j3} becomes {@code bx_o3}.
+	 */
+	private String outerAlias( String alias ) {
+		return alias.equals( root.hql() ) ? OUTER_ROOT : OUTER_ROOT + alias.substring( "bx_j".length() );
+	}
+
+	/**
+	 * An expression of this criteria rewritten onto the outer query's aliases.
+	 */
+	private String toOuter( String expr ) {
+		return INNER_ALIAS.matcher( expr ).replaceAll( m -> java.util.regex.Matcher.quoteReplacement( outerAlias( m.group() ) ) );
+	}
+
+	/**
+	 * The join with the given HQL alias, or null for the root or an alias of another query.
+	 */
+	private Join joinByAlias( String alias ) {
+		for ( Join join : joins.values() ) {
+			if ( join.hql.equals( alias ) ) {
+				return join;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The property path a join stands for, as the user wrote it (e.g. {@code vehicles} or {@code vehicles.features}).
+	 */
+	private String joinPath( Join join ) {
+		Join parent = joinByAlias( join.parentHql );
+		return parent == null ? join.attribute : joinPath( parent ) + "." + join.attribute;
+	}
+
+	/**
+	 * Whether an expression reads a collection (a collection join, or a join reached through one).
+	 */
+	private boolean readsCollection( String expr ) {
+		java.util.regex.Matcher m = INNER_ALIAS.matcher( expr );
+		while ( m.find() ) {
+			for ( Join j = joinByAlias( m.group() ); j != null; j = joinByAlias( j.parentHql ) ) {
+				if ( j.plural ) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Add a join and the joins it hangs from to the outer query's joins, parents first.
+	 *
+	 * @param join   The join.
+	 * @param needed The outer joins collected so far.
+	 */
+	private void needOuterJoin( Join join, java.util.Set<Join> needed ) {
+		Join parent = joinByAlias( join.parentHql );
+		if ( parent != null ) {
+			needOuterJoin( parent, needed );
+		}
+		needed.add( join );
+	}
+
+	/**
+	 * Compile a list of root entities (or columns of the root) as {@code select ... from Entity bx_o where bx_o in
+	 * (select bx_this from ... joins ... where ...) order by ...}: the subquery keeps every join and condition, the outer
+	 * query only reads the root, its fetch joins and the to-one joins its select and order use (see {@link #rootsById()}).
+	 *
+	 * @param selects    The select expressions, on this criteria's aliases (rewritten onto the outer query's).
+	 * @param ordering   The ordering, on this criteria's aliases.
+	 * @param allowFetch Whether fetch joins are rendered (only when selecting root entities).
+	 * @param columns    The struct/query column names (copied into the result).
+	 * @param lockable   Whether the query may take a pessimistic lock.
+	 *
+	 * @return The compiled query.
+	 */
+	private Compiled compileRootsById( List<String> selects, List<Order> ordering, boolean allowFetch, List<String> columns, boolean lockable ) {
+		RenderContext		ctx		= new RenderContext();
+		java.util.Set<Join>	needed	= new java.util.LinkedHashSet<>();
+		// Joins the select and the ordering read: to-one only, since a collection has no single value per root.
+		List<String>		used	= new ArrayList<>( selects );
+		ordering.forEach( o -> used.add( o.expr() ) );
+		for ( String expr : used ) {
+			java.util.regex.Matcher m = INNER_ALIAS.matcher( expr );
+			while ( m.find() ) {
+				Join join = joinByAlias( m.group() );
+				if ( join == null ) {
+					continue;
+				}
+				for ( Join j = join; j != null; j = joinByAlias( j.parentHql ) ) {
+					if ( j.plural ) {
+						String path = joinPath( join ) + expr.substring( m.end() ).replaceFirst( "^(\\.[A-Za-z0-9_]+).*", "$1" );
+						throw new ORMException( ORMErrorType.ARGUMENT,
+						    "Cannot sort by [" + path + "]: [" + joinPath( j ) + "] is a collection, so a "
+						        + getEntityName() + " has many values for it, not one to sort by.",
+						    "Sort by a property of " + getEntityName() + " or of a single association, or use withProjections() to sort the matching rows." );
+					}
+				}
+				needOuterJoin( join, needed );
+			}
+		}
+		// Fetch joins load associations with the root; a join with conditions is never fetched (Hibernate refuses it).
+		if ( allowFetch ) {
+			joins.values().stream()
+			    .filter( j -> j.fetch && ( j.with == null || j.with.isEmpty() ) )
+			    .forEach( j -> needOuterJoin( j, needed ) );
+		}
+
+		StringBuilder hql = new StringBuilder( "select " );
+		hql.append( selects.stream().map( this::toOuter ).collect( Collectors.joining( ", " ) ) );
+		hql.append( " from " ).append( getEntityName() ).append( ' ' ).append( OUTER_ROOT );
+		for ( Join join : joins.values() ) {
+			if ( !needed.contains( join ) ) {
+				continue;
+			}
+			boolean	conditioned	= join.with != null && !join.with.isEmpty();
+			boolean	fetchIt		= allowFetch && join.fetch && !conditioned;
+			// Rows are already filtered by the subquery, so a join used only for sorting must not drop any: left join.
+			hql.append( ' ' ).append( fetchIt ? join.kind.hql : JoinKind.LEFT.hql );
+			if ( fetchIt ) {
+				hql.append( " fetch" );
+			}
+			hql.append( ' ' ).append( outerAlias( join.parentHql ) ).append( '.' ).append( join.attribute ).append( ' ' ).append( outerAlias( join.hql ) );
+			if ( conditioned ) {
+				// Keep the join's own condition, so a sort reads the same association row as the subquery did.
+				StringBuilder on = new StringBuilder();
+				join.with.render( on, ctx );
+				hql.append( " on " ).append( toOuter( on.toString() ) );
+			}
+		}
+		hql.append( " where " ).append( OUTER_ROOT ).append( " in (select " ).append( root.hql() );
+		renderFrom( hql, ctx, false );
+		hql.append( ')' );
+		if ( !ordering.isEmpty() ) {
+			List<String> clauses = new ArrayList<>();
+			ordering.forEach( o -> clauses.add( toOuter( o.expr() ) + ( o.asc() ? " asc" : " desc" ) ) );
+			hql.append( " order by " ).append( String.join( ", ", clauses ) );
+		}
+		return new Compiled( hql.toString(), ctx.values, columns, lockable );
+	}
+
 	/**
 	 * Compile this criteria.
 	 *
@@ -2494,6 +2664,24 @@ public final class CriteriaBuilder implements IReferenceable {
 	 * @return The HQL, its values and its struct/query columns.
 	 */
 	Compiled compile( Mode mode, String expression ) {
+		if ( mode == Mode.LIST && rootsById() ) {
+			boolean			entities	= shape != Shape.STRUCT && shape != Shape.QUERY;
+			List<String>	columns		= new ArrayList<>();
+			List<String>	selects		= new ArrayList<>();
+			if ( entities ) {
+				selects.add( root.hql() );
+			} else {
+				root.model().basicAttributeNames().forEach( n -> {
+					selects.add( root.hql() + "." + n );
+					columns.add( n );
+				} );
+			}
+			// With no order() given, entity rows follow the entity's defaultSort annotation.
+			List<Order> ordering = orders.isEmpty()
+			    ? app.defaultSort( record ).stream().map( d -> new Order( root.hql() + "." + d.property(), d.ascending() ) ).toList()
+			    : orders;
+			return compileRootsById( selects, ordering, entities, columns, true );
+		}
 		RenderContext	ctx		= new RenderContext();
 		List<String>	columns	= new ArrayList<>();
 		StringBuilder	hql		= new StringBuilder( "select " );
