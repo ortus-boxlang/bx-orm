@@ -2,14 +2,14 @@
  * Test ContentStore!
  */
 class
-	persistent        ="true"
-	entityname        ="cbContentStore"
-	table             ="cb_contentStore"
-	batchsize         ="25"
-	cachename         ="cbContentStore"
-	cacheuse          ="read-write"
-	extends           ="BaseContent"
-	joinColumn        ="contentID"
+	persistent="true"
+	entityname="cbContentStore"
+	table="cb_contentStore"
+	batchsize="25"
+	cachename="cbContentStore"
+	cacheuse="read-write"
+	extends="BaseContent"
+	joinColumn="contentID"
 	discriminatorValue="ContentStore"
  {
 	/**********************************************************************

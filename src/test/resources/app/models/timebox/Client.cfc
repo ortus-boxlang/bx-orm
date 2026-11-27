@@ -1,4 +1,4 @@
-component persistent="true" table     ="client" extends   ="BaseEntity" {
+component persistent="true" table="client" extends="BaseEntity" {
 	/**********************************************************************
 	 * **						DI
 	 **********************************************************************/

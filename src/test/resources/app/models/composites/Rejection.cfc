@@ -1,4 +1,4 @@
-component persistent="true" table     ="composites_Rejections" output    ="false" {
+component persistent="true" table="composites_Rejections" output="false" {
 	property name="rejectionID" column="rejectionID" type="string" ormtype="string" fieldtype="id" setter="false" generator="guid";
 
 	property name="eventID" column="eventID" type="string" ormtype="string";

@@ -4,13 +4,7 @@
  * ---
  * A TimeBox Employee
  */
-component
-	persistent        ="true"
-	table             ="employee"
-	extends           ="User"
-	joinColumn        ="userId"
-	discriminatorValue="employee"
-{
+component persistent="true" table="employee" extends="User" joinColumn="userId" discriminatorValue="employee" {
 	property name="log" inject="logbox:logger:{this}" persistent="false";
 
 	property name="employeeService" inject="EmployeeService" persistent="false";
@@ -239,8 +233,8 @@ component
 	 */
 	numeric function getPtoBalance() {
 		log.info(
-				"ptobalance at #now()# - #getTickCount()#"
-			);
+			"ptobalance at #now()# - #getTickCount()#"
+		);
 		return variables.employeeService.getPtoBalance( this );
 	}
 
@@ -251,8 +245,8 @@ component
 	 */
 	numeric function getSickTimeBalance() {
 		log.info(
-				"sicktimebalance at #now()# - #getTickCount()#"
-			);
+			"sicktimebalance at #now()# - #getTickCount()#"
+		);
 		return variables.employeeService.getSickTimeBalance( this );
 	}
 

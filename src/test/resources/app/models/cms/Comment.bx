@@ -4,11 +4,11 @@
 class
 	persistent="true"
 	entityname="cbComment"
-	table     ="cb_comment"
-	batchsize ="25"
-	extends   ="BaseEntity"
-	cachename ="cbComment"
-	cacheuse  ="read-write"
+	table="cb_comment"
+	batchsize="25"
+	extends="BaseEntity"
+	cachename="cbComment"
+	cacheuse="read-write"
  {
 	/**********************************************************************
 	 * **							PROPERTIES

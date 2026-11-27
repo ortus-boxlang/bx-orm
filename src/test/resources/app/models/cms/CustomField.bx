@@ -4,10 +4,10 @@
 class
 	persistent="true"
 	entityname="cbCustomField"
-	table     ="cb_customfield"
-	extends   ="BaseEntity"
-	cachename ="cbCustomField"
-	cacheuse  ="read-write"
+	table="cb_customfield"
+	extends="BaseEntity"
+	cachename="cbCustomField"
+	cacheuse="read-write"
  {
 	/**********************************************************************
 	 * **							PROPERTIES

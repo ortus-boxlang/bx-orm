@@ -3,5 +3,8 @@
  */
 class accessors="true" persistent="true" table="cached_items" cacheuse="read-write" {
 	property name="id" generator="increment" fieldtype="id" ormType="integer";
+
 	property name="label" ormType="string";
+
+
 }

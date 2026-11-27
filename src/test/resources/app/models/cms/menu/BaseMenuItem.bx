@@ -2,12 +2,12 @@
  * Cool menu parent
  */
 class
-	persistent         ="true"
-	entityName         ="cbMenuItem"
-	table              ="cb_menuItem"
-	cachename          ="cbMenuItem"
-	extends            ="root.models.cms.BaseEntityMethods"
-	cacheuse           ="read-write"
+	persistent="true"
+	entityName="cbMenuItem"
+	table="cb_menuItem"
+	cachename="cbMenuItem"
+	extends="root.models.cms.BaseEntityMethods"
+	cacheuse="read-write"
 	discriminatorColumn="menuType"
  {
 	/**********************************************************************

@@ -3,6 +3,10 @@
  */
 class accessors="true" persistent="true" table="cached_owners" cacheuse="read-write" cachename="cachedOwner" {
 	property name="id" generator="increment" fieldtype="id" ormType="integer";
+
 	property name="name" ormType="string";
+
 	property name="items" fieldtype="one-to-many" cfc="CachedItem" fkcolumn="FK_owner" singularname="Item" cacheuse="read-write" cachename="cachedOwnerItems";
+
+
 }

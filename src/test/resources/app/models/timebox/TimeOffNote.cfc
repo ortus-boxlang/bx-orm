@@ -1,4 +1,4 @@
-component persistent="true" table     ="projectNote" extends   ="AbstractNote" {
+component persistent="true" table="projectNote" extends="AbstractNote" {
 	property
         name="request"
         notnull="true"

@@ -6,7 +6,6 @@
 @readOnly
 @dynamicInsert
 class {
-
 	@fieldtype( "id" )
 	@generator( "increment" )
 	@ormType( "integer" )
@@ -15,5 +14,6 @@ class {
 	@ormType( "string" )
 	@length( 100 )
 	property name;
+
 
 }

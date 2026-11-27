@@ -4,7 +4,6 @@
 @persistent
 @table( "bare_flag_folders" )
 class {
-
 	@fieldtype( "id" )
 	@generator( "increment" )
 	@ormType( "integer" )
@@ -20,5 +19,6 @@ class {
 	@inverse
 	@lazy
 	property notes;
+
 
 }

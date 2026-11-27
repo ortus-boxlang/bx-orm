@@ -2,7 +2,6 @@
  * Fixture for the uniquekey/index mapping regression tests (TableConstraintsTest).
  */
 class persistent="true" table="constrained_things" {
-
 	property name="id" fieldtype="id" generator="increment" ormType="integer";
 
 	property name="firstName" column="first_name" ormType="string" length="50" uniquekey="uk_ct_name";
@@ -12,5 +11,6 @@ class persistent="true" table="constrained_things" {
 	property name="status" ormType="string" length="20" index="idx_ct_status";
 
 	property name="code" ormType="string" length="20" notnull="true";
+
 
 }

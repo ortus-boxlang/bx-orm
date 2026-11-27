@@ -4,11 +4,11 @@
 class
 	persistent="true"
 	entityname="cbContentVersion"
-	table     ="cb_contentVersion"
-	batchsize ="25"
-	extends   ="BaseEntity"
-	cachename ="cbContentVersion"
-	cacheuse  ="read-write"
+	table="cb_contentVersion"
+	batchsize="25"
+	extends="BaseEntity"
+	cachename="cbContentVersion"
+	cacheuse="read-write"
  {
 	/**********************************************************************
 	 * **							DI

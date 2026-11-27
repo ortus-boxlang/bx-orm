@@ -4,11 +4,11 @@
 component
 	persistent="true"
 	entityname="cbCommentSubscription"
-	table     ="cb_commentSubscriptions"
-	extends   ="BaseSubscription"
+	table="cb_commentSubscriptions"
+	extends="BaseSubscription"
 	joinColumn="subscriptionID"
-	cachename ="cbCommentSubscription"
-	cacheuse  ="read-write"
+	cachename="cbCommentSubscription"
+	cacheuse="read-write"
 {
 	property
 		name     ="relatedContent"

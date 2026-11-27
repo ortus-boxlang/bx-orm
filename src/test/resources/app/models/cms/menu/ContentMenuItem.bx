@@ -2,10 +2,10 @@
  * Cool menu subclass
  */
 class
-	persistent        ="true"
-	entityName        ="cbContentMenuItem"
-	table             ="cb_menuItem"
-	extends           ="BaseMenuItem"
+	persistent="true"
+	entityName="cbContentMenuItem"
+	table="cb_menuItem"
+	extends="BaseMenuItem"
 	discriminatorValue="Content"
  {
 	/**********************************************************************

@@ -4,10 +4,10 @@
 component
 	persistent="true"
 	entityname="cbSubscription"
-	table     ="cb_subscriptions"
-	extends   ="root.models.cms.BaseEntityMethods"
-	cachename ="cbSubscription"
-	cacheuse  ="read-write"
+	table="cb_subscriptions"
+	extends="root.models.cms.BaseEntityMethods"
+	cachename="cbSubscription"
+	cacheuse="read-write"
 {
 	property
 		name   ="createdDate"

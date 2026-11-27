@@ -7,7 +7,6 @@
 @dynamicUpdate
 @selectBeforeUpdate
 class {
-
 	@fieldtype( "id" )
 	@generator( "increment" )
 	@ormType( "integer" )
@@ -32,5 +31,6 @@ class {
 	@fkcolumn( "folderId" )
 	@lazy
 	property folder;
+
 
 }
