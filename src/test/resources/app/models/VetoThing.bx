@@ -3,6 +3,7 @@
  * global event handler (models/events/EventHandler.bx) to veto an event instead.
  */
 class persistent="true" table="veto_things" {
+
 	property name="id" fieldtype="id" generator="increment" ormType="integer";
 
 	property name="name" ormType="string" length="50";
@@ -119,4 +120,5 @@ class persistent="true" table="veto_things" {
 	function postCommit( entity, action ) {
 		record( "postCommit:" & arguments.action );
 	}
+
 }

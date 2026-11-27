@@ -4,7 +4,12 @@
  * ---
  * A TimeBox Abstract User
  */
-component persistent="true" table="user" extends="BaseEntity" discriminatorColumn="userType" {
+component
+	persistent         ="true"
+	table              ="user"
+	extends            ="BaseEntity"
+	discriminatorColumn="userType"
+{
 	/**********************************************************************
 	 * **						DI
 	 **********************************************************************/

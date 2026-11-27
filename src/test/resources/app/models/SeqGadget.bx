@@ -5,8 +5,5 @@
  */
 class accessors="true" persistent="true" table="seq_gadgets" {
 	property name="id" fieldtype="id" generator="sequence" ormType="long";
-
 	property name="name" ormType="string";
-
-
 }

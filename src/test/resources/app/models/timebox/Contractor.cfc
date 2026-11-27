@@ -4,7 +4,13 @@
  * ---
  * A TimeBox Contractor
  */
-component persistent="true" table="contractor" extends="User" joinColumn="userId" discriminatorValue="contractor" {
+component
+	persistent        ="true"
+	table             ="contractor"
+	extends           ="User"
+	joinColumn        ="userId"
+	discriminatorValue="contractor"
+{
 	/**********************************************************************
 	 * **							PROPERTIES
 	 **********************************************************************/

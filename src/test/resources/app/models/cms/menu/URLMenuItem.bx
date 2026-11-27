@@ -5,7 +5,13 @@
  * ---
  * A URL-based Menu Item
  */
-class persistent="true" entityName="cbURLMenuItem" table="cb_menuItem" extends="BaseMenuItem" discriminatorValue="URL" {
+class
+	persistent        ="true"
+	entityName        ="cbURLMenuItem"
+	table             ="cb_menuItem"
+	extends           ="BaseMenuItem"
+	discriminatorValue="URL"
+ {
 	/**********************************************************************
 	 * **                          PROPERTIES
 	 **********************************************************************/
