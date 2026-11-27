@@ -1,0 +1,19 @@
+/**
+ * An account with a PostgreSQL json column, a team and roles: the shape from BLMODULES-319 (cbGenesis users).
+ * PostgreSQL has no equality operator for json, so a select distinct over this entity's columns fails.
+ */
+class persistent="true" table="pg319_accounts" defaultSort="name" {
+
+	property name="id" fieldtype="id" ormType="integer" generator="assigned";
+	property name="name" ormType="string";
+	property name="preferences" ormType="string" sqltype="json";
+	property name="team" fieldtype="many-to-one" cfc="Pg319Team" fkcolumn="FK_team";
+	property
+		name             ="roles"
+		fieldtype        ="many-to-many"
+		cfc              ="Pg319Role"
+		linktable        ="pg319_account_roles"
+		fkcolumn         ="FK_account"
+		inversejoincolumn="FK_role";
+
+}

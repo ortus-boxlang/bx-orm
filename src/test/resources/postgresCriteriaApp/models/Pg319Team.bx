@@ -1,0 +1,6 @@
+class persistent="true" table="pg319_teams" {
+
+	property name="id" fieldtype="id" ormType="integer" generator="assigned";
+	property name="name" ormType="string";
+
+}
