@@ -53,6 +53,17 @@ public class AutoManagedSessionSQLFlushTest {
 	@BeforeAll
 	public void setUp() {
 		instance = BoxRuntime.getInstance( false );
+		// This test boots its own MySQL-backed app, so it must load the MySQL JDBC driver module itself rather than rely on
+		// an earlier test class in the same JVM having done so (which made it pass or fail depending on test order).
+		Key mysqlModule = Key.of( "bx-mysql" );
+		if ( !instance.getModuleService().hasModule( mysqlModule ) ) {
+			ModuleRecord mysqlRecord = new ModuleRecord( Paths.get( "./src/test/resources/modules/bx-mysql" ).toAbsolutePath().toString() );
+			instance.getModuleService().getRegistry().put( mysqlModule, mysqlRecord );
+			mysqlRecord
+			    .loadDescriptor( instance.getRuntimeContext() )
+			    .register( instance.getRuntimeContext() )
+			    .activate( instance.getRuntimeContext() );
+		}
 		if ( !instance.getModuleService().hasModule( ORMKeys.moduleName ) ) {
 			ModuleRecord ormModuleRecord = new ModuleRecord( Paths.get( "./build/module" ).toAbsolutePath().toString() );
 			instance.getModuleService().getRegistry().put( ORMKeys.moduleName, ormModuleRecord );
