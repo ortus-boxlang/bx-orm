@@ -126,6 +126,26 @@ public class ORMContext {
 	    this::isInTransaction );
 
 	/**
+	 * The ORM context already attached to the request or thread that owns the given context, or null when none is. Unlike
+	 * {@link #getForContext(IBoxContext)} it never creates one, opens no session and never throws: a null result means no
+	 * ORM work has run in that request or thread, so there is no ORM state to flush, clear or complete.
+	 *
+	 * @param context The context to look in (it, or its nearest request or thread parent, owns the ORM context).
+	 *
+	 * @return The attached ORM context, or null.
+	 */
+	public static ORMContext findForContext( IBoxContext context ) {
+		if ( context == null ) {
+			return null;
+		}
+		IBoxContext jdbcCapableContext = context.getParentOfType( IJDBCCapableContext.class );
+		if ( jdbcCapableContext == null || !jdbcCapableContext.hasAttachment( ORMKeys.ORMContext ) ) {
+			return null;
+		}
+		return jdbcCapableContext.getAttachment( ORMKeys.ORMContext );
+	}
+
+	/**
 	 * Retrieve the ORMContext for the given boxlang context (whatever JDBC-capable context inside which we are currently executing).
 	 *
 	 * @param context The context for which to retrieve the ORMContext.

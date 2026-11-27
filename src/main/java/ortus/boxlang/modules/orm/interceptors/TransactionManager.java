@@ -17,15 +17,12 @@
  */
 package ortus.boxlang.modules.orm.interceptors;
 
+import java.util.function.BiConsumer;
+
 import org.hibernate.Session;
 
-import ortus.boxlang.modules.orm.ORMApp;
 import ortus.boxlang.modules.orm.ORMContext;
-import ortus.boxlang.modules.orm.ORMService;
-import ortus.boxlang.modules.orm.config.ORMConfig;
-import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.IBoxContext;
-import ortus.boxlang.runtime.context.IJDBCCapableContext;
 import ortus.boxlang.runtime.events.BaseInterceptor;
 import ortus.boxlang.runtime.events.InterceptionPoint;
 import ortus.boxlang.runtime.scopes.Key;
@@ -40,9 +37,6 @@ import ortus.boxlang.runtime.types.IStruct;
  */
 public class TransactionManager extends BaseInterceptor {
 
-	// The properties to configure the interceptor with
-	private ORMService ormService;
-
 	/**
 	 * This method is called by the BoxLang runtime to configure the interceptor
 	 * with a Struct of properties
@@ -53,7 +47,6 @@ public class TransactionManager extends BaseInterceptor {
 	public void configure( IStruct properties ) {
 		this.properties	= properties;
 		this.logger		= getRuntime().getLoggingService().getLogger( "orm" );
-		this.ormService	= ( ( ORMService ) getRuntime().getGlobalService( ORMKeys.ORMService ) );
 	}
 
 	/*
@@ -71,6 +64,12 @@ public class TransactionManager extends BaseInterceptor {
 	 * {@link ORMContext#flushForQuery(Session)} (Hibernate suppresses auto-flush-before-query when no
 	 * Hibernate transaction is in progress, and we deliberately run none).
 	 * <p>
+	 * Every event acts only on the ORM context already attached to the request or thread running the transaction, and
+	 * only on the Hibernate sessions it has opened ({@link ORMContext#findForContext(IBoxContext)}). A transaction in which
+	 * no ORM work ran (native queries only, or a context whose application settings do not enable the ORM, such as a
+	 * thread started with runThreadInContext()) is left alone: no ORM context is created, no session is opened and no
+	 * {@code orm.notEnabled} error is raised (BLMODULES-320).
+	 * <p>
 	 * Nested transactions are governed entirely by BoxLang (currently flattened into a single
 	 * demarcation unit unless the runtime's experimental enableNestedTransactions is on); this
 	 * interceptor treats every event uniformly and lets BoxLang decide what actually commits.
@@ -78,45 +77,27 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionBegin( IStruct args ) {
-		IBoxContext	context	= args.getAs( IBoxContext.class, Key.context );
-		ORMApp		ormApp	= ormService.getORMAppByContext( context );
-		if ( ormApp == null ) {
+		ORMContext ormContext = ORMContext.findForContext( args.getAs( IBoxContext.class, Key.context ) );
+		if ( ormContext == null || !ormContext.getConfig().autoManageSession ) {
 			return;
 		}
-		IJDBCCapableContext	jdbcContext	= context.getParentOfType( IJDBCCapableContext.class );
-		ORMContext			ormContext	= ORMContext.getForContext( jdbcContext );
-		ORMConfig			config		= ormContext.getConfig();
-
-		if ( !config.autoManageSession ) {
-			return;
-		}
-
-		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session ormSession = ormContext.getSession( datasource );
-			// Flush any pending pre-transaction work before the transaction boundary (Lucee compat).
-			if ( ormSession.isOpen() ) {
-				ORMContext.flush( ormSession, "transaction commit" );
-			}
-		} );
+		// Flush any pending pre-transaction work before the transaction boundary (Lucee compat).
+		forEachOpenSession( ormContext, ( datasource, ormSession ) -> ORMContext.flush( ormSession, "transaction commit" ) );
 	}
 
 	@InterceptionPoint
 	public void onTransactionSetSavepoint( IStruct args ) {
-		IBoxContext	context			= args.getAs( IBoxContext.class, Key.context );
-		String		savepointName	= args.getAsString( Key.savepoint );
-		ORMApp		ormApp			= ormService.getORMAppByContext( context );
-		if ( ormApp == null ) {
-			return;
-		}
-		ORMContext	ormContext						= ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
+		String savepointName = args.getAsString( Key.savepoint );
 		// A CHILD_*_END savepoint marks the end of a nested transaction unit; flush so the nested
 		// unit's writes are emitted on the shared connection before the parent proceeds.
-		boolean		isChildTransactionEndSavepoint	= savepointName.startsWith( "CHILD_" ) && savepointName.endsWith( "_END" );
-		if ( !isChildTransactionEndSavepoint ) {
+		if ( !savepointName.startsWith( "CHILD_" ) || !savepointName.endsWith( "_END" ) ) {
 			return;
 		}
-		ormApp.getDatasources().forEach( datasource -> {
-			Session ormSession = ormContext.getSession( datasource );
+		ORMContext ormContext = ORMContext.findForContext( args.getAs( IBoxContext.class, Key.context ) );
+		if ( ormContext == null ) {
+			return;
+		}
+		forEachOpenSession( ormContext, ( datasource, ormSession ) -> {
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
 				    "Flushing ORM session [{}] for datasource [{}] at child transaction savepoint [{}]",
@@ -125,25 +106,17 @@ public class TransactionManager extends BaseInterceptor {
 				    savepointName
 				);
 			}
-			if ( ormSession.isOpen() ) {
-				ORMContext.flush( ormSession, "transaction commit" );
-			}
+			ORMContext.flush( ormSession, "transaction commit" );
 		} );
 	}
 
 	@InterceptionPoint
 	public void onTransactionCommit( IStruct args ) {
-		IBoxContext	context	= args.getAs( IBoxContext.class, Key.context );
-
-		ORMApp		ormApp	= ormService.getORMAppByContext( context );
-		if ( ormApp == null ) {
+		ORMContext ormContext = ORMContext.findForContext( args.getAs( IBoxContext.class, Key.context ) );
+		if ( ormContext == null ) {
 			return;
 		}
-		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-
-		ormApp.getDatasources().forEach( datasource -> {
-			Session ormSession = ormContext.getSession( datasource );
-
+		forEachOpenSession( ormContext, ( datasource, ormSession ) -> {
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
 				    "Flushing ORM session [{}] for datasource [{}] on transaction commit; BoxLang owns the JDBC commit.",
@@ -154,9 +127,7 @@ public class TransactionManager extends BaseInterceptor {
 			// Emit pending SQL on the shared transaction connection. BoxLang performs the real JDBC
 			// commit; in a single-unit nested transaction a child commit is a no-op governed by the
 			// outermost block.
-			if ( ormSession.isOpen() ) {
-				ORMContext.flush( ormSession, "transaction commit" );
-			}
+			ORMContext.flush( ormSession, "transaction commit" );
 		} );
 		// The flushed writes are part of this commit: their postCommit events fire when the transaction ends.
 		ormContext.getPostCommits().markCommitted();
@@ -164,17 +135,11 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionRollback( IStruct args ) {
-		IBoxContext	context	= args.getAs( IBoxContext.class, Key.context );
-
-		ORMApp		ormApp	= ormService.getORMAppByContext( context );
-		if ( ormApp == null ) {
+		ORMContext ormContext = ORMContext.findForContext( args.getAs( IBoxContext.class, Key.context ) );
+		if ( ormContext == null ) {
 			return;
 		}
-		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-
-		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session ormSession = ormContext.getSession( datasource );
-
+		forEachOpenSession( ormContext, ( datasource, ormSession ) -> {
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
 				    "Clearing ORM session [{}] for datasource [{}] on transaction rollback; BoxLang owns the JDBC rollback.",
@@ -186,11 +151,9 @@ public class TransactionManager extends BaseInterceptor {
 			// Clearing the session is mandatory (independent of autoManageSession): it discards pending writes
 			// so they are never re-flushed at transaction end, and drops the first-level cache so the session
 			// does not retain entities whose rows were rolled back at the JDBC level.
-			if ( ormSession.isOpen() ) {
-				ormSession.clear();
-				// Release the cache entries the rolled-back writes locked (Hibernate's after-rollback work).
-				ORMContext.completeTransaction( ormSession, false );
-			}
+			ormSession.clear();
+			// Release the cache entries the rolled-back writes locked (Hibernate's after-rollback work).
+			ORMContext.completeTransaction( ormSession, false );
 		} );
 		// Rolled-back writes never get a postCommit event.
 		ormContext.getPostCommits().dropUncommitted();
@@ -198,17 +161,11 @@ public class TransactionManager extends BaseInterceptor {
 
 	@InterceptionPoint
 	public void onTransactionEnd( IStruct args ) {
-		IBoxContext	context	= args.getAs( IBoxContext.class, Key.context );
-
-		ORMApp		ormApp	= ormService.getORMAppByContext( context );
-		if ( ormApp == null ) {
+		ORMContext ormContext = ORMContext.findForContext( args.getAs( IBoxContext.class, Key.context ) );
+		if ( ormContext == null ) {
 			return;
 		}
-		ORMContext ormContext = ORMContext.getForContext( context.getParentOfType( IJDBCCapableContext.class ) );
-
-		ormApp.getDatasources().forEach( ( datasource ) -> {
-			Session ormSession = ormContext.getSession( datasource );
-
+		forEachOpenSession( ormContext, ( datasource, ormSession ) -> {
 			if ( logger.isDebugEnabled() ) {
 				logger.debug(
 				    "Flushing ORM session [{}] for datasource [{}] at transaction end.",
@@ -219,14 +176,28 @@ public class TransactionManager extends BaseInterceptor {
 			// Final flush so any pending writes (e.g. a transaction{} with no explicit commit) are
 			// emitted before BoxLang commits at the end of the demarcation unit. If the transaction was
 			// already rolled back, the session was cleared and this is a no-op.
-			if ( ormSession.isOpen() ) {
-				ORMContext.flush( ormSession, "transaction commit" );
-				// The transaction is over: run Hibernate's after-commit work (second-level cache updates, bulk query
-				// clean-up), which Hibernate itself never triggers because the ORM rides the BoxLang transaction.
-				ORMContext.completeTransaction( ormSession, true );
-			}
+			ORMContext.flush( ormSession, "transaction commit" );
+			// The transaction is over: run Hibernate's after-commit work (second-level cache updates, bulk query
+			// clean-up), which Hibernate itself never triggers because the ORM rides the BoxLang transaction.
+			ORMContext.completeTransaction( ormSession, true );
 		} );
 		// BoxLang announces the end after the JDBC commit: fire the committed writes' postCommit events.
 		ormContext.getPostCommits().fire();
+	}
+
+	/**
+	 * Run the given work on each Hibernate session the ORM context has already opened and that is still open. Sessions are
+	 * opened lazily by ORM work, so a datasource with no session has no ORM state to flush, clear or complete, and opening
+	 * one here would only cost a session per datasource on every transaction.
+	 *
+	 * @param ormContext The ORM context of the request or thread running the transaction.
+	 * @param work       The work to run, given the datasource name and its session.
+	 */
+	private static void forEachOpenSession( ORMContext ormContext, BiConsumer<Key, Session> work ) {
+		ormContext.getSessions().forEach( ( datasource, ormSession ) -> {
+			if ( ormSession.isOpen() ) {
+				work.accept( datasource, ormSession );
+			}
+		} );
 	}
 }
