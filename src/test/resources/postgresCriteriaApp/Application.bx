@@ -1,0 +1,25 @@
+class {
+
+	this.name = "BXORMPostgreSQLCriteriaTest";
+
+	this.mappings[ "/root" ] = getDirectoryFromPath( getCurrentTemplatePath() );
+
+	this.datasources = {
+		"PostgresCriteriaDB" : {
+			"connectionString" : "jdbc:postgresql://#getSystemSetting( "PG_HOST", "127.0.0.1" )#:#getSystemSetting( "PG_PORT", 5432 )#/#getSystemSetting( "PG_DB", "ormtest" )#",
+			"username"         : "#getSystemSetting( "PG_USER", "postgres" )#",
+			"password"         : "#getSystemSetting( "PG_PASSWORD", "postgres" )#"
+		}
+	};
+	this.datasource = "PostgresCriteriaDB";
+
+	this.ormSettings = {
+		"datasource"    : "PostgresCriteriaDB",
+		"entityPaths"   : [ "/root/models" ],
+		"logSQL"        : "false",
+		"dbcreate"      : "dropcreate",
+		"cacheprovider" : "ConcurrentHashMap"
+	};
+	this.ormEnabled = "true";
+
+}

@@ -40,8 +40,15 @@ and never change the builder; `copy()` branches it.
   start at the subquery entity and `this.` is the outer root.
 - Values are always bound (`Param`), wrapped as `{ value : v }` so `QueryParameter` never reads a struct or entity as
   options. Association values (id or entity) are resolved by `HQLQuery`. Hibernate coerces types.
-- Entity rows with a referenced to-many join are `select distinct`; `count()` uses `count(distinct root)`; fetch-only
-  joins are skipped outside entity lists.
+- Entity rows with a referenced to-many join (no projections, no `asDistinct()`) match the root by id in a subquery
+  (`compileRootsById()`): `select bx_o from E bx_o [fetch joins, to-one sort joins] where bx_o in (select bx_this from
+  E bx_this <all joins and conditions>) order by <sort on bx_o>`. Never `select distinct root`: the database would
+  compare every column (fails on PostgreSQL `json`, SQL Server `text`, Oracle `CLOB`; PostgreSQL also rejects an
+  `order by` on a joined column with it), and in-memory de-duplication would break `limit`/`offset` (BLMODULES-319).
+  The outer query renames aliases (`bx_this` -> `bx_o`, `bx_jN` -> `bx_oN`, `toOuter()`); a sort through a collection
+  is an `orm.argument` error. `asStruct()`/`asQuery()` and the memento root query (`compileColumns()`) use the same
+  shape. Without a to-many condition the HQL is unchanged. `count()` uses `count(distinct root)`; fetch-only joins are
+  skipped outside entity lists.
 - `chunk`/`each` read in batches (keyset by id when there is no order, else offset), flush + clear after each batch.
 - `getSQL` refuses when the app configured its own statement inspector.
 - Events: `beforeCriteriaBuilderList/Count/Get`, `after...`, `onCriteriaBuilderAddition` (registered in `ORMService`).
