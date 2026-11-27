@@ -19,6 +19,7 @@ package ortus.boxlang.modules.orm;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -29,7 +30,10 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import ortus.boxlang.modules.orm.config.ORMKeys;
 import ortus.boxlang.runtime.context.IJDBCCapableContext;
+import ortus.boxlang.runtime.context.RequestBoxContext;
+import ortus.boxlang.runtime.context.ScriptingRequestBoxContext;
 import ortus.boxlang.runtime.jdbc.DataSource;
 import ortus.boxlang.runtime.scopes.Key;
 import tools.BaseORMTest;
@@ -381,6 +385,94 @@ public class TransactionManagerTest extends BaseORMTest {
 		assertThat( variables.getAsInteger( Key.of( "loadedCount" ) ) ).isEqualTo( 1 );
 		assertThat( ( ( Number ) variables.get( Key.of( "hqlCount" ) ) ).intValue() ).isEqualTo( 1 );
 		assertThat( committedCount( name ) ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "A plain transaction in a context whose application settings lack ormEnabled runs and commits (BLMODULES-320)" )
+	@Test
+	public void testTransactionInContextWithoutOrmEnabled() throws SQLException {
+		String						name	= uniqueName( "NoOrm" );
+		// Same application (so the ORM app is found by name), but settings without ormEnabled: what cbq's queue
+		// pollers get from runThreadInContext().
+		ScriptingRequestBoxContext	poller	= new ScriptingRequestBoxContext( instance.getRuntimeContext(), false );
+		RequestBoxContext.setCurrent( poller );
+		try {
+			poller.loadApplicationDescriptor( Path.of( "src/test/resources/app/index.bxs" ).toAbsolutePath().toUri() );
+			poller.getApplicationListener().getSettings().remove( ORMKeys.ORMEnabled );
+			poller.clearConfigCache();
+			// @formatter:off
+			instance.executeSource(
+				"""
+				transaction {
+					queryExecute( "INSERT INTO manufacturers ( id, name, address ) VALUES ( :id, :name, 'poller' )", { id : %d, name : "%s" } );
+				}
+				""".formatted( uniqueId(), name ),
+				poller
+			);
+			// @formatter:on
+			assertThat( poller.hasAttachment( ORMKeys.ORMContext ) ).isFalse();
+		} finally {
+			RequestBoxContext.removeCurrent();
+			poller.shutdown();
+			RequestBoxContext.setCurrent( context );
+		}
+		assertThat( committedCount( name ) ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "A transaction with only native queries opens no Hibernate session" )
+	@Test
+	public void testNativeOnlyTransactionOpensNoSession() throws SQLException {
+		String name = uniqueName( "NativeOnly" );
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction {
+				queryExecute( "INSERT INTO manufacturers ( id, name, address ) VALUES ( :id, :name, 'native' )", { id : %d, name : "%s" } );
+			}
+			""".formatted( uniqueId(), name ),
+			context
+		);
+		// @formatter:on
+		assertThat( openSessionCount() ).isEqualTo( 0 );
+		assertThat( committedCount( name ) ).isEqualTo( 1 );
+	}
+
+	@DisplayName( "ORM work that starts inside a transaction is still flushed and committed with it" )
+	@Test
+	public void testORMWorkStartedInsideTransactionCommits() throws SQLException {
+		String name = uniqueName( "Inside" );
+		// @formatter:off
+		instance.executeSource(
+			"""
+			transaction {
+				queryExecute( "SELECT 1" );
+				entitySave( entityNew( "manufacturer", { name : "%s", address : "inside" } ) );
+			}
+			""".formatted( name ),
+			context
+		);
+		// @formatter:on
+		assertThat( committedCount( name ) ).isEqualTo( 1 );
+	}
+
+	/**
+	 * How many Hibernate sessions the request's ORM context holds (0 when it has none). The module loads its own copy of
+	 * {@link ORMContext}, so the attachment is read reflectively.
+	 */
+	private int openSessionCount() {
+		if ( !context.hasAttachment( ORMKeys.ORMContext ) ) {
+			return 0;
+		}
+		Object ormContext = context.getAttachment( ORMKeys.ORMContext );
+		try {
+			return ( ( java.util.Map<?, ?> ) ormContext.getClass().getMethod( "getSessions" ).invoke( ormContext ) ).size();
+		} catch ( ReflectiveOperationException e ) {
+			throw new IllegalStateException( e );
+		}
+	}
+
+	/** A manufacturer id unlikely to collide with seeded rows or with other runs. */
+	private static int uniqueId() {
+		return 100000 + java.util.concurrent.ThreadLocalRandom.current().nextInt( 800000 );
 	}
 
 	/** A manufacturer name unique to this run, so tests never depend on each other's rows or on execution order. */

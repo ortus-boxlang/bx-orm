@@ -107,6 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 
+- [BLMODULES-320](https://ortussolutions.atlassian.net/browse/BLMODULES-320) A `transaction{}` in a request or thread where the ORM is not enabled, for example a thread started with `runThreadInContext()` that does not copy `ormEnabled` (as cbq's queue workers do), failed with `orm.notEnabled` just because bx-orm was installed. The transaction events now act only on the ORM context and the Hibernate sessions that ORM work in that request or thread has already opened. A transaction that runs only native queries no longer opens a Hibernate session for every ORM datasource.
 - A `preInsert` or `preDelete` handler that vetoes the operation no longer fires `postInsert` / `postDelete` and `postCommit` for it. Hibernate calls its post-event listeners even after a veto, so a vetoed delete announced a committed `delete` for a row that was never removed.
 - An entity reached through no mapping (a relative `entityPaths` folder in a CLI script, `boxlang app.bxs`, or in `module:orm generate`) is named after its file again. BoxLang named its class after the whole folder path, so the entity was called `tmpappmodelsUser` instead of `User` and loads by name failed; the boot cache recorded the same wrong name.
 - In `off` and `auto` mode, switch annotations written without a value (`@persistent`, `@unique`, ...) now read `true` in the entity class's metadata (`getClassMetadata()`), as they already did after a `trust` boot, so code that reads the metadata as booleans works.
