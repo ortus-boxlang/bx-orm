@@ -33,6 +33,7 @@ commit or roll back independently of the surrounding `transaction{}`).
 | `SessionFactoryBuilder` | `SessionFactoryBuilder.java` | Sets `CONNECTION_HANDLING = DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT` so the session acquires/releases per statement instead of holding one connection. |
 | `TransactionManager` | `interceptors/TransactionManager.java` | Interceptor: flush on commit/end, clear on rollback. No Hibernate begin/commit/rollback. |
 | `ORMContext.flushForQuery` | `ORMContext.java` | Flushes before an in-transaction ORM query so it sees its own pending writes (read-your-writes). |
+| `ORMContext.flushForSQL` | `ORMContext.java` | Called from `TransactionManager.preQueryExecute`: flushes the open session of the transaction's datasource before SQL (`queryExecute()`, `bx:query`, qb) so it sees the ORM writes (BLMODULES-318). |
 
 ## ORMConnectionProvider — riding the connection
 
@@ -131,6 +132,7 @@ Hibernate session. **It never calls `beginTransaction`/`commit`/`rollback` on Hi
 | `onTransactionRollback` | `session.clear()` — discard pending writes + first-level cache; BoxLang rolls back the connection. **Always runs** (not gated on `autoManageSession`) — mandatory so pending work is never re-flushed at end. |
 | `onTransactionEnd` | `session.flush()` — final flush (a `transaction{}` with no explicit commit); no-op if already committed/cleared. |
 | `onTransactionSetSavepoint` | `session.flush()` on a `CHILD_*_END` savepoint (nested-unit boundary). |
+| `preQueryExecute` | `ORMContext.flushForSQL( pendingQuery.getDataSource() )`: flush before a SQL query on the transaction's datasource. Announced for every query in the runtime, so it returns at once without an ORM context. |
 
 Event ordering matters: BoxLang's `Transaction.commit()`/`rollback()` **announce the event first,
 then perform the JDBC operation.** So flushing in `onTransactionCommit` puts SQL on the connection
@@ -186,6 +188,23 @@ Called from `ORMApp.loadEntitiesByFilter` (EntityLoad by filter / list-all) and
 `HQLQuery.execute()` (for read queries, i.e. not `UPDATE`/`DELETE` HQL). Outside a transaction it is
 a no-op.
 
+### SQL in the transaction (BLMODULES-318)
+
+SQL (`queryExecute()`, `bx:query`, qb) never goes through Hibernate, so no flush mode covers it. BoxLang announces
+`preQueryExecute` (data: `pendingQuery`, `sql`, `bindings`, `context`) after preparing the statement on the connection
+and before executing it. `TransactionManager.preQueryExecute` calls `ORMContext.flushForSQL( datasource )`, which flushes
+only when all of these hold:
+
+- a BoxLang transaction is active (outside one, the session's connection is not the query's, and a flush would commit);
+- the query's datasource **equals** `transaction.getDataSource()` (BoxLang gives a query on another datasource a separate
+  pooled connection, so flushing that session would commit its writes outside the transaction);
+- the ORM already opened a session for that datasource (never open one here, BLMODULES-320);
+- the session is not already flushing (`getPersistenceContextInternal().isFlushing()`): SQL run from `preInsert`/an event
+  handler during a flush would otherwise start a nested flush, which fails.
+
+With `enableNestedTransactions=false`, the end of a nested `transaction{}` fires no event, so `onTransactionSetSavepoint`
+never flushes there; the next query's flush covers it.
+
 ## Nested transactions (BoxLang-governed)
 
 Nesting is decided entirely by BoxLang's runtime `enableNestedTransactions` setting (currently
@@ -228,7 +247,7 @@ that flag is experimental.
   releases the JDBC resources it kept; skip that and the next transaction gets a closed connection. `session.find`
   and `session.lock` (used by `entityLoadByPK { lock }` and `entityLock()`) need no scope.
 - `autoManageSession=false` sessions are opened with `FlushMode.MANUAL` (see
-  `ORMContext.getSession`), so nothing flushes except explicit `flush()`/`flushForQuery` and the
+  `ORMContext.getSession`), so nothing flushes except explicit `flush()`/`flushForQuery`/`flushForSQL` and the
   interceptor's flushes.
 
 ## Where the code lives
