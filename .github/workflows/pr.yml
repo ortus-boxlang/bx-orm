@@ -41,10 +41,12 @@ jobs:
       - name: Verify Code Formatting
         run: ./gradlew spotlessCheck
 
+      # Pinned so CI formats exactly like the version the test app was formatted with. 1.18.0 (the
+      # module's build version) has an older formatter without --check, --source dirs or --excludes.
       - name: Setup BoxLang
         uses: ortus-boxlang/setup-boxlang@1.6.0
         with:
-          with-commandbox: true
+          version: 1.19.0
 
       - name: Format BoxLang Source
         # StaticThing.bx is excluded: the formatter drops the `static` modifier from its
